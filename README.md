@@ -1,5 +1,7 @@
 # Software Fall 2026 Template
 
+hello test push hi peeps
+
 ## Repo Structure
 You are free to structure your respective repository(ies) as you wish. However we recommend keeping everything in a
 _monorepo_ so that deployments are easier to handle.
