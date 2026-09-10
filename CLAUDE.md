@@ -1,14 +1,15 @@
 # boutline
 
 Monorepo. `frontend/` — Next.js 16 App Router, React 19, TypeScript, Tailwind 4, Bun.
-`backend/` — Go (not created yet; create it there). `docs/` — design specs and style
+`backend/` — Go 1.25 + Fiber, layered architecture. `docs/` — design specs and style
 guides, authoritative once present.
 
 ## Commands
 
 - Frontend, from `frontend/`: `bun run dev`, `bun run build`, `bun run lint`.
   Package manager is Bun — never npm, yarn, or pnpm.
-- Backend, from `backend/` once it exists: `go build ./...`, `go test ./...`, `go vet ./...`.
+- Backend, from `backend/`: `make run`, `make build`, `make test`, `make lint`, `make vet`.
+  See `backend/README.md` for the full list.
 - Lint and test every package you touched before reporting work as done. If a check
   fails, say so with the output rather than describing the change as complete.
 
