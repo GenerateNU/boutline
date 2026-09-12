@@ -1,6 +1,7 @@
 package errs
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -27,6 +28,9 @@ func (e APIError) Error() string {
 	return fmt.Sprintf("api error: %d", e.StatusCode)
 }
 
+// NewAPIError sends err's message to the client verbatim, so only hand it an
+// error you wrote for a client to read. Service errors should be returned
+// unchanged and let ErrorHandler narrow them down instead.
 func NewAPIError(statusCode int, err error) APIError {
 	return APIError{StatusCode: statusCode, Message: err.Error()}
 }
@@ -91,14 +95,22 @@ func buildMessage(e validator.FieldError) string {
 func ErrorHandler(c *fiber.Ctx, err error) error {
 	apiErr := toAPIError(err)
 
-	slog.Error("HTTP API error",
-		"err", err.Error(),
-		"status", apiErr.StatusCode,
-		"method", c.Method(),
-		"path", c.Path(),
-	)
+	logError(err, apiErr.StatusCode, "method", c.Method(), "path", c.Path())
 
 	return c.Status(apiErr.StatusCode).JSON(apiErr)
+}
+
+// logError records the full wrapped chain, which is the only place it survives
+// — the client reads ClientMessage instead. A client's mistake is a warning;
+// anything we failed to recognise is our bug and an error.
+func logError(err error, status int, args ...any) {
+	level := slog.LevelWarn
+	if status >= http.StatusInternalServerError {
+		level = slog.LevelError
+	}
+
+	slog.Log(context.Background(), level, "HTTP API error",
+		append([]any{"err", err.Error(), "status", status}, args...)...)
 }
 
 func toAPIError(err error) APIError {
@@ -117,16 +129,7 @@ func toAPIError(err error) APIError {
 		return NewAPIError(fiberErr.Code, fiberErr)
 	}
 
-	switch {
-	case errors.Is(err, ErrNotFound):
-		return NewAPIError(http.StatusNotFound, err)
-	case errors.Is(err, ErrDuplicate):
-		return NewAPIError(http.StatusConflict, err)
-	case errors.Is(err, ErrInvalidInput):
-		return NewAPIError(http.StatusBadRequest, err)
-	default:
-		// Anything unrecognised is a bug, not a client problem: log the detail
-		// above but never leak it in the response.
-		return InternalServerError()
-	}
+	// The wrapped chain a service built on the way up is for the log, not for
+	// the client: only the sentinel's status and its public message get out.
+	return APIError{StatusCode: StatusFor(err), Message: ClientMessage(err)}
 }

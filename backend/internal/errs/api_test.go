@@ -34,10 +34,24 @@ func TestErrorHandler(t *testing.T) {
 		wantMessage any
 	}{
 		{
-			name:        "not found maps to 404",
+			name:        "not found maps to 404 without the wrapped chain",
 			err:         fmt.Errorf("load user: %w", errs.ErrNotFound),
 			wantStatus:  http.StatusNotFound,
-			wantMessage: "load user: not found",
+			wantMessage: "not found",
+		},
+		{
+			name: "a chain built across layers is not leaked",
+			err: fmt.Errorf("create example: %w",
+				fmt.Errorf("insert example: %w", errs.ErrDuplicate)),
+			wantStatus:  http.StatusConflict,
+			wantMessage: "already exists",
+		},
+		{
+			name: "a public message reaches the client",
+			err: fmt.Errorf("create example: %w",
+				errs.Public(`an example named "taken" already exists`, errs.ErrDuplicate)),
+			wantStatus:  http.StatusConflict,
+			wantMessage: `an example named "taken" already exists`,
 		},
 		{
 			name:        "duplicate maps to 409",
