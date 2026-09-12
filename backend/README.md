@@ -154,6 +154,16 @@ Huma validates the request against the schema it builds from the struct tags in
 come back as `errs` sentinels and `errs.HumaError` is the single place that
 turns them into status codes.
 
+The chain a service builds on the way up (`create example: insert example: ...`)
+is for the log only — a client reads the sentinel's own text, and an
+unrecognised error reads `internal server error`. When the caller genuinely
+needs to know why, say so explicitly:
+
+```go
+return nil, fmt.Errorf("create example: %w",
+    errs.Public(fmt.Sprintf("an example named %q already exists", name), err))
+```
+
 Every route, healthcheck included, is a Huma operation, so error responses share
 one shape (`{"title","status","detail"}`). The exception is the catch-all 404 for
 an unrouted path, which Fiber still answers in `routers.go`.
