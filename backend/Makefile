@@ -34,6 +34,21 @@ test-unit:
 test-integration:
 	go test ./internal/tests/... -race
 
+# Write the next versioned migration by diffing the gorm models against
+# ./migrations. Needs the atlas CLI and Docker, and should be run before
+# dev-up so the stack has a schema to apply.
+migrate-new:
+	@test -n "$(NAME)" || { echo "NAME is required, e.g. make migrate-new NAME=create_examples"; exit 1; }
+	@command -v atlas >/dev/null || { echo "atlas CLI not found: brew install ariga/tap/atlas"; exit 1; }
+	atlas migrate diff $(NAME) --env local
+
+# dev-up applies migrations on its own; these are for doing it out of band.
+migrate-apply:
+	$(COMPOSE) run --rm migrate
+
+migrate-status:
+	$(COMPOSE) run --rm migrate 'atlas migrate status --dir file:///migrations --url "$$ATLAS_URL"'
+
 # Build the image from ./Dockerfile and run it against a Postgres container.
 dev-up:
 	$(COMPOSE) up --build --detach
@@ -64,4 +79,5 @@ tidy:
 	go mod tidy
 
 .PHONY: build run clean test test-cover test-pkg test-unit test-integration \
+	migrate-new migrate-apply migrate-status \
 	dev-up dev-down dev-reset dev-logs dev-psql vet lint format tidy
