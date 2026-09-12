@@ -1,0 +1,49 @@
+name: boutline
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Everything else falls back to the defaults in internal/config; only the
+      # host differs, since the database is a service on the compose network.
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # Applies pending migrations once, between the database being ready and the
+  # api starting. Generate them first with `make migrate-new NAME=...`.
+  migrate:
+    image: arigaio/atlas:1.3.3-community-alpine
+    environment:
+      ATLAS_URL: postgres://postgres:postgres@db:5432/boutline?sslmode=disable
+    entrypoint: ["/bin/sh", "-c"]
+    command: ['atlas migrate apply --dir file:///migrations --url "$$ATLAS_URL"']
+    volumes:
+      - ./migrations:/migrations:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17.11-alpine
+    environment:
+      POSTGRES_DB: boutline
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    # Not published to the host, so a local Postgres on 5432 does not clash.
+    # Reach it with `make dev-psql`.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d boutline"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  pgdata:

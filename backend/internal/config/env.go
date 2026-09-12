@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 )
 
 // An empty value is treated as unset so that a blank entry in a shell profile or
@@ -22,6 +23,20 @@ func intEnv(key string, fallback int) (int, error) {
 	}
 
 	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+
+	return value, nil
+}
+
+func durationEnv(key string, fallback time.Duration) (time.Duration, error) {
+	raw, ok := os.LookupEnv(key)
+	if !ok || raw == "" {
+		return fallback, nil
+	}
+
+	value, err := time.ParseDuration(raw)
 	if err != nil {
 		return 0, fmt.Errorf("parse %s: %w", key, err)
 	}

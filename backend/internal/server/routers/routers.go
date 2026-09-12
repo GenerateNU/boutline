@@ -1,17 +1,20 @@
 package routers
 
 import (
-	"boutline/internal/controllers"
+	"boutline/internal/features/example"
+	"boutline/internal/features/health"
 	"boutline/internal/types"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-// SetUpRoutes mounts every router. Feature routers take the /api/v1 group and
-// live in their own file next to this one.
+// SetUpRoutes mounts every feature. A feature owns its own routes file under
+// internal/features/<name> and is registered with one call from here.
 func SetUpRoutes(app *fiber.App, routeParams types.RouteParams) {
-	app.Get("/healthcheck", controllers.HealthcheckHandler(routeParams.ServiceParams.Config))
+	health.RegisterHealthRoutes(routeParams.API, routeParams.ServiceParams)
+	example.RegisterExampleRoutes(routeParams.API, routeParams.ServiceParams)
 
+	// Fiber owns anything Huma did not claim, so the catch-all stays here.
 	setUpNotFoundHandler(app)
 }
 

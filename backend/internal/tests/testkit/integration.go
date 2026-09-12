@@ -136,6 +136,6 @@ func (tb *IntegrationTestBuilder) GetBody() map[string]any {
 }
 
 func (tb *IntegrationTestBuilder) DebugLogging() *IntegrationTestBuilder {
-	fmt.Fprintf(os.Stderr, "Response: %s\n", tb.raw)
+	_, _ = fmt.Fprintf(os.Stderr, "Response: %s\n", tb.raw)
 	return tb
 }

@@ -10,10 +10,14 @@ import (
 	"time"
 
 	"boutline/internal/config"
+	"boutline/internal/database"
 	"boutline/internal/server"
 )
 
-const shutdownTimeout = 10 * time.Second
+const (
+	shutdownTimeout  = 10 * time.Second
+	dbConnectTimeout = 10 * time.Second
+)
 
 func main() {
 	if err := run(); err != nil {
@@ -28,7 +32,22 @@ func run() error {
 		return fmt.Errorf("load configuration: %w", err)
 	}
 
-	app := server.CreateApp(cfg)
+	connectCtx, cancelConnect := context.WithTimeout(context.Background(), dbConnectTimeout)
+	defer cancelConnect()
+
+	db, err := database.Connect(connectCtx, cfg.Database)
+	if err != nil {
+		return fmt.Errorf("connect database: %w", err)
+	}
+	defer func() {
+		if err := database.Close(db); err != nil {
+			slog.Error("close database", "err", err)
+		}
+	}()
+
+	slog.Info("database connected", "host", cfg.Database.Host, "database", cfg.Database.Name)
+
+	app := server.CreateApp(cfg, db)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

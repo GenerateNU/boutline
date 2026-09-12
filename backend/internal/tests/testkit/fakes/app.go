@@ -21,7 +21,9 @@ var (
 // parallel tests share one instance.
 func GetSharedTestApp() *fiber.App {
 	once.Do(func() {
-		sharedApp = server.CreateApp(TestConfiguration())
+		// nil DB: the app builds and every route registers, but a test that
+		// actually hits a database-backed feature needs a real connection here.
+		sharedApp = server.CreateApp(TestConfiguration(), nil)
 	})
 
 	return sharedApp
@@ -37,6 +39,17 @@ func TestConfiguration() *config.Configuration {
 			Version:        config.DefaultAppVersion,
 			Port:           config.DefaultAppPort,
 			AllowedOrigins: config.DefaultAllowedOrigins,
+		},
+		Database: config.DatabaseConfig{
+			Host:            config.DefaultDBHost,
+			Port:            config.DefaultDBPort,
+			Name:            config.DefaultDBName,
+			User:            config.DefaultDBUser,
+			Password:        config.DefaultDBPassword,
+			SSLMode:         config.DefaultDBSSLMode,
+			MaxOpenConns:    config.DefaultDBMaxOpenConns,
+			MaxIdleConns:    config.DefaultDBMaxIdleConns,
+			ConnMaxLifetime: config.DefaultDBConnMaxLifetime,
 		},
 		Environment: TestEnvironment,
 	}

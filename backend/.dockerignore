@@ -1,0 +1,12 @@
+.git
+.gitignore
+.golangci.yml
+docker-compose.yml
+atlas.hcl
+migrations
+Makefile
+README.md
+docs
+boutline
+coverage.out
+tmp
