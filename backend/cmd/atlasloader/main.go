@@ -11,9 +11,9 @@ import (
 	"io"
 	"os"
 
-	"boutline/internal/features/example"
-
 	"ariga.io/atlas-provider-gorm/gormschema"
+	// Import your feature models here so Atlas can see them.
+	// _ "boutline/internal/features/example"
 )
 
 func main() {
@@ -24,9 +24,7 @@ func main() {
 }
 
 func run() error {
-	stmts, err := gormschema.New("postgres").Load(
-		&example.Example{},
-	)
+	stmts, err := gormschema.New("postgres").Load()
 	if err != nil {
 		return fmt.Errorf("load gorm schema: %w", err)
 	}

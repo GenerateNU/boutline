@@ -1,7 +1,6 @@
 package routers
 
 import (
-	"boutline/internal/features/example"
 	"boutline/internal/features/health"
 	"boutline/internal/types"
 
@@ -12,7 +11,6 @@ import (
 // internal/features/<name> and is registered with one call from here.
 func SetUpRoutes(app *fiber.App, routeParams types.RouteParams) {
 	health.RegisterHealthRoutes(routeParams.API, routeParams.ServiceParams)
-	example.RegisterExampleRoutes(routeParams.API, routeParams.ServiceParams)
 
 	// Fiber owns anything Huma did not claim, so the catch-all stays here.
 	setUpNotFoundHandler(app)
