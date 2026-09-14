@@ -6,7 +6,9 @@ import (
 	"fmt"
 
 	"boutline/internal/errs"
-	"boutline/internal/features/user"
+	"boutline/internal/models"
+	"boutline/internal/repository"
+	"boutline/internal/services"
 
 	"gorm.io/gorm"
 )
@@ -32,7 +34,7 @@ func userFixtures() []seedUser {
 }
 
 func seedUsers(ctx context.Context, db *gorm.DB) (Result, error) {
-	service := user.NewUserService(user.NewUserRepository(db))
+	service := services.NewUserService(repository.NewUserRepository(db))
 
 	var result Result
 	for _, fixture := range userFixtures() {
@@ -54,7 +56,7 @@ func seedUsers(ctx context.Context, db *gorm.DB) (Result, error) {
 // not a transaction, so a concurrent run could still lose the race — the
 // duplicate error from the unique index is the authority, and it counts as
 // "already there" rather than a failure.
-func seedOneUser(ctx context.Context, service *user.UserService, fixture seedUser) (bool, error) {
+func seedOneUser(ctx context.Context, service *services.UserService, fixture seedUser) (bool, error) {
 	_, err := service.GetUserByEmail(ctx, fixture.email)
 	switch {
 	case err == nil:
@@ -63,7 +65,7 @@ func seedOneUser(ctx context.Context, service *user.UserService, fixture seedUse
 		return false, fmt.Errorf("look up %s: %w", fixture.email, err)
 	}
 
-	_, err = service.CreateUser(ctx, user.UserCreateParams{
+	_, err = service.CreateUser(ctx, models.CreateUserRequest{
 		Email:         fixture.email,
 		Password:      seedUserPassword,
 		FirstName:     fixture.firstName,

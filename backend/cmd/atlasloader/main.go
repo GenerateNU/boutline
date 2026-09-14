@@ -13,14 +13,14 @@ import (
 
 	"ariga.io/atlas-provider-gorm/gormschema"
 
-	"boutline/internal/features/user"
+	"boutline/internal/models"
 )
 
-// Every feature model this service owns. Load only sees what is listed here, so
-// a model left off this slice is a table that never gets migrated.
-func models() []any {
+// Every model this service owns. Load only sees what is listed here, so a model
+// left off this slice is a table that never gets migrated.
+func schema() []any {
 	return []any{
-		&user.User{},
+		&models.User{},
 	}
 }
 
@@ -32,7 +32,7 @@ func main() {
 }
 
 func run() error {
-	stmts, err := gormschema.New("postgres").Load(models()...)
+	stmts, err := gormschema.New("postgres").Load(schema()...)
 	if err != nil {
 		return fmt.Errorf("load gorm schema: %w", err)
 	}

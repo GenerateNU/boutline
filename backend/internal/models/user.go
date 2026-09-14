@@ -1,8 +1,4 @@
-// Package user owns the account record: the model, its persistence, and the
-// rules for creating one. It has no handler or routes yet — the HTTP surface
-// arrives with the auth feature, so the five-file template is collapsed the way
-// internal/features/health collapses it.
-package user
+package models
 
 import (
 	"time"
@@ -22,4 +18,13 @@ type User struct {
 	Certification pq.StringArray `gorm:"type:text[];not null;default:'{}'"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+}
+
+type CreateUserRequest struct {
+	Email     string `validate:"required,email" json:"email"`
+	Password  string `validate:"required,min=8,max=72" json:"password"`
+	FirstName string `validate:"required,min=1" json:"first_name"`
+	LastName  string `validate:"required,min=1" json:"last_name"`
+	// Empty for a sign-up; the seed and later profile edits are what fill it.
+	Certification []string `validate:"omitempty" json:"certification,omitempty"`
 }

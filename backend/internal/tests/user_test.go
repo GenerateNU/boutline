@@ -1,4 +1,4 @@
-package test
+package tests
 
 import (
 	"context"
@@ -7,7 +7,9 @@ import (
 	"testing"
 
 	"boutline/internal/errs"
-	"boutline/internal/features/user"
+	"boutline/internal/models"
+	"boutline/internal/services"
+	"boutline/internal/tests/mocks"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -15,8 +17,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func validParams() user.UserCreateParams {
-	return user.UserCreateParams{
+func validUserRequest() models.CreateUserRequest {
+	return models.CreateUserRequest{
 		Email:     "Ada@Boutline.TEST",
 		Password:  "password123",
 		FirstName: "Ada",
@@ -29,44 +31,44 @@ func TestCreateUser(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		seed    []user.User
-		mutate  func(*user.UserCreateParams)
+		seed    []models.User
+		mutate  func(*models.CreateUserRequest)
 		wantErr error
 	}{
 		{
 			name:   "valid account",
-			mutate: func(*user.UserCreateParams) {},
+			mutate: func(*models.CreateUserRequest) {},
 		},
 		{
 			name:    "duplicate email after normalization",
-			seed:    []user.User{{Email: "ada@boutline.test"}},
-			mutate:  func(*user.UserCreateParams) {},
+			seed:    []models.User{{Email: "ada@boutline.test"}},
+			mutate:  func(*models.CreateUserRequest) {},
 			wantErr: errs.ErrDuplicate,
 		},
 		{
 			name:    "email without an @",
-			mutate:  func(p *user.UserCreateParams) { p.Email = "not-an-email" },
+			mutate:  func(r *models.CreateUserRequest) { r.Email = "not-an-email" },
 			wantErr: errs.ErrInvalidInput,
 		},
 		{
 			name:    "blank email",
-			mutate:  func(p *user.UserCreateParams) { p.Email = "   " },
+			mutate:  func(r *models.CreateUserRequest) { r.Email = "   " },
 			wantErr: errs.ErrInvalidInput,
 		},
 		{
 			name:    "blank first name",
-			mutate:  func(p *user.UserCreateParams) { p.FirstName = "  " },
+			mutate:  func(r *models.CreateUserRequest) { r.FirstName = "  " },
 			wantErr: errs.ErrInvalidInput,
 		},
 		{
 			name:    "password below the minimum",
-			mutate:  func(p *user.UserCreateParams) { p.Password = "short" },
+			mutate:  func(r *models.CreateUserRequest) { r.Password = "short" },
 			wantErr: errs.ErrInvalidInput,
 		},
 		{
 			name: "password past bcrypt's 72-byte ceiling",
-			mutate: func(p *user.UserCreateParams) {
-				p.Password = strings.Repeat("a", user.UserMaxPasswordLength+1)
+			mutate: func(r *models.CreateUserRequest) {
+				r.Password = strings.Repeat("a", services.UserMaxPasswordLength+1)
 			},
 			wantErr: errs.ErrInvalidInput,
 		},
@@ -76,11 +78,11 @@ func TestCreateUser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			params := validParams()
-			tt.mutate(&params)
+			req := validUserRequest()
+			tt.mutate(&req)
 
-			svc := user.NewUserService(NewFakeUserRepository(tt.seed...))
-			got, err := svc.CreateUser(context.Background(), params)
+			svc := services.NewUserService(mocks.NewMockUserRepository(tt.seed...))
+			got, err := svc.CreateUser(context.Background(), req)
 
 			if tt.wantErr != nil {
 				require.Error(t, err)
@@ -99,8 +101,8 @@ func TestCreateUser(t *testing.T) {
 func TestCreateUserHashesPassword(t *testing.T) {
 	t.Parallel()
 
-	svc := user.NewUserService(NewFakeUserRepository())
-	got, err := svc.CreateUser(context.Background(), validParams())
+	svc := services.NewUserService(mocks.NewMockUserRepository())
+	got, err := svc.CreateUser(context.Background(), validUserRequest())
 	require.NoError(t, err)
 
 	assert.NotEqual(t, "password123", got.Password, "the plaintext must not be stored")
@@ -109,7 +111,7 @@ func TestCreateUserHashesPassword(t *testing.T) {
 
 	cost, err := bcrypt.Cost([]byte(got.Password))
 	require.NoError(t, err)
-	assert.Equal(t, user.UserBcryptCost, cost)
+	assert.Equal(t, services.UserBcryptCost, cost)
 }
 
 // The column is NOT NULL, and a nil pq.StringArray writes SQL NULL rather than
@@ -117,18 +119,18 @@ func TestCreateUserHashesPassword(t *testing.T) {
 func TestCreateUserDefaultsCertificationToEmpty(t *testing.T) {
 	t.Parallel()
 
-	svc := user.NewUserService(NewFakeUserRepository())
+	svc := services.NewUserService(mocks.NewMockUserRepository())
 
-	got, err := svc.CreateUser(context.Background(), validParams())
+	got, err := svc.CreateUser(context.Background(), validUserRequest())
 	require.NoError(t, err)
 	assert.NotNil(t, got.Certification)
 	assert.Empty(t, got.Certification)
 
-	params := validParams()
-	params.Email = "grace@boutline.test"
-	params.Certification = []string{"CPR", "First Aid"}
+	req := validUserRequest()
+	req.Email = "grace@boutline.test"
+	req.Certification = []string{"CPR", "First Aid"}
 
-	withCerts, err := svc.CreateUser(context.Background(), params)
+	withCerts, err := svc.CreateUser(context.Background(), req)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"CPR", "First Aid"}, []string(withCerts.Certification))
 }
@@ -136,8 +138,8 @@ func TestCreateUserDefaultsCertificationToEmpty(t *testing.T) {
 func TestGetUserByEmail(t *testing.T) {
 	t.Parallel()
 
-	svc := user.NewUserService(NewFakeUserRepository())
-	created, err := svc.CreateUser(context.Background(), validParams())
+	svc := services.NewUserService(mocks.NewMockUserRepository())
+	created, err := svc.CreateUser(context.Background(), validUserRequest())
 	require.NoError(t, err)
 
 	t.Run("lookup normalizes the address", func(t *testing.T) {
