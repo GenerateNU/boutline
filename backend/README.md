@@ -70,6 +70,36 @@ Adding or changing a model goes:
    not what you meant
 4. `make dev-up`
 
+## Seeding
+
+```sh
+make seed   # insert the development fixtures
+```
+
+`cmd/seed` runs a list of seeders in order, one file per fixture. Each is
+idempotent — a record that already exists is left alone — so the command is safe
+to re-run. It refuses to run unless `APP_ENVIRONMENT` is `dev`, because some
+fixtures embed credentials committed to this repository.
+
+Add a fixture by writing a `Seeder` in its own file under `cmd/seed` and adding
+it to `seeders()`; put it after anything it depends on.
+
+It runs inside the compose network rather than on the host: the database port is
+deliberately not published, so a host-side run would connect to whatever
+Postgres is listening on `localhost:5432` instead of the container.
+
+Current fixtures:
+
+| Fixture | Contents                                                              |
+| ------- | --------------------------------------------------------------------- |
+| `users` | Three accounts, all with password `password123`                       |
+
+| Email                 | Certification      |
+| --------------------- | ------------------ |
+| `ada@boutline.test`   | `{CPR, Lifeguard}` |
+| `grace@boutline.test` | `{First Aid}`      |
+| `alan@boutline.test`  | `{}`               |
+
 `make migrate-new` needs the Atlas CLI (`brew install ariga/tap/atlas`) and
 Docker: Atlas starts a throwaway Postgres to normalise the schema before
 diffing, configured as `dev` in `atlas.hcl`. Migrations are committed, and
@@ -111,6 +141,7 @@ below `main` reads the environment directly.
 ```
 cmd/main.go                  config load, db connect, signals, graceful shutdown
 cmd/atlasloader/             prints the gorm schema for Atlas to diff against
+cmd/seed/                    development fixtures, one file per seeder, dev only
 migrations/                  versioned SQL, generated, committed
 atlas.hcl                    how Atlas finds the models and the migrations
 internal/config/             one file per config group, validated on load

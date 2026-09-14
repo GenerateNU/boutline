@@ -49,6 +49,13 @@ migrate-apply:
 migrate-status:
 	$(COMPOSE) run --rm migrate 'atlas migrate status --dir file:///migrations --url "$$ATLAS_URL"'
 
+# Insert the development fixtures. Idempotent, and refuses to run unless
+# APP_ENVIRONMENT is dev, since some fixtures embed public credentials. Runs inside the
+# compose network because the database port is not published to the host —
+# running it here would hit whatever Postgres is on localhost:5432 instead.
+seed:
+	$(COMPOSE) run --rm --build seed
+
 # Build the image from ./Dockerfile and run it against a Postgres container.
 dev-up:
 	$(COMPOSE) up --build --detach
@@ -79,5 +86,5 @@ tidy:
 	go mod tidy
 
 .PHONY: build run clean test test-cover test-pkg test-unit test-integration \
-	migrate-new migrate-apply migrate-status \
+	migrate-new migrate-apply migrate-status seed \
 	dev-up dev-down dev-reset dev-logs dev-psql vet lint format tidy

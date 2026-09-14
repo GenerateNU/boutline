@@ -12,9 +12,17 @@ import (
 	"os"
 
 	"ariga.io/atlas-provider-gorm/gormschema"
-	// Import your feature models here so Atlas can see them.
-	// _ "boutline/internal/features/example"
+
+	"boutline/internal/features/user"
 )
+
+// Every feature model this service owns. Load only sees what is listed here, so
+// a model left off this slice is a table that never gets migrated.
+func models() []any {
+	return []any{
+		&user.User{},
+	}
+}
 
 func main() {
 	if err := run(); err != nil {
@@ -24,7 +32,7 @@ func main() {
 }
 
 func run() error {
-	stmts, err := gormschema.New("postgres").Load()
+	stmts, err := gormschema.New("postgres").Load(models()...)
 	if err != nil {
 		return fmt.Errorf("load gorm schema: %w", err)
 	}
