@@ -15,9 +15,32 @@ import (
 // interface in a unit test, use the gorm implementation below everywhere else.
 type ExampleRepository interface {
 	CreateExample(ctx context.Context, example *Example) error
-	FindExampleByID(ctx context.Context, id uuid.UUID) (*Example, error)
+	GetExampleByID(ctx context.Context, id uuid.UUID) (*Example, error)
 	ListExamples(ctx context.Context, filter ExampleListFilter) ([]Example, int64, error)
+	UpdateExampleByID(ctx context.Context, id uuid.UUID, update ExampleUpdate) error
 	DeleteExample(ctx context.Context, id uuid.UUID) error
+}
+
+// ExampleUpdate is a patch: a nil field is left alone. The service rejects an
+// empty one, so the repository can assume there is something to write.
+type ExampleUpdate struct {
+	Name   *string
+	Status *ExampleStatus
+}
+
+// Sent to gorm as a map rather than a struct: Updates on a struct skips zero
+// values, so an empty string would silently not be written.
+func (u ExampleUpdate) columns() map[string]any {
+	columns := make(map[string]any, 2)
+
+	if u.Name != nil {
+		columns["name"] = *u.Name
+	}
+	if u.Status != nil {
+		columns["status"] = *u.Status
+	}
+
+	return columns
 }
 
 // ExampleListFilter is already validated and clamped by the service; the
@@ -39,20 +62,18 @@ func NewExampleRepository(db *gorm.DB) ExampleRepository {
 func (r *exampleRepository) CreateExample(ctx context.Context, example *Example) error {
 	if err := r.db.WithContext(ctx).Create(example).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return fmt.Errorf("insert example: %w", errs.ErrDuplicate)
+			return fmt.Errorf("create example: %w", errs.ErrDuplicate)
 		}
-		return fmt.Errorf("insert example: %w", err)
+		return fmt.Errorf("create example: %w", err)
 	}
 
 	return nil
 }
 
-func (r *exampleRepository) FindExampleByID(ctx context.Context, id uuid.UUID) (*Example, error) {
+func (r *exampleRepository) GetExampleByID(ctx context.Context, id uuid.UUID) (*Example, error) {
 	var example Example
 
-	err := r.db.WithContext(ctx).
-		Select("id", "name", "status", "created_at", "updated_at").
-		First(&example, "id = ?", id).Error
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&example).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("select example %s: %w", id, errs.ErrNotFound)
@@ -63,14 +84,34 @@ func (r *exampleRepository) FindExampleByID(ctx context.Context, id uuid.UUID) (
 	return &example, nil
 }
 
+// Model is required here: a map destination tells gorm nothing about the table,
+// and it keeps the patch from being read as a set of primary-key conditions.
+func (r *exampleRepository) UpdateExampleByID(ctx context.Context, id uuid.UUID, update ExampleUpdate) error {
+	result := r.db.WithContext(ctx).Model(&Example{}).Where("id = ?", id).Updates(update.columns())
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
+			return fmt.Errorf("update example %s: %w", id, errs.ErrDuplicate)
+		}
+		return fmt.Errorf("update example %s: %w", id, result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("update example %s: %w", id, errs.ErrNotFound)
+	}
+
+	return nil
+}
+
 func (r *exampleRepository) ListExamples(ctx context.Context, filter ExampleListFilter) ([]Example, int64, error) {
+	// Model is required: Count writes into an int64, which tells gorm nothing
+	// about which table to count.
 	query := r.db.WithContext(ctx).Model(&Example{})
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)
 	}
 
-	// Counted before the page is fetched so the caller can report a total
-	// without a second round trip through the same filter.
+	// Counted before the page is fetched so the caller gets a total without a
+	// second round trip through the same filter.
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count examples: %w", err)

@@ -11,16 +11,16 @@ import (
 const exampleBasePath = "/api/v1/examples"
 
 // RegisterExampleRoutes builds this feature's dependency chain and mounts it.
-// It is the only place that knows how the four layers fit together; SetUpRoutes
-// just calls it once with the params CreateApp built.
+// It is the only place that knows how the layers fit together; SetUpRoutes just
+// calls it once with the params CreateApp built.
 func RegisterExampleRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterExampleHandler(api, NewExampleHandler(NewExampleService(NewExampleRepository(params.DB))))
+	RegisterExampleService(api, NewExampleService(NewExampleRepository(params.DB)))
 }
 
-// RegisterExampleHandler mounts an already-built handler, which is how the unit
+// RegisterExampleService mounts an already-built service, which is how the unit
 // tests in ./test register one backed by a fake repository instead of a
 // database.
-func RegisterExampleHandler(api huma.API, handler *ExampleHandler) {
+func RegisterExampleService(api huma.API, service ExampleService) {
 	huma.Register(api, huma.Operation{
 		OperationID:   "createExample",
 		Method:        http.MethodPost,
@@ -28,7 +28,7 @@ func RegisterExampleHandler(api huma.API, handler *ExampleHandler) {
 		Summary:       "Create an example",
 		Tags:          []string{"Examples"},
 		DefaultStatus: http.StatusCreated,
-	}, handler.CreateExample)
+	}, service.CreateExample)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listExamples",
@@ -36,15 +36,24 @@ func RegisterExampleHandler(api huma.API, handler *ExampleHandler) {
 		Path:        exampleBasePath,
 		Summary:     "List examples",
 		Tags:        []string{"Examples"},
-	}, handler.ListExamples)
+	}, service.ListExamples)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "findExampleByID",
+		OperationID: "getExampleByID",
 		Method:      http.MethodGet,
 		Path:        exampleBasePath + "/{id}",
-		Summary:     "Find an example by ID",
+		Summary:     "Get an example by ID",
 		Tags:        []string{"Examples"},
-	}, handler.FindExampleByID)
+	}, service.GetExampleByID)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "updateExampleByID",
+		Method:      http.MethodPatch,
+		Path:        exampleBasePath + "/{id}",
+		Summary:     "Update an example",
+		Description: "Fields left out of the body are left as they are.",
+		Tags:        []string{"Examples"},
+	}, service.UpdateExampleByID)
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "deleteExample",
@@ -53,5 +62,5 @@ func RegisterExampleHandler(api huma.API, handler *ExampleHandler) {
 		Summary:       "Delete an example",
 		Tags:          []string{"Examples"},
 		DefaultStatus: http.StatusNoContent,
-	}, handler.DeleteExample)
+	}, service.DeleteExample)
 }

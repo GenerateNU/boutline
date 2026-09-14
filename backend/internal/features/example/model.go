@@ -3,13 +3,13 @@
 //
 //	model.go       the gorm model and its domain types — no HTTP, no JSON
 //	repository.go  queries only, gorm errors translated to errs sentinels
-//	service.go     business logic, the only layer that decides anything
-//	handler.go     Huma input/output types and the transport mapping
-//	routes.go      builds repository -> service -> handler and registers routes
+//	types.go       the Huma request and response types — the API contract
+//	service.go     takes those types, applies the rules, returns the responses
+//	routes.go      builds repository -> service and registers the operations
 //	test/          this feature's unit tests and the fakes they run against
 //
-// Dependencies point one way: routes -> handler -> service -> repository.
-// Nothing below handler.go knows it is serving HTTP.
+// Dependencies point one way: routes -> service -> repository. The repository
+// is the only layer that does not know it is serving HTTP.
 //
 // Every exported name starts with the feature's name. Huma keys its schema
 // registry by the bare Go type name, so two features that both declared a

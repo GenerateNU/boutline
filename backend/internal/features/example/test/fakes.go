@@ -54,7 +54,7 @@ func (f *FakeExampleRepository) CreateExample(_ context.Context, toCreate *examp
 	return nil
 }
 
-func (f *FakeExampleRepository) FindExampleByID(_ context.Context, id uuid.UUID) (*example.Example, error) {
+func (f *FakeExampleRepository) GetExampleByID(_ context.Context, id uuid.UUID) (*example.Example, error) {
 	if f.Err != nil {
 		return nil, f.Err
 	}
@@ -99,6 +99,39 @@ func (f *FakeExampleRepository) ListExamples(
 	}
 
 	return matched, total, nil
+}
+
+func (f *FakeExampleRepository) UpdateExampleByID(
+	_ context.Context,
+	id uuid.UUID,
+	update example.ExampleUpdate,
+) error {
+	if f.Err != nil {
+		return f.Err
+	}
+
+	stored, ok := f.Examples[id]
+	if !ok {
+		return fmt.Errorf("update example %s: %w", id, errs.ErrNotFound)
+	}
+
+	if update.Name != nil {
+		for otherID, existing := range f.Examples {
+			if otherID != id && existing.Name == *update.Name {
+				return fmt.Errorf("update example %s: %w", id, errs.ErrDuplicate)
+			}
+		}
+		stored.Name = *update.Name
+	}
+
+	if update.Status != nil {
+		stored.Status = *update.Status
+	}
+
+	stored.UpdatedAt = time.Now()
+	f.Examples[id] = stored
+
+	return nil
 }
 
 func (f *FakeExampleRepository) DeleteExample(_ context.Context, id uuid.UUID) error {

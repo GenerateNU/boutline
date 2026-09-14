@@ -133,14 +133,14 @@ A feature is a folder under `internal/features` holding exactly five files:
 ```
 model.go       the gorm model and its domain types — no HTTP, no JSON
 repository.go  queries only, gorm errors translated to errs sentinels
-service.go     business logic, the only layer that decides anything
-handler.go     Huma input/output types and the transport mapping
-routes.go      builds repository -> service -> handler, registers the operations
+types.go       the Huma request and response types — the API contract
+service.go     takes those types, applies the rules, returns the responses
+routes.go      builds repository -> service, registers the operations
 test/          this feature's unit tests and the fakes they run against
 ```
 
-Dependencies point one way: `routes -> handler -> service -> repository`, and
-nothing below `handler.go` knows it is serving HTTP. `internal/features/example`
+Dependencies point one way: `routes -> service -> repository`, and the
+repository is the only layer that does not know it is serving HTTP. `internal/features/example`
 is a working copy of that template — read it before starting a new feature, and
 copy it rather than inventing a layout. Register the new feature with one call
 in `internal/server/routers/routers.go`.
@@ -150,7 +150,7 @@ just a handler and its routes, since there is nothing to store and nothing to
 decide.
 
 Huma validates the request against the schema it builds from the struct tags in
-`handler.go`, so a bad body or query never reaches the handler. Service errors
+`types.go`, so a bad body or query never reaches the service. Service errors
 come back as `errs` sentinels and `errs.HumaError` is the single place that
 turns them into status codes.
 
@@ -187,7 +187,7 @@ or Atlas will never generate a migration for it. See Migrations.
 
 `internal/features/example/test` is the template for the first row: `fakes.go`
 holds the in-memory `FakeExampleRepository`, `service_test.go` covers the rules, and
-`handler_test.go` drives the registered operations through `humatest` for real
+`routes_test.go` drives the registered operations through `humatest` for real
 status codes and JSON with no database and no Fiber in the way. A feature test
 imports its own package and nothing else from the server.
 

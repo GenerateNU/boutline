@@ -13,15 +13,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The handler is exercised over the real service and a fake repository: the
-// mapping, the validation Huma derives from the struct tags, and the status
-// codes errs.HumaError picks are all only observable end to end, and none of
-// them needs a database.
+// The registered operations are exercised over a fake repository: the schema
+// validation Huma derives from the struct tags only runs on a real request, so
+// these are the cases a direct call to the service cannot reach. No database is
+// involved.
 func newTestAPI(t *testing.T, seed ...example.Example) humatest.TestAPI {
 	t.Helper()
 
 	_, api := humatest.New(t)
-	example.RegisterExampleHandler(api, example.NewExampleHandler(example.NewExampleService(NewFakeExampleRepository(seed...))))
+	example.RegisterExampleService(api, example.NewExampleService(NewFakeExampleRepository(seed...)))
 
 	return api
 }
@@ -88,7 +88,7 @@ func TestCreateEndpoint(t *testing.T) {
 	}
 }
 
-func TestFindByIDEndpoint(t *testing.T) {
+func TestGetByIDEndpoint(t *testing.T) {
 	t.Parallel()
 
 	stored := seeded("stored", example.ExampleStatusActive)
@@ -159,4 +159,60 @@ func TestDeleteEndpoint(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, api.Get(path).Code)
 		assert.Equal(t, http.StatusNotFound, api.Delete(path).Code)
 	})
+}
+
+func TestUpdateEndpoint(t *testing.T) {
+	t.Parallel()
+
+	stored := seeded("before", example.ExampleStatusActive)
+
+	tests := []struct {
+		name       string
+		path       string
+		body       map[string]any
+		wantStatus int
+		wantFields map[string]any
+	}{
+		{
+			name:       "patches only the fields present in the body",
+			path:       stored.ID.String(),
+			body:       map[string]any{"status": "archived"},
+			wantStatus: http.StatusOK,
+			wantFields: map[string]any{"name": "before", "status": "archived"},
+		},
+		{
+			name:       "rejects a status outside the enum before the service runs",
+			path:       stored.ID.String(),
+			body:       map[string]any{"status": "nope"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "rejects an empty patch",
+			path:       stored.ID.String(),
+			body:       map[string]any{},
+			wantStatus: http.StatusBadRequest,
+			wantFields: map[string]any{"detail": "provide at least one field to update"},
+		},
+		{
+			name:       "reports an unknown id as not found",
+			path:       uuid.New().String(),
+			body:       map[string]any{"name": "after"},
+			wantStatus: http.StatusNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := newTestAPI(t, stored).Patch("/api/v1/examples/"+tt.path, tt.body)
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+
+			body := decodeBody(t, resp.Body.Bytes())
+			for field, want := range tt.wantFields {
+				assert.Equal(t, want, body[field])
+			}
+		})
+	}
 }
