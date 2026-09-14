@@ -432,7 +432,7 @@ curl -X POST localhost:8000/api/v1/examples \
 ## Naming
 
 **Every exported name in a feature starts with the feature's name** —
-`ExampleHandler`, `ExampleResponse`, `NewExampleService`, `ExampleMaxPageSize`.
+`ExampleResponse`, `NewExampleService`, `ExampleListInput`, `ExampleMaxPageSize`.
 This is not style. Huma keys its schema registry by the bare Go type name, so a
 second feature declaring a `Response` panics the app at registration:
 

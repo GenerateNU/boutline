@@ -169,7 +169,7 @@ one shape (`{"title","status","detail"}`). The exception is the catch-all 404 fo
 an unrouted path, which Fiber still answers in `routers.go`.
 
 Every exported name in a feature starts with the feature's own name —
-`ExampleHandler`, `ExampleResponse`, `NewExampleService`, `HealthResponse`. Huma
+`ExampleResponse`, `NewExampleService`, `ExampleListInput`, `HealthResponse`. Huma
 keys its schema registry by the bare Go type name, so two features that both
 declared a `Response` would panic at registration. Keep the prefix when you copy
 the template.

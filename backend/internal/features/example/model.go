@@ -31,7 +31,7 @@ const (
 )
 
 // Example is the persistence shape and carries no json tags on purpose: the
-// wire format belongs to handler.go, so a column rename is not an API break.
+// wire format belongs to types.go, so a column rename is not an API break.
 type Example struct {
 	ID        uuid.UUID     `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	Name      string        `gorm:"type:text;not null;uniqueIndex:idx_examples_name,where:deleted_at IS NULL"`
