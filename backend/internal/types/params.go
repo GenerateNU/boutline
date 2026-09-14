@@ -2,6 +2,7 @@ package types //nolint:revive
 
 import (
 	"boutline/internal/config"
+	"boutline/internal/repository"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/go-playground/validator/v10"
@@ -17,6 +18,7 @@ type RouteParams struct {
 }
 
 type ServiceParams struct {
-	Config *config.Configuration
-	DB     *gorm.DB
+	Config     *config.Configuration
+	DB         *gorm.DB
+	Repository *repository.Repository
 }

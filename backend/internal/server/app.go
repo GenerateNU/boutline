@@ -5,6 +5,7 @@ import (
 
 	"boutline/internal/config"
 	"boutline/internal/errs"
+	"boutline/internal/repository"
 	"boutline/internal/server/middlewares"
 	"boutline/internal/server/routers"
 	"boutline/internal/types"
@@ -36,8 +37,9 @@ func CreateApp(cfg *config.Configuration, db *gorm.DB) *fiber.App {
 		API:       api,
 		Validator: validators.NewValidator(),
 		ServiceParams: &types.ServiceParams{
-			Config: cfg,
-			DB:     db,
+			Config:     cfg,
+			DB:         db,
+			Repository: repository.NewRepository(db),
 		},
 	})
 
