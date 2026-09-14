@@ -45,7 +45,7 @@ make format            # gofmt -s -w .
 One package at a time, optionally one test, with verbose output:
 
 ```sh
-make test-pkg PKG=./internal/features/example/test
+make test-pkg PKG=./internal/tests RUN=TestCreateUser
 make test-pkg PKG=./internal/config RUN=TestLoadAppConfig
 ```
 
@@ -115,44 +115,47 @@ migrations/                  versioned SQL, generated, committed
 atlas.hcl                    how Atlas finds the models and the migrations
 internal/config/             one file per config group, validated on load
 internal/database/           the gorm/postgres pool
-internal/features/           one folder per feature, five files each
+internal/models/             gorm models and their request types
+internal/repository/         queries only, one file per domain + repository.go
+internal/services/           business logic
+internal/controllers/        Huma input/output types and the transport mapping
 internal/server/app.go       builds the Fiber app, the Huma API, and the wiring
 internal/server/middlewares/ cross-cutting concerns
-internal/server/routers/     mounts each feature with one call
+internal/server/routers/     one file per feature, mounted from routers.go
 internal/validators/         the shared validator and its custom tags
 internal/errs/               the error vocabulary, Fiber's ErrorHandler, HumaError
 internal/types/              RouteParams / ServiceParams
-internal/tests/              integration and end-to-end tests
+internal/tests/              unit, integration, and end-to-end tests
+internal/tests/mocks/        in-memory stand-ins for the repository interfaces
 internal/tests/testkit/      request builder and assertions for those tests
 ```
 
 ## Features
 
-A feature is a folder under `internal/features` holding exactly five files:
+Layers are packages, not folders per feature. A feature named `thing` is one
+file in each layer it needs:
 
 ```
-model.go       the gorm model and its domain types — no HTTP, no JSON
-repository.go  queries only, gorm errors translated to errs sentinels
-service.go     business logic, the only layer that decides anything
-handler.go     Huma input/output types and the transport mapping
-routes.go      builds repository -> service -> handler, registers the operations
-test/          this feature's unit tests and the fakes they run against
+models/thing.go            the gorm model and its request types — no HTTP
+repository/thing.go        queries only, gorm errors translated to errs sentinels
+services/thing.go          business logic, the only layer that decides anything
+controllers/thing.go       Huma input/output types and the transport mapping
+server/routers/thing.go    builds repository -> service -> controller, registers it
+tests/thing_test.go        that feature's tests
 ```
 
-Dependencies point one way: `routes -> handler -> service -> repository`, and
-nothing below `handler.go` knows it is serving HTTP. `internal/features/example`
-is a working copy of that template — read it before starting a new feature, and
-copy it rather than inventing a layout. Register the new feature with one call
-in `internal/server/routers/routers.go`.
+Dependencies point one way: `routers -> controllers -> services -> repository`,
+and nothing below `controllers` knows it is serving HTTP. Create a layer's file
+when the first real code needs it — `health` has only a controller and a router,
+since there is nothing to store and nothing to decide.
 
-A feature with no state collapses the template — `internal/features/health` is
-just a handler and its routes, since there is nothing to store and nothing to
-decide.
+Add the repository to `repository.Repository` so it is constructed once at
+startup, then register the feature with one call in `server/routers/routers.go`.
 
 Huma validates the request against the schema it builds from the struct tags in
-`handler.go`, so a bad body or query never reaches the handler. Service errors
-come back as `errs` sentinels and `errs.HumaError` is the single place that
-turns them into status codes.
+the controller, so a bad body or query never reaches it. Service errors come
+back as `errs` sentinels and `errs.HumaError` is the single place that turns
+them into status codes.
 
 The chain a service builds on the way up (`create example: insert example: ...`)
 is for the log only — a client reads the sentinel's own text, and an
@@ -168,28 +171,29 @@ Every route, healthcheck included, is a Huma operation, so error responses share
 one shape (`{"title","status","detail"}`). The exception is the catch-all 404 for
 an unrouted path, which Fiber still answers in `routers.go`.
 
-Every exported name in a feature starts with the feature's own name —
-`ExampleHandler`, `ExampleResponse`, `NewExampleService`, `HealthResponse`. Huma
-keys its schema registry by the bare Go type name, so two features that both
-declared a `Response` would panic at registration. Keep the prefix when you copy
-the template.
+Controller types are prefixed with the feature's own name — `HealthResponse`,
+`UserResponse`, not a bare `Response`. Huma keys its schema registry by the bare
+Go type name, so two features that both declared a `Response` would panic at
+registration. Layers are separate packages, so this only binds the types Huma
+sees; `services.NewUserService` does not need the stutter.
 
-A new feature's model also has to be registered in `cmd/atlasloader/main.go`,
-or Atlas will never generate a migration for it. See Migrations.
+A new model also has to be registered in `cmd/atlasloader/main.go`, or Atlas
+will never generate a migration for it. See Migrations.
 
 ## Testing
 
-| Kind                     | Lives in                          | Runs against                                     |
-| ------------------------ | --------------------------------- | ------------------------------------------------ |
-| Feature unit tests       | `internal/features/<name>/test/`  | that feature's layers over a fake repository      |
-| Other package unit tests | beside the code they cover        | that package (`internal/config/app_test.go`)      |
-| Integration and e2e      | `internal/tests/`                 | the whole app through the testkit                 |
+| Kind                     | Lives in                        | Runs against                                 |
+| ------------------------ | ------------------------------- | -------------------------------------------- |
+| Feature unit tests       | `internal/tests/<name>_test.go` | the service over `internal/tests/mocks`      |
+| Package-local unit tests | beside the code they cover      | that package (`internal/config/app_test.go`) |
+| Integration and e2e      | `internal/tests/`               | the whole app through the testkit            |
 
-`internal/features/example/test` is the template for the first row: `fakes.go`
-holds the in-memory `FakeExampleRepository`, `service_test.go` covers the rules, and
-`handler_test.go` drives the registered operations through `humatest` for real
-status codes and JSON with no database and no Fiber in the way. A feature test
-imports its own package and nothing else from the server.
+`internal/tests/user_test.go` is the template for the first row: it drives
+`services.UserService` over `mocks.NewMockUserRepository`, which enforces the
+same unique-email and not-found semantics Postgres would, so the service's error
+paths are reachable with no database. `internal/tests/health_test.go` shows the
+other half — registering a controller through `humatest` for real status codes
+and JSON with no database and no Fiber in the way.
 
 Integration tests live in `internal/tests` and drive the real app through the
 testkit builder:
