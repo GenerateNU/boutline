@@ -1,7 +1,4 @@
-// Package test holds the health feature's unit tests. The healthcheck reports
-// the configuration the app was built with, so the test registers the operation
-// over a fixed configuration and reads the response back.
-package test
+package tests
 
 import (
 	"encoding/json"
@@ -9,13 +6,16 @@ import (
 	"testing"
 
 	"boutline/internal/config"
-	"boutline/internal/features/health"
+	"boutline/internal/server/routers"
+	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// The healthcheck reports the configuration the app was built with, so the test
+// registers the operation over a fixed configuration and reads the response back.
 func TestHealthcheckEndpoint(t *testing.T) {
 	t.Parallel()
 
@@ -59,7 +59,7 @@ func TestHealthcheckEndpoint(t *testing.T) {
 			t.Parallel()
 
 			_, api := humatest.New(t)
-			health.RegisterHealthHandler(api, health.NewHealthHandler(tt.cfg))
+			routers.HealthRoutes(api, &types.ServiceParams{Config: tt.cfg})
 
 			resp := api.Get("/healthcheck")
 

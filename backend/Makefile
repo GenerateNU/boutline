@@ -20,14 +20,13 @@ test-cover:
 	go tool cover -func=$(COVERAGE_FILE) | tail -n 1
 
 # Unit tests for one package, optionally one test:
-#   make test-pkg PKG=./internal/features/example/test
+#   make test-pkg PKG=./internal/tests RUN=TestHealthcheckEndpoint
 #   make test-pkg PKG=./internal/config RUN=TestLoadAppConfig
 test-pkg:
-	@test -n "$(PKG)" || { echo "PKG is required, e.g. make test-pkg PKG=./internal/features/example/test"; exit 1; }
+	@test -n "$(PKG)" || { echo "PKG is required, e.g. make test-pkg PKG=./internal/config"; exit 1; }
 	go test $(PKG) -race -v $(if $(RUN),-run '$(RUN)',)
 
-# Everything except internal/tests: the feature test folders and the unit tests
-# that sit beside their package.
+# Everything except internal/tests: the unit tests that sit beside their package.
 test-unit:
 	go test $$(go list ./... | grep -v '/internal/tests') -race
 

@@ -63,8 +63,9 @@ make migrate-apply                     # apply out of band; dev-up already does
 
 Adding or changing a model goes:
 
-1. edit the model, and register it in `cmd/atlasloader/main.go` if the feature
-   is new — a model Atlas cannot see is a table that never gets migrated
+1. edit the model, and add it to the `Load` call in `cmd/atlasloader/main.go` if
+   the feature is new — a model Atlas cannot see is a table that never gets
+   migrated
 2. `make migrate-new NAME=what_changed`
 3. read the generated SQL; it is an ordinary file, so correct it if the diff is
    not what you meant
@@ -130,6 +131,11 @@ internal/tests/mocks/        in-memory stand-ins for the repository interfaces
 internal/tests/testkit/      request builder and assertions for those tests
 ```
 
+A layer is a package, created when the first real code needs it rather than as
+an empty placeholder. `health` is the only feature so far and it stores nothing,
+so `models`, `repository`, `services`, and `tests/mocks` are where that code
+will go rather than directories in the tree today.
+
 ## Features
 
 Layers are packages, not folders per feature. A feature named `thing` is one
@@ -149,8 +155,11 @@ and nothing below `controllers` knows it is serving HTTP. Create a layer's file
 when the first real code needs it — `health` has only a controller and a router,
 since there is nothing to store and nothing to decide.
 
-Add the repository to `repository.Repository` so it is constructed once at
-startup, then register the feature with one call in `server/routers/routers.go`.
+Repositories hang off a single `repository.Repository`, built once in
+`server/app.go` and carried down on `types.ServiceParams` so a router can
+construct its service from it. `ServiceParams` currently carries the raw
+`*gorm.DB`; the `Repository` field lands with the first repository. Either way
+the feature is registered with one call in `server/routers/routers.go`.
 
 Huma validates the request against the schema it builds from the struct tags in
 the controller, so a bad body or query never reaches it. Service errors come
@@ -174,29 +183,31 @@ an unrouted path, which Fiber still answers in `routers.go`.
 Controller types are prefixed with the feature's own name — `HealthResponse`,
 `UserResponse`, not a bare `Response`. Huma keys its schema registry by the bare
 Go type name, so two features that both declared a `Response` would panic at
-registration. Layers are separate packages, so this only binds the types Huma
-sees; `services.NewUserService` does not need the stutter.
+registration. That only binds the types Huma sees: `services.NewUserService`
+does not need the stutter.
 
-A new model also has to be registered in `cmd/atlasloader/main.go`, or Atlas
-will never generate a migration for it. See Migrations.
+A new model also has to be added to the `Load` call in
+`cmd/atlasloader/main.go`, or Atlas will never generate a migration for it. See
+Migrations.
 
 ## Testing
 
-| Kind                     | Lives in                        | Runs against                                 |
-| ------------------------ | ------------------------------- | -------------------------------------------- |
-| Feature unit tests       | `internal/tests/<name>_test.go` | the service over `internal/tests/mocks`      |
-| Package-local unit tests | beside the code they cover      | that package (`internal/config/app_test.go`) |
-| Integration and e2e      | `internal/tests/`               | the whole app through the testkit            |
+| Kind                     | Lives in                        | Runs against                                      |
+| ------------------------ | ------------------------------- | ------------------------------------------------- |
+| Feature unit tests       | `internal/tests/<name>_test.go` | one layer — a service over mocks, or `humatest`   |
+| Package-local unit tests | beside the code they cover      | that package (`internal/config/app_test.go`)      |
+| Integration and e2e      | `internal/tests/`               | the whole app through the testkit                 |
 
-`internal/tests/user_test.go` is the template for the first row: it drives
-`services.UserService` over `mocks.NewMockUserRepository`, which enforces the
-same unique-email and not-found semantics Postgres would, so the service's error
-paths are reachable with no database. `internal/tests/health_test.go` shows the
-other half — registering a controller through `humatest` for real status codes
-and JSON with no database and no Fiber in the way.
+`internal/tests/health_test.go` is the template for the first row: it registers
+the healthcheck through `humatest` for real status codes and JSON, with no
+database and no Fiber in the way. A feature with a service tests it the other
+way, over a mock repository from `internal/tests/mocks` that enforces the same
+unique-key and not-found semantics Postgres would, so the error paths are
+reachable without a database.
 
-Integration tests live in `internal/tests` and drive the real app through the
-testkit builder:
+Integration tests live in the same package and drive the real app through the
+testkit builder — `internal/tests/routing_test.go` covers the healthcheck and
+the catch-all 404 this way:
 
 ```go
 testkit.New(t).

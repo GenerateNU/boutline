@@ -2,8 +2,9 @@
 // Atlas runs it as the desired state for `atlas migrate diff`, so the models
 // stay the single source of truth for the schema.
 //
-// Register each new feature's model here — a model Atlas cannot see is a table
-// that never gets migrated.
+// Add each new feature's model to the Load call as a pointer argument
+// (`Load(&models.Example{})`) — a model Atlas cannot see is a table that never
+// gets migrated.
 package main
 
 import (
@@ -12,8 +13,6 @@ import (
 	"os"
 
 	"ariga.io/atlas-provider-gorm/gormschema"
-	// Import your feature models here so Atlas can see them.
-	// _ "boutline/internal/features/example"
 )
 
 func main() {

@@ -1,7 +1,4 @@
-// Package health reports what the running process is. It has no model,
-// repository, or service: there is no state to read and nothing to decide, so
-// the five-file feature template collapses to a handler and its routes.
-package health
+package controllers
 
 import (
 	"context"
@@ -9,6 +6,9 @@ import (
 	"boutline/internal/config"
 )
 
+// Healthcheck reports what the running process is. There is no state to read
+// and nothing to decide, so it is the one feature with no service or repository
+// beneath it.
 type HealthHandler struct {
 	cfg *config.Configuration
 }
