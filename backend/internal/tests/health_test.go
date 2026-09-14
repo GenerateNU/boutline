@@ -1,7 +1,7 @@
-// Package test holds the health feature's unit tests. The healthcheck reports
-// the configuration the app was built with, so the test registers the operation
-// over a fixed configuration and reads the response back.
-package test
+// The healthcheck reports the configuration the app was built with, so the
+// test registers the operation over a fixed configuration and reads the
+// response back.
+package tests
 
 import (
 	"encoding/json"
@@ -9,7 +9,8 @@ import (
 	"testing"
 
 	"boutline/internal/config"
-	"boutline/internal/features/health"
+	"boutline/internal/controllers"
+	"boutline/internal/server/routers"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/stretchr/testify/assert"
@@ -59,7 +60,7 @@ func TestHealthcheckEndpoint(t *testing.T) {
 			t.Parallel()
 
 			_, api := humatest.New(t)
-			health.RegisterHealthHandler(api, health.NewHealthHandler(tt.cfg))
+			routers.RegisterHealthController(api, controllers.NewHealthController(tt.cfg))
 
 			resp := api.Get("/healthcheck")
 

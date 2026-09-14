@@ -29,6 +29,18 @@ services:
       db:
         condition: service_healthy
 
+  # Inserts the development accounts. Behind a profile so it never runs as part
+  # of `dev-up` — reach it with `make seed`.
+  seed:
+    build: .
+    entrypoint: ["/seed"]
+    profiles: ["seed"]
+    environment:
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: postgres:17.11-alpine
     environment:

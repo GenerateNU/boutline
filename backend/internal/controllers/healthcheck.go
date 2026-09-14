@@ -1,7 +1,4 @@
-// Package health reports what the running process is. It has no model,
-// repository, or service: there is no state to read and nothing to decide, so
-// the five-file feature template collapses to a handler and its routes.
-package health
+package controllers
 
 import (
 	"context"
@@ -9,12 +6,12 @@ import (
 	"boutline/internal/config"
 )
 
-type HealthHandler struct {
+type HealthController struct {
 	cfg *config.Configuration
 }
 
-func NewHealthHandler(cfg *config.Configuration) *HealthHandler {
-	return &HealthHandler{cfg: cfg}
+func NewHealthController(cfg *config.Configuration) *HealthController {
+	return &HealthController{cfg: cfg}
 }
 
 type HealthResponse struct {
@@ -28,7 +25,7 @@ type HealthOutput struct {
 	Body HealthResponse
 }
 
-func (h *HealthHandler) CheckHealth(_ context.Context, _ *struct{}) (*HealthOutput, error) {
+func (h *HealthController) CheckHealth(_ context.Context, _ *struct{}) (*HealthOutput, error) {
 	return &HealthOutput{Body: HealthResponse{
 		Status:      "ok",
 		Name:        h.cfg.App.Name,
