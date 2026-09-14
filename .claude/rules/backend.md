@@ -10,16 +10,29 @@ projects. `backend/README.md` has the commands and the current directory map.
 
 ## Layers
 
+Everything below lives under `backend/internal/`:
+
 ```
-config/       loaded and validated once at startup
-repository/   database access
-services/     business logic
-controllers/  HTTP request/response
-validators/   request validation and custom tags
-middlewares/  cross-cutting concerns
-routers/      route registration, one file per feature
-errs/         the shared error vocabulary
+config/             loaded and validated once at startup
+database/           the gorm/postgres pool
+models/             gorm models and their request types — no HTTP, no queries
+repository/         database access, one file per domain + repository.go
+services/           business logic
+controllers/        HTTP request/response (Huma input/output types)
+validators/         request validation and custom tags
+server/app.go       builds the Fiber app, the Huma API, and the wiring
+server/middlewares/ cross-cutting concerns
+server/routers/     route registration, one file per feature + routers.go
+errs/               the shared error vocabulary
+types/              RouteParams / ServiceParams
+tests/              unit, integration, and e2e tests
+tests/mocks/        in-memory stand-ins for the repository interfaces
+tests/testkit/      request builder and assertions
 ```
+
+`repository.Repository` aggregates one field per domain repository and is built
+once in `server/app.go`, then carried down through `types.ServiceParams`. A
+router constructs its own service from it.
 
 Boundaries are one-directional and absolute:
 
@@ -95,8 +108,10 @@ request may be delivered twice.
 
 ## Tests
 
-- Unit tests sit beside the code they cover; integration tests live in
-  `internal/tests` and go through the `testkit` builder against the real app.
+- Tests live in `internal/tests`, one file per domain (`user_test.go`), and run
+  against `internal/tests/mocks` for unit coverage or through the `testkit`
+  builder against the real app for integration. Package-local tests sit beside
+  the code they cover when they test that package alone (`config/app_test.go`).
 - Table-driven, subtests named for the case, `t.Parallel()` where the test does
   not mutate process state (`t.Setenv` rules it out).
 - Assert observable behavior — status codes, response fields, stored rows — not
