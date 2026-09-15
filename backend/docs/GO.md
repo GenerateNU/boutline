@@ -1,5 +1,5 @@
 # GO BASICS
-Hello Go Goats. I understand that most of our team is not familiar with Go. While I am also not an expert, this is what I've been able to learn about Go so far that I think will be useful when you try to cook on this team. It isn't a perfect guide but a general overview/topics to look out for while you're coding. If you have any questions always feel free to ask! 
+Hello Go Goats. I understand that some of our team is not familiar with Go. While I am also not an expert, this is what I've been able to learn about Go so far that I think will be useful when you try to cook on this team. It isn't a perfect guide but a general overview/topics to look out for while you're coding. If you have any questions always feel free to ask! 
 
 # Variables
 Starting off with the basics! There are 2 ways to define a variable in go, inferred type and explicit type. Both are lit! And pretty easy 
@@ -63,13 +63,28 @@ package pizza // ba dum chh
 slice := []int {1,2,3} // slize with values [1,2,3]
 slice.append(4)
 
-// you can "slice" them to get a sub-slice, not inclusive
+// you can "slice" them to get a sub-slice, last digit not inclusive
 sub := slice[1:3] // 2, 3 
 
 // get the length of a slice
 len(sub) // 2
 ```
 
+Sub-slices are views of the original slice, aka a modification of the sub slice propogates back to the original slice (wonky..)
+
+``` go 
+package pizza 
+
+slice := []int{1, 2, 3}
+subslice := slice[1:3] // subslice = {2, 3}
+subslice[0] = 10 // subslice = {10, 3}
+
+fmt.Println(slice) // will print {1, 10, 3}
+
+// This is because a sub-slice is a pointer to the SAME memory address as the OG slice
+// To safely modify things and retain all prior information, you must deep copy the slice 
+
+```
 ## Maps (HashMaps/Dictionaries)
 
 ``` go
@@ -80,7 +95,7 @@ colors := map[string]string{
 ```
 
 # Private v Public
-In go you can't declare something private or public... Instead something is made private or public based on if it starts with a capital letter or not. Some examples to follow...
+In go you can't declare something private or public... Instead something is made private or public based on if it starts with a capital letter or not. (Capitalization = Public, lowercase = private) Some examples to follow...
 
 # Iteration
 ITERATION EXAMPLES!
@@ -176,6 +191,28 @@ func VoidFunc() { // return type of void!
 ```
 
 The structure of a function in go is simple, always start with the `func` keyword, then the name of the function, the parameters the function takes in, & the return type.
+
+Go supports MULTIPLE ! returns in the same function, just wrap however many returns you have in pararenthesis. Go also allows you to take arrays of undefined length as a parameter
+``` go 
+func ToooooMuchData(data [...]int, target) (int, string, bool) {
+    count := 0
+    idx, integer := range data {
+        count++ 
+    }
+
+    return count, "hiiii", count > target
+}
+
+// catch each return when calling the function 
+count, message, isGreaterThanTarget := ToooooMuchData([5]int{1, 2, 3, 4, 5}, 4)
+
+// If you don't care about a variable a function gives, you still need to catch it. 
+// BUTT Go's compiler complains crazy style if you declare a function you never use. 
+// SO, you can use _ instead to catch and basically throw away a variable 
+
+_, _, isGreaterThan := ToooooMuchData([5]int{1, 2, 3, 4, 5}, 4)
+
+```
 
 ## Free floating vs attatched to struct
 You can also attatch functions onto structs so the functions can directly use the data within the struct! You do this by adding one more part to the original func signature
@@ -334,7 +371,7 @@ goat := Goat{Name: "Avni", Silly: true}
 mutateOG(&goat) // TAKE NOTE: passing in the pointer, this will mutate the original goat that we pass in
 fmt.Printf(goat.Name) // OUTPUT: Mutated hehe
 mutateOGCopy(goat) // NOT THE POINTER
-fmt.Printf(goat.Name) // OUTPUT: Mutated hehe
+fmt.Printf(goat.Name) // OUTPUT: Avni
 ```
 
 Here when we pass in the pointer to the function the function is able to mutate the original variable rather than a copy. When we pass in the goat **value** a copy is made behind the scenes when the function is called, causing your mutation to do nothing.
@@ -364,8 +401,6 @@ func (g Goat) MakeCopy() Goat { // Creates an identical copy of the Goat the fun
 }
 ```
 Here we can see that setting the function to operate on the pointer or value of the struct can significantly change how you're function actually works! 
-
-To see this example in action check out the method in goat_test.go!
 
 ### Pointers in Structs
 The last example (that I can think of) was pointers in structs
