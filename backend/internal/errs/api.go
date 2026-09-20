@@ -17,7 +17,7 @@ var (
 	ErrNotFound     = errors.New("not found")
 	ErrDuplicate    = errors.New("already exists")
 	ErrInvalidInput = errors.New("invalid input")
-	ErrConflict = errors.New("conflict")
+	ErrConflict     = errors.New("conflict")
 )
 
 type APIError struct {
