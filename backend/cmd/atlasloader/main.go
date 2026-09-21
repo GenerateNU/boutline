@@ -12,6 +12,8 @@ import (
 	"io"
 	"os"
 
+	"boutline/internal/features/user"
+
 	"ariga.io/atlas-provider-gorm/gormschema"
 )
 
@@ -23,7 +25,9 @@ func main() {
 }
 
 func run() error {
-	stmts, err := gormschema.New("postgres").Load()
+	stmts, err := gormschema.New("postgres").Load(
+		&user.User{},
+	)
 	if err != nil {
 		return fmt.Errorf("load gorm schema: %w", err)
 	}
