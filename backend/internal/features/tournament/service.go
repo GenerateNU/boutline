@@ -165,14 +165,7 @@ func (s *tournamentService) ListTournaments(
 		return nil, errs.HumaError(errs.Public(
 			fmt.Sprintf("unknown status %q", input.Status), errs.ErrInvalidInput))
 	}
-	limit := input.Limit
-	switch {
-	case limit <= 0:
-		limit = TournamentDefaultPageSize
-	case limit > TournamentMaxPageSize:
-		limit = TournamentMaxPageSize
-	}
-
+	limit := tournamentPageLimit(input.Limit)
 	offset := max(input.Offset, 0)
 
 	tournaments, total, err := s.repo.ListTournaments(ctx, TournamentListFilter{
@@ -195,6 +188,14 @@ func (s *tournamentService) ListTournaments(
 		Limit:  limit,
 		Offset: offset,
 	}}, nil
+}
+
+func tournamentPageLimit(requested int) int {
+	if requested <= 0 {
+		return TournamentDefaultPageSize
+	}
+
+	return min(requested, TournamentMaxPageSize)
 }
 
 func (s *tournamentService) UpdateTournamentByID(
