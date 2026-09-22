@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/validators"
 
 	"github.com/google/uuid"
 )
@@ -64,7 +65,7 @@ func (s *tournamentService) CreateTournament(
 	}
 
 	// TODO: once the user table is made, do a validation check here
-	createdBy, err := parseTournamentUUID(input.Body.CreatedBy, "created_by")
+	createdBy, err := validators.ParseUUID(input.Body.CreatedBy, "created_by")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -128,7 +129,7 @@ func (s *tournamentService) GetTournamentByID(
 	ctx context.Context,
 	input *TournamentIDInput,
 ) (*TournamentOutput, error) {
-	id, err := parseTournamentUUID(input.ID, "id")
+	id, err := validators.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -203,7 +204,7 @@ func (s *tournamentService) UpdateTournamentByID(
 	ctx context.Context,
 	input *TournamentUpdateInput,
 ) (*TournamentOutput, error) {
-	id, err := parseTournamentUUID(input.ID, "id")
+	id, err := validators.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -246,7 +247,7 @@ func (s *tournamentService) StartTournament(
 	ctx context.Context,
 	input *TournamentIDInput,
 ) (*TournamentOutput, error) {
-	id, err := parseTournamentUUID(input.ID, "id")
+	id, err := validators.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -263,7 +264,7 @@ func (s *tournamentService) CompleteTournament(
 	ctx context.Context,
 	input *TournamentIDInput,
 ) (*TournamentOutput, error) {
-	id, err := parseTournamentUUID(input.ID, "id")
+	id, err := validators.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -299,14 +300,4 @@ func (s *tournamentService) applyUpdate(
 	}
 
 	return &TournamentOutput{Body: newTournamentResponse(*tournament)}, nil
-}
-
-func parseTournamentUUID(raw string, field string) (uuid.UUID, error) {
-	id, err := uuid.Parse(raw)
-	if err != nil {
-		return uuid.Nil, errs.Public(
-			fmt.Sprintf("%s must be a valid uuid", field), errs.ErrInvalidInput)
-	}
-
-	return id, nil
 }
