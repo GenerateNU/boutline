@@ -87,17 +87,13 @@ func NewExampleRepository(db *gorm.DB) ExampleRepository {
 }
 ```
 
-**Translate driver errors into sentinels** so nothing raw reaches a client
-(`TranslateError` is already on in `internal/database`, which is what turns a
-unique violation into `gorm.ErrDuplicatedKey`):
+**Translate driver errors into readable errors** so no raw errors reach a client
 
 ```go
 func (r *exampleRepository) GetExampleByID(ctx context.Context, id uuid.UUID) (*Example, error) {
 	var example Example
 
-	err := r.db.WithContext(ctx).
-		Select("id", "name", "status", "created_at", "updated_at").
-		First(&example, "id = ?", id).Error
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&example).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("select example %s: %w", id, errs.ErrNotFound)
@@ -108,9 +104,6 @@ func (r *exampleRepository) GetExampleByID(ctx context.Context, id uuid.UUID) (*
 	return &example, nil
 }
 ```
-
-**Select the columns you need**, never `SELECT *`. **Every list is paginated and
-returns a total**, counted before the page is fetched so one filter serves both:
 
 ```go
 query := r.db.WithContext(ctx).Model(&Example{})
@@ -143,9 +136,9 @@ if result.RowsAffected == 0 {
 
 ## 3. types.go
 
-The wire format, kept apart from the logic so the API contract reads as one
-file. Huma builds the OpenAPI schema from these struct tags and rejects a bad
-request *before* the service runs.
+The response/requests format kept apart from the logic. 
+Huma builds the OpenAPI schema from these struct tags and rejects a bad
+request before the service runs.
 
 ```go
 type ExampleResponse struct {
@@ -218,7 +211,7 @@ type ExampleService interface {
 }
 ```
 
-Normalise input, default what can be defaulted, reject what cannot. Errors leave
+Normalise inputs, default fields, reject incompatible inputs. Erros are serialized
 through `errs.HumaError`, which picks the status and decides what the client is
 allowed to read:
 
@@ -239,7 +232,7 @@ if !status.IsValid() {
 ```
 
 Clamp the page size even though Huma already enforces `maximum:"100"` on the
-query param — a job calling the method directly never went through a schema.
+query param. A job calling the method directly never went through a schema.
 The response reports the clamped values, so the caller can tell which page it
 actually got:
 
@@ -255,7 +248,7 @@ case limit > ExampleMaxPageSize:
 offset := max(input.Offset, 0)
 ```
 
-Wrap a repository error with what you were doing. The chain is for the log — a
+Wrap a repository error with what you were doing. The chain is for the log. A
 client reads `errs.ClientMessage`, which is the sentinel's generic text unless
 you mark a message public with `errs.Public`:
 
@@ -279,9 +272,7 @@ Delete returns `(*struct{}, error)` and `nil, nil` on success, paired with
 
 ## 5. routes.go
 
-The only file that knows how the layers fit together. Keep the two-function
-split — the tests register a service over a fake repository through the second
-one.
+The only file that knows how the layers fit together. 
 
 ```go
 const exampleBasePath = "/api/v1/examples"
@@ -331,8 +322,7 @@ func SetUpRoutes(app *fiber.App, routeParams types.RouteParams) {
 
 ## 7. Migration
 
-Atlas derives the schema from the models, so a model it cannot see is a table
-that never gets migrated. Register it in `cmd/atlasloader/main.go`:
+Atlas derives the schema from the models. Register it in `cmd/atlasloader/main.go`:
 
 ```go
 stmts, err := gormschema.New("postgres").Load(
@@ -363,12 +353,11 @@ CREATE UNIQUE INDEX "idx_examples_name" ON "public"."examples" ("name") WHERE (d
 
 ## 8. Tests
 
-Feature unit tests live in the feature's own `test/` folder, in `package test`,
-which means they only see the exported surface. Integration and end-to-end tests
-stay in `internal/tests`.
+Feature unit tests exist in the feature's own `test/` folder, in `package test`.
+Integration and end-to-end tests stay in `internal/tests`.
 
 `fakes.go` holds an in-memory repository returning the same sentinels as the
-real one — including the duplicate conflict, so every service branch is
+real one including the duplicate conflict, so every service branch is
 reachable without a database:
 
 ```go
