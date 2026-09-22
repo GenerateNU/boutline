@@ -4,7 +4,7 @@ CREATE TABLE "tournaments" (
   "name" text NOT NULL,
   "visibility" text NOT NULL,
   "code" text NOT NULL,
-  "status" text NOT NULL,
+  "status" text NOT NULL DEFAULT 'pending',
   "created_by" uuid NOT NULL,
   "start_time" timestamptz NULL,
   "started_at" timestamptz NULL,

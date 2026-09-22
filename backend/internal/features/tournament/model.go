@@ -30,12 +30,12 @@ const (
 // Deletion is left out on purpose, and it is under consideration. If we
 // choose to implement it, deleted_at is a cheap migration.
 type Tournament struct {
-	ID         uuid.UUID            `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	Name       string               `gorm:"type:text;not null"`
-	Visibility TournamentVisibility `gorm:"type:text;not null;check:chk_tournaments_visibility,visibility IN ('private','public')"`
-	Code       string               `gorm:"type:text;not null;uniqueIndex:idx_tournaments_code"`
-	Status     TournamentStatus     `gorm:"type:text;not null;index;check:chk_tournaments_status,status IN ('pending','active','end')"`
-	CreatedBy  uuid.UUID            `gorm:"type:uuid;not null"`
+	ID          uuid.UUID            `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	Name        string               `gorm:"type:text;not null"`
+	Visibility  TournamentVisibility `gorm:"type:text;not null;check:chk_tournaments_visibility,visibility IN ('private','public')"`
+	Code        string               `gorm:"type:text;not null;uniqueIndex:idx_tournaments_code"`
+	Status      TournamentStatus     `gorm:"type:text;not null;index;default:pending;check:chk_tournaments_status,status IN ('pending','active','end')"`
+	CreatedBy   uuid.UUID            `gorm:"type:uuid;not null"`
 	StartTime   *time.Time
 	StartedAt   *time.Time
 	CompletedAt *time.Time
