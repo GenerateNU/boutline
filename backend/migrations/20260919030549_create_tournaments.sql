@@ -9,7 +9,9 @@ CREATE TABLE "tournaments" (
   "completed_at" timestamptz NULL,
   "created_at" timestamptz NULL,
   "updated_at" timestamptz NULL,
-  PRIMARY KEY ("id")
+  PRIMARY KEY ("id"),
+  CONSTRAINT "chk_tournaments_visibility" CHECK (visibility IN ('private', 'public')),
+  CONSTRAINT "chk_tournaments_status" CHECK (status IN ('pending', 'active', 'end'))
 );
 -- Create index "idx_tournaments_code" to table: "tournaments"
 CREATE UNIQUE INDEX "idx_tournaments_code" ON "tournaments" ("code");

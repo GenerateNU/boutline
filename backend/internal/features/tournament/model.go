@@ -32,9 +32,9 @@ const (
 type Tournament struct {
 	ID          uuid.UUID            `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	Name        string               `gorm:"type:text;not null"`
-	Visibility  TournamentVisibility `gorm:"type:text;not null"`
+	Visibility  TournamentVisibility `gorm:"type:text;not null;check:chk_tournaments_visibility,visibility IN ('private','public')"`
 	Code        string               `gorm:"type:text;not null;uniqueIndex:idx_tournaments_code"`
-	Status      TournamentStatus     `gorm:"type:text;not null;index"`
+	Status      TournamentStatus     `gorm:"type:text;not null;index;check:chk_tournaments_status,status IN ('pending','active','end')"`
 	CreatedBy   uuid.UUID            `gorm:"type:uuid;not null"`
 	CompletedAt *time.Time
 	CreatedAt   time.Time
