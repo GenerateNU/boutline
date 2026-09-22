@@ -1,0 +1,121 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+# A new push to the same ref makes in-flight runs irrelevant, so cancel them.
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  quality:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.13.2
+          working-directory: backend
+
+      - run: make format-check
+
+      - run: make tidy-check
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - run: make test-cover
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.out
+          if-no-files-found: ignore
+
+  migrations:
+    name: Schema drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - uses: ariga/setup-atlas@v0
+        with:
+          version: v1.3.3
+
+      # Checksum integrity: catches a hand-edited migration that was never
+      # re-signed with `atlas migrate hash`.
+      - run: atlas migrate validate --env local
+
+      # Diffing the gorm models against ./migrations writes a file only when the
+      # two disagree, so a dirty tree here means a model changed without a
+      # migration — or a new model was never registered in cmd/atlasloader.
+      - name: Models match the migration directory
+        run: |
+          atlas migrate diff ci_drift --env local
+          if [ -n "$(git status --porcelain migrations)" ]; then
+            git status --porcelain migrations
+            echo "::error::gorm models and ./migrations disagree — run 'make migrate-new NAME=what_changed' and commit the result"
+            exit 1
+          fi
+
+  vuln:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    # Advisory only: every finding today is in a transitive dependency or the
+    # toolchain's stdlib, so blocking PRs on them would gate this repo on
+    # upgrades it does not control. Read the log, don't ignore it.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - run: make vuln
+
+  image:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # The deployable artifact, and the only check that the Dockerfile's
+      # pinned Go version still builds this code.
+      - run: docker build --tag boutline:${{ github.sha }} .

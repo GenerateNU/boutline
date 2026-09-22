@@ -90,9 +90,12 @@ Per stack: `fe-dev`, `fe-build`, `fe-lint`, `fe-typecheck`, `fe-test`, `fe-check
 for the frontend, and `be-up`, `be-down`, `be-logs`, `be-build`, `be-test`,
 `be-lint`, `be-check` for the backend.
 
-[Frontend CI](.github/workflows/frontend-ci.yml) runs the frontend half of
-`check` on every PR touching `frontend/`. There is no backend workflow yet, so
-`make be-check` is the only thing catching Go breakage right now.
+[Frontend CI](.github/workflows/frontend-ci.yml) and
+[Backend CI](.github/workflows/backend-ci.yml) run the matching half of `check`
+on every PR touching that stack. The backend workflow goes further than
+`be-check` does: it also builds the Docker image, runs govulncheck as an
+advisory job, and fails if the gorm models and `backend/migrations` have drifted
+apart.
 
 One thing that looks like broken setup but isn't: `fe-typecheck` must run
 `next typegen` before `tsc`. Bare `tsc` reports errors CI never sees, since

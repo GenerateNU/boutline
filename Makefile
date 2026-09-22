@@ -72,8 +72,8 @@ be-test: ## Go tests with the race detector
 be-lint: ## golangci-lint, which includes go vet
 	@$(BE) lint
 
-be-check: ## Backend lint and tests
-	@$(BE) lint && $(BE) test
+be-check: ## Everything backend CI gates on
+	@$(BE) lint && $(BE) format-check && $(BE) tidy-check && $(BE) test
 
 ##@ Database
 
