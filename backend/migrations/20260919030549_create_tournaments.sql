@@ -6,6 +6,8 @@ CREATE TABLE "tournaments" (
   "code" text NOT NULL,
   "status" text NOT NULL,
   "created_by" uuid NOT NULL,
+  "start_time" timestamptz NULL,
+  "started_at" timestamptz NULL,
   "completed_at" timestamptz NULL,
   "created_at" timestamptz NULL,
   "updated_at" timestamptz NULL,
