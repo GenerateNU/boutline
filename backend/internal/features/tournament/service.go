@@ -63,6 +63,7 @@ func (s *tournamentService) CreateTournament(
 			fmt.Sprintf("unknown visibility %q", visibility), errs.ErrInvalidInput))
 	}
 
+	// TODO: once the user table is made, do a validation check here
 	createdBy, err := parseTournamentUUID(input.Body.CreatedBy, "created_by")
 	if err != nil {
 		return nil, errs.HumaError(err)
