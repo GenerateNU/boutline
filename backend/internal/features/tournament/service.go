@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"boutline/internal/errs"
-	"boutline/internal/validators"
+	"boutline/internal/utils"
 
 	"github.com/google/uuid"
 )
 
 const (
+	TournamentMinPageSize     = 1
 	TournamentDefaultPageSize = 20
 	TournamentMaxPageSize     = 100
 
@@ -65,7 +66,7 @@ func (s *tournamentService) CreateTournament(
 	}
 
 	// TODO: once the user table is made, do a validation check here
-	createdBy, err := validators.ParseUUID(input.Body.CreatedBy, "created_by")
+	createdBy, err := utils.ParseUUID(input.Body.CreatedBy, "created_by")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -129,7 +130,7 @@ func (s *tournamentService) GetTournamentByID(
 	ctx context.Context,
 	input *TournamentIDInput,
 ) (*TournamentOutput, error) {
-	id, err := validators.ParseUUID(input.ID, "id")
+	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -167,7 +168,11 @@ func (s *tournamentService) ListTournaments(
 		return nil, errs.HumaError(errs.Public(
 			fmt.Sprintf("unknown status %q", input.Status), errs.ErrInvalidInput))
 	}
-	limit := tournamentPageLimit(input.Limit)
+	limit := input.Limit
+	if limit <= 0 {
+		limit = TournamentDefaultPageSize
+	}
+	limit = utils.Clamp(limit, TournamentMinPageSize, TournamentMaxPageSize)
 	offset := max(input.Offset, 0)
 
 	tournaments, total, err := s.repo.ListTournaments(ctx, TournamentListFilter{
@@ -192,19 +197,11 @@ func (s *tournamentService) ListTournaments(
 	}}, nil
 }
 
-func tournamentPageLimit(requested int) int {
-	if requested <= 0 {
-		return TournamentDefaultPageSize
-	}
-
-	return min(requested, TournamentMaxPageSize)
-}
-
 func (s *tournamentService) UpdateTournamentByID(
 	ctx context.Context,
 	input *TournamentUpdateInput,
 ) (*TournamentOutput, error) {
-	id, err := validators.ParseUUID(input.ID, "id")
+	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -249,7 +246,7 @@ func (s *tournamentService) StartTournament(
 	ctx context.Context,
 	input *TournamentIDInput,
 ) (*TournamentOutput, error) {
-	id, err := validators.ParseUUID(input.ID, "id")
+	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -266,7 +263,7 @@ func (s *tournamentService) CompleteTournament(
 	ctx context.Context,
 	input *TournamentIDInput,
 ) (*TournamentOutput, error) {
-	id, err := validators.ParseUUID(input.ID, "id")
+	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
