@@ -120,7 +120,7 @@ internal/features/           one folder per feature, one file per layer
 internal/server/app.go       builds the Fiber app, the Huma API, and the wiring
 internal/server/middlewares/ cross-cutting concerns
 internal/server/routers/     mounts each feature with one call
-internal/validators/         the shared validator and its custom tags
+internal/utils/              shared helpers: the validator, uuid parsing, clamp
 internal/errs/               the error vocabulary, Fiber's ErrorHandler, HumaError
 internal/types/              RouteParams / ServiceParams
 internal/tests/              integration and end-to-end tests
