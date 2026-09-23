@@ -209,38 +209,40 @@ func (s *tournamentService) UpdateTournamentByID(
 		return nil, errs.HumaError(err)
 	}
 
-	update, err := tournamentUpdateFrom(input.Body)
+	edit, err := tournamentEditFrom(input.Body)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
-	return s.applyUpdate(ctx, id, update, "tournament has ended and can no longer be edited")
+	err = s.repo.EditTournamentByID(ctx, id, edit)
+
+	return s.afterUpdate(ctx, id, err, "tournament has ended and can no longer be edited")
 }
 
-func tournamentUpdateFrom(body TournamentUpdateBody) (TournamentUpdate, error) {
-	update := TournamentUpdate{AllowedStatuses: TournamentEditableStatuses()}
+func tournamentEditFrom(body TournamentUpdateBody) (TournamentEdit, error) {
+	var edit TournamentEdit
 
 	if body.Name != nil {
 		name := strings.TrimSpace(*body.Name)
 		if name == "" {
-			return update, errs.Public("name must not be blank", errs.ErrInvalidInput)
+			return edit, errs.Public("name must not be blank", errs.ErrInvalidInput)
 		}
-		update.Name = &name
+		edit.Name = &name
 	}
 
 	if body.Visibility != nil {
 		if !body.Visibility.IsValid() {
-			return update, errs.Public(
+			return edit, errs.Public(
 				fmt.Sprintf("unknown visibility %q", *body.Visibility), errs.ErrInvalidInput)
 		}
-		update.Visibility = body.Visibility
+		edit.Visibility = body.Visibility
 	}
 
-	if update.Name == nil && update.Visibility == nil {
-		return update, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
+	if edit.Name == nil && edit.Visibility == nil {
+		return edit, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
 	}
 
-	return update, nil
+	return edit, nil
 }
 
 func (s *tournamentService) StartTournament(
@@ -252,12 +254,12 @@ func (s *tournamentService) StartTournament(
 		return nil, errs.HumaError(err)
 	}
 
-	active := TournamentStatusActive
+	err = s.repo.TransitionTournamentByID(ctx, id, TournamentTransition{
+		To:   TournamentStatusActive,
+		From: []TournamentStatus{TournamentStatusPending},
+	})
 
-	return s.applyUpdate(ctx, id, TournamentUpdate{
-		Status:          &active,
-		AllowedStatuses: []TournamentStatus{TournamentStatusPending},
-	}, "only a pending tournament can be started")
+	return s.afterUpdate(ctx, id, err, "only a pending tournament can be started")
 }
 
 func (s *tournamentService) CompleteTournament(
@@ -269,23 +271,24 @@ func (s *tournamentService) CompleteTournament(
 		return nil, errs.HumaError(err)
 	}
 
-	end := TournamentStatusEnd
 	completedAt := time.Now().UTC()
 
-	return s.applyUpdate(ctx, id, TournamentUpdate{
-		Status:          &end,
-		CompletedAt:     &completedAt,
-		AllowedStatuses: []TournamentStatus{TournamentStatusActive},
-	}, "only an active tournament can be completed")
+	err = s.repo.TransitionTournamentByID(ctx, id, TournamentTransition{
+		To:          TournamentStatusEnd,
+		CompletedAt: &completedAt,
+		From:        []TournamentStatus{TournamentStatusActive},
+	})
+
+	return s.afterUpdate(ctx, id, err, "only an active tournament can be completed")
 }
 
-func (s *tournamentService) applyUpdate(
+func (s *tournamentService) afterUpdate(
 	ctx context.Context,
 	id uuid.UUID,
-	update TournamentUpdate,
+	err error,
 	conflictMessage string,
 ) (*TournamentOutput, error) {
-	if err := s.repo.UpdateTournamentByID(ctx, id, update); err != nil {
+	if err != nil {
 		if errors.Is(err, errs.ErrConflict) {
 			return nil, errs.HumaError(fmt.Errorf("update tournament: %w",
 				errs.Public(conflictMessage, err)))

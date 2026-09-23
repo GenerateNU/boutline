@@ -17,31 +17,38 @@ type TournamentRepository interface {
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*Tournament, error)
 	GetTournamentByCode(ctx context.Context, code string) (*Tournament, error)
 	ListTournaments(ctx context.Context, filter TournamentListFilter) ([]Tournament, int64, error)
-	UpdateTournamentByID(ctx context.Context, id uuid.UUID, update TournamentUpdate) error
+	EditTournamentByID(ctx context.Context, id uuid.UUID, edit TournamentEdit) error
+	TransitionTournamentByID(ctx context.Context, id uuid.UUID, transition TournamentTransition) error
 }
 
-type TournamentUpdate struct {
-	Name            *string
-	Visibility      *TournamentVisibility
-	Status          *TournamentStatus
-	CompletedAt     *time.Time
-	AllowedStatuses []TournamentStatus
+type TournamentEdit struct {
+	Name       *string
+	Visibility *TournamentVisibility
 }
 
-func (u TournamentUpdate) columns() map[string]any {
-	columns := make(map[string]any, 4)
+func (e TournamentEdit) columns() map[string]any {
+	columns := make(map[string]any, 2)
 
-	if u.Name != nil {
-		columns["name"] = *u.Name
+	if e.Name != nil {
+		columns["name"] = *e.Name
 	}
-	if u.Visibility != nil {
-		columns["visibility"] = *u.Visibility
+	if e.Visibility != nil {
+		columns["visibility"] = *e.Visibility
 	}
-	if u.Status != nil {
-		columns["status"] = *u.Status
-	}
-	if u.CompletedAt != nil {
-		columns["completed_at"] = *u.CompletedAt
+
+	return columns
+}
+
+type TournamentTransition struct {
+	To          TournamentStatus
+	CompletedAt *time.Time
+	From        []TournamentStatus
+}
+
+func (t TournamentTransition) columns() map[string]any {
+	columns := map[string]any{"status": t.To}
+	if t.CompletedAt != nil {
+		columns["completed_at"] = *t.CompletedAt
 	}
 
 	return columns
@@ -101,17 +108,34 @@ func (r *tournamentRepository) GetTournamentByCode(ctx context.Context, code str
 	return &tournament, nil
 }
 
-func (r *tournamentRepository) UpdateTournamentByID(
+func (r *tournamentRepository) EditTournamentByID(
 	ctx context.Context,
 	id uuid.UUID,
-	update TournamentUpdate,
+	edit TournamentEdit,
+) error {
+	return r.updateByID(ctx, id, edit.columns(), TournamentEditableStatuses())
+}
+
+func (r *tournamentRepository) TransitionTournamentByID(
+	ctx context.Context,
+	id uuid.UUID,
+	transition TournamentTransition,
+) error {
+	return r.updateByID(ctx, id, transition.columns(), transition.From)
+}
+
+func (r *tournamentRepository) updateByID(
+	ctx context.Context,
+	id uuid.UUID,
+	columns map[string]any,
+	allowedStatuses []TournamentStatus,
 ) error {
 	query := r.db.WithContext(ctx).Model(&Tournament{}).Where("id = ?", id)
-	if len(update.AllowedStatuses) > 0 {
-		query = query.Where("status IN ?", update.AllowedStatuses)
+	if len(allowedStatuses) > 0 {
+		query = query.Where("status IN ?", allowedStatuses)
 	}
 
-	result := query.Updates(update.columns())
+	result := query.Updates(columns)
 	if result.Error != nil {
 		return fmt.Errorf("update tournament %s: %w", id, result.Error)
 	}

@@ -108,39 +108,69 @@ func (f *FakeTournamentRepository) ListTournaments(
 	return matched, total, nil
 }
 
-func (f *FakeTournamentRepository) UpdateTournamentByID(
+func (f *FakeTournamentRepository) EditTournamentByID(
 	_ context.Context,
 	id uuid.UUID,
-	update tournament.TournamentUpdate,
+	edit tournament.TournamentEdit,
 ) error {
+	stored, err := f.guard(id, tournament.TournamentEditableStatuses())
+	if err != nil {
+		return err
+	}
+
+	if edit.Name != nil {
+		stored.Name = *edit.Name
+	}
+	if edit.Visibility != nil {
+		stored.Visibility = *edit.Visibility
+	}
+
+	f.save(id, stored)
+
+	return nil
+}
+
+func (f *FakeTournamentRepository) TransitionTournamentByID(
+	_ context.Context,
+	id uuid.UUID,
+	transition tournament.TournamentTransition,
+) error {
+	stored, err := f.guard(id, transition.From)
+	if err != nil {
+		return err
+	}
+
+	stored.Status = transition.To
+	if transition.CompletedAt != nil {
+		stored.CompletedAt = transition.CompletedAt
+	}
+
+	f.save(id, stored)
+
+	return nil
+}
+
+func (f *FakeTournamentRepository) guard(
+	id uuid.UUID,
+	allowedStatuses []tournament.TournamentStatus,
+) (tournament.Tournament, error) {
 	if f.Err != nil {
-		return f.Err
+		return tournament.Tournament{}, f.Err
 	}
 
 	stored, ok := f.Tournaments[id]
 	if !ok {
-		return fmt.Errorf("update tournament %s: %w", id, errs.ErrNotFound)
+		return tournament.Tournament{}, fmt.Errorf("update tournament %s: %w", id, errs.ErrNotFound)
 	}
 
-	if len(update.AllowedStatuses) > 0 && !slices.Contains(update.AllowedStatuses, stored.Status) {
-		return fmt.Errorf("update tournament %s: %w", id, errs.ErrConflict)
+	if len(allowedStatuses) > 0 && !slices.Contains(allowedStatuses, stored.Status) {
+		return tournament.Tournament{}, fmt.Errorf("update tournament %s: %w", id, errs.ErrConflict)
 	}
 
-	if update.Name != nil {
-		stored.Name = *update.Name
-	}
-	if update.Visibility != nil {
-		stored.Visibility = *update.Visibility
-	}
-	if update.Status != nil {
-		stored.Status = *update.Status
-	}
-	if update.CompletedAt != nil {
-		stored.CompletedAt = update.CompletedAt
-	}
+	return stored, nil
+}
 
+func (f *FakeTournamentRepository) save(id uuid.UUID, stored tournament.Tournament) {
 	stored.UpdatedAt = time.Now()
 	f.Tournaments[id] = stored
-
-	return nil
 }
