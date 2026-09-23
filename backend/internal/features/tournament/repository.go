@@ -47,7 +47,7 @@ func (u TournamentUpdate) columns() map[string]any {
 	return columns
 }
 
-// Will support timestamp filtering (started_at ranges) later on
+// TODO: support timestamp filtering (started_at ranges)
 type TournamentListFilter struct {
 	Status TournamentStatus
 	Limit  int
