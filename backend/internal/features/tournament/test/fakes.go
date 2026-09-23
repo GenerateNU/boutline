@@ -124,6 +124,9 @@ func (f *FakeTournamentRepository) EditTournamentByID(
 	if edit.Visibility != nil {
 		stored.Visibility = *edit.Visibility
 	}
+	if edit.StartTime != nil {
+		stored.StartTime = edit.StartTime
+	}
 
 	f.save(id, stored)
 
@@ -141,6 +144,9 @@ func (f *FakeTournamentRepository) TransitionTournamentByID(
 	}
 
 	stored.Status = transition.To
+	if transition.StartedAt != nil {
+		stored.StartedAt = transition.StartedAt
+	}
 	if transition.CompletedAt != nil {
 		stored.CompletedAt = transition.CompletedAt
 	}

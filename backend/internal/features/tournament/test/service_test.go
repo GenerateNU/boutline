@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
+	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -141,6 +143,41 @@ func TestCreateTournamentGeneratesACode(t *testing.T) {
 	assert.NotContains(t, first.Body.Code, "1")
 	assert.NotContains(t, first.Body.Code, "I")
 	assert.NotContains(t, first.Body.Code, "L")
+}
+
+func TestCreateTournamentKeepsTheScheduledStart(t *testing.T) {
+	t.Parallel()
+
+	startTime := time.Now().UTC().Add(time.Hour)
+
+	out, err := tournament.NewTournamentService(NewFakeTournamentRepository()).
+		CreateTournament(t.Context(), &tournament.TournamentCreateInput{
+			Body: tournament.TournamentCreateBody{
+				Name:      "scheduled",
+				CreatedBy: uuid.New().String(),
+				StartTime: &startTime,
+			},
+		})
+
+	require.NoError(t, err)
+	require.NotNil(t, out.Body.StartTime)
+	assert.Equal(t, startTime, *out.Body.StartTime)
+	assert.Nil(t, out.Body.StartedAt)
+}
+
+func TestCreateTournamentRejectsAnUnknownCreator(t *testing.T) {
+	t.Parallel()
+
+	repo := NewFakeTournamentRepository()
+	repo.Err = fmt.Errorf("create tournament: %w",
+		errs.Public("created_by must reference an existing user", errs.ErrInvalidInput))
+
+	_, err := tournament.NewTournamentService(repo).
+		CreateTournament(t.Context(), createInput("orphan", "", uuid.New().String()))
+
+	code, detail := apiError(t, err)
+	assert.Equal(t, http.StatusBadRequest, code)
+	assert.Equal(t, "created_by must reference an existing user", detail)
 }
 
 func TestGetTournamentByID(t *testing.T) {
@@ -340,6 +377,8 @@ func TestListTournaments(t *testing.T) {
 func TestUpdateTournamentByID(t *testing.T) {
 	t.Parallel()
 
+	scheduledStart := time.Now().UTC().Add(time.Hour)
+
 	tests := []struct {
 		name           string
 		seedStatus     tournament.TournamentStatus
@@ -347,6 +386,7 @@ func TestUpdateTournamentByID(t *testing.T) {
 		useUnknownID   bool
 		wantName       string
 		wantVisibility tournament.TournamentVisibility
+		wantStartTime  *time.Time
 		wantCode       int
 		wantDetail     string
 	}{
@@ -377,6 +417,14 @@ func TestUpdateTournamentByID(t *testing.T) {
 			body:           tournament.TournamentUpdateBody{Name: ptr("renamed mid-run")},
 			wantName:       "renamed mid-run",
 			wantVisibility: tournament.TournamentVisibilityPrivate,
+		},
+		{
+			name:           "sets the scheduled start on its own",
+			seedStatus:     tournament.TournamentStatusPending,
+			body:           tournament.TournamentUpdateBody{StartTime: ptr(scheduledStart)},
+			wantName:       "before",
+			wantVisibility: tournament.TournamentVisibilityPrivate,
+			wantStartTime:  ptr(scheduledStart),
 		},
 		{
 			name:       "refuses a patch that would change nothing",
@@ -448,6 +496,7 @@ func TestUpdateTournamentByID(t *testing.T) {
 
 			assert.Equal(t, tt.wantName, repo.Tournaments[stored.ID].Name)
 			assert.Equal(t, tt.wantVisibility, repo.Tournaments[stored.ID].Visibility)
+			assert.Equal(t, tt.wantStartTime, repo.Tournaments[stored.ID].StartTime)
 		})
 	}
 }
@@ -491,6 +540,7 @@ func TestStartTournament(t *testing.T) {
 				assert.Equal(t, tt.wantCode, code)
 				assert.Equal(t, tt.wantDetail, detail)
 				assert.Equal(t, tt.seedStatus, repo.Tournaments[stored.ID].Status)
+				assert.Nil(t, repo.Tournaments[stored.ID].StartedAt)
 
 				return
 			}
@@ -498,6 +548,8 @@ func TestStartTournament(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tournament.TournamentStatusActive, out.Body.Status)
 			assert.Equal(t, tournament.TournamentStatusActive, repo.Tournaments[stored.ID].Status)
+			assert.NotNil(t, out.Body.StartedAt)
+			assert.NotNil(t, repo.Tournaments[stored.ID].StartedAt)
 			assert.Nil(t, out.Body.CompletedAt)
 		})
 	}

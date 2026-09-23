@@ -24,10 +24,11 @@ type TournamentRepository interface {
 type TournamentEdit struct {
 	Name       *string
 	Visibility *TournamentVisibility
+	StartTime  *time.Time
 }
 
 func (e TournamentEdit) columns() map[string]any {
-	columns := make(map[string]any, 2)
+	columns := make(map[string]any, 3)
 
 	if e.Name != nil {
 		columns["name"] = *e.Name
@@ -35,18 +36,25 @@ func (e TournamentEdit) columns() map[string]any {
 	if e.Visibility != nil {
 		columns["visibility"] = *e.Visibility
 	}
+	if e.StartTime != nil {
+		columns["start_time"] = *e.StartTime
+	}
 
 	return columns
 }
 
 type TournamentTransition struct {
 	To          TournamentStatus
+	StartedAt   *time.Time
 	CompletedAt *time.Time
 	From        []TournamentStatus
 }
 
 func (t TournamentTransition) columns() map[string]any {
 	columns := map[string]any{"status": t.To}
+	if t.StartedAt != nil {
+		columns["started_at"] = *t.StartedAt
+	}
 	if t.CompletedAt != nil {
 		columns["completed_at"] = *t.CompletedAt
 	}
@@ -73,6 +81,10 @@ func (r *tournamentRepository) CreateTournament(ctx context.Context, tournament 
 	if err := r.db.WithContext(ctx).Create(tournament).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fmt.Errorf("create tournament: %w", errs.ErrDuplicate)
+		}
+		if errors.Is(err, gorm.ErrForeignKeyViolated) {
+			return fmt.Errorf("create tournament: %w",
+				errs.Public("created_by must reference an existing user", errs.ErrInvalidInput))
 		}
 		return fmt.Errorf("create tournament: %w", err)
 	}

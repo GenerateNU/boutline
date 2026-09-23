@@ -65,50 +65,43 @@ func (s *tournamentService) CreateTournament(
 			fmt.Sprintf("unknown visibility %q", visibility), errs.ErrInvalidInput))
 	}
 
-	// TODO: once the user table is made, do a validation check here
 	createdBy, err := utils.ParseUUID(input.Body.CreatedBy, "created_by")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
-	tournament, err := s.createWithGeneratedCode(ctx, name, visibility, createdBy)
-	if err != nil {
+	tournament := &Tournament{
+		Name:       name,
+		Visibility: visibility,
+		Status:     TournamentStatusPending,
+		CreatedBy:  createdBy,
+		StartTime:  input.Body.StartTime,
+	}
+	if err := s.createWithGeneratedCode(ctx, tournament); err != nil {
 		return nil, errs.HumaError(err)
 	}
 
 	return &TournamentOutput{Body: newTournamentResponse(*tournament)}, nil
 }
 
-func (s *tournamentService) createWithGeneratedCode(
-	ctx context.Context,
-	name string,
-	visibility TournamentVisibility,
-	createdBy uuid.UUID,
-) (*Tournament, error) {
+func (s *tournamentService) createWithGeneratedCode(ctx context.Context, tournament *Tournament) error {
 	for range tournamentCodeMaxAttempts {
 		code, err := generateTournamentCode()
 		if err != nil {
-			return nil, fmt.Errorf("generate tournament code: %w", err)
+			return fmt.Errorf("generate tournament code: %w", err)
 		}
-
-		tournament := &Tournament{
-			Name:       name,
-			Visibility: visibility,
-			Code:       code,
-			Status:     TournamentStatusPending,
-			CreatedBy:  createdBy,
-		}
+		tournament.Code = code
 
 		err = s.repo.CreateTournament(ctx, tournament)
 		if err == nil {
-			return tournament, nil
+			return nil
 		}
 		if !errors.Is(err, errs.ErrDuplicate) {
-			return nil, fmt.Errorf("create tournament: %w", err)
+			return fmt.Errorf("create tournament: %w", err)
 		}
 	}
 
-	return nil, fmt.Errorf("create tournament: exhausted %d code attempts", tournamentCodeMaxAttempts)
+	return fmt.Errorf("create tournament: exhausted %d code attempts", tournamentCodeMaxAttempts)
 }
 
 func generateTournamentCode() (string, error) {
@@ -235,7 +228,9 @@ func tournamentEditFrom(body TournamentUpdateBody) (TournamentEdit, error) {
 		edit.Visibility = body.Visibility
 	}
 
-	if edit.Name == nil && edit.Visibility == nil {
+	edit.StartTime = body.StartTime
+
+	if edit.Name == nil && edit.Visibility == nil && edit.StartTime == nil {
 		return edit, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
 	}
 
@@ -251,9 +246,12 @@ func (s *tournamentService) StartTournament(
 		return nil, errs.HumaError(err)
 	}
 
+	startedAt := time.Now().UTC()
+
 	err = s.repo.TransitionTournamentByID(ctx, id, TournamentTransition{
-		To:   TournamentStatusActive,
-		From: []TournamentStatus{TournamentStatusPending},
+		To:        TournamentStatusActive,
+		StartedAt: &startedAt,
+		From:      []TournamentStatus{TournamentStatusPending},
 	})
 
 	return s.afterUpdate(ctx, id, err, "only a pending tournament can be started")
