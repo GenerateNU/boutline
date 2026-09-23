@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 
+	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 
 	"ariga.io/atlas-provider-gorm/gormschema"
@@ -26,6 +27,7 @@ func main() {
 
 func run() error {
 	stmts, err := gormschema.New("postgres").Load(
+		&tournament.Tournament{},
 		&user.User{},
 	)
 	if err != nil {
