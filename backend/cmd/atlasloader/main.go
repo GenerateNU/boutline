@@ -14,6 +14,7 @@ import (
 
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
+	"boutline/internal/features/competitor"
 
 	"ariga.io/atlas-provider-gorm/gormschema"
 )
@@ -29,6 +30,7 @@ func run() error {
 	stmts, err := gormschema.New("postgres").Load(
 		&tournament.Tournament{},
 		&user.User{},
+		&competitor.Competitor{},
 	)
 	if err != nil {
 		return fmt.Errorf("load gorm schema: %w", err)
