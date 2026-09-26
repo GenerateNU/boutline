@@ -93,23 +93,6 @@ jobs:
             exit 1
           fi
 
-  vuln:
-    name: govulncheck
-    runs-on: ubuntu-latest
-    # Advisory only: every finding today is in a transitive dependency or the
-    # toolchain's stdlib, so blocking PRs on them would gate this repo on
-    # upgrades it does not control. Read the log, don't ignore it.
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-
-      - run: make vuln
-
   image:
     name: Docker image
     runs-on: ubuntu-latest

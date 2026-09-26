@@ -82,8 +82,7 @@ file, re-sign it with `atlas migrate hash`.
 
 Run `make lint` and `make test` before opening a PR, or `make be-check` from
 the repo root for everything [Backend CI](../.github/workflows/backend-ci.yml)
-gates on. CI additionally builds the Docker image, runs govulncheck (advisory —
-it reports but does not fail the run), and re-diffs the models against
+gates on. CI additionally builds the Docker image and re-diffs the models against
 `./migrations` so a model change without a migration cannot merge.
 
 ## Configuration
