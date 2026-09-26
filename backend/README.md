@@ -40,6 +40,9 @@ make test-cover        # every package, with a coverage summary
 make vet
 make lint              # golangci-lint
 make format            # gofmt -s -w .
+make format-check      # fails instead of rewriting; what CI runs
+make tidy-check        # fails if go.mod/go.sum are not tidy
+make vuln              # govulncheck
 ```
 
 One package at a time, optionally one test, with verbose output:
@@ -77,7 +80,10 @@ diffing, configured as `dev` in `atlas.hcl`. Migrations are committed, and
 `migrations/atlas.sum` is a checksum over the directory — if you hand-edit a
 file, re-sign it with `atlas migrate hash`.
 
-Run `make lint` and `make test` before opening a PR.
+Run `make lint` and `make test` before opening a PR, or `make be-check` from
+the repo root for everything [Backend CI](../.github/workflows/backend-ci.yml)
+gates on. CI additionally builds the Docker image and re-diffs the models against
+`./migrations` so a model change without a migration cannot merge.
 
 ## Configuration
 
