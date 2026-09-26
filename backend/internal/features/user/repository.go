@@ -22,7 +22,7 @@ type UserRepository interface {
 // Any non-nil fields to be applied as updates
 type UserUpdate struct {
 	Email     *string
-	Password  *string
+	// Password  *string // TODO: is password updateable in this way?
 	FirstName *string
 	LastName  *string
 }
@@ -42,9 +42,6 @@ func (u UserUpdate) columns() map[string]any {
 
 	if u.Email != nil {
 		columns["email"] = *u.Email
-	}
-	if u.Password != nil {
-		columns["password"] = *u.Password
 	}
 	if u.FirstName != nil {
 		columns["first_name"] = *u.FirstName
