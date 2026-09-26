@@ -5,15 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/utils"
 
 	"github.com/google/uuid"
 )
 
 const (
 	UserDefaultPageSize = 20
+	UserMinPageSize     = 1
 	UserMaxPageSize     = 100
 )
 
@@ -37,9 +38,19 @@ func (s *userService) CreateUser(ctx context.Context, input *UserCreateInput) (*
 	firstName := strings.TrimSpace(input.Body.FirstName)
 	lastName := strings.TrimSpace(input.Body.LastName)
 	email := strings.TrimSpace(input.Body.Email)
-	password := input.Body.Password
-	if firstName == "" || lastName == "" || email == "" {
-		return nil, errs.HumaError(errs.Public("name must not be blank", errs.ErrInvalidInput))
+	// password := input.Body.Password
+	
+	// TODO: other name validation?
+	if firstName == "" {
+		return nil, errs.HumaError(errs.Public("first name must not be blank", errs.ErrInvalidInput))
+	}
+	if lastName == "" {
+		return nil, errs.HumaError(errs.Public("last name must not be blank", errs.ErrInvalidInput))
+	}
+	
+	// TODO: other email validation
+	if email == "" {
+		return nil, errs.HumaError(errs.Public("email must not be blank", errs.ErrInvalidInput))
 	}
 
 	user := &User{
@@ -48,11 +59,10 @@ func (s *userService) CreateUser(ctx context.Context, input *UserCreateInput) (*
 		LastName:  lastName,
 	}
 	if err := s.repo.CreateUser(ctx, user); err != nil {
-		// The client can act on a name collision, so it gets the detail; the
-		// rest of the chain stays in the log.
+		// TODO: what are conditions for a duplicate here? dup email? dup name? other? need to revisit in repository.go
 		if errors.Is(err, errs.ErrDuplicate) {
 			return nil, errs.HumaError(fmt.Errorf("create user: %w",
-				errs.Public(fmt.Sprintf("an user named %q already exists", name), err)))
+				errs.Public(fmt.Sprintf("an user TODO TODO TODO %q", email), err)))
 		}
 
 		return nil, errs.HumaError(fmt.Errorf("create user: %w", err))
@@ -87,9 +97,11 @@ func (s *userService) UpdateUserByID(ctx context.Context, input *UserUpdateInput
 	}
 
 	if err := s.repo.UpdateUserByID(ctx, id, update); err != nil {
+
+		// TODO: Again, conditions for duplicate??
 		if errors.Is(err, errs.ErrDuplicate) {
 			return nil, errs.HumaError(fmt.Errorf("update user: %w",
-				errs.Public(fmt.Sprintf("an user named %q already exists", *update.Name), err)))
+				errs.Public(fmt.Sprintf("an user TODO TODO TODO %q", *update.Email), err)))
 		}
 
 		return nil, errs.HumaError(fmt.Errorf("update user: %w", err))
@@ -110,49 +122,20 @@ func (s *userService) UpdateUserByID(ctx context.Context, input *UserUpdateInput
 func userUpdateFrom(body UserUpdateBody) (UserUpdate, error) {
 	var update UserUpdate
 
-	if body.Name != nil {
-		name := strings.TrimSpace(*body.Name)
-		if name == "" {
-			return update, errs.Public("name must not be blank", errs.ErrInvalidInput)
-		}
-		update.Name = &name
-	}
-
-	if body.Status != nil {
-		if !body.Status.IsValid() {
-			return update, errs.Public(
-				fmt.Sprintf("unknown status %q", *body.Status), errs.ErrInvalidInput)
-		}
-		update.Status = body.Status
-	}
-
-	if update.Name == nil && update.Status == nil {
-		return update, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
-	}
+	// TODO: extract fields, and unify validation logic with CreateUser
 
 	return update, nil
 }
 
 func (s *userService) ListUsers(ctx context.Context, input *UserListInput) (*UserListOutput, error) {
-	if input.Status != "" && !input.Status.IsValid() {
-		return nil, errs.HumaError(
-			errs.Public(fmt.Sprintf("unknown status %q", input.Status), errs.ErrInvalidInput))
-	}
+	// TODO: validate fields, perhaps unified but we have to allow some fuzzy searching
 
-	// Clamped rather than trusted: Huma enforces the bounds on an HTTP request,
-	// but a job calling this method directly gets a bounded page too.
-	limit := input.Limit
-	switch {
-	case limit <= 0:
-		limit = UserDefaultPageSize
-	case limit > UserMaxPageSize:
-		limit = UserMaxPageSize
-	}
+	limit := utils.Clamp(input.Limit, UserMinPageSize, UserMaxPageSize)
 
 	offset := max(input.Offset, 0)
 
 	users, total, err := s.repo.ListUsers(ctx, UserListFilter{
-		Status: input.Status,
+		// TODO: decide what filters we want and include them in repository
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -165,14 +148,14 @@ func (s *userService) ListUsers(ctx context.Context, input *UserListInput) (*Use
 		data = append(data, newUserResponse(user))
 	}
 
-	// The clamped values, not what was asked for, so the caller can tell which
-	// page it actually got.
-	return &UserListOutput{Body: UserListBody{
-		Data:   data,
-		Total:  total,
-		Limit:  limit,
-		Offset: offset,
-	}}, nil
+	return &UserListOutput{
+			Body: UserListBody{
+				Data:   data,
+				Total:  total,
+				Limit:  limit,
+				Offset: offset,
+			}}, 
+		nil
 }
 
 func (s *userService) DeleteUser(ctx context.Context, input *UserIDInput) (*struct{}, error) {
