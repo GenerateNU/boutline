@@ -1,4 +1,4 @@
-package match
+package bout
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func TestTranslateMatchWriteError(t *testing.T) {
+func TestTranslateBoutWriteError(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -30,7 +30,7 @@ func TestTranslateMatchWriteError(t *testing.T) {
 			name:       "check constraint violation becomes an invalid input",
 			err:        fmt.Errorf("%w: boom", gorm.ErrCheckConstraintViolated),
 			wantStatus: http.StatusBadRequest,
-			wantMsg:    "match fields violate a constraint",
+			wantMsg:    "bout fields violate a constraint",
 		},
 		{
 			name:       "unrelated error stays internal",
@@ -44,7 +44,7 @@ func TestTranslateMatchWriteError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := translateMatchWriteError("create match", tt.err)
+			err := translateBoutWriteError("create bout", tt.err)
 
 			assert.Equal(t, tt.wantStatus, errs.StatusFor(err))
 			assert.Equal(t, tt.wantMsg, errs.ClientMessage(err))

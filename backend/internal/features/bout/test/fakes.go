@@ -7,29 +7,29 @@ import (
 	"time"
 
 	"boutline/internal/errs"
-	"boutline/internal/features/match"
+	"boutline/internal/features/bout"
 	"boutline/internal/features/tournament"
 
 	"github.com/google/uuid"
 )
 
-var _ match.MatchRepository = (*FakeMatchRepository)(nil)
+var _ bout.BoutRepository = (*FakeBoutRepository)(nil)
 
-type FakeMatchRepository struct {
-	Matches map[uuid.UUID]match.Match
-	Err     error // when set, every method fails with it
+type FakeBoutRepository struct {
+	Bouts map[uuid.UUID]bout.Bout
+	Err   error // when set, every method fails with it
 }
 
-func NewFakeMatchRepository(seed ...match.Match) *FakeMatchRepository {
-	matches := make(map[uuid.UUID]match.Match, len(seed))
+func NewFakeBoutRepository(seed ...bout.Bout) *FakeBoutRepository {
+	bouts := make(map[uuid.UUID]bout.Bout, len(seed))
 	for _, seeded := range seed {
-		matches[seeded.ID] = seeded
+		bouts[seeded.ID] = seeded
 	}
 
-	return &FakeMatchRepository{Matches: matches}
+	return &FakeBoutRepository{Bouts: bouts}
 }
 
-func (f *FakeMatchRepository) CreateMatch(_ context.Context, toCreate *match.Match) error {
+func (f *FakeBoutRepository) CreateBout(_ context.Context, toCreate *bout.Bout) error {
 	if f.Err != nil {
 		return f.Err
 	}
@@ -37,34 +37,34 @@ func (f *FakeMatchRepository) CreateMatch(_ context.Context, toCreate *match.Mat
 	toCreate.ID = uuid.New()
 	toCreate.CreatedAt = time.Now()
 	toCreate.UpdatedAt = toCreate.CreatedAt
-	f.Matches[toCreate.ID] = *toCreate
+	f.Bouts[toCreate.ID] = *toCreate
 
 	return nil
 }
 
-func (f *FakeMatchRepository) GetMatchByID(_ context.Context, id uuid.UUID) (*match.Match, error) {
+func (f *FakeBoutRepository) GetBoutByID(_ context.Context, id uuid.UUID) (*bout.Bout, error) {
 	if f.Err != nil {
 		return nil, f.Err
 	}
 
-	found, ok := f.Matches[id]
+	found, ok := f.Bouts[id]
 	if !ok {
-		return nil, fmt.Errorf("select match %s: %w", id, errs.ErrNotFound)
+		return nil, fmt.Errorf("select bout %s: %w", id, errs.ErrNotFound)
 	}
 
 	return &found, nil
 }
 
-func (f *FakeMatchRepository) ListMatches(
+func (f *FakeBoutRepository) ListBouts(
 	_ context.Context,
-	filter match.MatchListFilter,
-) ([]match.Match, int64, error) {
+	filter bout.BoutListFilter,
+) ([]bout.Bout, int64, error) {
 	if f.Err != nil {
 		return nil, 0, f.Err
 	}
 
-	matched := make([]match.Match, 0, len(f.Matches))
-	for _, candidate := range f.Matches {
+	matched := make([]bout.Bout, 0, len(f.Bouts))
+	for _, candidate := range f.Bouts {
 		if filter.TournamentID != nil && candidate.TournamentID != *filter.TournamentID {
 			continue
 		}
@@ -74,13 +74,13 @@ func (f *FakeMatchRepository) ListMatches(
 		matched = append(matched, candidate)
 	}
 
-	slices.SortFunc(matched, func(a, b match.Match) int {
+	slices.SortFunc(matched, func(a, b bout.Bout) int {
 		return b.CreatedAt.Compare(a.CreatedAt)
 	})
 
 	total := int64(len(matched))
 	if filter.Offset >= len(matched) {
-		return []match.Match{}, total, nil
+		return []bout.Bout{}, total, nil
 	}
 
 	matched = matched[filter.Offset:]
@@ -91,8 +91,8 @@ func (f *FakeMatchRepository) ListMatches(
 	return matched, total, nil
 }
 
-func (f *FakeMatchRepository) EditMatchByID(_ context.Context, id uuid.UUID, edit match.MatchEdit) error {
-	stored, err := f.guard(id, match.MatchEditableStatuses())
+func (f *FakeBoutRepository) EditBoutByID(_ context.Context, id uuid.UUID, edit bout.BoutEdit) error {
+	stored, err := f.guard(id, bout.BoutEditableStatuses())
 	if err != nil {
 		return err
 	}
@@ -127,10 +127,10 @@ func (f *FakeMatchRepository) EditMatchByID(_ context.Context, id uuid.UUID, edi
 	return nil
 }
 
-func (f *FakeMatchRepository) TransitionMatchByID(
+func (f *FakeBoutRepository) TransitionBoutByID(
 	_ context.Context,
 	id uuid.UUID,
-	transition match.MatchTransition,
+	transition bout.BoutTransition,
 ) error {
 	stored, err := f.guard(id, transition.From)
 	if err != nil {
@@ -147,39 +147,39 @@ func (f *FakeMatchRepository) TransitionMatchByID(
 	return nil
 }
 
-func (f *FakeMatchRepository) DeleteMatchByID(_ context.Context, id uuid.UUID) error {
-	if _, err := f.guard(id, match.MatchDeletableStatuses()); err != nil {
+func (f *FakeBoutRepository) DeleteBoutByID(_ context.Context, id uuid.UUID) error {
+	if _, err := f.guard(id, bout.BoutDeletableStatuses()); err != nil {
 		return err
 	}
 
-	delete(f.Matches, id)
+	delete(f.Bouts, id)
 
 	return nil
 }
 
-func (f *FakeMatchRepository) guard(id uuid.UUID, allowedStatuses []match.MatchStatus) (match.Match, error) {
+func (f *FakeBoutRepository) guard(id uuid.UUID, allowedStatuses []bout.BoutStatus) (bout.Bout, error) {
 	if f.Err != nil {
-		return match.Match{}, f.Err
+		return bout.Bout{}, f.Err
 	}
 
-	stored, ok := f.Matches[id]
+	stored, ok := f.Bouts[id]
 	if !ok {
-		return match.Match{}, fmt.Errorf("update match %s: %w", id, errs.ErrNotFound)
+		return bout.Bout{}, fmt.Errorf("update bout %s: %w", id, errs.ErrNotFound)
 	}
 
 	if len(allowedStatuses) > 0 && !slices.Contains(allowedStatuses, stored.Status) {
-		return match.Match{}, fmt.Errorf("update match %s: %w", id, errs.ErrConflict)
+		return bout.Bout{}, fmt.Errorf("update bout %s: %w", id, errs.ErrConflict)
 	}
 
 	return stored, nil
 }
 
-func (f *FakeMatchRepository) save(id uuid.UUID, stored match.Match) {
+func (f *FakeBoutRepository) save(id uuid.UUID, stored bout.Bout) {
 	stored.UpdatedAt = time.Now()
-	f.Matches[id] = stored
+	f.Bouts[id] = stored
 }
 
-var _ match.TournamentLookup = (*FakeTournamentLookup)(nil)
+var _ bout.TournamentLookup = (*FakeTournamentLookup)(nil)
 
 type FakeTournamentLookup struct {
 	Tournaments map[uuid.UUID]tournament.Tournament

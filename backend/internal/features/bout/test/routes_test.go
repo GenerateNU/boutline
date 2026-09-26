@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"boutline/internal/features/match"
+	"boutline/internal/features/bout"
 	"boutline/internal/features/tournament"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
@@ -14,11 +14,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestAPI(t *testing.T, tournaments *FakeTournamentLookup, seed ...match.Match) humatest.TestAPI {
+func newTestAPI(t *testing.T, tournaments *FakeTournamentLookup, seed ...bout.Bout) humatest.TestAPI {
 	t.Helper()
 
 	_, api := humatest.New(t)
-	match.RegisterMatchService(api, match.NewMatchService(NewFakeMatchRepository(seed...), tournaments))
+	bout.RegisterBoutService(api, bout.NewBoutService(NewFakeBoutRepository(seed...), tournaments))
 
 	return api
 }
@@ -47,7 +47,7 @@ func TestCreateEndpoint(t *testing.T) {
 		wantFields map[string]any
 	}{
 		{
-			name: "creates a match and echoes the stored row",
+			name: "creates a bout and echoes the stored row",
 			body: map[string]any{
 				"tournament_id":   activeTournament.ID.String(),
 				"referee_id":      referee,
@@ -91,7 +91,7 @@ func TestCreateEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t, NewFakeTournamentLookup(activeTournament)).Post("/api/v1/matches", tt.body)
+			resp := newTestAPI(t, NewFakeTournamentLookup(activeTournament)).Post("/api/v1/bouts", tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 
@@ -107,15 +107,15 @@ func TestListEndpoint(t *testing.T) {
 	t.Parallel()
 
 	tournamentID := uuid.New()
-	seed := []match.Match{
-		seededMatch(match.MatchStatusPending, tournamentID),
-		seededMatch(match.MatchStatusActive, tournamentID),
+	seed := []bout.Bout{
+		seededBout(bout.BoutStatusPending, tournamentID),
+		seededBout(bout.BoutStatusActive, tournamentID),
 	}
 
 	t.Run("returns a page and the unpaged total", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakeTournamentLookup(), seed...).Get("/api/v1/matches?limit=1")
+		resp := newTestAPI(t, NewFakeTournamentLookup(), seed...).Get("/api/v1/bouts?limit=1")
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 
@@ -129,7 +129,7 @@ func TestListEndpoint(t *testing.T) {
 		t.Parallel()
 
 		resp := newTestAPI(t, NewFakeTournamentLookup(), seed...).
-			Get("/api/v1/matches?tournament_id=" + tournamentID.String() + "&status=active")
+			Get("/api/v1/bouts?tournament_id=" + tournamentID.String() + "&status=active")
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 
@@ -140,7 +140,7 @@ func TestListEndpoint(t *testing.T) {
 	t.Run("rejects a status outside the enum", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakeTournamentLookup(), seed...).Get("/api/v1/matches?status=nope")
+		resp := newTestAPI(t, NewFakeTournamentLookup(), seed...).Get("/api/v1/bouts?status=nope")
 
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
@@ -149,12 +149,12 @@ func TestListEndpoint(t *testing.T) {
 func TestGetAndUpdateEndpoint(t *testing.T) {
 	t.Parallel()
 
-	stored := seededMatch(match.MatchStatusPending, uuid.New())
+	stored := seededBout(bout.BoutStatusPending, uuid.New())
 
-	t.Run("returns the stored match", func(t *testing.T) {
+	t.Run("returns the stored bout", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakeTournamentLookup(), stored).Get("/api/v1/matches/" + stored.ID.String())
+		resp := newTestAPI(t, NewFakeTournamentLookup(), stored).Get("/api/v1/bouts/" + stored.ID.String())
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 	})
@@ -162,7 +162,7 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 	t.Run("reports an unknown id as not found", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakeTournamentLookup(), stored).Get("/api/v1/matches/" + uuid.New().String())
+		resp := newTestAPI(t, NewFakeTournamentLookup(), stored).Get("/api/v1/bouts/" + uuid.New().String())
 
 		assert.Equal(t, http.StatusNotFound, resp.Code)
 	})
@@ -171,7 +171,7 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 		t.Parallel()
 
 		resp := newTestAPI(t, NewFakeTournamentLookup(), stored).
-			Patch("/api/v1/matches/"+stored.ID.String(), map[string]any{"points_to_win": 21})
+			Patch("/api/v1/bouts/"+stored.ID.String(), map[string]any{"points_to_win": 21})
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 
@@ -184,9 +184,9 @@ func TestLifecycleEndpoints(t *testing.T) {
 	t.Parallel()
 
 	activeTournament := seededTournament(tournament.TournamentStatusActive)
-	stored := seededMatch(match.MatchStatusPending, activeTournament.ID)
+	stored := seededBout(bout.BoutStatusPending, activeTournament.ID)
 	api := newTestAPI(t, NewFakeTournamentLookup(activeTournament), stored)
-	base := "/api/v1/matches/" + stored.ID.String()
+	base := "/api/v1/bouts/" + stored.ID.String()
 
 	started := api.Post(base + "/start")
 	require.Equal(t, http.StatusOK, started.Code, "body: %s", started.Body)
@@ -206,9 +206,9 @@ func TestDeleteEndpoint(t *testing.T) {
 	t.Parallel()
 
 	activeTournament := seededTournament(tournament.TournamentStatusActive)
-	stored := seededMatch(match.MatchStatusPending, activeTournament.ID)
+	stored := seededBout(bout.BoutStatusPending, activeTournament.ID)
 	api := newTestAPI(t, NewFakeTournamentLookup(activeTournament), stored)
-	base := "/api/v1/matches/" + stored.ID.String()
+	base := "/api/v1/bouts/" + stored.ID.String()
 
 	require.Equal(t, http.StatusOK, api.Post(base+"/start").Code)
 	assert.Equal(t, http.StatusConflict, api.Delete(base).Code)

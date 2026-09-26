@@ -1,4 +1,4 @@
-package match
+package bout
 
 import (
 	"context"
@@ -14,37 +14,37 @@ import (
 )
 
 const (
-	MatchMinPageSize     = 1
-	MatchDefaultPageSize = 20
-	MatchMaxPageSize     = 100
+	BoutMinPageSize     = 1
+	BoutDefaultPageSize = 20
+	BoutMaxPageSize     = 100
 )
 
-// TournamentLookup is the slice of tournament.TournamentRepository the match
+// TournamentLookup is the slice of tournament.TournamentRepository the bout
 // service needs; tournament.TournamentRepository satisfies it.
 type TournamentLookup interface {
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*tournament.Tournament, error)
 }
 
-type MatchService interface {
-	CreateMatch(ctx context.Context, input *MatchCreateInput) (*MatchOutput, error)
-	GetMatchByID(ctx context.Context, input *MatchIDInput) (*MatchOutput, error)
-	ListMatches(ctx context.Context, input *MatchListInput) (*MatchListOutput, error)
-	UpdateMatchByID(ctx context.Context, input *MatchUpdateInput) (*MatchOutput, error)
-	StartMatch(ctx context.Context, input *MatchIDInput) (*MatchOutput, error)
-	EndMatch(ctx context.Context, input *MatchIDInput) (*MatchOutput, error)
-	DeleteMatchByID(ctx context.Context, input *MatchIDInput) (*struct{}, error)
+type BoutService interface {
+	CreateBout(ctx context.Context, input *BoutCreateInput) (*BoutOutput, error)
+	GetBoutByID(ctx context.Context, input *BoutIDInput) (*BoutOutput, error)
+	ListBouts(ctx context.Context, input *BoutListInput) (*BoutListOutput, error)
+	UpdateBoutByID(ctx context.Context, input *BoutUpdateInput) (*BoutOutput, error)
+	StartBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error)
+	EndBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error)
+	DeleteBoutByID(ctx context.Context, input *BoutIDInput) (*struct{}, error)
 }
 
-type matchService struct {
-	repo        MatchRepository
+type boutService struct {
+	repo        BoutRepository
 	tournaments TournamentLookup
 }
 
-func NewMatchService(repo MatchRepository, tournaments TournamentLookup) MatchService {
-	return &matchService{repo: repo, tournaments: tournaments}
+func NewBoutService(repo BoutRepository, tournaments TournamentLookup) BoutService {
+	return &boutService{repo: repo, tournaments: tournaments}
 }
 
-func (s *matchService) CreateMatch(ctx context.Context, input *MatchCreateInput) (*MatchOutput, error) {
+func (s *boutService) CreateBout(ctx context.Context, input *BoutCreateInput) (*BoutOutput, error) {
 	tournamentID, err := utils.ParseUUID(input.Body.TournamentID, "tournament_id")
 	if err != nil {
 		return nil, errs.HumaError(err)
@@ -62,7 +62,7 @@ func (s *matchService) CreateMatch(ctx context.Context, input *MatchCreateInput)
 		return nil, errs.HumaError(err)
 	}
 
-	if err := validateMatchFields(
+	if err := validateBoutFields(
 		competitor1ID, competitor2ID,
 		input.Body.PointsToWin, input.Body.TimeLimitSeconds, input.Body.GroupNumber,
 	); err != nil {
@@ -79,10 +79,10 @@ func (s *matchService) CreateMatch(ctx context.Context, input *MatchCreateInput)
 	}
 	if tourney.Status != tournament.TournamentStatusActive {
 		return nil, errs.HumaError(errs.Public(
-			"matches can only be created in an active tournament", errs.ErrConflict))
+			"bouts can only be created in an active tournament", errs.ErrConflict))
 	}
 
-	match := &Match{
+	bout := &Bout{
 		TournamentID:     tournamentID,
 		Location:         input.Body.Location,
 		Time:             input.Body.Time,
@@ -90,18 +90,18 @@ func (s *matchService) CreateMatch(ctx context.Context, input *MatchCreateInput)
 		TimeLimitSeconds: input.Body.TimeLimitSeconds,
 		PointsToWin:      input.Body.PointsToWin,
 		GroupNumber:      input.Body.GroupNumber,
-		Status:           MatchStatusPending,
+		Status:           BoutStatusPending,
 		Competitor1ID:    competitor1ID,
 		Competitor2ID:    competitor2ID,
 	}
-	if err := s.repo.CreateMatch(ctx, match); err != nil {
-		return nil, errs.HumaError(fmt.Errorf("create match: %w", err))
+	if err := s.repo.CreateBout(ctx, bout); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("create bout: %w", err))
 	}
 
-	return &MatchOutput{Body: newMatchResponse(*match)}, nil
+	return &BoutOutput{Body: newBoutResponse(*bout)}, nil
 }
 
-func validateMatchFields(competitor1ID, competitor2ID uuid.UUID, pointsToWin int, timeLimitSeconds *int, groupNumber int) error {
+func validateBoutFields(competitor1ID, competitor2ID uuid.UUID, pointsToWin int, timeLimitSeconds *int, groupNumber int) error {
 	if competitor1ID == competitor2ID {
 		return errs.Public("competitor_1_id and competitor_2_id must be different", errs.ErrInvalidInput)
 	}
@@ -118,21 +118,21 @@ func validateMatchFields(competitor1ID, competitor2ID uuid.UUID, pointsToWin int
 	return nil
 }
 
-func (s *matchService) GetMatchByID(ctx context.Context, input *MatchIDInput) (*MatchOutput, error) {
+func (s *boutService) GetBoutByID(ctx context.Context, input *BoutIDInput) (*BoutOutput, error) {
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
-	match, err := s.repo.GetMatchByID(ctx, id)
+	bout, err := s.repo.GetBoutByID(ctx, id)
 	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("get match: %w", err))
+		return nil, errs.HumaError(fmt.Errorf("get bout: %w", err))
 	}
 
-	return &MatchOutput{Body: newMatchResponse(*match)}, nil
+	return &BoutOutput{Body: newBoutResponse(*bout)}, nil
 }
 
-func (s *matchService) ListMatches(ctx context.Context, input *MatchListInput) (*MatchListOutput, error) {
+func (s *boutService) ListBouts(ctx context.Context, input *BoutListInput) (*BoutListOutput, error) {
 	if input.Status != "" && !input.Status.IsValid() {
 		return nil, errs.HumaError(errs.Public(
 			fmt.Sprintf("unknown status %q", input.Status), errs.ErrInvalidInput))
@@ -149,27 +149,27 @@ func (s *matchService) ListMatches(ctx context.Context, input *MatchListInput) (
 
 	limit := input.Limit
 	if limit <= 0 {
-		limit = MatchDefaultPageSize
+		limit = BoutDefaultPageSize
 	}
-	limit = utils.Clamp(limit, MatchMinPageSize, MatchMaxPageSize)
+	limit = utils.Clamp(limit, BoutMinPageSize, BoutMaxPageSize)
 	offset := max(input.Offset, 0)
 
-	matches, total, err := s.repo.ListMatches(ctx, MatchListFilter{
+	bouts, total, err := s.repo.ListBouts(ctx, BoutListFilter{
 		TournamentID: tournamentID,
 		Status:       input.Status,
 		Limit:        limit,
 		Offset:       offset,
 	})
 	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("list matches: %w", err))
+		return nil, errs.HumaError(fmt.Errorf("list bouts: %w", err))
 	}
 
-	data := make([]MatchResponse, 0, len(matches))
-	for _, listed := range matches {
-		data = append(data, newMatchResponse(listed))
+	data := make([]BoutResponse, 0, len(bouts))
+	for _, listed := range bouts {
+		data = append(data, newBoutResponse(listed))
 	}
 
-	return &MatchListOutput{Body: MatchListBody{
+	return &BoutListOutput{Body: BoutListBody{
 		Data:   data,
 		Total:  total,
 		Limit:  limit,
@@ -177,24 +177,24 @@ func (s *matchService) ListMatches(ctx context.Context, input *MatchListInput) (
 	}}, nil
 }
 
-func (s *matchService) UpdateMatchByID(ctx context.Context, input *MatchUpdateInput) (*MatchOutput, error) {
+func (s *boutService) UpdateBoutByID(ctx context.Context, input *BoutUpdateInput) (*BoutOutput, error) {
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
-	edit, err := s.matchEditFrom(ctx, id, input.Body)
+	edit, err := s.boutEditFrom(ctx, id, input.Body)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
-	err = s.repo.EditMatchByID(ctx, id, edit)
+	err = s.repo.EditBoutByID(ctx, id, edit)
 
-	return s.afterUpdate(ctx, id, err, "only a pending match can be edited")
+	return s.afterUpdate(ctx, id, err, "only a pending bout can be edited")
 }
 
-func (s *matchService) matchEditFrom(ctx context.Context, id uuid.UUID, body MatchUpdateBody) (MatchEdit, error) {
-	var edit MatchEdit
+func (s *boutService) boutEditFrom(ctx context.Context, id uuid.UUID, body BoutUpdateBody) (BoutEdit, error) {
+	var edit BoutEdit
 
 	if body.RefereeID != nil {
 		refereeID, err := utils.ParseUUID(*body.RefereeID, "referee_id")
@@ -256,7 +256,7 @@ func (s *matchService) matchEditFrom(ctx context.Context, id uuid.UUID, body Mat
 // When only one competitor is supplied, the other side of the pair comes from
 // the stored row, so the distinctness check needs a read the plain field
 // validation above cannot see.
-func (s *matchService) validateCompetitorPair(ctx context.Context, id uuid.UUID, competitor1ID, competitor2ID *uuid.UUID) error {
+func (s *boutService) validateCompetitorPair(ctx context.Context, id uuid.UUID, competitor1ID, competitor2ID *uuid.UUID) error {
 	if competitor1ID != nil && competitor2ID != nil {
 		if *competitor1ID == *competitor2ID {
 			return errs.Public("competitor_1_id and competitor_2_id must be different", errs.ErrInvalidInput)
@@ -267,7 +267,7 @@ func (s *matchService) validateCompetitorPair(ctx context.Context, id uuid.UUID,
 		return nil
 	}
 
-	stored, err := s.repo.GetMatchByID(ctx, id)
+	stored, err := s.repo.GetBoutByID(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -285,87 +285,87 @@ func (s *matchService) validateCompetitorPair(ctx context.Context, id uuid.UUID,
 	return nil
 }
 
-func (s *matchService) StartMatch(ctx context.Context, input *MatchIDInput) (*MatchOutput, error) {
+func (s *boutService) StartBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error) {
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
-	match, err := s.repo.GetMatchByID(ctx, id)
+	bout, err := s.repo.GetBoutByID(ctx, id)
 	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("get match: %w", err))
+		return nil, errs.HumaError(fmt.Errorf("get bout: %w", err))
 	}
 
-	tourney, err := s.tournaments.GetTournamentByID(ctx, match.TournamentID)
+	tourney, err := s.tournaments.GetTournamentByID(ctx, bout.TournamentID)
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("get tournament: %w", err))
 	}
 	if tourney.Status != tournament.TournamentStatusActive {
 		return nil, errs.HumaError(errs.Public(
-			"matches can only be started in an active tournament", errs.ErrConflict))
+			"bouts can only be started in an active tournament", errs.ErrConflict))
 	}
 
 	now := time.Now().UTC()
-	err = s.repo.TransitionMatchByID(ctx, id, MatchTransition{
-		To:   MatchStatusActive,
+	err = s.repo.TransitionBoutByID(ctx, id, BoutTransition{
+		To:   BoutStatusActive,
 		Time: &now,
-		From: []MatchStatus{MatchStatusPending},
+		From: []BoutStatus{BoutStatusPending},
 	})
 
-	return s.afterUpdate(ctx, id, err, "only a pending match can be started")
+	return s.afterUpdate(ctx, id, err, "only a pending bout can be started")
 }
 
-func (s *matchService) EndMatch(ctx context.Context, input *MatchIDInput) (*MatchOutput, error) {
+func (s *boutService) EndBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error) {
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
-	err = s.repo.TransitionMatchByID(ctx, id, MatchTransition{
-		To:   MatchStatusEnd,
-		From: []MatchStatus{MatchStatusActive},
+	err = s.repo.TransitionBoutByID(ctx, id, BoutTransition{
+		To:   BoutStatusEnd,
+		From: []BoutStatus{BoutStatusActive},
 	})
 
-	return s.afterUpdate(ctx, id, err, "only an active match can be ended")
+	return s.afterUpdate(ctx, id, err, "only an active bout can be ended")
 }
 
-func (s *matchService) DeleteMatchByID(ctx context.Context, input *MatchIDInput) (*struct{}, error) {
+func (s *boutService) DeleteBoutByID(ctx context.Context, input *BoutIDInput) (*struct{}, error) {
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
-	if err := s.repo.DeleteMatchByID(ctx, id); err != nil {
+	if err := s.repo.DeleteBoutByID(ctx, id); err != nil {
 		if errors.Is(err, errs.ErrConflict) {
-			return nil, errs.HumaError(fmt.Errorf("delete match: %w",
-				errs.Public("an active match cannot be deleted", err)))
+			return nil, errs.HumaError(fmt.Errorf("delete bout: %w",
+				errs.Public("an active bout cannot be deleted", err)))
 		}
 
-		return nil, errs.HumaError(fmt.Errorf("delete match: %w", err))
+		return nil, errs.HumaError(fmt.Errorf("delete bout: %w", err))
 	}
 
 	return nil, nil
 }
 
-func (s *matchService) afterUpdate(
+func (s *boutService) afterUpdate(
 	ctx context.Context,
 	id uuid.UUID,
 	err error,
 	conflictMessage string,
-) (*MatchOutput, error) {
+) (*BoutOutput, error) {
 	if err != nil {
 		if errors.Is(err, errs.ErrConflict) {
-			return nil, errs.HumaError(fmt.Errorf("update match: %w",
+			return nil, errs.HumaError(fmt.Errorf("update bout: %w",
 				errs.Public(conflictMessage, err)))
 		}
 
-		return nil, errs.HumaError(fmt.Errorf("update match: %w", err))
+		return nil, errs.HumaError(fmt.Errorf("update bout: %w", err))
 	}
 
-	match, err := s.repo.GetMatchByID(ctx, id)
+	bout, err := s.repo.GetBoutByID(ctx, id)
 	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("get updated match: %w", err))
+		return nil, errs.HumaError(fmt.Errorf("get updated bout: %w", err))
 	}
 
-	return &MatchOutput{Body: newMatchResponse(*match)}, nil
+	return &BoutOutput{Body: newBoutResponse(*bout)}, nil
 }
