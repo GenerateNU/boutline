@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 
+	"boutline/internal/features/match"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 
@@ -27,6 +28,7 @@ func main() {
 
 func run() error {
 	stmts, err := gormschema.New("postgres").Load(
+		&match.Match{},
 		&tournament.Tournament{},
 		&user.User{},
 	)
