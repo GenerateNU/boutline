@@ -2,8 +2,9 @@
 // Atlas runs it as the desired state for `atlas migrate diff`, so the models
 // stay the single source of truth for the schema.
 //
-// Register each new feature's model here — a model Atlas cannot see is a table
-// that never gets migrated.
+// Add each new feature's model to the Load call as a pointer argument
+// (`Load(&example.Example{})`) — a model Atlas cannot see is a table that never
+// gets migrated.
 package main
 
 import (
@@ -11,9 +12,10 @@ import (
 	"io"
 	"os"
 
+	"boutline/internal/features/tournament"
+	"boutline/internal/features/user"
+
 	"ariga.io/atlas-provider-gorm/gormschema"
-	// Import your feature models here so Atlas can see them.
-	// _ "boutline/internal/features/example"
 )
 
 func main() {
@@ -24,7 +26,10 @@ func main() {
 }
 
 func run() error {
-	stmts, err := gormschema.New("postgres").Load()
+	stmts, err := gormschema.New("postgres").Load(
+		&tournament.Tournament{},
+		&user.User{},
+	)
 	if err != nil {
 		return fmt.Errorf("load gorm schema: %w", err)
 	}

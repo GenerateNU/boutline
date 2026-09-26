@@ -1,0 +1,21 @@
+-- Create "tournaments" table
+CREATE TABLE "tournaments" (
+  "id" uuid NOT NULL DEFAULT gen_random_uuid(),
+  "name" text NOT NULL,
+  "visibility" text NOT NULL,
+  "code" text NOT NULL,
+  "status" text NOT NULL DEFAULT 'pending',
+  "created_by" uuid NOT NULL,
+  "start_time" timestamptz NULL,
+  "started_at" timestamptz NULL,
+  "completed_at" timestamptz NULL,
+  "created_at" timestamptz NULL,
+  "updated_at" timestamptz NULL,
+  PRIMARY KEY ("id"),
+  CONSTRAINT "chk_tournaments_visibility" CHECK (visibility IN ('private', 'public')),
+  CONSTRAINT "chk_tournaments_status" CHECK (status IN ('pending', 'active', 'end'))
+);
+-- Create index "idx_tournaments_code" to table: "tournaments"
+CREATE UNIQUE INDEX "idx_tournaments_code" ON "tournaments" ("code");
+-- Create index "idx_tournaments_status" to table: "tournaments"
+CREATE INDEX "idx_tournaments_status" ON "tournaments" ("status");

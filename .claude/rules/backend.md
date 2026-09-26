@@ -10,26 +10,45 @@ projects. `backend/README.md` has the commands and the current directory map.
 
 ## Layers
 
+Everything below lives under `backend/internal/`:
+
 ```
-config/       loaded and validated once at startup
-repository/   database access
-services/     business logic
-controllers/  HTTP request/response
-validators/   request validation and custom tags
-middlewares/  cross-cutting concerns
-routers/      route registration, one file per feature
-errs/         the shared error vocabulary
+config/              loaded and validated once at startup
+database/            the gorm/postgres pool
+features/<name>/     one folder per feature, one file per layer
+utils/               shared helpers: request validation, custom tags, clamp
+errs/                the shared error vocabulary
+types/               RouteParams / ServiceParams
+server/app.go        builds the Fiber app, the Huma API, and the wiring
+server/middlewares/  cross-cutting concerns
+server/routers/      mounts each feature with one call
+tests/               integration and end-to-end tests
+tests/testkit/       request builder and assertions for those tests
+```
+
+The layers are the files inside a feature folder, not top-level packages:
+
+```
+features/trips/types.go       the wire format Huma builds the schema from
+features/trips/model.go       the gorm model and its domain types
+features/trips/repository.go  database access
+features/trips/service.go     business logic, registered with Huma by routes.go
+features/trips/routes.go      route registration, one file per feature
+features/trips/test/          that feature's unit tests and their fakes
 ```
 
 Boundaries are one-directional and absolute:
 
-- Controllers hold no business logic — bind, validate, call the service, encode.
-- Services hold no HTTP types. No `*fiber.Ctx` below the controller.
+- The service is the top layer: it takes the input type, decides, and returns
+  the output type. Nothing else holds business logic.
+- `model.go` and `repository.go` never mention a wire type. No `*fiber.Ctx`
+  anywhere below `routes.go`.
 - Repositories hold no business logic — queries only.
 
-Create a layer's package when the first real code needs it, not as an empty
-placeholder. One file per domain concept within a layer (`services/trips.go`,
-`repository/trips.go`), never a `utils.go` or `helpers.go` grab bag.
+Create a feature's file when the first real code needs it, not as an empty
+placeholder — `features/health` is its types, a service, and its routes, since
+there is nothing to store and nothing to decide. One file per domain concept,
+never a `utils.go` or `helpers.go` grab bag.
 
 ## Dependency injection
 
@@ -53,8 +72,9 @@ the only place that maps an error to a status code.
 
 - Services return sentinels (`errs.ErrNotFound`, `errs.ErrDuplicate`,
   `errs.ErrInvalidInput`), wrapped with `fmt.Errorf("verb noun: %w", err)`.
-- Controllers return `errs.NewAPIError(status, err)` when they need a specific
-  status; otherwise they return the service's error unchanged.
+- A service returns `errs.NewAPIError(status, err)` when it needs a specific
+  status; otherwise it returns the sentinel unchanged and `errs.HumaError` maps
+  it.
 - Never return a raw database or driver error to a client. Anything unrecognised
   becomes a 500 with a generic message — the detail goes to the log only.
 - Compare with `errors.Is` / `errors.As`. Never discard an error with `_`, and
@@ -75,9 +95,10 @@ the only place that maps an error to a status code.
 ## Routing
 
 Routes are versioned and grouped by feature: `/api/v1/trips`, `/api/v1/users`.
-Each feature gets its own file in `internal/server/routers`, registered from
-`SetUpRoutes`. Auth, logging, CORS, and rate limiting belong in middleware, not
-in handlers.
+A feature owns its `routes.go`, which is the only place that knows how its
+layers fit together; `SetUpRoutes` in `internal/server/routers` mounts it with
+one call. Auth, logging, CORS, and rate limiting belong in middleware, not in a
+feature.
 
 ## Database
 
@@ -95,8 +116,11 @@ request may be delivered twice.
 
 ## Tests
 
-- Unit tests sit beside the code they cover; integration tests live in
-  `internal/tests` and go through the `testkit` builder against the real app.
+- A feature's unit tests live in `internal/features/<name>/test`, running that
+  feature's layers over a fake repository. Package-local tests sit beside the
+  code they cover when they test that package alone (`config/app_test.go`).
+  Integration tests live in `internal/tests` and go through the `testkit`
+  builder against the real app.
 - Table-driven, subtests named for the case, `t.Parallel()` where the test does
   not mutate process state (`t.Setenv` rules it out).
 - Assert observable behavior — status codes, response fields, stored rows — not
