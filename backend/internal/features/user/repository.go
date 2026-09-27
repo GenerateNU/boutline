@@ -22,19 +22,23 @@ type UserRepository interface {
 // Any non-nil fields to be applied as updates
 type UserUpdate struct {
 	Email     *string
-	// Password  *string // TODO: is password updateable in this way?
+	// Password  *string // TODO: is this the route for updating a password?
 	FirstName *string
 	LastName  *string
 }
 
-// TODO: ability to list by name or other fuzzy search?
 type UserListFilter struct {
+	// TODO: other filter criteria
 	Limit  int
 	Offset int
 }
 
 type userRepository struct {
 	db *gorm.DB
+}
+
+func NewUserRepository(db *gorm.DB) UserRepository {
+	return &userRepository{db: db}
 }
 
 func (u UserUpdate) columns() map[string]any {
@@ -96,13 +100,8 @@ func (r *userRepository) UpdateUserByID(ctx context.Context, id uuid.UUID, updat
 
 func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error) {
 	query := r.db.WithContext(ctx).Model(&User{})
-	// TODO: how do we want to be able to search for users?
-	// if filter.Status != "" {
-	// 	query = query.Where("status = ?", filter.Status)
-	// }
-
-	// Counted before the page is fetched so the caller gets a total without a
-	// second round trip through the same filter.
+	// TODO: apply other filters once decided
+	
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count users: %w", err)

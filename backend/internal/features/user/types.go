@@ -31,7 +31,7 @@ type UserOutput struct {
 }
 
 type UserCreateBody struct {
-	Email     string        `json:"email" minLength:"1" maxLength:"120" doc:"User email"`
+	Email     string        `json:"email" format:"email" minLength:"1" maxLength:"120" doc:"User email"`
 	Password  string        `json:"password" minLength:"1" maxLength:"120" doc:"User password, hashed"`
 	FirstName string        `json:"firstName" minLength:"1" maxLength:"120" doc:"User first name"`
 	LastName  string        `json:"lastName" minLength:"1" maxLength:"120" doc:"User last name"`
@@ -42,14 +42,14 @@ type UserCreateInput struct {
 }
 
 type UserUpdateBody struct {
-	Email     string        `json:"email,omitempty" minLength:"1" maxLength:"120" doc:"User email"`
-	Password  string        `json:"password,omitempty" minLength:"1" maxLength:"120" doc:"User password, hashed"`
-	FirstName string        `json:"firstName,omitempty" minLength:"1" maxLength:"120" doc:"User first name"`
-	LastName  string        `json:"lastName,omitempty" minLength:"1" maxLength:"120" doc:"User last name"`
+	Email     *string        `json:"email,omitempty" format:"email" minLength:"1" maxLength:"120" doc:"User email"`
+	Password  *string        `json:"password,omitempty" minLength:"1" maxLength:"120" doc:"User password, hashed"`
+	FirstName *string        `json:"firstName,omitempty" minLength:"1" maxLength:"120" doc:"User first name"`
+	LastName  *string        `json:"lastName,omitempty" minLength:"1" maxLength:"120" doc:"User last name"`
 }
 
 type UserUpdateInput struct {
-	ID   string `path:"id" format:"uuid" doc:"User ID"`
+	ID   string 			`path:"id" format:"uuid" doc:"User ID"`
 	Body UserUpdateBody
 }
 

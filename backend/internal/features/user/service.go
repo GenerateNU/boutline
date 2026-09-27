@@ -37,21 +37,15 @@ func NewUserService(repo UserRepository) UserService {
 func (s *userService) CreateUser(ctx context.Context, input *UserCreateInput) (*UserOutput, error) {
 	firstName := strings.TrimSpace(input.Body.FirstName)
 	lastName := strings.TrimSpace(input.Body.LastName)
-	email := strings.TrimSpace(input.Body.Email)
-	// password := input.Body.Password
-	
-	// TODO: other name validation?
 	if firstName == "" {
 		return nil, errs.HumaError(errs.Public("first name must not be blank", errs.ErrInvalidInput))
 	}
 	if lastName == "" {
 		return nil, errs.HumaError(errs.Public("last name must not be blank", errs.ErrInvalidInput))
 	}
-	
-	// TODO: other email validation
-	if email == "" {
-		return nil, errs.HumaError(errs.Public("email must not be blank", errs.ErrInvalidInput))
-	}
+
+	// Huma validates email format on the input
+	email := strings.TrimSpace(input.Body.Email)
 
 	user := &User{
 		Email:	   email,
@@ -59,10 +53,9 @@ func (s *userService) CreateUser(ctx context.Context, input *UserCreateInput) (*
 		LastName:  lastName,
 	}
 	if err := s.repo.CreateUser(ctx, user); err != nil {
-		// TODO: what are conditions for a duplicate here? dup email? dup name? other? need to revisit in repository.go
 		if errors.Is(err, errs.ErrDuplicate) {
 			return nil, errs.HumaError(fmt.Errorf("create user: %w",
-				errs.Public(fmt.Sprintf("an user TODO TODO TODO %q", email), err)))
+				errs.Public(fmt.Sprintf("a user with email %q already exists", email), err)))
 		}
 
 		return nil, errs.HumaError(fmt.Errorf("create user: %w", err))
@@ -96,12 +89,12 @@ func (s *userService) UpdateUserByID(ctx context.Context, input *UserUpdateInput
 		return nil, errs.HumaError(err)
 	}
 
-	if err := s.repo.UpdateUserByID(ctx, id, update); err != nil {
+	if err := s.repo.UpdateUserByID(ctx, id, *update); err != nil {
 
 		// TODO: Again, conditions for duplicate??
 		if errors.Is(err, errs.ErrDuplicate) {
 			return nil, errs.HumaError(fmt.Errorf("update user: %w",
-				errs.Public(fmt.Sprintf("an user TODO TODO TODO %q", *update.Email), err)))
+				errs.Public(fmt.Sprintf("a user with email %q already exists", *update.Email), err)))
 		}
 
 		return nil, errs.HumaError(fmt.Errorf("update user: %w", err))
@@ -119,12 +112,35 @@ func (s *userService) UpdateUserByID(ctx context.Context, input *UserUpdateInput
 
 // userUpdateFrom applies the same rules as create to whichever fields the
 // patch actually carries, and refuses a patch that would change nothing.
-func userUpdateFrom(body UserUpdateBody) (UserUpdate, error) {
+func userUpdateFrom(body UserUpdateBody) (*UserUpdate, error) {
 	var update UserUpdate
 
-	// TODO: extract fields, and unify validation logic with CreateUser
+	if body.FirstName != nil {
+		firstName := strings.TrimSpace(*body.FirstName)
+		if firstName == "" {
+			return nil, errs.Public("first name must not be blank", errs.ErrInvalidInput)
+		}
+		update.FirstName = &firstName
+	}
+	if body.LastName != nil {
+		lastName := strings.TrimSpace(*body.LastName)
+		if lastName == "" {
+			return nil, errs.Public("last name must not be blank", errs.ErrInvalidInput)
+		}
+		update.LastName = &lastName
+	}
 
-	return update, nil
+	if body.Email != nil {
+		// Huma validates email format on the input
+		email := strings.TrimSpace(*body.Email)
+		update.Email = &email
+	}
+
+	if update.FirstName == nil && update.LastName == nil && update.Email == nil {
+		return nil, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
+	}
+
+	return &update, nil
 }
 
 func (s *userService) ListUsers(ctx context.Context, input *UserListInput) (*UserListOutput, error) {
