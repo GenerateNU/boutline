@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/mail"
 	"strings"
 
 	"boutline/internal/errs"
@@ -44,8 +45,12 @@ func (s *userService) CreateUser(ctx context.Context, input *UserCreateInput) (*
 		return nil, errs.HumaError(errs.Public("last name must not be blank", errs.ErrInvalidInput))
 	}
 
-	// Huma validates email format on the input
+	// Huma validates email format on input
+	// but we validate again in case this function is called from outside Huma
 	email := strings.TrimSpace(input.Body.Email)
+	if _, err := mail.ParseAddress(email); err != nil {
+		return nil, errs.HumaError(errs.Public("email must be a valid address", errs.ErrInvalidInput))
+	}
 
 	user := &User{
 		Email:	   email,
@@ -131,8 +136,12 @@ func userUpdateFrom(body UserUpdateBody) (*UserUpdate, error) {
 	}
 
 	if body.Email != nil {
-		// Huma validates email format on the input
+		// Huma validates email format on input
+		// but we validate again in case this function is called from outside Huma
 		email := strings.TrimSpace(*body.Email)
+		if _, err := mail.ParseAddress(email); err != nil {
+			return nil, errs.Public("email must be a valid address", errs.ErrInvalidInput)
+		}
 		update.Email = &email
 	}
 
