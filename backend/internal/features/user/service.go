@@ -155,7 +155,11 @@ func userUpdateFrom(body UserUpdateBody) (*UserUpdate, error) {
 func (s *userService) ListUsers(ctx context.Context, input *UserListInput) (*UserListOutput, error) {
 	// TODO: validate fields, perhaps unified but we have to allow some fuzzy searching
 
-	limit := utils.Clamp(input.Limit, UserMinPageSize, UserMaxPageSize)
+	limit := input.Limit
+	if limit <= 0 {
+		limit = UserDefaultPageSize
+	}
+	limit = utils.Clamp(limit, UserMinPageSize, UserMaxPageSize)
 
 	offset := max(input.Offset, 0)
 
