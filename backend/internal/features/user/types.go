@@ -30,9 +30,9 @@ type UserOutput struct {
 	Body UserResponse
 }
 
+// TODO: user auth (password omitted for now)
 type UserCreateBody struct {
 	Email     string        `json:"email" format:"email" minLength:"1" maxLength:"120" doc:"User email"`
-	Password  string        `json:"password" minLength:"1" maxLength:"120" doc:"User password, hashed"`
 	FirstName string        `json:"firstName" minLength:"1" maxLength:"120" doc:"User first name"`
 	LastName  string        `json:"lastName" minLength:"1" maxLength:"120" doc:"User last name"`
 }
@@ -41,9 +41,9 @@ type UserCreateInput struct {
 	Body UserCreateBody
 }
 
+// TODO: user auth (password omitted for now... do we even want to allow password updates?)
 type UserUpdateBody struct {
 	Email     *string        `json:"email,omitempty" format:"email" minLength:"1" maxLength:"120" doc:"User email"`
-	Password  *string        `json:"password,omitempty" minLength:"1" maxLength:"120" doc:"User password, hashed"`
 	FirstName *string        `json:"firstName,omitempty" minLength:"1" maxLength:"120" doc:"User first name"`
 	LastName  *string        `json:"lastName,omitempty" minLength:"1" maxLength:"120" doc:"User last name"`
 }

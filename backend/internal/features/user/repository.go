@@ -109,7 +109,7 @@ func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) (
 
 	users := make([]User, 0, filter.Limit)
 	err := query.
-		Select("id").
+		Omit("password").
 		Order("created_at DESC").
 		Limit(filter.Limit).
 		Offset(filter.Offset).

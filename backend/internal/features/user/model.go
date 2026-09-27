@@ -7,6 +7,7 @@ import (
 )
 
 // Password holds a hash, never the plaintext the client sent.
+// TODO: user auth (password exists in the model but is not used anywhere yet)
 type User struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	Email     string    `gorm:"type:text;not null;uniqueIndex:idx_users_email"`
