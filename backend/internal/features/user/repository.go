@@ -108,6 +108,7 @@ func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) (
 	}
 
 	users := make([]User, 0, filter.Limit)
+	// Avoid pulling password ever, makes it harder to leak
 	err := query.
 		Omit("password").
 		Order("created_at DESC").

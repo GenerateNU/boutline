@@ -45,11 +45,9 @@ func (s *userService) CreateUser(ctx context.Context, input *UserCreateInput) (*
 		return nil, errs.HumaError(errs.Public("last name must not be blank", errs.ErrInvalidInput))
 	}
 
-	// Huma validates email format on input
-	// but we validate again in case this function is called from outside Huma
-	email := strings.TrimSpace(input.Body.Email)
-	if _, err := mail.ParseAddress(email); err != nil {
-		return nil, errs.HumaError(errs.Public("email must be a valid address", errs.ErrInvalidInput))
+	email, err := parseUserEmail(input.Body.Email)
+	if err != nil {
+		return nil, errs.HumaError(err)
 	}
 
 	user := &User{
@@ -136,11 +134,9 @@ func userUpdateFrom(body UserUpdateBody) (*UserUpdate, error) {
 	}
 
 	if body.Email != nil {
-		// Huma validates email format on input
-		// but we validate again in case this function is called from outside Huma
-		email := strings.TrimSpace(*body.Email)
-		if _, err := mail.ParseAddress(email); err != nil {
-			return nil, errs.Public("email must be a valid address", errs.ErrInvalidInput)
+		email, err := parseUserEmail(*body.Email)
+		if err != nil {
+			return nil, err
 		}
 		update.Email = &email
 	}
@@ -207,4 +203,15 @@ func parseUserID(raw string) (uuid.UUID, error) {
 	}
 
 	return id, nil
+}
+
+func parseUserEmail(raw string) (string, error) {
+	// Huma validates email format on input
+	// but we validate again in case this function is called from outside Huma
+	email := strings.TrimSpace(raw)
+	if _, err := mail.ParseAddress(email); err != nil {
+		return "", errs.Public("email must be a valid address", errs.ErrInvalidInput)
+	}
+
+	return email, nil
 }
