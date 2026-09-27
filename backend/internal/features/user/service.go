@@ -53,7 +53,7 @@ func (s *userService) CreateUser(ctx context.Context, input *UserCreateInput) (*
 	}
 
 	user := &User{
-		Email:	   email,
+		Email:     email,
 		FirstName: firstName,
 		LastName:  lastName,
 	}
@@ -179,7 +179,7 @@ func (s *userService) ListUsers(ctx context.Context, input *UserListInput) (*Use
 				Total:  total,
 				Limit:  limit,
 				Offset: offset,
-			}}, 
+			}},
 		nil
 }
 

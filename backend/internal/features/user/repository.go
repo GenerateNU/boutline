@@ -21,7 +21,7 @@ type UserRepository interface {
 
 // Any non-nil fields to be applied as updates
 type UserUpdate struct {
-	Email     *string
+	Email *string
 	// Password  *string // TODO: is this the route for updating a password?
 	FirstName *string
 	LastName  *string
@@ -101,7 +101,7 @@ func (r *userRepository) UpdateUserByID(ctx context.Context, id uuid.UUID, updat
 func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error) {
 	query := r.db.WithContext(ctx).Model(&User{})
 	// TODO: apply other filters once decided
-	
+
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count users: %w", err)
