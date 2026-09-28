@@ -4,3 +4,4 @@ h1:D3Ucq6Z67sCF3/MV0brVlAnOGoWTdPo4vj7iKnrbGJQ=
 20260921045710_create_users.sql h1:sYJ+YDgRgLEeCsWY1twv4IioM7e9VT5NQwjkT99CngM=
 20260922235024_add_tournaments_created_by_foreign_key.sql h1:F5zeGDKSddq9N5u9hfnGYlWhir28gHA4jQiEkL8INy0=
 20260924023422_create_tournament_users.sql h1:V5nPX+qrYArlcJeXvLExA9/UOEfpvnI1tSdUU5rb/8c=
+20260926154431_drop_examples.sql h1:FFEfPjbLP5L0OUjfiy4trpGOFoelc6goOkerFlilpeE=
