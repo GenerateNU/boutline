@@ -90,7 +90,7 @@ func (s *boutService) CreateBout(ctx context.Context, input *BoutCreateInput) (*
 		TimeLimitSeconds: input.Body.TimeLimitSeconds,
 		PointsToWin:      input.Body.PointsToWin,
 		GroupNumber:      input.Body.GroupNumber,
-		Status:           BoutStatusPending,
+		Status:           BoutStatusUpcoming,
 		Competitor1ID:    competitor1ID,
 		Competitor2ID:    competitor2ID,
 	}
@@ -203,7 +203,7 @@ func (s *boutService) UpdateBoutByID(ctx context.Context, input *BoutUpdateInput
 
 	err = s.repo.EditBoutByID(ctx, id, edit)
 
-	return s.afterUpdate(ctx, id, err, "only a pending bout can be edited")
+	return s.afterUpdate(ctx, id, err, "only an upcoming bout can be edited")
 }
 
 func (s *boutService) boutEditFrom(ctx context.Context, id uuid.UUID, body BoutUpdateBody) (BoutEdit, error) {
@@ -315,10 +315,10 @@ func (s *boutService) StartBout(ctx context.Context, input *BoutIDInput) (*BoutO
 	err = s.repo.TransitionBoutByID(ctx, id, BoutTransition{
 		To:        BoutStatusActive,
 		StartedAt: &now,
-		From:      []BoutStatus{BoutStatusPending},
+		From:      []BoutStatus{BoutStatusUpcoming},
 	})
 
-	return s.afterUpdate(ctx, id, err, "only a pending bout can be started")
+	return s.afterUpdate(ctx, id, err, "only an upcoming bout can be started")
 }
 
 func (s *boutService) EndBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error) {

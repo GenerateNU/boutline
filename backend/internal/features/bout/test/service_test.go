@@ -81,7 +81,7 @@ func TestCreateBout(t *testing.T) {
 		wantNoBouts bool
 	}{
 		{
-			name:   "creates a pending bout in an active tournament",
+			name:   "creates an upcoming bout in an active tournament",
 			lookup: NewFakeTournamentLookup(activeTournament),
 			input:  createInput(activeTournament.ID.String(), ptr(referee), competitor1, competitor2, 11),
 		},
@@ -192,7 +192,7 @@ func TestCreateBout(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, bout.BoutStatusPending, out.Body.Status)
+			assert.Equal(t, bout.BoutStatusUpcoming, out.Body.Status)
 			assert.Len(t, repo.Bouts, 1)
 		})
 	}
@@ -205,9 +205,9 @@ func TestListBouts(t *testing.T) {
 	otherTournamentID := uuid.New()
 
 	mixed := []bout.Bout{
-		seededBout(bout.BoutStatusPending, tournamentID),
+		seededBout(bout.BoutStatusUpcoming, tournamentID),
 		seededBout(bout.BoutStatusActive, tournamentID),
-		seededBout(bout.BoutStatusPending, otherTournamentID),
+		seededBout(bout.BoutStatusUpcoming, otherTournamentID),
 	}
 
 	tests := []struct {
@@ -278,10 +278,10 @@ func TestListBouts(t *testing.T) {
 func TestUpdateBoutByID(t *testing.T) {
 	t.Parallel()
 
-	t.Run("edits a pending bout", func(t *testing.T) {
+	t.Run("edits an upcoming bout", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededBout(bout.BoutStatusPending, uuid.New())
+		stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
 		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup()).UpdateBoutByID(t.Context(),
@@ -305,7 +305,7 @@ func TestUpdateBoutByID(t *testing.T) {
 
 		code, detail := apiError(t, err)
 		assert.Equal(t, http.StatusConflict, code)
-		assert.Equal(t, "only a pending bout can be edited", detail)
+		assert.Equal(t, "only an upcoming bout can be edited", detail)
 	})
 
 	t.Run("refuses to edit an ended bout", func(t *testing.T) {
@@ -319,13 +319,13 @@ func TestUpdateBoutByID(t *testing.T) {
 
 		code, detail := apiError(t, err)
 		assert.Equal(t, http.StatusConflict, code)
-		assert.Equal(t, "only a pending bout can be edited", detail)
+		assert.Equal(t, "only an upcoming bout can be edited", detail)
 	})
 
 	t.Run("refuses an empty patch", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededBout(bout.BoutStatusPending, uuid.New())
+		stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
 		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup()).UpdateBoutByID(t.Context(),
@@ -339,7 +339,7 @@ func TestUpdateBoutByID(t *testing.T) {
 	t.Run("rejects a single competitor equal to the other stored competitor", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededBout(bout.BoutStatusPending, uuid.New())
+		stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
 		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup()).UpdateBoutByID(t.Context(),
@@ -368,11 +368,11 @@ func TestUpdateBoutByID(t *testing.T) {
 func TestStartBout(t *testing.T) {
 	t.Parallel()
 
-	t.Run("moves a pending bout to active and records the start time", func(t *testing.T) {
+	t.Run("moves an upcoming bout to active and records the start time", func(t *testing.T) {
 		t.Parallel()
 
 		activeTournament := seededTournament(tournament.TournamentStatusActive)
-		stored := seededBout(bout.BoutStatusPending, activeTournament.ID)
+		stored := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
 		stored.StartTime = ptr(time.Date(2026, 10, 1, 14, 0, 0, 0, time.UTC))
 		repo := NewFakeBoutRepository(stored)
 
@@ -390,7 +390,7 @@ func TestStartBout(t *testing.T) {
 		t.Parallel()
 
 		activeTournament := seededTournament(tournament.TournamentStatusActive)
-		stored := seededBout(bout.BoutStatusPending, activeTournament.ID)
+		stored := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
 		stored.RefereeID = nil
 		repo := NewFakeBoutRepository(stored)
 
@@ -400,14 +400,14 @@ func TestStartBout(t *testing.T) {
 		code, detail := apiError(t, err)
 		assert.Equal(t, http.StatusConflict, code)
 		assert.Equal(t, "a referee must be assigned before the bout can start", detail)
-		assert.Equal(t, bout.BoutStatusPending, repo.Bouts[stored.ID].Status)
+		assert.Equal(t, bout.BoutStatusUpcoming, repo.Bouts[stored.ID].Status)
 	})
 
 	t.Run("refuses to start a bout in a pending tournament", func(t *testing.T) {
 		t.Parallel()
 
 		pendingTournament := seededTournament(tournament.TournamentStatusPending)
-		stored := seededBout(bout.BoutStatusPending, pendingTournament.ID)
+		stored := seededBout(bout.BoutStatusUpcoming, pendingTournament.ID)
 		repo := NewFakeBoutRepository(stored)
 
 		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(pendingTournament)).
@@ -422,7 +422,7 @@ func TestStartBout(t *testing.T) {
 		t.Parallel()
 
 		endedTournament := seededTournament(tournament.TournamentStatusEnd)
-		stored := seededBout(bout.BoutStatusPending, endedTournament.ID)
+		stored := seededBout(bout.BoutStatusUpcoming, endedTournament.ID)
 		repo := NewFakeBoutRepository(stored)
 
 		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(endedTournament)).
@@ -445,7 +445,7 @@ func TestStartBout(t *testing.T) {
 
 		code, detail := apiError(t, err)
 		assert.Equal(t, http.StatusConflict, code)
-		assert.Equal(t, "only a pending bout can be started", detail)
+		assert.Equal(t, "only an upcoming bout can be started", detail)
 	})
 
 	t.Run("reports an unknown id as not found", func(t *testing.T) {
@@ -479,10 +479,10 @@ func TestEndBout(t *testing.T) {
 		assert.WithinDuration(t, time.Now().UTC(), *out.Body.CompletedAt, time.Minute)
 	})
 
-	t.Run("refuses to end a pending bout", func(t *testing.T) {
+	t.Run("refuses to end an upcoming bout", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededBout(bout.BoutStatusPending, uuid.New())
+		stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
 		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup()).
@@ -516,7 +516,7 @@ func TestDeleteBoutByID(t *testing.T) {
 		wantCode   int
 		wantDetail string
 	}{
-		{name: "deletes a pending bout", status: bout.BoutStatusPending},
+		{name: "deletes an upcoming bout", status: bout.BoutStatusUpcoming},
 		{name: "deletes an ended bout", status: bout.BoutStatusEnd},
 		{
 			name:       "refuses to delete an active bout",
@@ -526,7 +526,7 @@ func TestDeleteBoutByID(t *testing.T) {
 		},
 		{
 			name:      "reports an unknown id as not found",
-			status:    bout.BoutStatusPending,
+			status:    bout.BoutStatusUpcoming,
 			unknownID: true,
 			wantCode:  http.StatusNotFound,
 		},

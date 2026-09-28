@@ -10,7 +10,7 @@ CREATE TABLE "bouts" (
   "time_limit_seconds" bigint NULL,
   "points_to_win" bigint NOT NULL,
   "group_number" bigint NOT NULL DEFAULT 0,
-  "status" text NOT NULL DEFAULT 'pending',
+  "status" text NOT NULL DEFAULT 'upcoming',
   "competitor_1_id" uuid NOT NULL,
   "competitor_2_id" uuid NOT NULL,
   "created_at" timestamptz NULL,
@@ -21,7 +21,7 @@ CREATE TABLE "bouts" (
   CONSTRAINT "chk_bouts_distinct_competitors" CHECK (competitor_1_id <> competitor_2_id),
   CONSTRAINT "chk_bouts_group_number" CHECK (group_number >= 0),
   CONSTRAINT "chk_bouts_points_to_win" CHECK (points_to_win > 0),
-  CONSTRAINT "chk_bouts_status" CHECK (status = ANY (ARRAY['pending'::text, 'active'::text, 'end'::text])),
+  CONSTRAINT "chk_bouts_status" CHECK (status = ANY (ARRAY['upcoming'::text, 'active'::text, 'end'::text])),
   CONSTRAINT "chk_bouts_time_limit_seconds" CHECK (time_limit_seconds > 0)
 );
 -- Create index "idx_bouts_competitor_1_id" to table: "bouts"

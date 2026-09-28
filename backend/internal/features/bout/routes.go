@@ -46,7 +46,7 @@ func RegisterBoutService(api huma.API, service BoutService) {
 		Method:      http.MethodPatch,
 		Path:        boutBasePath + "/{id}",
 		Summary:     "Update a bout",
-		Description: "Only pending bouts can be edited.",
+		Description: "Only upcoming bouts can be edited.",
 		Tags:        []string{"Bouts"},
 	}, service.UpdateBoutByID)
 
@@ -55,7 +55,7 @@ func RegisterBoutService(api huma.API, service BoutService) {
 		Method:      http.MethodPost,
 		Path:        boutBasePath + "/{id}/start",
 		Summary:     "Start a bout",
-		Description: "Moves a pending bout to active and records started_at. The tournament must be active and the bout must have a referee.",
+		Description: "Moves an upcoming bout to active and records started_at. The tournament must be active and the bout must have a referee.",
 		Tags:        []string{"Bouts"},
 	}, service.StartBout)
 
@@ -73,7 +73,7 @@ func RegisterBoutService(api huma.API, service BoutService) {
 		Method:        http.MethodDelete,
 		Path:          boutBasePath + "/{id}",
 		Summary:       "Delete a bout",
-		Description:   "Only pending or ended bouts can be deleted; an active bout must be ended first.",
+		Description:   "Only upcoming or ended bouts can be deleted; an active bout must be ended first.",
 		Tags:          []string{"Bouts"},
 		DefaultStatus: http.StatusNoContent,
 	}, service.DeleteBoutByID)

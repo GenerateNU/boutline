@@ -12,13 +12,13 @@ import (
 type BoutStatus string
 
 const (
-	BoutStatusPending BoutStatus = "pending"
-	BoutStatusActive  BoutStatus = "active"
-	BoutStatusEnd     BoutStatus = "end"
+	BoutStatusUpcoming BoutStatus = "upcoming"
+	BoutStatusActive   BoutStatus = "active"
+	BoutStatusEnd      BoutStatus = "end"
 )
 
 func (s BoutStatus) IsValid() bool {
-	return s == BoutStatusPending ||
+	return s == BoutStatusUpcoming ||
 		s == BoutStatusActive ||
 		s == BoutStatusEnd
 }
@@ -38,7 +38,7 @@ type Bout struct {
 	TimeLimitSeconds *int       `gorm:"check:chk_bouts_time_limit_seconds,time_limit_seconds > 0"`
 	PointsToWin      int        `gorm:"not null;check:chk_bouts_points_to_win,points_to_win > 0"`
 	GroupNumber      int        `gorm:"not null;default:0;check:chk_bouts_group_number,group_number >= 0"`
-	Status           BoutStatus `gorm:"type:text;not null;index;default:pending;check:chk_bouts_status,status IN ('pending','active','end')"`
+	Status           BoutStatus `gorm:"type:text;not null;index;default:upcoming;check:chk_bouts_status,status IN ('upcoming','active','end')"`
 	// The competitors table has not been merged yet, so these columns have no
 	// foreign key or Competitor association; add both in the migration that
 	// creates that table.
@@ -53,9 +53,9 @@ func (Bout) TableName() string {
 }
 
 func BoutEditableStatuses() []BoutStatus {
-	return []BoutStatus{BoutStatusPending}
+	return []BoutStatus{BoutStatusUpcoming}
 }
 
 func BoutDeletableStatuses() []BoutStatus {
-	return []BoutStatus{BoutStatusPending, BoutStatusEnd}
+	return []BoutStatus{BoutStatusUpcoming, BoutStatusEnd}
 }

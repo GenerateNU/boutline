@@ -61,7 +61,7 @@ func TestCreateEndpoint(t *testing.T) {
 				"referee_id":      referee,
 				"competitor_1_id": competitor1,
 				"competitor_2_id": competitor2,
-				"status":          "pending",
+				"status":          "upcoming",
 			},
 		},
 		{
@@ -76,7 +76,7 @@ func TestCreateEndpoint(t *testing.T) {
 			wantFields: map[string]any{
 				"referee_id": nil,
 				"started_at": nil,
-				"status":     "pending",
+				"status":     "upcoming",
 			},
 		},
 		{
@@ -123,7 +123,7 @@ func TestListEndpoint(t *testing.T) {
 
 	tournamentID := uuid.New()
 	seed := []bout.Bout{
-		seededBout(bout.BoutStatusPending, tournamentID),
+		seededBout(bout.BoutStatusUpcoming, tournamentID),
 		seededBout(bout.BoutStatusActive, tournamentID),
 	}
 
@@ -164,7 +164,7 @@ func TestListEndpoint(t *testing.T) {
 func TestGetAndUpdateEndpoint(t *testing.T) {
 	t.Parallel()
 
-	stored := seededBout(bout.BoutStatusPending, uuid.New())
+	stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
 
 	t.Run("returns the stored bout", func(t *testing.T) {
 		t.Parallel()
@@ -199,7 +199,7 @@ func TestLifecycleEndpoints(t *testing.T) {
 	t.Parallel()
 
 	activeTournament := seededTournament(tournament.TournamentStatusActive)
-	stored := seededBout(bout.BoutStatusPending, activeTournament.ID)
+	stored := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
 	api := newTestAPI(t, NewFakeTournamentLookup(activeTournament), stored)
 	base := "/api/v1/bouts/" + stored.ID.String()
 
@@ -221,7 +221,7 @@ func TestDeleteEndpoint(t *testing.T) {
 	t.Parallel()
 
 	activeTournament := seededTournament(tournament.TournamentStatusActive)
-	stored := seededBout(bout.BoutStatusPending, activeTournament.ID)
+	stored := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
 	api := newTestAPI(t, NewFakeTournamentLookup(activeTournament), stored)
 	base := "/api/v1/bouts/" + stored.ID.String()
 
