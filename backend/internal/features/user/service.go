@@ -198,9 +198,11 @@ func parseUserEmail(raw string) (string, error) {
 	// Huma validates email format on input
 	// but we validate again in case this function is called from outside Huma
 	email := strings.TrimSpace(raw)
-	if _, err := mail.ParseAddress(email); err != nil {
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
 		return "", errs.Public("email must be a valid address", errs.ErrInvalidInput)
 	}
 
+	email = strings.ToLower(addr.Address)
 	return email, nil
 }
