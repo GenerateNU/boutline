@@ -185,12 +185,6 @@ func TestUpdateEndpoint(t *testing.T) {
 			wantFields: map[string]any{"firstName": "After", "email": "before@example.com"},
 		},
 		{
-			name:       "rejects a malformed email before the service runs",
-			path:       stored.ID.String(),
-			body:       map[string]any{"email": "nope"},
-			wantStatus: http.StatusUnprocessableEntity,
-		},
-		{
 			name:       "rejects an empty patch",
 			path:       stored.ID.String(),
 			body:       map[string]any{},

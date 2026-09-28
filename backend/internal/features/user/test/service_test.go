@@ -211,10 +211,10 @@ func TestListUsers(t *testing.T) {
 	}
 }
 
-func updateInput(id string, email, firstName, lastName *string) *user.UserUpdateInput {
+func updateInput(id string, firstName, lastName *string) *user.UserUpdateInput {
 	return &user.UserUpdateInput{
 		ID:   id,
-		Body: user.UserUpdateBody{Email: email, FirstName: firstName, LastName: lastName},
+		Body: user.UserUpdateBody{FirstName: firstName, LastName: lastName},
 	}
 }
 
@@ -224,7 +224,6 @@ func TestUpdateUserByID(t *testing.T) {
 	t.Parallel()
 
 	stored := seeded("before@example.com", "Before", "Name")
-	other := seeded("taken@example.com", "Other", "User")
 
 	tests := []struct {
 		name          string
@@ -238,54 +237,33 @@ func TestUpdateUserByID(t *testing.T) {
 		{
 			name:          "renames without touching the email",
 			seed:          []user.User{stored},
-			input:         updateInput(stored.ID.String(), nil, ptr("After"), nil),
+			input:         updateInput(stored.ID.String(), ptr("After"), nil),
 			wantEmail:     "before@example.com",
 			wantFirstName: "After",
 		},
 		{
-			name:          "changes the email without touching the name",
-			seed:          []user.User{stored},
-			input:         updateInput(stored.ID.String(), ptr("after@example.com"), nil, nil),
-			wantEmail:     "after@example.com",
-			wantFirstName: "Before",
-		},
-		{
 			name:       "refuses a patch that would change nothing",
 			seed:       []user.User{stored},
-			input:      updateInput(stored.ID.String(), nil, nil, nil),
+			input:      updateInput(stored.ID.String(), nil, nil),
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "provide at least one field to update",
 		},
 		{
 			name:       "rejects a first name that is only whitespace",
 			seed:       []user.User{stored},
-			input:      updateInput(stored.ID.String(), nil, ptr("   "), nil),
+			input:      updateInput(stored.ID.String(), ptr("   "), nil),
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "first name must not be blank",
 		},
 		{
-			name:       "rejects a malformed email",
-			seed:       []user.User{stored},
-			input:      updateInput(stored.ID.String(), ptr("not-an-email"), nil, nil),
-			wantCode:   http.StatusBadRequest,
-			wantDetail: "email must be a valid address",
-		},
-		{
-			name:       "reports an email already used by another row",
-			seed:       []user.User{stored, other},
-			input:      updateInput(stored.ID.String(), ptr("taken@example.com"), nil, nil),
-			wantCode:   http.StatusConflict,
-			wantDetail: `a user with email "taken@example.com" already exists`,
-		},
-		{
 			name:     "reports an unknown id as not found",
-			input:    updateInput(uuid.New().String(), nil, ptr("After"), nil),
+			input:    updateInput(uuid.New().String(), ptr("After"), nil),
 			wantCode: http.StatusNotFound,
 		},
 		{
 			name:     "rejects an id that is not a uuid",
 			seed:     []user.User{stored},
-			input:    updateInput("not-a-uuid", nil, ptr("After"), nil),
+			input:    updateInput("not-a-uuid", ptr("After"), nil),
 			wantCode: http.StatusBadRequest,
 		},
 	}

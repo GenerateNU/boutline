@@ -93,11 +93,8 @@ func (s *userService) UpdateUserByID(ctx context.Context, input *UserUpdateInput
 	}
 
 	if err := s.repo.UpdateUserByID(ctx, id, *update); err != nil {
-
-		// TODO: Again, conditions for duplicate??
 		if errors.Is(err, errs.ErrDuplicate) {
-			return nil, errs.HumaError(fmt.Errorf("update user: %w",
-				errs.Public(fmt.Sprintf("a user with email %q already exists", *update.Email), err)))
+			return nil, errs.HumaError(fmt.Errorf("update user: %w", err))
 		}
 
 		return nil, errs.HumaError(fmt.Errorf("update user: %w", err))
@@ -133,15 +130,7 @@ func userUpdateFrom(body UserUpdateBody) (*UserUpdate, error) {
 		update.LastName = &lastName
 	}
 
-	if body.Email != nil {
-		email, err := parseUserEmail(*body.Email)
-		if err != nil {
-			return nil, err
-		}
-		update.Email = &email
-	}
-
-	if update.FirstName == nil && update.LastName == nil && update.Email == nil {
+	if update.FirstName == nil && update.LastName == nil {
 		return nil, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
 	}
 

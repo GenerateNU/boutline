@@ -21,8 +21,9 @@ type UserRepository interface {
 
 // Any non-nil fields to be applied as updates
 type UserUpdate struct {
-	Email *string
-	// Password  *string // TODO: is this the route for updating a password?
+	// TODO: determine if we allow email/password updates, and if so what the correct route is
+	// Email *string
+	// Password  *string
 	FirstName *string
 	LastName  *string
 }
@@ -44,9 +45,6 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 func (u UserUpdate) columns() map[string]any {
 	columns := make(map[string]any, 4)
 
-	if u.Email != nil {
-		columns["email"] = *u.Email
-	}
 	if u.FirstName != nil {
 		columns["first_name"] = *u.FirstName
 	}

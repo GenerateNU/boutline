@@ -43,7 +43,6 @@ type UserCreateInput struct {
 
 // TODO: user auth (password omitted for now... do we even want to allow password updates?)
 type UserUpdateBody struct {
-	Email     *string `json:"email,omitempty" format:"email" minLength:"1" maxLength:"120" doc:"User email"`
 	FirstName *string `json:"firstName,omitempty" minLength:"1" maxLength:"120" doc:"User first name"`
 	LastName  *string `json:"lastName,omitempty" minLength:"1" maxLength:"120" doc:"User last name"`
 }

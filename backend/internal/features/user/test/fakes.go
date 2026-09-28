@@ -107,15 +107,6 @@ func (f *FakeUserRepository) UpdateUserByID(
 		return fmt.Errorf("update user %s: %w", id, errs.ErrNotFound)
 	}
 
-	if update.Email != nil {
-		for otherID, existing := range f.Users {
-			if otherID != id && existing.Email == *update.Email {
-				return fmt.Errorf("update user %s: %w", id, errs.ErrDuplicate)
-			}
-		}
-		stored.Email = *update.Email
-	}
-
 	if update.FirstName != nil {
 		stored.FirstName = *update.FirstName
 	}
