@@ -13,7 +13,7 @@ import (
 
 type TournamentUserRepository interface {
 	CreateTournamentUser(ctx context.Context, membership *TournamentUser) error
-	ListTournamentUsers(ctx context.Context, tournamentID uuid.UUID) ([]TournamentUser, error)
+	ListTournamentUsers(ctx context.Context, tournamentID uuid.UUID, limit, offset int) ([]TournamentUser, error)
 	UpdateTournamentUserRole(ctx context.Context, tournamentID, userID uuid.UUID, role TournamentUserRole) error
 	DeleteTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) error
 }
@@ -45,12 +45,16 @@ func (r *tournamentUserRepository) CreateTournamentUser(ctx context.Context, mem
 func (r *tournamentUserRepository) ListTournamentUsers(
 	ctx context.Context,
 	tournamentID uuid.UUID,
+	limit int,
+	offset int,
 ) ([]TournamentUser, error) {
 	var memberships []TournamentUser
 
 	err := r.db.WithContext(ctx).
 		Where("tournament_id = ?", tournamentID).
-		Order("created_at").
+		Order("created_at, user_id").
+		Limit(limit).
+		Offset(offset).
 		Find(&memberships).Error
 	if err != nil {
 		return nil, fmt.Errorf("select tournament users for %s: %w", tournamentID, err)
