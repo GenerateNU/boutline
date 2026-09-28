@@ -4,7 +4,7 @@ CREATE TABLE "competitors" (
   "first_name" text NOT NULL,
   "last_name" text NOT NULL,
   "rating" text NOT NULL DEFAULT 'U',
-  "team" text NULL,
+  "team" text NOT NULL DEFAULT '',
   "created_at" timestamptz NULL,
   "updated_at" timestamptz NULL,
   PRIMARY KEY ("id"),
