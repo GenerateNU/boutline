@@ -15,7 +15,5 @@ CREATE TABLE "events" (
   CONSTRAINT "chk_events_format" CHECK (format = 'pool_then_direct_elimination'::text),
   CONSTRAINT "chk_events_status" CHECK (status = ANY (ARRAY['upcoming'::text, 'active'::text, 'ended'::text]))
 );
--- Create index "idx_events_status" to table: "events"
-CREATE INDEX "idx_events_status" ON "events" ("status");
 -- Create index "idx_events_tournament_id" to table: "events"
 CREATE INDEX "idx_events_tournament_id" ON "events" ("tournament_id");

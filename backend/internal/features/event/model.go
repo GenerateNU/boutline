@@ -31,7 +31,7 @@ type Event struct {
 	Tournament   *tournament.Tournament `gorm:"foreignKey:TournamentID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 	Format       EventFormat            `gorm:"type:text;not null;default:pool_then_direct_elimination;check:chk_events_format,format IN ('pool_then_direct_elimination')"`
 	Name         string                 `gorm:"type:text;not null"`
-	Status       EventStatus            `gorm:"type:text;not null;index;default:upcoming;check:chk_events_status,status IN ('upcoming','active','ended')"`
+	Status       EventStatus            `gorm:"type:text;not null;default:upcoming;check:chk_events_status,status IN ('upcoming','active','ended')"`
 	StartTime    *time.Time
 	StartedAt    *time.Time
 	CompletedAt  *time.Time
