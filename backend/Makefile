@@ -75,9 +75,21 @@ lint:
 format:
 	gofmt -s -w .
 
+# The CI-side halves of format and tidy: report instead of rewriting.
+format-check:
+	@unformatted=$$(gofmt -s -l .); \
+	test -z "$$unformatted" || { echo "gofmt -s needed:"; echo "$$unformatted"; exit 1; }
+
+tidy-check:
+	go mod tidy -diff
+
 tidy:
 	go mod tidy
 
+vuln:
+	go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+
 .PHONY: build run clean test test-cover test-pkg test-unit test-integration \
 	migrate-new migrate-apply migrate-status \
-	dev-up dev-down dev-reset dev-logs dev-psql vet lint format tidy
+	dev-up dev-down dev-reset dev-logs dev-psql vet lint format format-check \
+	tidy-check tidy vuln
