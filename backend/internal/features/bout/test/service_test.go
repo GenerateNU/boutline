@@ -30,7 +30,7 @@ func seededBout(status bout.BoutStatus, tournamentID uuid.UUID) bout.Bout {
 	return bout.Bout{
 		ID:            uuid.New(),
 		TournamentID:  tournamentID,
-		RefereeID:     uuid.New(),
+		RefereeID:     ptr(uuid.New()),
 		PointsToWin:   11,
 		Status:        status,
 		Competitor1ID: uuid.New(),
@@ -49,7 +49,7 @@ func apiError(t *testing.T, err error) (int, string) {
 
 func ptr[T any](v T) *T { return &v }
 
-func createInput(tournamentID, refereeID, competitor1ID, competitor2ID string, pointsToWin int) *bout.BoutCreateInput {
+func createInput(tournamentID string, refereeID *string, competitor1ID, competitor2ID string, pointsToWin int) *bout.BoutCreateInput {
 	return &bout.BoutCreateInput{
 		Body: bout.BoutCreateBody{
 			TournamentID:  tournamentID,
@@ -83,12 +83,17 @@ func TestCreateBout(t *testing.T) {
 		{
 			name:   "creates a pending bout in an active tournament",
 			lookup: NewFakeTournamentLookup(activeTournament),
-			input:  createInput(activeTournament.ID.String(), referee, competitor1, competitor2, 11),
+			input:  createInput(activeTournament.ID.String(), ptr(referee), competitor1, competitor2, 11),
+		},
+		{
+			name:   "creates a bout with no referee assigned yet",
+			lookup: NewFakeTournamentLookup(activeTournament),
+			input:  createInput(activeTournament.ID.String(), nil, competitor1, competitor2, 11),
 		},
 		{
 			name:        "rejects a tournament_id that does not exist",
 			lookup:      NewFakeTournamentLookup(),
-			input:       createInput(uuid.New().String(), referee, competitor1, competitor2, 11),
+			input:       createInput(uuid.New().String(), ptr(referee), competitor1, competitor2, 11),
 			wantCode:    http.StatusBadRequest,
 			wantDetail:  "tournament_id must reference an existing tournament",
 			wantNoBouts: true,
@@ -96,7 +101,7 @@ func TestCreateBout(t *testing.T) {
 		{
 			name:        "refuses a pending tournament",
 			lookup:      NewFakeTournamentLookup(pendingTournament),
-			input:       createInput(pendingTournament.ID.String(), referee, competitor1, competitor2, 11),
+			input:       createInput(pendingTournament.ID.String(), ptr(referee), competitor1, competitor2, 11),
 			wantCode:    http.StatusConflict,
 			wantDetail:  "bouts can only be created in an active tournament",
 			wantNoBouts: true,
@@ -104,7 +109,7 @@ func TestCreateBout(t *testing.T) {
 		{
 			name:        "refuses an ended tournament",
 			lookup:      NewFakeTournamentLookup(endedTournament),
-			input:       createInput(endedTournament.ID.String(), referee, competitor1, competitor2, 11),
+			input:       createInput(endedTournament.ID.String(), ptr(referee), competitor1, competitor2, 11),
 			wantCode:    http.StatusConflict,
 			wantDetail:  "bouts can only be created in an active tournament",
 			wantNoBouts: true,
@@ -112,7 +117,7 @@ func TestCreateBout(t *testing.T) {
 		{
 			name:        "rejects identical competitors",
 			lookup:      NewFakeTournamentLookup(activeTournament),
-			input:       createInput(activeTournament.ID.String(), referee, competitor1, competitor1, 11),
+			input:       createInput(activeTournament.ID.String(), ptr(referee), competitor1, competitor1, 11),
 			wantCode:    http.StatusBadRequest,
 			wantDetail:  "competitor_1_id and competitor_2_id must be different",
 			wantNoBouts: true,
@@ -120,7 +125,7 @@ func TestCreateBout(t *testing.T) {
 		{
 			name:        "rejects a non-positive points_to_win",
 			lookup:      NewFakeTournamentLookup(activeTournament),
-			input:       createInput(activeTournament.ID.String(), referee, competitor1, competitor2, 0),
+			input:       createInput(activeTournament.ID.String(), ptr(referee), competitor1, competitor2, 0),
 			wantCode:    http.StatusBadRequest,
 			wantDetail:  "points_to_win must be greater than 0",
 			wantNoBouts: true,
@@ -129,7 +134,7 @@ func TestCreateBout(t *testing.T) {
 			name:   "rejects a non-positive time_limit_seconds",
 			lookup: NewFakeTournamentLookup(activeTournament),
 			input: &bout.BoutCreateInput{Body: bout.BoutCreateBody{
-				TournamentID: activeTournament.ID.String(), RefereeID: referee,
+				TournamentID: activeTournament.ID.String(), RefereeID: ptr(referee),
 				Competitor1ID: competitor1, Competitor2ID: competitor2,
 				PointsToWin: 11, TimeLimitSeconds: ptr(0),
 			}},
@@ -141,7 +146,7 @@ func TestCreateBout(t *testing.T) {
 			name:   "rejects a negative group_number",
 			lookup: NewFakeTournamentLookup(activeTournament),
 			input: &bout.BoutCreateInput{Body: bout.BoutCreateBody{
-				TournamentID: activeTournament.ID.String(), RefereeID: referee,
+				TournamentID: activeTournament.ID.String(), RefereeID: ptr(referee),
 				Competitor1ID: competitor1, Competitor2ID: competitor2,
 				PointsToWin: 11, GroupNumber: -1,
 			}},
@@ -152,7 +157,7 @@ func TestCreateBout(t *testing.T) {
 		{
 			name:        "rejects a bad uuid",
 			lookup:      NewFakeTournamentLookup(activeTournament),
-			input:       createInput("not-a-uuid", referee, competitor1, competitor2, 11),
+			input:       createInput("not-a-uuid", ptr(referee), competitor1, competitor2, 11),
 			wantCode:    http.StatusBadRequest,
 			wantDetail:  "tournament_id must be a valid uuid",
 			wantNoBouts: true,
@@ -160,7 +165,7 @@ func TestCreateBout(t *testing.T) {
 		{
 			name:        "reports a tournament lookup failure as a server error",
 			lookup:      &FakeTournamentLookup{Err: errors.New("connection refused")},
-			input:       createInput(activeTournament.ID.String(), referee, competitor1, competitor2, 11),
+			input:       createInput(activeTournament.ID.String(), ptr(referee), competitor1, competitor2, 11),
 			wantCode:    http.StatusInternalServerError,
 			wantDetail:  "internal server error",
 			wantNoBouts: true,
@@ -368,6 +373,7 @@ func TestStartBout(t *testing.T) {
 
 		activeTournament := seededTournament(tournament.TournamentStatusActive)
 		stored := seededBout(bout.BoutStatusPending, activeTournament.ID)
+		stored.StartTime = ptr(time.Date(2026, 10, 1, 14, 0, 0, 0, time.UTC))
 		repo := NewFakeBoutRepository(stored)
 
 		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament)).
@@ -375,8 +381,26 @@ func TestStartBout(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, bout.BoutStatusActive, out.Body.Status)
-		require.NotNil(t, out.Body.Time)
-		assert.WithinDuration(t, time.Now().UTC(), *out.Body.Time, time.Minute)
+		require.NotNil(t, out.Body.StartedAt)
+		assert.WithinDuration(t, time.Now().UTC(), *out.Body.StartedAt, time.Minute)
+		assert.Equal(t, stored.StartTime, out.Body.StartTime, "the scheduled start is kept")
+	})
+
+	t.Run("refuses to start a bout with no referee assigned", func(t *testing.T) {
+		t.Parallel()
+
+		activeTournament := seededTournament(tournament.TournamentStatusActive)
+		stored := seededBout(bout.BoutStatusPending, activeTournament.ID)
+		stored.RefereeID = nil
+		repo := NewFakeBoutRepository(stored)
+
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament)).
+			StartBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
+
+		code, detail := apiError(t, err)
+		assert.Equal(t, http.StatusConflict, code)
+		assert.Equal(t, "a referee must be assigned before the bout can start", detail)
+		assert.Equal(t, bout.BoutStatusPending, repo.Bouts[stored.ID].Status)
 	})
 
 	t.Run("refuses to start a bout in a pending tournament", func(t *testing.T) {
@@ -451,6 +475,8 @@ func TestEndBout(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, bout.BoutStatusEnd, out.Body.Status)
+		require.NotNil(t, out.Body.CompletedAt)
+		assert.WithinDuration(t, time.Now().UTC(), *out.Body.CompletedAt, time.Minute)
 	})
 
 	t.Run("refuses to end a pending bout", func(t *testing.T) {

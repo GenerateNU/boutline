@@ -55,7 +55,7 @@ func RegisterBoutService(api huma.API, service BoutService) {
 		Method:      http.MethodPost,
 		Path:        boutBasePath + "/{id}/start",
 		Summary:     "Start a bout",
-		Description: "Moves a pending bout to active and records its start time; the tournament must be active.",
+		Description: "Moves a pending bout to active and records started_at. The tournament must be active and the bout must have a referee.",
 		Tags:        []string{"Bouts"},
 	}, service.StartBout)
 
@@ -64,7 +64,7 @@ func RegisterBoutService(api huma.API, service BoutService) {
 		Method:      http.MethodPost,
 		Path:        boutBasePath + "/{id}/end",
 		Summary:     "End a bout",
-		Description: "Moves an active bout to end.",
+		Description: "Moves an active bout to end and records completed_at.",
 		Tags:        []string{"Bouts"},
 	}, service.EndBout)
 

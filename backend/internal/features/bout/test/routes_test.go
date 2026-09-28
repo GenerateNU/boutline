@@ -65,6 +65,21 @@ func TestCreateEndpoint(t *testing.T) {
 			},
 		},
 		{
+			name: "creates a bout with no referee assigned yet",
+			body: map[string]any{
+				"tournament_id":   activeTournament.ID.String(),
+				"competitor_1_id": competitor1,
+				"competitor_2_id": competitor2,
+				"points_to_win":   11,
+			},
+			wantStatus: http.StatusCreated,
+			wantFields: map[string]any{
+				"referee_id": nil,
+				"started_at": nil,
+				"status":     "pending",
+			},
+		},
+		{
 			name: "rejects a missing competitor before the handler runs",
 			body: map[string]any{
 				"tournament_id":   activeTournament.ID.String(),

@@ -49,7 +49,7 @@ func (s *boutService) CreateBout(ctx context.Context, input *BoutCreateInput) (*
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
-	refereeID, err := utils.ParseUUID(input.Body.RefereeID, "referee_id")
+	refereeID, err := parseOptionalUUID(input.Body.RefereeID, "referee_id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -85,7 +85,7 @@ func (s *boutService) CreateBout(ctx context.Context, input *BoutCreateInput) (*
 	bout := &Bout{
 		TournamentID:     tournamentID,
 		Location:         input.Body.Location,
-		Time:             input.Body.Time,
+		StartTime:        input.Body.StartTime,
 		RefereeID:        refereeID,
 		TimeLimitSeconds: input.Body.TimeLimitSeconds,
 		PointsToWin:      input.Body.PointsToWin,
@@ -116,6 +116,19 @@ func validateBoutFields(competitor1ID, competitor2ID uuid.UUID, pointsToWin int,
 	}
 
 	return nil
+}
+
+func parseOptionalUUID(raw *string, field string) (*uuid.UUID, error) {
+	if raw == nil {
+		return nil, nil
+	}
+
+	id, err := utils.ParseUUID(*raw, field)
+	if err != nil {
+		return nil, err
+	}
+
+	return &id, nil
 }
 
 func (s *boutService) GetBoutByID(ctx context.Context, input *BoutIDInput) (*BoutOutput, error) {
@@ -195,28 +208,17 @@ func (s *boutService) UpdateBoutByID(ctx context.Context, input *BoutUpdateInput
 
 func (s *boutService) boutEditFrom(ctx context.Context, id uuid.UUID, body BoutUpdateBody) (BoutEdit, error) {
 	var edit BoutEdit
+	var err error
 
-	if body.RefereeID != nil {
-		refereeID, err := utils.ParseUUID(*body.RefereeID, "referee_id")
-		if err != nil {
-			return edit, err
-		}
-		edit.RefereeID = &refereeID
+	if edit.RefereeID, err = parseOptionalUUID(body.RefereeID, "referee_id"); err != nil {
+		return edit, err
 	}
 
-	if body.Competitor1ID != nil {
-		competitor1ID, err := utils.ParseUUID(*body.Competitor1ID, "competitor_1_id")
-		if err != nil {
-			return edit, err
-		}
-		edit.Competitor1ID = &competitor1ID
+	if edit.Competitor1ID, err = parseOptionalUUID(body.Competitor1ID, "competitor_1_id"); err != nil {
+		return edit, err
 	}
-	if body.Competitor2ID != nil {
-		competitor2ID, err := utils.ParseUUID(*body.Competitor2ID, "competitor_2_id")
-		if err != nil {
-			return edit, err
-		}
-		edit.Competitor2ID = &competitor2ID
+	if edit.Competitor2ID, err = parseOptionalUUID(body.Competitor2ID, "competitor_2_id"); err != nil {
+		return edit, err
 	}
 	if err := s.validateCompetitorPair(ctx, id, edit.Competitor1ID, edit.Competitor2ID); err != nil {
 		return edit, err
@@ -242,9 +244,9 @@ func (s *boutService) boutEditFrom(ctx context.Context, id uuid.UUID, body BoutU
 	}
 
 	edit.Location = body.Location
-	edit.Time = body.Time
+	edit.StartTime = body.StartTime
 
-	if edit.Location == nil && edit.Time == nil && edit.RefereeID == nil &&
+	if edit.Location == nil && edit.StartTime == nil && edit.RefereeID == nil &&
 		edit.TimeLimitSeconds == nil && edit.PointsToWin == nil && edit.GroupNumber == nil &&
 		edit.Competitor1ID == nil && edit.Competitor2ID == nil {
 		return edit, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
@@ -304,12 +306,16 @@ func (s *boutService) StartBout(ctx context.Context, input *BoutIDInput) (*BoutO
 		return nil, errs.HumaError(errs.Public(
 			"bouts can only be started in an active tournament", errs.ErrConflict))
 	}
+	if bout.RefereeID == nil {
+		return nil, errs.HumaError(errs.Public(
+			"a referee must be assigned before the bout can start", errs.ErrConflict))
+	}
 
 	now := time.Now().UTC()
 	err = s.repo.TransitionBoutByID(ctx, id, BoutTransition{
-		To:   BoutStatusActive,
-		Time: &now,
-		From: []BoutStatus{BoutStatusPending},
+		To:        BoutStatusActive,
+		StartedAt: &now,
+		From:      []BoutStatus{BoutStatusPending},
 	})
 
 	return s.afterUpdate(ctx, id, err, "only a pending bout can be started")
@@ -321,9 +327,11 @@ func (s *boutService) EndBout(ctx context.Context, input *BoutIDInput) (*BoutOut
 		return nil, errs.HumaError(err)
 	}
 
+	completedAt := time.Now().UTC()
 	err = s.repo.TransitionBoutByID(ctx, id, BoutTransition{
-		To:   BoutStatusEnd,
-		From: []BoutStatus{BoutStatusActive},
+		To:          BoutStatusEnd,
+		CompletedAt: &completedAt,
+		From:        []BoutStatus{BoutStatusActive},
 	})
 
 	return s.afterUpdate(ctx, id, err, "only an active bout can be ended")

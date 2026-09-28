@@ -23,7 +23,7 @@ type BoutRepository interface {
 
 type BoutEdit struct {
 	Location         *string
-	Time             *time.Time
+	StartTime        *time.Time
 	RefereeID        *uuid.UUID
 	TimeLimitSeconds *int
 	PointsToWin      *int
@@ -38,8 +38,8 @@ func (e BoutEdit) columns() map[string]any {
 	if e.Location != nil {
 		columns["location"] = *e.Location
 	}
-	if e.Time != nil {
-		columns["time"] = *e.Time
+	if e.StartTime != nil {
+		columns["start_time"] = *e.StartTime
 	}
 	if e.RefereeID != nil {
 		columns["referee_id"] = *e.RefereeID
@@ -64,15 +64,19 @@ func (e BoutEdit) columns() map[string]any {
 }
 
 type BoutTransition struct {
-	To   BoutStatus
-	Time *time.Time
-	From []BoutStatus
+	To          BoutStatus
+	StartedAt   *time.Time
+	CompletedAt *time.Time
+	From        []BoutStatus
 }
 
 func (t BoutTransition) columns() map[string]any {
 	columns := map[string]any{"status": t.To}
-	if t.Time != nil {
-		columns["time"] = *t.Time
+	if t.StartedAt != nil {
+		columns["started_at"] = *t.StartedAt
+	}
+	if t.CompletedAt != nil {
+		columns["completed_at"] = *t.CompletedAt
 	}
 
 	return columns

@@ -100,11 +100,11 @@ func (f *FakeBoutRepository) EditBoutByID(_ context.Context, id uuid.UUID, edit 
 	if edit.Location != nil {
 		stored.Location = edit.Location
 	}
-	if edit.Time != nil {
-		stored.Time = edit.Time
+	if edit.StartTime != nil {
+		stored.StartTime = edit.StartTime
 	}
 	if edit.RefereeID != nil {
-		stored.RefereeID = *edit.RefereeID
+		stored.RefereeID = edit.RefereeID
 	}
 	if edit.TimeLimitSeconds != nil {
 		stored.TimeLimitSeconds = edit.TimeLimitSeconds
@@ -138,8 +138,11 @@ func (f *FakeBoutRepository) TransitionBoutByID(
 	}
 
 	stored.Status = transition.To
-	if transition.Time != nil {
-		stored.Time = transition.Time
+	if transition.StartedAt != nil {
+		stored.StartedAt = transition.StartedAt
+	}
+	if transition.CompletedAt != nil {
+		stored.CompletedAt = transition.CompletedAt
 	}
 
 	f.save(id, stored)
