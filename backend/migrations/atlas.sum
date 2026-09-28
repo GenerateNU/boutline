@@ -1,8 +1,8 @@
-h1:oWL/NchjuWafhhzvAA5DmBxRGo28LSc+fCdgpmLZ3KU=
+h1:6bhY4HlqUu8bUIqnH6v9NVx38uTEq6XqCfzQ8Lpm/tQ=
 20260912065155_create_examples.sql h1:0KjoBLsLY6UbTg23Ctie16NbsSEZPGfFV/QxvOV7NHE=
 20260919030549_create_tournaments.sql h1:x/6bQNnr7O+E76TEIpBmjwvZeZDH9AYV8c6v8SEB0w4=
 20260921045710_create_users.sql h1:sYJ+YDgRgLEeCsWY1twv4IioM7e9VT5NQwjkT99CngM=
 20260922235024_add_tournaments_created_by_foreign_key.sql h1:F5zeGDKSddq9N5u9hfnGYlWhir28gHA4jQiEkL8INy0=
 20260924023422_create_tournament_users.sql h1:V5nPX+qrYArlcJeXvLExA9/UOEfpvnI1tSdUU5rb/8c=
 20260926154431_drop_examples.sql h1:psu2gxxa/UdMiShFp9Aut0ZhdpeKMJ/urdGMF15gSwE=
-20260928011955_create_events.sql h1:lmrURJ/taRIf1XuWIeR/8+AahqtQN8xW9oWFKSFhc5g=
+20260928013220_create_events.sql h1:4Taz8vUZ1eAopqmqItCAOJpw9KynbC9Wj3mgAtmWJMU=

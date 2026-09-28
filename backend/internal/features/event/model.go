@@ -8,11 +8,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type EventType string
+// Format never changes after creation and decides the order of the event's
+// stages. The current stage is whichever stage row is active, so it isn't
+// stored on the event.
+type EventFormat string
 
 const (
-	EventTypePool              EventType = "pool"
-	EventTypeDirectElimination EventType = "direct_elimination"
+	EventFormatPoolThenDirectElimination EventFormat = "pool_then_direct_elimination"
 )
 
 type EventStatus string
@@ -27,7 +29,7 @@ type Event struct {
 	ID           uuid.UUID              `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	TournamentID uuid.UUID              `gorm:"type:uuid;not null;index"`
 	Tournament   *tournament.Tournament `gorm:"foreignKey:TournamentID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
-	EventType    EventType              `gorm:"type:text;not null;check:chk_events_event_type,event_type IN ('pool','direct_elimination')"`
+	Format       EventFormat            `gorm:"type:text;not null;default:pool_then_direct_elimination;check:chk_events_format,format IN ('pool_then_direct_elimination')"`
 	Name         string                 `gorm:"type:text;not null"`
 	Status       EventStatus            `gorm:"type:text;not null;index;default:upcoming;check:chk_events_status,status IN ('upcoming','active','ended')"`
 	StartTime    *time.Time
