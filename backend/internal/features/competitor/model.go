@@ -31,7 +31,7 @@ type Competitor struct {
 	FirstName string    `gorm:"type:text;not null"`
 	LastName  string    `gorm:"type:text;not null"`
 	// Rating defaults to U (unrated) for competitors with no classification on file.
-	Rating    Rating `gorm:"type:text;not null;index;default:U;check:chk_competitors_rating,rating IN ('A','B','C','D','E','U')"`
+	Rating    Rating `gorm:"type:text;not null;default:U;check:chk_competitors_rating,rating IN ('A','B','C','D','E','U')"`
 	Team      string `gorm:"type:text;null"`
 	CreatedAt time.Time
 	UpdatedAt time.Time

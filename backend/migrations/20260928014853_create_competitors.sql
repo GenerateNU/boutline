@@ -10,7 +10,5 @@ CREATE TABLE "competitors" (
   PRIMARY KEY ("id"),
   CONSTRAINT "chk_competitors_rating" CHECK (rating = ANY (ARRAY['A'::text, 'B'::text, 'C'::text, 'D'::text, 'E'::text, 'U'::text]))
 );
--- Create index "idx_competitors_rating" to table: "competitors"
-CREATE INDEX "idx_competitors_rating" ON "competitors" ("rating");
 -- Drop "examples" table
 DROP TABLE "examples";
