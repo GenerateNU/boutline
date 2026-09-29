@@ -159,7 +159,7 @@ func (r *tournamentUserRepository) ListTournamentsByUser(
 	tournaments := make([]tournament.Tournament, 0, limit)
 	err := query.
 		Select("tournaments.*").
-		Order("tournaments.created_at DESC").
+		Order("tournaments.created_at DESC, tournaments.id").
 		Limit(limit).
 		Offset(offset).
 		Find(&tournaments).Error
