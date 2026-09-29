@@ -7,6 +7,7 @@ import (
 
 	"boutline/internal/errs"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -93,37 +94,4 @@ func (r *scoringRepository) UpdateScoring(ctx context.Context, scoring *Scoring)
 	}
 
 	return nil
-}
-
-func (s *scoringService) RevokeScoring(
-	ctx context.Context,
-	input *ScoringRevokeInput,
-) (*ScoringOutput, error) {
-	// TODO: take revoked_by from the logged-in user in ctx once auth is wired up.
-	revokedBy, err := utils.ParseUUID(input.Body.RevokedBy, "revoked_by")
-	if err != nil {
-		return nil, errs.HumaError(err)
-	}
-
-	scoring, err := s.repo.GetScoringByID(ctx, input.ID)
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("get scoring: %w", err))
-	}
-
-	if scoring.RevokedAt != nil {
-		return nil, errs.HumaError(errs.Public("score has already been revoked", errs.ErrConflict))
-	}
-
-	now := time.Now()
-	scoring.RevokedAt = &now
-	scoring.RevokedBy = &revokedBy
-
-	if err := s.repo.UpdateScoring(ctx, scoring); err != nil {
-		if errors.Is(err, errs.ErrConflict) {
-			return nil, errs.HumaError(errs.Public("score has already been revoked", errs.ErrConflict))
-		}
-		return nil, errs.HumaError(fmt.Errorf("revoke scoring: %w", err))
-	}
-
-	return &ScoringOutput{Body: newScoringResponse(*scoring)}, nil
 }

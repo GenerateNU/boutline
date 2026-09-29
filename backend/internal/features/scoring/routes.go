@@ -38,7 +38,7 @@ func RegisterScoringService(api huma.API, service ScoringService) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "revokeScoring",
-		Method:      http.MethodPatch,
+		Method:      http.MethodPost,
 		Path:        scoringBasePath + "/{id}/revoke",
 		Summary:     "Revoke a scoring",
 		Tags:        []string{"Scoring"},
