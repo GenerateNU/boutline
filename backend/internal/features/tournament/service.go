@@ -81,7 +81,7 @@ func (s *tournamentService) CreateTournament(
 		return nil, errs.HumaError(err)
 	}
 
-	return &TournamentOutput{Body: newTournamentResponse(*tournament)}, nil
+	return &TournamentOutput{Body: NewTournamentResponse(*tournament)}, nil
 }
 
 func (s *tournamentService) createWithGeneratedCode(ctx context.Context, tournament *Tournament) error {
@@ -133,7 +133,7 @@ func (s *tournamentService) GetTournamentByID(
 		return nil, errs.HumaError(fmt.Errorf("get tournament: %w", err))
 	}
 
-	return &TournamentOutput{Body: newTournamentResponse(*tournament)}, nil
+	return &TournamentOutput{Body: NewTournamentResponse(*tournament)}, nil
 }
 
 func (s *tournamentService) GetTournamentByCode(
@@ -150,7 +150,7 @@ func (s *tournamentService) GetTournamentByCode(
 		return nil, errs.HumaError(fmt.Errorf("get tournament by code: %w", err))
 	}
 
-	return &TournamentOutput{Body: newTournamentResponse(*tournament)}, nil
+	return &TournamentOutput{Body: NewTournamentResponse(*tournament)}, nil
 }
 
 func (s *tournamentService) ListTournaments(
@@ -179,7 +179,7 @@ func (s *tournamentService) ListTournaments(
 
 	data := make([]TournamentResponse, 0, len(tournaments))
 	for _, listed := range tournaments {
-		data = append(data, newTournamentResponse(listed))
+		data = append(data, NewTournamentResponse(listed))
 	}
 
 	return &TournamentListOutput{Body: TournamentListBody{
@@ -297,5 +297,5 @@ func (s *tournamentService) afterUpdate(
 		return nil, errs.HumaError(fmt.Errorf("get updated tournament: %w", err))
 	}
 
-	return &TournamentOutput{Body: newTournamentResponse(*tournament)}, nil
+	return &TournamentOutput{Body: NewTournamentResponse(*tournament)}, nil
 }

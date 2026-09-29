@@ -16,7 +16,7 @@ type TournamentResponse struct {
 	UpdatedAt   time.Time            `json:"updated_at"`
 }
 
-func newTournamentResponse(tournament Tournament) TournamentResponse {
+func NewTournamentResponse(tournament Tournament) TournamentResponse {
 	return TournamentResponse{
 		ID:          tournament.ID.String(),
 		Name:        tournament.Name,
