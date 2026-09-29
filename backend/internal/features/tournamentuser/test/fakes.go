@@ -24,7 +24,7 @@ type membershipKey struct {
 type FakeTournamentUserRepository struct {
 	Memberships map[membershipKey]tournamentuser.TournamentUser
 	Tournaments map[uuid.UUID]tournament.Tournament
-	Err         error 
+	Err         error
 }
 
 func NewFakeTournamentUserRepository(seed ...tournamentuser.TournamentUser) *FakeTournamentUserRepository {
