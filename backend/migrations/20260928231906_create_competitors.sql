@@ -10,5 +10,3 @@ CREATE TABLE "competitors" (
   PRIMARY KEY ("id"),
   CONSTRAINT "chk_competitors_rating" CHECK (rating = ANY (ARRAY['A'::text, 'B'::text, 'C'::text, 'D'::text, 'E'::text, 'U'::text]))
 );
--- Drop "examples" table
-DROP TABLE "examples";
