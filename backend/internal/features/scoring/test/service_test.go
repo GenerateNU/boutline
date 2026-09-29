@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 func apiError(t *testing.T, err error) (int, string) {
 	t.Helper()
 

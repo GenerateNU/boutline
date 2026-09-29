@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	scoringBasePath      = "/api/v1/scoring"
-	scoringByMatchPath   = scoringBasePath + "/match/{match_id}"
+	scoringBasePath    = "/api/v1/scoring"
+	scoringByMatchPath = scoringBasePath + "/match/{match_id}"
 )
 
 func RegisterScoringRoutes(api huma.API, params *types.ServiceParams) {
@@ -48,7 +48,7 @@ func RegisterScoringService(api huma.API, service ScoringService) {
 		OperationID: "listScoring",
 		Method:      http.MethodGet,
 		Path:        scoringByMatchPath,
-		
+
 		Summary:     "List scoring for a match",
 		Description: "Returns a match's scores in the order they were recorded. Revoked scores are excluded unless include_revoked is true.",
 		Tags:        []string{"Scoring"},
