@@ -16,7 +16,7 @@ Everything below lives under `backend/internal/`:
 config/              loaded and validated once at startup
 database/            the gorm/postgres pool
 features/<name>/     one folder per feature, one file per layer
-validators/          request validation and custom tags
+utils/               shared helpers: request validation, custom tags, clamp
 errs/                the shared error vocabulary
 types/               RouteParams / ServiceParams
 server/app.go        builds the Fiber app, the Huma API, and the wiring

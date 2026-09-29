@@ -8,7 +8,7 @@ import (
 	"boutline/internal/server/middlewares"
 	"boutline/internal/server/routers"
 	"boutline/internal/types"
-	"boutline/internal/validators"
+	"boutline/internal/utils"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
@@ -34,7 +34,7 @@ func CreateApp(cfg *config.Configuration, db *gorm.DB) *fiber.App {
 
 	routers.SetUpRoutes(app, types.RouteParams{
 		API:       api,
-		Validator: validators.NewValidator(),
+		Validator: utils.NewValidator(),
 		ServiceParams: &types.ServiceParams{
 			Config: cfg,
 			DB:     db,
