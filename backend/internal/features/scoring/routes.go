@@ -8,7 +8,10 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
-const scoringBasePath = "/api/v1/scoring"
+const (
+	scoringBasePath      = "/api/v1/scoring"
+	scoringByMatchPath   = scoringBasePath + "/match/{match_id}"
+)
 
 func RegisterScoringRoutes(api huma.API, params *types.ServiceParams) {
 	RegisterScoringService(api, NewScoringService(NewScoringRepository(params.DB)))
@@ -36,7 +39,7 @@ func RegisterScoringService(api huma.API, service ScoringService) {
 	huma.Register(api, huma.Operation{
 		OperationID: "revokeScoring",
 		Method:      http.MethodPatch,
-		Path:        scoringBasePath + "/{id}",
+		Path:        scoringBasePath + "/{id}/revoke",
 		Summary:     "Revoke a scoring",
 		Tags:        []string{"Scoring"},
 	}, service.RevokeScoring)
@@ -44,8 +47,10 @@ func RegisterScoringService(api huma.API, service ScoringService) {
 	huma.Register(api, huma.Operation{
 		OperationID: "listScoring",
 		Method:      http.MethodGet,
-		Path:        scoringBasePath,
-		Summary:     "List scoring",
+		Path:        scoringByMatchPath,
+		
+		Summary:     "List scoring for a match",
+		Description: "Returns a match's scores in the order they were recorded. Revoked scores are excluded unless include_revoked is true.",
 		Tags:        []string{"Scoring"},
 	}, service.ListScoring)
 
