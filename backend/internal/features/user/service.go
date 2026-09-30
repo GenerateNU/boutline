@@ -50,8 +50,10 @@ func (s *userService) CreateUser(ctx context.Context, input *UserCreateInput) (*
 		return nil, errs.HumaError(err)
 	}
 
+	// TODO: Hash password for storage. input.body.Password exists but not used yet
 	user := &User{
 		Email:     email,
+		Password: "",
 		FirstName: firstName,
 		LastName:  lastName,
 	}

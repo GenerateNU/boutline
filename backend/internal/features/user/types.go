@@ -33,6 +33,7 @@ type UserOutput struct {
 // TODO: user auth (password omitted for now)
 type UserCreateBody struct {
 	Email     string `json:"email" format:"email" minLength:"1" maxLength:"120" doc:"User email"`
+	Password  string `json:"password" format:"password" minLength:"1" doc:"User password"`
 	FirstName string `json:"firstName" minLength:"1" maxLength:"120" doc:"User first name"`
 	LastName  string `json:"lastName" minLength:"1" maxLength:"120" doc:"User last name"`
 }
