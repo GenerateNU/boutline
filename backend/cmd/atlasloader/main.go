@@ -13,10 +13,10 @@ import (
 	"os"
 
 	"boutline/internal/features/bout"
+	"boutline/internal/features/competitor"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
 	"boutline/internal/features/user"
-	"boutline/internal/features/competitor"
 
 	"ariga.io/atlas-provider-gorm/gormschema"
 )
