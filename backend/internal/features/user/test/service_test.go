@@ -30,7 +30,7 @@ func apiError(t *testing.T, err error) (int, string) {
 
 func createInput(email, firstName, lastName string) *user.UserCreateInput {
 	return &user.UserCreateInput{
-		Body: user.UserCreateBody{Email: email, FirstName: firstName, LastName: lastName},
+		Body: user.UserCreateBody{Email: email, Password: "hunter2", FirstName: firstName, LastName: lastName},
 	}
 }
 

@@ -48,19 +48,24 @@ func TestCreateEndpoint(t *testing.T) {
 		{
 			name: "creates a user and echoes the stored row",
 			body: map[string]any{
-				"email": "new@example.com", "firstName": "  Ada  ", "lastName": "Lovelace",
+				"email": "new@example.com", "password": "hunter2", "firstName": "  Ada  ", "lastName": "Lovelace",
 			},
 			wantStatus: http.StatusCreated,
 			wantFields: map[string]any{"email": "new@example.com", "firstName": "Ada"},
 		},
 		{
 			name:       "rejects a malformed email before the handler runs",
-			body:       map[string]any{"email": "nope", "firstName": "Ada", "lastName": "Lovelace"},
+			body:       map[string]any{"email": "nope", "password": "hunter2", "firstName": "Ada", "lastName": "Lovelace"},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name:       "rejects a blank first name",
-			body:       map[string]any{"email": "new@example.com", "firstName": "", "lastName": "Lovelace"},
+			body:       map[string]any{"email": "new@example.com", "password": "hunter2", "firstName": "", "lastName": "Lovelace"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "rejects a missing password",
+			body:       map[string]any{"email": "new@example.com", "firstName": "Ada", "lastName": "Lovelace"},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
@@ -69,7 +74,7 @@ func TestCreateEndpoint(t *testing.T) {
 			name: "reports a duplicate email as a conflict the client can read",
 			seed: []user.User{seeded("taken@example.com", "Grace", "Hopper")},
 			body: map[string]any{
-				"email": "taken@example.com", "firstName": "Ada", "lastName": "Lovelace",
+				"email": "taken@example.com", "password": "hunter2", "firstName": "Ada", "lastName": "Lovelace",
 			},
 			wantStatus: http.StatusConflict,
 			wantFields: map[string]any{"detail": `a user with email "taken@example.com" already exists`},
