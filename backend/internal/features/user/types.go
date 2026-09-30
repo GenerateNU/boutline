@@ -31,7 +31,7 @@ type UserOutput struct {
 }
 
 type UserCreateBody struct {
-	Email     string `json:"email" format:"email" minLength:"1" maxLength:"120" doc:"User email"`
+	Email string `json:"email" format:"email" minLength:"1" maxLength:"120" doc:"User email"`
 	// Password max length is 72 because that's what bcrypt accepts
 	Password  string `json:"password" format:"password" minLength:"1" maxLength:"72" doc:"User password"`
 	FirstName string `json:"firstName" minLength:"1" maxLength:"120" doc:"User first name"`
