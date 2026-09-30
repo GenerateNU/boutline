@@ -3,6 +3,7 @@ package test
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 
 	"boutline/internal/features/user"
@@ -11,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func seeded(email, firstName, lastName string) user.User {
@@ -79,6 +81,19 @@ func TestCreateUser(t *testing.T) {
 			wantCode:   http.StatusConflict,
 			wantDetail: `a user with email "taken@example.com" already exists`,
 		},
+		{
+			// Huma's maxLength:"72" rejects this over HTTP; the check still has
+			// to exist for a caller that does not come through a request.
+			name: "rejects a password over bcrypt's 72 byte limit",
+			input: &user.UserCreateInput{
+				Body: user.UserCreateBody{
+					Email: "new@example.com", Password: strings.Repeat("a", 73),
+					FirstName: "Ada", LastName: "Lovelace",
+				},
+			},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "password must be at most 72 bytes",
+		},
 	}
 
 	for _, tt := range tests {
@@ -102,6 +117,12 @@ func TestCreateUser(t *testing.T) {
 			assert.Equal(t, tt.wantFirstName, out.Body.FirstName)
 			assert.NotEmpty(t, out.Body.ID)
 			assert.Len(t, repo.Users, len(tt.seed)+1)
+
+			id, err := uuid.Parse(out.Body.ID)
+			require.NoError(t, err)
+			stored := repo.Users[id]
+			assert.NotEqual(t, tt.input.Body.Password, stored.Password)
+			assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(stored.Password), []byte(tt.input.Body.Password)))
 		})
 	}
 }

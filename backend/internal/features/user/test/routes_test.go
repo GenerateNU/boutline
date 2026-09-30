@@ -93,6 +93,7 @@ func TestCreateEndpoint(t *testing.T) {
 			for field, want := range tt.wantFields {
 				assert.Equal(t, want, body[field])
 			}
+			assert.NotContains(t, body, "password")
 		})
 	}
 }
