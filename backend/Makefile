@@ -36,10 +36,12 @@ test-integration:
 
 # Write the next versioned migration by diffing the gorm models against
 # ./migrations. Needs the atlas CLI and Docker, and should be run before
-# dev-up so the stack has a schema to apply.
+# dev-up so the stack has a schema to apply. atlas.sum is gitignored, so it is
+# re-hashed first to match whatever the last pull brought in.
 migrate-new:
 	@test -n "$(NAME)" || { echo "NAME is required, e.g. make migrate-new NAME=create_examples"; exit 1; }
 	@command -v atlas >/dev/null || { echo "atlas CLI not found: brew install ariga/tap/atlas"; exit 1; }
+	atlas migrate hash --env local
 	atlas migrate diff $(NAME) --env local
 
 # dev-up applies migrations on its own; these are for doing it out of band.
@@ -47,7 +49,7 @@ migrate-apply:
 	$(COMPOSE) run --rm migrate
 
 migrate-status:
-	$(COMPOSE) run --rm migrate 'atlas migrate status --dir file:///migrations --url "$$ATLAS_URL"'
+	$(COMPOSE) run --rm migrate 'atlas migrate status --dir file:///tmp/migrations --url "$$ATLAS_URL"'
 
 # Build the image from ./Dockerfile and run it against a Postgres container.
 dev-up:

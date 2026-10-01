@@ -76,9 +76,14 @@ Adding or changing a model goes:
 
 `make migrate-new` needs the Atlas CLI (`brew install ariga/tap/atlas`) and
 Docker: Atlas starts a throwaway Postgres to normalise the schema before
-diffing, configured as `dev` in `atlas.hcl`. Migrations are committed, and
-`migrations/atlas.sum` is a checksum over the directory — if you hand-edit a
-file, re-sign it with `atlas migrate hash`.
+diffing, configured as `dev` in `atlas.hcl`. Migrations are committed;
+`migrations/atlas.sum` is not. It is a checksum over the whole directory, so
+committing it made every pair of PRs that added a migration conflict. Every
+command that runs Atlas regenerates it with `atlas migrate hash` first, and CI
+enforces what it used to: once a migration is on main it is never edited,
+renamed, or deleted, and a new one must carry a later timestamp than everything
+on main. If your PR's migration ends up older than one merged ahead of it,
+rename it to a fresh timestamp.
 
 Run `make lint` and `make test` before opening a PR, or `make be-check` from
 the repo root for everything [Backend CI](../.github/workflows/backend-ci.yml)

@@ -94,7 +94,9 @@ for the frontend, and `be-up`, `be-down`, `be-logs`, `be-build`, `be-test`,
 [Backend CI](.github/workflows/backend-ci.yml) run the matching half of `check`
 on every PR touching that stack. The backend workflow goes further than
 `be-check` does: it also builds the Docker image and fails if the gorm models
-and `backend/migrations` have drifted apart.
+and `backend/migrations` have drifted apart, or if a PR edits a migration
+already on main. It runs on merge-queue groups too, which is where two PRs'
+migrations first meet.
 
 One thing that looks like broken setup but isn't: `fe-typecheck` must run
 `next typegen` before `tsc`. Bare `tsc` reports errors CI never sees, since
