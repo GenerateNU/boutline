@@ -7,6 +7,9 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
+  # The merge queue tests each PR stacked on the ones ahead of it, which is the
+  # only place two migrations written in parallel meet before main.
+  merge_group:
 
 # A new push to the same ref makes in-flight runs irrelevant, so cancel them.
 concurrency:
@@ -78,9 +81,38 @@ jobs:
         with:
           version: v1.3.3
 
-      # Checksum integrity: catches a hand-edited migration that was never
-      # re-signed with `atlas migrate hash`.
+      # atlas.sum is gitignored so parallel migrations never conflict on it;
+      # hash the directory as it stands, then replay it on a scratch database.
+      - run: atlas migrate hash --env local
+
       - run: atlas migrate validate --env local
+
+      # What a committed atlas.sum used to guarantee, checked against the base
+      # instead: applied migrations are never edited, and new ones sort after
+      # everything already on main, or `migrate apply` rejects them as out of order.
+      - name: Migrations are append-only
+        if: github.event_name != 'push'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: |
+          git fetch --quiet --depth=1 origin "$BASE_SHA"
+
+          edited=$(git diff --name-only --diff-filter=MDR "$BASE_SHA" HEAD -- 'migrations/*.sql')
+          if [ -n "$edited" ]; then
+            echo "$edited"
+            echo "::error::migrations already on main were edited, renamed, or deleted — add a new migration instead"
+            exit 1
+          fi
+
+          latest=$(git ls-tree --name-only "$BASE_SHA" migrations/ | grep '\.sql$' | sort | tail -n 1)
+          latest_version=$(basename "${latest%%_*}")
+          for file in $(git diff --name-only --diff-filter=A "$BASE_SHA" HEAD -- 'migrations/*.sql'); do
+            version=$(basename "${file%%_*}")
+            if [[ ! "$version" > "$latest_version" ]]; then
+              echo "::error file=$file::version $version is not newer than $latest_version on main — rename it with a later timestamp"
+              exit 1
+            fi
+          done
 
       # Diffing the gorm models against ./migrations writes a file only when the
       # two disagree, so a dirty tree here means a model changed without a

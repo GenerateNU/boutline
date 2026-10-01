@@ -1,3 +1,8 @@
 boutline
 coverage.out
 tmp/
+
+# A checksum over the whole directory, so every PR adding a migration rewrote
+# the same line and conflicted with every other. Regenerated with
+# `atlas migrate hash` wherever Atlas runs; CI enforces what it used to.
+migrations/atlas.sum
