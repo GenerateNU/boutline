@@ -345,7 +345,7 @@ func (s *tournamentService) ListTournamentUsers(
 		return nil, errs.HumaError(fmt.Errorf("list tournament users: %w", err))
 	}
 
-	total, err := s.membershipRepo.CountTournamentUsers(ctx, tournamentID)
+	total, err := s.membershipRepo.CountUsersInTournament(ctx, tournamentID)
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list tournament users: %w", err))
 	}

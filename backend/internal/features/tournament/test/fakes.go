@@ -280,7 +280,7 @@ func (f *FakeTournamentUserRepository) ListTournamentUsers(
 	return matched, nil
 }
 
-func (f *FakeTournamentUserRepository) CountTournamentUsers(
+func (f *FakeTournamentUserRepository) CountUsersInTournament(
 	_ context.Context,
 	tournamentID uuid.UUID,
 ) (int64, error) {

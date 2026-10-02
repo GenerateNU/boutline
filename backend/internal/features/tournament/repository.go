@@ -190,7 +190,7 @@ type TournamentUserRepository interface {
 	CreateTournamentUser(ctx context.Context, membership *TournamentUser) error
 	GetTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) (*TournamentUser, error)
 	ListTournamentUsers(ctx context.Context, tournamentID uuid.UUID, limit, offset int) ([]TournamentUser, error)
-	CountTournamentUsers(ctx context.Context, tournamentID uuid.UUID) (int64, error)
+	CountUsersInTournament(ctx context.Context, tournamentID uuid.UUID) (int64, error)
 	ListTournamentsByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]Tournament, int64, error)
 	UpdateTournamentUserRole(ctx context.Context, tournamentID, userID uuid.UUID, role TournamentUserRole) error
 	DeleteTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) error
@@ -298,7 +298,7 @@ func (r *tournamentUserRepository) GetTournamentUser(
 	return &membership, nil
 }
 
-func (r *tournamentUserRepository) CountTournamentUsers(
+func (r *tournamentUserRepository) CountUsersInTournament(
 	ctx context.Context,
 	tournamentID uuid.UUID,
 ) (int64, error) {
@@ -309,7 +309,7 @@ func (r *tournamentUserRepository) CountTournamentUsers(
 		Where("tournament_id = ?", tournamentID).
 		Count(&total).Error
 	if err != nil {
-		return 0, fmt.Errorf("count tournament users for %s: %w", tournamentID, err)
+		return 0, fmt.Errorf("count users in tournament %s: %w", tournamentID, err)
 	}
 
 	return total, nil
