@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 
 	"github.com/google/uuid"
@@ -132,4 +133,35 @@ func (f *FakeUserRepository) DeleteUser(_ context.Context, id uuid.UUID) error {
 	delete(f.Users, id)
 
 	return nil
+}
+
+var _ user.TournamentMembershipLookup = (*FakeTournamentMembership)(nil)
+
+// FakeTournamentMembership stands in for the slice of the tournament membership
+// repository the user service consumes. Order is seed order.
+type FakeTournamentMembership struct {
+	ByUser map[uuid.UUID][]tournament.Tournament
+	Err    error
+}
+
+func NewFakeTournamentMembership() *FakeTournamentMembership {
+	return &FakeTournamentMembership{ByUser: map[uuid.UUID][]tournament.Tournament{}}
+}
+
+func (f *FakeTournamentMembership) ListTournamentsByUser(
+	_ context.Context,
+	userID uuid.UUID,
+	limit, offset int,
+) ([]tournament.Tournament, int64, error) {
+	if f.Err != nil {
+		return nil, 0, f.Err
+	}
+
+	joined := f.ByUser[userID]
+	total := int64(len(joined))
+	if offset >= len(joined) {
+		return []tournament.Tournament{}, total, nil
+	}
+
+	return slices.Clone(joined[offset:min(offset+limit, len(joined))]), total, nil
 }

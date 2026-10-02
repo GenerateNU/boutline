@@ -8,10 +8,16 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
-const tournamentBasePath = "/api/v1/tournaments"
+const (
+	tournamentBasePath = "/api/v1/tournaments"
+	membershipBasePath = tournamentBasePath + "/{id}/users"
+)
 
 func RegisterTournamentRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterTournamentService(api, NewTournamentService(NewTournamentRepository(params.DB)))
+	RegisterTournamentService(api, NewTournamentService(
+		NewTournamentRepository(params.DB),
+		NewTournamentUserRepository(params.DB),
+	))
 }
 
 func RegisterTournamentService(api huma.API, service TournamentService) {
@@ -76,4 +82,39 @@ func RegisterTournamentService(api huma.API, service TournamentService) {
 		Description: "Moves an active tournament to end and records completed_at. The tournament becomes immutable.",
 		Tags:        []string{"Tournaments"},
 	}, service.CompleteTournament)
+
+	huma.Register(api, huma.Operation{
+		OperationID:   "addTournamentUser",
+		Method:        http.MethodPost,
+		Path:          membershipBasePath,
+		Summary:       "Add a user to a tournament",
+		Description:   "The role decides what the member is: a referee or an admin.",
+		Tags:          []string{"Tournaments"},
+		DefaultStatus: http.StatusCreated,
+	}, service.AddTournamentUser)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listTournamentUsers",
+		Method:      http.MethodGet,
+		Path:        membershipBasePath,
+		Summary:     "List the users in a tournament",
+		Tags:        []string{"Tournaments"},
+	}, service.ListTournamentUsers)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "updateTournamentUserRole",
+		Method:      http.MethodPatch,
+		Path:        membershipBasePath + "/{user_id}",
+		Summary:     "Change a member's role",
+		Tags:        []string{"Tournaments"},
+	}, service.UpdateTournamentUserRole)
+
+	huma.Register(api, huma.Operation{
+		OperationID:   "removeTournamentUser",
+		Method:        http.MethodDelete,
+		Path:          membershipBasePath + "/{user_id}",
+		Summary:       "Remove a user from a tournament",
+		Tags:          []string{"Tournaments"},
+		DefaultStatus: http.StatusNoContent,
+	}, service.RemoveTournamentUser)
 }

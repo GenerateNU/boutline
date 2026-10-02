@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -101,7 +102,7 @@ func TestCreateUser(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakeUserRepository(tt.seed...)
-			out, err := user.NewUserService(repo).CreateUser(t.Context(), tt.input)
+			out, err := user.NewUserService(repo, NewFakeTournamentMembership()).CreateUser(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -131,7 +132,7 @@ func TestGetUserByID(t *testing.T) {
 	t.Parallel()
 
 	stored := seeded("stored@example.com", "Stored", "User")
-	service := user.NewUserService(NewFakeUserRepository(stored))
+	service := user.NewUserService(NewFakeUserRepository(stored), NewFakeTournamentMembership())
 
 	t.Run("returns the stored user", func(t *testing.T) {
 		t.Parallel()
@@ -216,7 +217,7 @@ func TestListUsers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := user.NewUserService(NewFakeUserRepository(seed...)).ListUsers(t.Context(), tt.input)
+			out, err := user.NewUserService(NewFakeUserRepository(seed...), NewFakeTournamentMembership()).ListUsers(t.Context(), tt.input)
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantTotal, out.Body.Total)
@@ -294,7 +295,7 @@ func TestUpdateUserByID(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakeUserRepository(tt.seed...)
-			out, err := user.NewUserService(repo).UpdateUserByID(t.Context(), tt.input)
+			out, err := user.NewUserService(repo, NewFakeTournamentMembership()).UpdateUserByID(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -326,7 +327,7 @@ func TestDeleteUser(t *testing.T) {
 		stored := seeded("doomed@example.com", "Doomed", "User")
 		repo := NewFakeUserRepository(stored)
 
-		_, err := user.NewUserService(repo).DeleteUser(t.Context(), &user.UserIDInput{ID: stored.ID.String()})
+		_, err := user.NewUserService(repo, NewFakeTournamentMembership()).DeleteUser(t.Context(), &user.UserIDInput{ID: stored.ID.String()})
 
 		require.NoError(t, err)
 		assert.Empty(t, repo.Users)
@@ -335,7 +336,7 @@ func TestDeleteUser(t *testing.T) {
 	t.Run("reports an unknown id as not found", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := user.NewUserService(NewFakeUserRepository()).
+		_, err := user.NewUserService(NewFakeUserRepository(), NewFakeTournamentMembership()).
 			DeleteUser(t.Context(), &user.UserIDInput{ID: uuid.New().String()})
 
 		code, _ := apiError(t, err)
@@ -351,9 +352,71 @@ func TestRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo := NewFakeUserRepository()
 	repo.Err = errors.New("connection refused")
 
-	_, err := user.NewUserService(repo).ListUsers(t.Context(), &user.UserListInput{})
+	_, err := user.NewUserService(repo, NewFakeTournamentMembership()).ListUsers(t.Context(), &user.UserListInput{})
 
 	code, detail := apiError(t, err)
 	assert.Equal(t, http.StatusInternalServerError, code)
 	assert.Equal(t, "internal server error", detail)
+}
+
+func TestListTournamentsByUser(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	joined := tournament.Tournament{ID: uuid.New(), Name: "a joined", Status: tournament.TournamentStatusPending}
+	alsoJoined := tournament.Tournament{ID: uuid.New(), Name: "b joined", Status: tournament.TournamentStatusActive}
+
+	newService := func() user.UserService {
+		memberships := NewFakeTournamentMembership()
+		memberships.ByUser[userID] = []tournament.Tournament{joined, alsoJoined}
+
+		return user.NewUserService(NewFakeUserRepository(), memberships)
+	}
+
+	t.Run("returns only the tournaments the user belongs to", func(t *testing.T) {
+		t.Parallel()
+
+		out, err := newService().ListTournamentsByUser(t.Context(),
+			&user.UserTournamentsInput{ID: userID.String()})
+
+		require.NoError(t, err)
+		require.Len(t, out.Body.Data, 2)
+		assert.Equal(t, int64(2), out.Body.Total)
+		assert.Equal(t, "a joined", out.Body.Data[0].Name)
+		assert.Equal(t, "b joined", out.Body.Data[1].Name)
+	})
+
+	t.Run("returns nothing for a user with no memberships", func(t *testing.T) {
+		t.Parallel()
+
+		out, err := newService().ListTournamentsByUser(t.Context(),
+			&user.UserTournamentsInput{ID: uuid.New().String()})
+
+		require.NoError(t, err)
+		assert.Empty(t, out.Body.Data)
+		assert.Equal(t, int64(0), out.Body.Total)
+	})
+
+	t.Run("pages the result", func(t *testing.T) {
+		t.Parallel()
+
+		out, err := newService().ListTournamentsByUser(t.Context(),
+			&user.UserTournamentsInput{ID: userID.String(), Limit: 1, Offset: 1})
+
+		require.NoError(t, err)
+		require.Len(t, out.Body.Data, 1)
+		assert.Equal(t, "b joined", out.Body.Data[0].Name)
+		assert.Equal(t, int64(2), out.Body.Total)
+	})
+
+	t.Run("rejects a user id that is not a uuid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := newService().ListTournamentsByUser(t.Context(),
+			&user.UserTournamentsInput{ID: "not-a-uuid"})
+
+		status, detail := apiError(t, err)
+		assert.Equal(t, http.StatusBadRequest, status)
+		assert.Equal(t, "id must be a valid uuid", detail)
+	})
 }

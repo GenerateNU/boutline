@@ -4,7 +4,6 @@ import (
 	"boutline/internal/features/bout"
 	"boutline/internal/features/health"
 	"boutline/internal/features/tournament"
-	"boutline/internal/features/tournamentuser"
 	"boutline/internal/features/user"
 	"boutline/internal/types"
 
@@ -16,7 +15,6 @@ import (
 func SetUpRoutes(app *fiber.App, routeParams types.RouteParams) {
 	health.RegisterHealthRoutes(routeParams.API, routeParams.ServiceParams)
 	tournament.RegisterTournamentRoutes(routeParams.API, routeParams.ServiceParams)
-	tournamentuser.RegisterTournamentUserRoutes(routeParams.API, routeParams.ServiceParams)
 	bout.RegisterBoutRoutes(routeParams.API, routeParams.ServiceParams)
 	user.RegisterUserRoutes(routeParams.API, routeParams.ServiceParams)
 

@@ -19,7 +19,7 @@ func newTestAPI(t *testing.T, seed ...tournament.Tournament) humatest.TestAPI {
 
 	_, api := humatest.New(t)
 	tournament.RegisterTournamentService(api,
-		tournament.NewTournamentService(NewFakeTournamentRepository(seed...)))
+		tournament.NewTournamentService(NewFakeTournamentRepository(seed...), NewFakeTournamentUserRepository()))
 
 	return api
 }
@@ -282,4 +282,182 @@ func TestLifecycleEndpoints(t *testing.T) {
 	require.Equal(t, http.StatusConflict, edit.Code, "body: %s", edit.Body)
 	assert.Equal(t, "tournament has ended and can no longer be edited",
 		decodeBody(t, edit.Body.Bytes())["detail"])
+}
+
+func newMembershipTestAPI(t *testing.T, seed ...tournament.TournamentUser) humatest.TestAPI {
+	t.Helper()
+
+	_, api := humatest.New(t)
+	tournament.RegisterTournamentService(api,
+		tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository(seed...)))
+
+	return api
+}
+
+func TestAddTournamentUserEndpoint(t *testing.T) {
+	t.Parallel()
+
+	tournamentID := uuid.New()
+	member := uuid.New()
+
+	tests := []struct {
+		name       string
+		path       string
+		body       map[string]any
+		wantStatus int
+		wantFields map[string]any
+	}{
+		{
+			name:       "adds a referee",
+			path:       tournamentID.String(),
+			body:       map[string]any{"user_id": uuid.New().String(), "role": "referee"},
+			wantStatus: http.StatusCreated,
+			wantFields: map[string]any{"role": "referee", "tournament_id": tournamentID.String()},
+		},
+		{
+			name:       "adds an admin",
+			path:       tournamentID.String(),
+			body:       map[string]any{"user_id": uuid.New().String(), "role": "admin"},
+			wantStatus: http.StatusCreated,
+			wantFields: map[string]any{"role": "admin"},
+		},
+		{
+			name:       "rejects a role outside the enum before the service runs",
+			path:       tournamentID.String(),
+			body:       map[string]any{"user_id": uuid.New().String(), "role": "scorekeeper"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "rejects a user_id that is not a uuid",
+			path:       tournamentID.String(),
+			body:       map[string]any{"user_id": "not-a-uuid", "role": "referee"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "rejects a tournament id that is not a uuid",
+			path:       "not-a-uuid",
+			body:       map[string]any{"user_id": uuid.New().String(), "role": "referee"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "reports an already-added user as a conflict",
+			path:       tournamentID.String(),
+			body:       map[string]any{"user_id": member.String(), "role": "admin"},
+			wantStatus: http.StatusConflict,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			api := newMembershipTestAPI(t, seededMembership(tournamentID, member, tournament.TournamentUserRoleReferee))
+			resp := api.Post("/api/v1/tournaments/"+tt.path+"/users", tt.body)
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+
+			body := decodeBody(t, resp.Body.Bytes())
+			for field, want := range tt.wantFields {
+				assert.Equal(t, want, body[field])
+			}
+		})
+	}
+}
+
+func TestListTournamentUsersEndpoint(t *testing.T) {
+	t.Parallel()
+
+	tournamentID := uuid.New()
+	seed := []tournament.TournamentUser{
+		seededMembership(tournamentID, uuid.New(), tournament.TournamentUserRoleReferee),
+		seededMembership(tournamentID, uuid.New(), tournament.TournamentUserRoleAdmin),
+		seededMembership(uuid.New(), uuid.New(), tournament.TournamentUserRoleAdmin),
+	}
+
+	t.Run("returns a page and the unpaged total", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newMembershipTestAPI(t, seed...).Get("/api/v1/tournaments/" + tournamentID.String() + "/users?limit=1")
+
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 1)
+		assert.InDelta(t, 2, body["total"], 0)
+		assert.InDelta(t, 1, body["limit"], 0)
+	})
+
+	t.Run("rejects a limit above the maximum", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newMembershipTestAPI(t, seed...).Get("/api/v1/tournaments/" + tournamentID.String() + "/users?limit=500")
+
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+}
+
+func TestUpdateTournamentUserRoleEndpoint(t *testing.T) {
+	t.Parallel()
+
+	tournamentID := uuid.New()
+	member := uuid.New()
+
+	tests := []struct {
+		name       string
+		userPath   string
+		body       map[string]any
+		wantStatus int
+		wantFields map[string]any
+	}{
+		{
+			name:       "promotes a referee to admin",
+			userPath:   member.String(),
+			body:       map[string]any{"role": "admin"},
+			wantStatus: http.StatusOK,
+			wantFields: map[string]any{"role": "admin", "user_id": member.String()},
+		},
+		{
+			name:       "rejects a role outside the enum",
+			userPath:   member.String(),
+			body:       map[string]any{"role": "nope"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "reports a non-member as not found",
+			userPath:   uuid.New().String(),
+			body:       map[string]any{"role": "admin"},
+			wantStatus: http.StatusNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			api := newMembershipTestAPI(t, seededMembership(tournamentID, member, tournament.TournamentUserRoleReferee))
+			resp := api.Patch("/api/v1/tournaments/"+tournamentID.String()+"/users/"+tt.userPath, tt.body)
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+
+			body := decodeBody(t, resp.Body.Bytes())
+			for field, want := range tt.wantFields {
+				assert.Equal(t, want, body[field])
+			}
+		})
+	}
+}
+
+func TestRemoveTournamentUserEndpoint(t *testing.T) {
+	t.Parallel()
+
+	tournamentID := uuid.New()
+	member := uuid.New()
+	api := newMembershipTestAPI(t, seededMembership(tournamentID, member, tournament.TournamentUserRoleReferee))
+	path := "/api/v1/tournaments/" + tournamentID.String() + "/users/" + member.String()
+
+	removed := api.Delete(path)
+	require.Equal(t, http.StatusNoContent, removed.Code, "body: %s", removed.Body)
+	assert.Empty(t, removed.Body.Bytes())
+
+	assert.Equal(t, http.StatusNotFound, api.Delete(path).Code)
 }

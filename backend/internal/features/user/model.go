@@ -3,6 +3,8 @@ package user
 import (
 	"time"
 
+	"boutline/internal/features/tournament"
+
 	"github.com/google/uuid"
 )
 
@@ -15,6 +17,8 @@ type User struct {
 	LastName  string    `gorm:"type:text;not null"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	CreatedTournaments []tournament.Tournament     `gorm:"foreignKey:CreatedBy;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
+	Memberships        []tournament.TournamentUser `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 }
 
 func (User) TableName() string {

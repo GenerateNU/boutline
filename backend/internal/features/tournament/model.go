@@ -3,8 +3,6 @@ package tournament
 import (
 	"time"
 
-	"boutline/internal/features/user"
-
 	"github.com/google/uuid"
 )
 
@@ -38,7 +36,6 @@ type Tournament struct {
 	Code        string               `gorm:"type:text;not null;uniqueIndex:idx_tournaments_code"`
 	Status      TournamentStatus     `gorm:"type:text;not null;index;default:pending;check:chk_tournaments_status,status IN ('pending','active','end')"`
 	CreatedBy   uuid.UUID            `gorm:"type:uuid;not null;index"`
-	Creator     *user.User           `gorm:"foreignKey:CreatedBy;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
 	StartTime   *time.Time
 	StartedAt   *time.Time
 	CompletedAt *time.Time
@@ -56,4 +53,28 @@ func (Tournament) TableName() string {
 
 func TournamentEditableStatuses() []TournamentStatus {
 	return []TournamentStatus{TournamentStatusPending, TournamentStatusActive}
+}
+
+type TournamentUserRole string
+
+const (
+	TournamentUserRoleReferee TournamentUserRole = "referee"
+	TournamentUserRoleAdmin   TournamentUserRole = "admin"
+)
+
+func (r TournamentUserRole) IsValid() bool {
+	return r == TournamentUserRoleReferee || r == TournamentUserRoleAdmin
+}
+
+type TournamentUser struct {
+	UserID       uuid.UUID          `gorm:"type:uuid;primaryKey"`
+	TournamentID uuid.UUID          `gorm:"type:uuid;primaryKey;index"`
+	Role         TournamentUserRole `gorm:"type:text;not null;check:chk_tournament_users_role,role IN ('referee','admin')"`
+	Tournament   *Tournament        `gorm:"foreignKey:TournamentID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+func (TournamentUser) TableName() string {
+	return "tournament_users"
 }

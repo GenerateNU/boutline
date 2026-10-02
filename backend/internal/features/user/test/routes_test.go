@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
@@ -21,7 +22,7 @@ func newTestAPI(t *testing.T, seed ...user.User) humatest.TestAPI {
 	t.Helper()
 
 	_, api := humatest.New(t)
-	user.RegisterUserService(api, user.NewUserService(NewFakeUserRepository(seed...)))
+	user.RegisterUserService(api, user.NewUserService(NewFakeUserRepository(seed...), NewFakeTournamentMembership()))
 
 	return api
 }
@@ -219,4 +220,30 @@ func TestUpdateEndpoint(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestListTournamentsByUserEndpoint(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	joined := tournament.Tournament{ID: uuid.New(), Name: "joined", Status: tournament.TournamentStatusPending}
+
+	memberships := NewFakeTournamentMembership()
+	memberships.ByUser[userID] = []tournament.Tournament{joined}
+
+	_, api := humatest.New(t)
+	user.RegisterUserService(api, user.NewUserService(NewFakeUserRepository(), memberships))
+
+	resp := api.Get("/api/v1/users/" + userID.String() + "/tournaments")
+	require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+	body := decodeBody(t, resp.Body.Bytes())
+	require.Len(t, body["data"], 1)
+	assert.InDelta(t, 1, body["total"], 0)
+
+	listed, ok := body["data"].([]any)[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "joined", listed["name"])
+
+	assert.Equal(t, http.StatusUnprocessableEntity, api.Get("/api/v1/users/not-a-uuid/tournaments").Code)
 }
