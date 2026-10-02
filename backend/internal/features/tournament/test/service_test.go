@@ -716,7 +716,7 @@ func TestAddTournamentUser(t *testing.T) {
 	}
 }
 
-func TestListTournamentUsers(t *testing.T) {
+func TestListUsersByTournament(t *testing.T) {
 	t.Parallel()
 
 	tournamentID := uuid.New()
@@ -732,7 +732,7 @@ func TestListTournamentUsers(t *testing.T) {
 
 		service := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository(seed...))
 
-		output, err := service.ListTournamentUsers(context.Background(), &tournament.TournamentUserListInput{
+		output, err := service.ListUsersByTournament(context.Background(), &tournament.TournamentUserListInput{
 			TournamentID: tournamentID.String(),
 			Limit:        1,
 		})
@@ -748,13 +748,13 @@ func TestListTournamentUsers(t *testing.T) {
 
 		service := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository(seed...))
 
-		defaulted, err := service.ListTournamentUsers(context.Background(), &tournament.TournamentUserListInput{
+		defaulted, err := service.ListUsersByTournament(context.Background(), &tournament.TournamentUserListInput{
 			TournamentID: tournamentID.String(),
 		})
 		require.NoError(t, err)
 		assert.Equal(t, tournament.TournamentDefaultPageSize, defaulted.Body.Limit)
 
-		clamped, err := service.ListTournamentUsers(context.Background(), &tournament.TournamentUserListInput{
+		clamped, err := service.ListUsersByTournament(context.Background(), &tournament.TournamentUserListInput{
 			TournamentID: tournamentID.String(),
 			Limit:        5000,
 		})
@@ -767,7 +767,7 @@ func TestListTournamentUsers(t *testing.T) {
 
 		service := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository(seed...))
 
-		output, err := service.ListTournamentUsers(context.Background(), &tournament.TournamentUserListInput{
+		output, err := service.ListUsersByTournament(context.Background(), &tournament.TournamentUserListInput{
 			TournamentID: uuid.New().String(),
 		})
 

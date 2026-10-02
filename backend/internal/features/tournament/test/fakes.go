@@ -246,7 +246,7 @@ func (f *FakeTournamentUserRepository) GetTournamentUser(
 	return &found, nil
 }
 
-func (f *FakeTournamentUserRepository) ListTournamentUsers(
+func (f *FakeTournamentUserRepository) ListUsersByTournament(
 	_ context.Context,
 	tournamentID uuid.UUID,
 	limit, offset int,
@@ -280,7 +280,7 @@ func (f *FakeTournamentUserRepository) ListTournamentUsers(
 	return matched, nil
 }
 
-func (f *FakeTournamentUserRepository) CountUsersInTournament(
+func (f *FakeTournamentUserRepository) CountUsersByTournament(
 	_ context.Context,
 	tournamentID uuid.UUID,
 ) (int64, error) {

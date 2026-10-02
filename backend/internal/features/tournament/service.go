@@ -37,7 +37,7 @@ type TournamentService interface {
 
 	// TournamentUser Endpoints
 	AddTournamentUser(ctx context.Context, input *TournamentUserAddInput) (*TournamentUserOutput, error)
-	ListTournamentUsers(ctx context.Context, input *TournamentUserListInput) (*TournamentUserListOutput, error)
+	ListUsersByTournament(ctx context.Context, input *TournamentUserListInput) (*TournamentUserListOutput, error)
 	UpdateTournamentUserRole(ctx context.Context, input *TournamentUserUpdateRoleInput) (*TournamentUserOutput, error)
 	RemoveTournamentUser(ctx context.Context, input *TournamentUserRemoveInput) (*struct{}, error)
 }
@@ -329,7 +329,7 @@ func (s *tournamentService) AddTournamentUser(
 	return &TournamentUserOutput{Body: newTournamentUserResponse(*membership)}, nil
 }
 
-func (s *tournamentService) ListTournamentUsers(
+func (s *tournamentService) ListUsersByTournament(
 	ctx context.Context,
 	input *TournamentUserListInput,
 ) (*TournamentUserListOutput, error) {
@@ -340,14 +340,14 @@ func (s *tournamentService) ListTournamentUsers(
 
 	limit, offset := page(input.Limit, input.Offset)
 
-	memberships, err := s.membershipRepo.ListTournamentUsers(ctx, tournamentID, limit, offset)
+	memberships, err := s.membershipRepo.ListUsersByTournament(ctx, tournamentID, limit, offset)
 	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("list tournament users: %w", err))
+		return nil, errs.HumaError(fmt.Errorf("list users in tournament: %w", err))
 	}
 
-	total, err := s.membershipRepo.CountUsersInTournament(ctx, tournamentID)
+	total, err := s.membershipRepo.CountUsersByTournament(ctx, tournamentID)
 	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("list tournament users: %w", err))
+		return nil, errs.HumaError(fmt.Errorf("list users in tournament: %w", err))
 	}
 
 	data := make([]TournamentUserResponse, 0, len(memberships))

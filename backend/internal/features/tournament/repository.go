@@ -189,8 +189,8 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 type TournamentUserRepository interface {
 	CreateTournamentUser(ctx context.Context, membership *TournamentUser) error
 	GetTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) (*TournamentUser, error)
-	ListTournamentUsers(ctx context.Context, tournamentID uuid.UUID, limit, offset int) ([]TournamentUser, error)
-	CountUsersInTournament(ctx context.Context, tournamentID uuid.UUID) (int64, error)
+	ListUsersByTournament(ctx context.Context, tournamentID uuid.UUID, limit, offset int) ([]TournamentUser, error)
+	CountUsersByTournament(ctx context.Context, tournamentID uuid.UUID) (int64, error)
 	ListTournamentsByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]Tournament, int64, error)
 	UpdateTournamentUserRole(ctx context.Context, tournamentID, userID uuid.UUID, role TournamentUserRole) error
 	DeleteTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) error
@@ -220,7 +220,7 @@ func (r *tournamentUserRepository) CreateTournamentUser(ctx context.Context, mem
 	return nil
 }
 
-func (r *tournamentUserRepository) ListTournamentUsers(
+func (r *tournamentUserRepository) ListUsersByTournament(
 	ctx context.Context,
 	tournamentID uuid.UUID,
 	limit int,
@@ -235,7 +235,7 @@ func (r *tournamentUserRepository) ListTournamentUsers(
 		Offset(offset).
 		Find(&memberships).Error
 	if err != nil {
-		return nil, fmt.Errorf("select tournament users for %s: %w", tournamentID, err)
+		return nil, fmt.Errorf("select users in tournament %s: %w", tournamentID, err)
 	}
 
 	return memberships, nil
@@ -298,7 +298,7 @@ func (r *tournamentUserRepository) GetTournamentUser(
 	return &membership, nil
 }
 
-func (r *tournamentUserRepository) CountUsersInTournament(
+func (r *tournamentUserRepository) CountUsersByTournament(
 	ctx context.Context,
 	tournamentID uuid.UUID,
 ) (int64, error) {

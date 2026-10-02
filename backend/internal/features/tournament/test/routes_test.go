@@ -364,7 +364,7 @@ func TestAddTournamentUserEndpoint(t *testing.T) {
 	}
 }
 
-func TestListTournamentUsersEndpoint(t *testing.T) {
+func TestListUsersByTournamentEndpoint(t *testing.T) {
 	t.Parallel()
 
 	tournamentID := uuid.New()

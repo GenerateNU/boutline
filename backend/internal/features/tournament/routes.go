@@ -94,12 +94,12 @@ func RegisterTournamentService(api huma.API, service TournamentService) {
 	}, service.AddTournamentUser)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "listTournamentUsers",
+		OperationID: "listUsersByTournament",
 		Method:      http.MethodGet,
 		Path:        membershipBasePath,
 		Summary:     "List the users in a tournament",
 		Tags:        []string{"Tournaments"},
-	}, service.ListTournamentUsers)
+	}, service.ListUsersByTournament)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateTournamentUserRole",
