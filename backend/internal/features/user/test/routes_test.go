@@ -22,7 +22,7 @@ func newTestAPI(t *testing.T, seed ...user.User) humatest.TestAPI {
 	t.Helper()
 
 	_, api := humatest.New(t)
-	user.RegisterUserService(api, user.NewUserService(NewFakeUserRepository(seed...), NewFakeTournamentMembership()))
+	user.RegisterUserService(api, user.NewUserService(NewFakeUserRepository(seed...)))
 
 	return api
 }
@@ -228,11 +228,11 @@ func TestListTournamentsByUserEndpoint(t *testing.T) {
 	userID := uuid.New()
 	joined := tournament.Tournament{ID: uuid.New(), Name: "joined", Status: tournament.TournamentStatusPending}
 
-	memberships := NewFakeTournamentMembership()
-	memberships.ByUser[userID] = []tournament.Tournament{joined}
+	repo := NewFakeUserRepository()
+	repo.Joined[userID] = []tournament.Tournament{joined}
 
 	_, api := humatest.New(t)
-	user.RegisterUserService(api, user.NewUserService(NewFakeUserRepository(), memberships))
+	user.RegisterUserService(api, user.NewUserService(repo))
 
 	resp := api.Get("/api/v1/users/" + userID.String() + "/tournaments")
 	require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)

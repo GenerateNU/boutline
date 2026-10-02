@@ -3,6 +3,7 @@ package tournament
 import (
 	"net/http"
 
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -16,7 +17,7 @@ const (
 func RegisterTournamentRoutes(api huma.API, params *types.ServiceParams) {
 	RegisterTournamentService(api, NewTournamentService(
 		NewTournamentRepository(params.DB),
-		NewTournamentUserRepository(params.DB),
+		tournamentuser.NewTournamentUserRepository(params.DB),
 	))
 }
 

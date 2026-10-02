@@ -1,6 +1,10 @@
 package tournament
 
-import "time"
+import (
+	"time"
+
+	"boutline/internal/features/tournamentuser"
+)
 
 type TournamentResponse struct {
 	ID          string               `json:"id" format:"uuid"`
@@ -84,14 +88,14 @@ type TournamentListOutput struct {
 }
 
 type TournamentUserResponse struct {
-	UserID       string             `json:"user_id" format:"uuid"`
-	TournamentID string             `json:"tournament_id" format:"uuid"`
-	Role         TournamentUserRole `json:"role" enum:"referee,admin"`
-	CreatedAt    time.Time          `json:"created_at"`
-	UpdatedAt    time.Time          `json:"updated_at"`
+	UserID       string                            `json:"user_id" format:"uuid"`
+	TournamentID string                            `json:"tournament_id" format:"uuid"`
+	Role         tournamentuser.TournamentUserRole `json:"role" enum:"referee,admin"`
+	CreatedAt    time.Time                         `json:"created_at"`
+	UpdatedAt    time.Time                         `json:"updated_at"`
 }
 
-func newTournamentUserResponse(membership TournamentUser) TournamentUserResponse {
+func newTournamentUserResponse(membership tournamentuser.TournamentUser) TournamentUserResponse {
 	return TournamentUserResponse{
 		UserID:       membership.UserID.String(),
 		TournamentID: membership.TournamentID.String(),
@@ -102,8 +106,8 @@ func newTournamentUserResponse(membership TournamentUser) TournamentUserResponse
 }
 
 type TournamentUserAddBody struct {
-	UserID string             `json:"user_id" format:"uuid" doc:"User to add to the tournament"`
-	Role   TournamentUserRole `json:"role" enum:"referee,admin" doc:"Role the user holds in this tournament"`
+	UserID string                            `json:"user_id" format:"uuid" doc:"User to add to the tournament"`
+	Role   tournamentuser.TournamentUserRole `json:"role" enum:"referee,admin" doc:"Role the user holds in this tournament"`
 }
 
 type TournamentUserAddInput struct {
@@ -118,7 +122,7 @@ type TournamentUserListInput struct {
 }
 
 type TournamentUserUpdateRoleBody struct {
-	Role TournamentUserRole `json:"role" enum:"referee,admin" doc:"New role for this member"`
+	Role tournamentuser.TournamentUserRole `json:"role" enum:"referee,admin" doc:"New role for this member"`
 }
 
 type TournamentUserUpdateRoleInput struct {

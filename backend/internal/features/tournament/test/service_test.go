@@ -11,6 +11,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -621,8 +622,8 @@ func TestRepositoryFailureIsNotAClientError(t *testing.T) {
 	assert.Equal(t, "internal server error", detail)
 }
 
-func seededMembership(tournamentID, userID uuid.UUID, role tournament.TournamentUserRole) tournament.TournamentUser {
-	return tournament.TournamentUser{TournamentID: tournamentID, UserID: userID, Role: role}
+func seededMembership(tournamentID, userID uuid.UUID, role tournamentuser.TournamentUserRole) tournamentuser.TournamentUser {
+	return tournamentuser.TournamentUser{TournamentID: tournamentID, UserID: userID, Role: role}
 }
 
 func TestAddTournamentUser(t *testing.T) {
@@ -635,8 +636,8 @@ func TestAddTournamentUser(t *testing.T) {
 		name         string
 		tournamentID string
 		userID       string
-		role         tournament.TournamentUserRole
-		wantRole     tournament.TournamentUserRole
+		role         tournamentuser.TournamentUserRole
+		wantRole     tournamentuser.TournamentUserRole
 		wantCode     int
 		wantDetail   string
 	}{
@@ -644,21 +645,21 @@ func TestAddTournamentUser(t *testing.T) {
 			name:         "adds a referee",
 			tournamentID: tournamentID.String(),
 			userID:       uuid.New().String(),
-			role:         tournament.TournamentUserRoleReferee,
-			wantRole:     tournament.TournamentUserRoleReferee,
+			role:         tournamentuser.TournamentUserRoleReferee,
+			wantRole:     tournamentuser.TournamentUserRoleReferee,
 		},
 		{
 			name:         "adds an admin",
 			tournamentID: tournamentID.String(),
 			userID:       uuid.New().String(),
-			role:         tournament.TournamentUserRoleAdmin,
-			wantRole:     tournament.TournamentUserRoleAdmin,
+			role:         tournamentuser.TournamentUserRoleAdmin,
+			wantRole:     tournamentuser.TournamentUserRoleAdmin,
 		},
 		{
 			name:         "rejects an unknown role",
 			tournamentID: tournamentID.String(),
 			userID:       uuid.New().String(),
-			role:         tournament.TournamentUserRole("scorekeeper"),
+			role:         tournamentuser.TournamentUserRole("scorekeeper"),
 			wantCode:     http.StatusBadRequest,
 			wantDetail:   `unknown role "scorekeeper"`,
 		},
@@ -666,7 +667,7 @@ func TestAddTournamentUser(t *testing.T) {
 			name:         "rejects a tournament id that is not a uuid",
 			tournamentID: "not-a-uuid",
 			userID:       uuid.New().String(),
-			role:         tournament.TournamentUserRoleReferee,
+			role:         tournamentuser.TournamentUserRoleReferee,
 			wantCode:     http.StatusBadRequest,
 			wantDetail:   "id must be a valid uuid",
 		},
@@ -674,7 +675,7 @@ func TestAddTournamentUser(t *testing.T) {
 			name:         "rejects a user id that is not a uuid",
 			tournamentID: tournamentID.String(),
 			userID:       "not-a-uuid",
-			role:         tournament.TournamentUserRoleReferee,
+			role:         tournamentuser.TournamentUserRoleReferee,
 			wantCode:     http.StatusBadRequest,
 			wantDetail:   "user_id must be a valid uuid",
 		},
@@ -682,7 +683,7 @@ func TestAddTournamentUser(t *testing.T) {
 			name:         "reports an already-added user as a duplicate",
 			tournamentID: tournamentID.String(),
 			userID:       existing.String(),
-			role:         tournament.TournamentUserRoleAdmin,
+			role:         tournamentuser.TournamentUserRoleAdmin,
 			wantCode:     http.StatusConflict,
 			wantDetail:   "already exists",
 		},
@@ -693,7 +694,7 @@ func TestAddTournamentUser(t *testing.T) {
 			t.Parallel()
 
 			service := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository(
-				seededMembership(tournamentID, existing, tournament.TournamentUserRoleReferee)))
+				seededMembership(tournamentID, existing, tournamentuser.TournamentUserRoleReferee)))
 
 			output, err := service.AddTournamentUser(context.Background(), &tournament.TournamentUserAddInput{
 				TournamentID: tt.tournamentID,
@@ -721,10 +722,10 @@ func TestListUsersByTournament(t *testing.T) {
 
 	tournamentID := uuid.New()
 	other := uuid.New()
-	seed := []tournament.TournamentUser{
-		seededMembership(tournamentID, uuid.New(), tournament.TournamentUserRoleReferee),
-		seededMembership(tournamentID, uuid.New(), tournament.TournamentUserRoleAdmin),
-		seededMembership(other, uuid.New(), tournament.TournamentUserRoleReferee),
+	seed := []tournamentuser.TournamentUser{
+		seededMembership(tournamentID, uuid.New(), tournamentuser.TournamentUserRoleReferee),
+		seededMembership(tournamentID, uuid.New(), tournamentuser.TournamentUserRoleAdmin),
+		seededMembership(other, uuid.New(), tournamentuser.TournamentUserRoleReferee),
 	}
 
 	t.Run("returns a page and the unpaged total for that tournament only", func(t *testing.T) {
@@ -786,28 +787,28 @@ func TestUpdateTournamentUserRole(t *testing.T) {
 	tests := []struct {
 		name       string
 		userID     string
-		role       tournament.TournamentUserRole
-		wantRole   tournament.TournamentUserRole
+		role       tournamentuser.TournamentUserRole
+		wantRole   tournamentuser.TournamentUserRole
 		wantCode   int
 		wantDetail string
 	}{
 		{
 			name:     "promotes a referee to admin",
 			userID:   userID.String(),
-			role:     tournament.TournamentUserRoleAdmin,
-			wantRole: tournament.TournamentUserRoleAdmin,
+			role:     tournamentuser.TournamentUserRoleAdmin,
+			wantRole: tournamentuser.TournamentUserRoleAdmin,
 		},
 		{
 			name:       "rejects an unknown role",
 			userID:     userID.String(),
-			role:       tournament.TournamentUserRole("nope"),
+			role:       tournamentuser.TournamentUserRole("nope"),
 			wantCode:   http.StatusBadRequest,
 			wantDetail: `unknown role "nope"`,
 		},
 		{
 			name:       "reports a user who is not a member as not found",
 			userID:     uuid.New().String(),
-			role:       tournament.TournamentUserRoleAdmin,
+			role:       tournamentuser.TournamentUserRoleAdmin,
 			wantCode:   http.StatusNotFound,
 			wantDetail: "not found",
 		},
@@ -818,7 +819,7 @@ func TestUpdateTournamentUserRole(t *testing.T) {
 			t.Parallel()
 
 			service := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository(
-				seededMembership(tournamentID, userID, tournament.TournamentUserRoleReferee)))
+				seededMembership(tournamentID, userID, tournamentuser.TournamentUserRoleReferee)))
 
 			output, err := service.UpdateTournamentUserRole(
 				context.Background(),
@@ -852,7 +853,7 @@ func TestRemoveTournamentUser(t *testing.T) {
 		t.Parallel()
 
 		repo := NewFakeTournamentUserRepository(
-			seededMembership(tournamentID, userID, tournament.TournamentUserRoleReferee))
+			seededMembership(tournamentID, userID, tournamentuser.TournamentUserRoleReferee))
 		service := tournament.NewTournamentService(NewFakeTournamentRepository(), repo)
 		input := &tournament.TournamentUserRemoveInput{
 			TournamentID: tournamentID.String(),

@@ -15,6 +15,7 @@ import (
 	"boutline/internal/features/bout"
 	"boutline/internal/features/event"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/features/user"
 
 	"ariga.io/atlas-provider-gorm/gormschema"
@@ -32,7 +33,7 @@ func run() error {
 		&bout.Bout{},
 		&event.Event{},
 		&tournament.Tournament{},
-		&tournament.TournamentUser{},
+		&tournamentuser.TournamentUser{},
 		&user.User{},
 	)
 	if err != nil {

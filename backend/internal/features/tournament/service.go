@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -35,7 +36,7 @@ type TournamentService interface {
 	StartTournament(ctx context.Context, input *TournamentIDInput) (*TournamentOutput, error)
 	CompleteTournament(ctx context.Context, input *TournamentIDInput) (*TournamentOutput, error)
 
-	// TournamentUser Endpoints
+	// tournamentuser.TournamentUser Endpoints
 	AddTournamentUser(ctx context.Context, input *TournamentUserAddInput) (*TournamentUserOutput, error)
 	ListUsersByTournament(ctx context.Context, input *TournamentUserListInput) (*TournamentUserListOutput, error)
 	UpdateTournamentUserRole(ctx context.Context, input *TournamentUserUpdateRoleInput) (*TournamentUserOutput, error)
@@ -44,10 +45,10 @@ type TournamentService interface {
 
 type tournamentService struct {
 	repo           TournamentRepository
-	membershipRepo TournamentUserRepository
+	membershipRepo tournamentuser.TournamentUserRepository
 }
 
-func NewTournamentService(repo TournamentRepository, membershipRepo TournamentUserRepository) TournamentService {
+func NewTournamentService(repo TournamentRepository, membershipRepo tournamentuser.TournamentUserRepository) TournamentService {
 	return &tournamentService{repo: repo, membershipRepo: membershipRepo}
 }
 
@@ -317,7 +318,7 @@ func (s *tournamentService) AddTournamentUser(
 			fmt.Sprintf("unknown role %q", input.Body.Role), errs.ErrInvalidInput))
 	}
 
-	membership := &TournamentUser{
+	membership := &tournamentuser.TournamentUser{
 		TournamentID: tournamentID,
 		UserID:       userID,
 		Role:         input.Body.Role,

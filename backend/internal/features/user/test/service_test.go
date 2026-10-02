@@ -102,7 +102,7 @@ func TestCreateUser(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakeUserRepository(tt.seed...)
-			out, err := user.NewUserService(repo, NewFakeTournamentMembership()).CreateUser(t.Context(), tt.input)
+			out, err := user.NewUserService(repo).CreateUser(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -132,7 +132,7 @@ func TestGetUserByID(t *testing.T) {
 	t.Parallel()
 
 	stored := seeded("stored@example.com", "Stored", "User")
-	service := user.NewUserService(NewFakeUserRepository(stored), NewFakeTournamentMembership())
+	service := user.NewUserService(NewFakeUserRepository(stored))
 
 	t.Run("returns the stored user", func(t *testing.T) {
 		t.Parallel()
@@ -217,7 +217,7 @@ func TestListUsers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := user.NewUserService(NewFakeUserRepository(seed...), NewFakeTournamentMembership()).ListUsers(t.Context(), tt.input)
+			out, err := user.NewUserService(NewFakeUserRepository(seed...)).ListUsers(t.Context(), tt.input)
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantTotal, out.Body.Total)
@@ -295,7 +295,7 @@ func TestUpdateUserByID(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakeUserRepository(tt.seed...)
-			out, err := user.NewUserService(repo, NewFakeTournamentMembership()).UpdateUserByID(t.Context(), tt.input)
+			out, err := user.NewUserService(repo).UpdateUserByID(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -327,7 +327,7 @@ func TestDeleteUser(t *testing.T) {
 		stored := seeded("doomed@example.com", "Doomed", "User")
 		repo := NewFakeUserRepository(stored)
 
-		_, err := user.NewUserService(repo, NewFakeTournamentMembership()).DeleteUser(t.Context(), &user.UserIDInput{ID: stored.ID.String()})
+		_, err := user.NewUserService(repo).DeleteUser(t.Context(), &user.UserIDInput{ID: stored.ID.String()})
 
 		require.NoError(t, err)
 		assert.Empty(t, repo.Users)
@@ -336,7 +336,7 @@ func TestDeleteUser(t *testing.T) {
 	t.Run("reports an unknown id as not found", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := user.NewUserService(NewFakeUserRepository(), NewFakeTournamentMembership()).
+		_, err := user.NewUserService(NewFakeUserRepository()).
 			DeleteUser(t.Context(), &user.UserIDInput{ID: uuid.New().String()})
 
 		code, _ := apiError(t, err)
@@ -352,7 +352,7 @@ func TestRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo := NewFakeUserRepository()
 	repo.Err = errors.New("connection refused")
 
-	_, err := user.NewUserService(repo, NewFakeTournamentMembership()).ListUsers(t.Context(), &user.UserListInput{})
+	_, err := user.NewUserService(repo).ListUsers(t.Context(), &user.UserListInput{})
 
 	code, detail := apiError(t, err)
 	assert.Equal(t, http.StatusInternalServerError, code)
@@ -367,10 +367,10 @@ func TestListTournamentsByUser(t *testing.T) {
 	alsoJoined := tournament.Tournament{ID: uuid.New(), Name: "b joined", Status: tournament.TournamentStatusActive}
 
 	newService := func() user.UserService {
-		memberships := NewFakeTournamentMembership()
-		memberships.ByUser[userID] = []tournament.Tournament{joined, alsoJoined}
+		repo := NewFakeUserRepository()
+		repo.Joined[userID] = []tournament.Tournament{joined, alsoJoined}
 
-		return user.NewUserService(NewFakeUserRepository(), memberships)
+		return user.NewUserService(repo)
 	}
 
 	t.Run("returns only the tournaments the user belongs to", func(t *testing.T) {

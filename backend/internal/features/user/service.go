@@ -20,14 +20,6 @@ const (
 	UserMaxPageSize     = 100
 )
 
-type TournamentMembershipLookup interface {
-	ListTournamentsByUser(
-		ctx context.Context,
-		userID uuid.UUID,
-		limit, offset int,
-	) ([]tournament.Tournament, int64, error)
-}
-
 type UserService interface {
 	CreateUser(ctx context.Context, input *UserCreateInput) (*UserOutput, error)
 	GetUserByID(ctx context.Context, input *UserIDInput) (*UserOutput, error)
@@ -38,12 +30,11 @@ type UserService interface {
 }
 
 type userService struct {
-	repo        UserRepository
-	memberships TournamentMembershipLookup
+	repo UserRepository
 }
 
-func NewUserService(repo UserRepository, memberships TournamentMembershipLookup) UserService {
-	return &userService{repo: repo, memberships: memberships}
+func NewUserService(repo UserRepository) UserService {
+	return &userService{repo: repo}
 }
 
 func (s *userService) CreateUser(ctx context.Context, input *UserCreateInput) (*UserOutput, error) {
@@ -241,7 +232,7 @@ func (s *userService) ListTournamentsByUser(
 
 	offset := max(input.Offset, 0)
 
-	tournaments, total, err := s.memberships.ListTournamentsByUser(ctx, id, limit, offset)
+	tournaments, total, err := s.repo.ListTournamentsByUser(ctx, id, limit, offset)
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list tournaments for user: %w", err))
 	}

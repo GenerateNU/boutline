@@ -3,7 +3,6 @@ package user
 import (
 	"net/http"
 
-	"boutline/internal/features/tournament"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -12,10 +11,7 @@ import (
 const userBasePath = "/api/v1/users"
 
 func RegisterUserRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterUserService(api, NewUserService(
-		NewUserRepository(params.DB),
-		tournament.NewTournamentUserRepository(params.DB),
-	))
+	RegisterUserService(api, NewUserService(NewUserRepository(params.DB)))
 }
 
 func RegisterUserService(api huma.API, service UserService) {

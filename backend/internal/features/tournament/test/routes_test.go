@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
@@ -284,7 +285,7 @@ func TestLifecycleEndpoints(t *testing.T) {
 		decodeBody(t, edit.Body.Bytes())["detail"])
 }
 
-func newMembershipTestAPI(t *testing.T, seed ...tournament.TournamentUser) humatest.TestAPI {
+func newMembershipTestAPI(t *testing.T, seed ...tournamentuser.TournamentUser) humatest.TestAPI {
 	t.Helper()
 
 	_, api := humatest.New(t)
@@ -351,7 +352,7 @@ func TestAddTournamentUserEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			api := newMembershipTestAPI(t, seededMembership(tournamentID, member, tournament.TournamentUserRoleReferee))
+			api := newMembershipTestAPI(t, seededMembership(tournamentID, member, tournamentuser.TournamentUserRoleReferee))
 			resp := api.Post("/api/v1/tournaments/"+tt.path+"/users", tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
@@ -368,10 +369,10 @@ func TestListUsersByTournamentEndpoint(t *testing.T) {
 	t.Parallel()
 
 	tournamentID := uuid.New()
-	seed := []tournament.TournamentUser{
-		seededMembership(tournamentID, uuid.New(), tournament.TournamentUserRoleReferee),
-		seededMembership(tournamentID, uuid.New(), tournament.TournamentUserRoleAdmin),
-		seededMembership(uuid.New(), uuid.New(), tournament.TournamentUserRoleAdmin),
+	seed := []tournamentuser.TournamentUser{
+		seededMembership(tournamentID, uuid.New(), tournamentuser.TournamentUserRoleReferee),
+		seededMembership(tournamentID, uuid.New(), tournamentuser.TournamentUserRoleAdmin),
+		seededMembership(uuid.New(), uuid.New(), tournamentuser.TournamentUserRoleAdmin),
 	}
 
 	t.Run("returns a page and the unpaged total", func(t *testing.T) {
@@ -434,7 +435,7 @@ func TestUpdateTournamentUserRoleEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			api := newMembershipTestAPI(t, seededMembership(tournamentID, member, tournament.TournamentUserRoleReferee))
+			api := newMembershipTestAPI(t, seededMembership(tournamentID, member, tournamentuser.TournamentUserRoleReferee))
 			resp := api.Patch("/api/v1/tournaments/"+tournamentID.String()+"/users/"+tt.userPath, tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
@@ -452,7 +453,7 @@ func TestRemoveTournamentUserEndpoint(t *testing.T) {
 
 	tournamentID := uuid.New()
 	member := uuid.New()
-	api := newMembershipTestAPI(t, seededMembership(tournamentID, member, tournament.TournamentUserRoleReferee))
+	api := newMembershipTestAPI(t, seededMembership(tournamentID, member, tournamentuser.TournamentUserRoleReferee))
 	path := "/api/v1/tournaments/" + tournamentID.String() + "/users/" + member.String()
 
 	removed := api.Delete(path)

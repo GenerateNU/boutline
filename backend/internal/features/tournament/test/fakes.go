@@ -9,6 +9,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 
 	"github.com/google/uuid"
 )
@@ -181,7 +182,7 @@ func (f *FakeTournamentRepository) save(id uuid.UUID, stored tournament.Tourname
 	f.Tournaments[id] = stored
 }
 
-var _ tournament.TournamentUserRepository = (*FakeTournamentUserRepository)(nil)
+var _ tournamentuser.TournamentUserRepository = (*FakeTournamentUserRepository)(nil)
 
 type membershipKey struct {
 	TournamentID uuid.UUID
@@ -189,13 +190,13 @@ type membershipKey struct {
 }
 
 type FakeTournamentUserRepository struct {
-	Memberships map[membershipKey]tournament.TournamentUser
+	Memberships map[membershipKey]tournamentuser.TournamentUser
 	Tournaments map[uuid.UUID]tournament.Tournament
 	Err         error
 }
 
-func NewFakeTournamentUserRepository(seed ...tournament.TournamentUser) *FakeTournamentUserRepository {
-	memberships := make(map[membershipKey]tournament.TournamentUser, len(seed))
+func NewFakeTournamentUserRepository(seed ...tournamentuser.TournamentUser) *FakeTournamentUserRepository {
+	memberships := make(map[membershipKey]tournamentuser.TournamentUser, len(seed))
 	for _, seeded := range seed {
 		memberships[keyOf(seeded.TournamentID, seeded.UserID)] = seeded
 	}
@@ -212,7 +213,7 @@ func keyOf(tournamentID, userID uuid.UUID) membershipKey {
 
 func (f *FakeTournamentUserRepository) CreateTournamentUser(
 	_ context.Context,
-	membership *tournament.TournamentUser,
+	membership *tournamentuser.TournamentUser,
 ) error {
 	if f.Err != nil {
 		return f.Err
@@ -233,7 +234,7 @@ func (f *FakeTournamentUserRepository) CreateTournamentUser(
 func (f *FakeTournamentUserRepository) GetTournamentUser(
 	_ context.Context,
 	tournamentID, userID uuid.UUID,
-) (*tournament.TournamentUser, error) {
+) (*tournamentuser.TournamentUser, error) {
 	if f.Err != nil {
 		return nil, f.Err
 	}
@@ -250,12 +251,12 @@ func (f *FakeTournamentUserRepository) ListUsersByTournament(
 	_ context.Context,
 	tournamentID uuid.UUID,
 	limit, offset int,
-) ([]tournament.TournamentUser, error) {
+) ([]tournamentuser.TournamentUser, error) {
 	if f.Err != nil {
 		return nil, f.Err
 	}
 
-	matched := make([]tournament.TournamentUser, 0, len(f.Memberships))
+	matched := make([]tournamentuser.TournamentUser, 0, len(f.Memberships))
 	for _, candidate := range f.Memberships {
 		if candidate.TournamentID == tournamentID {
 			matched = append(matched, candidate)
@@ -264,12 +265,12 @@ func (f *FakeTournamentUserRepository) ListUsersByTournament(
 
 	// Ordered by user id, not the repository's created_at, so that iterating a
 	// map still yields the same page on every run.
-	slices.SortFunc(matched, func(a, b tournament.TournamentUser) int {
+	slices.SortFunc(matched, func(a, b tournamentuser.TournamentUser) int {
 		return strings.Compare(a.UserID.String(), b.UserID.String())
 	})
 
 	if offset >= len(matched) {
-		return []tournament.TournamentUser{}, nil
+		return []tournamentuser.TournamentUser{}, nil
 	}
 
 	matched = matched[offset:]
@@ -337,7 +338,7 @@ func (f *FakeTournamentUserRepository) ListTournamentsByUser(
 func (f *FakeTournamentUserRepository) UpdateTournamentUserRole(
 	_ context.Context,
 	tournamentID, userID uuid.UUID,
-	role tournament.TournamentUserRole,
+	role tournamentuser.TournamentUserRole,
 ) error {
 	if f.Err != nil {
 		return f.Err
