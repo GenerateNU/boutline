@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 
 	"github.com/google/uuid"
@@ -17,7 +18,9 @@ var _ user.UserRepository = (*FakeUserRepository)(nil)
 
 type FakeUserRepository struct {
 	Users map[uuid.UUID]user.User
-	Err   error // when set, every method fails with it
+	// Tournaments each user belongs to, in seed order.
+	Joined map[uuid.UUID][]tournament.Tournament
+	Err    error // when set, every method fails with it
 }
 
 func NewFakeUserRepository(seed ...user.User) *FakeUserRepository {
@@ -26,7 +29,7 @@ func NewFakeUserRepository(seed ...user.User) *FakeUserRepository {
 		users[seeded.ID] = seeded
 	}
 
-	return &FakeUserRepository{Users: users}
+	return &FakeUserRepository{Users: users, Joined: map[uuid.UUID][]tournament.Tournament{}}
 }
 
 func (f *FakeUserRepository) CreateUser(_ context.Context, toCreate *user.User) error {
@@ -132,4 +135,22 @@ func (f *FakeUserRepository) DeleteUser(_ context.Context, id uuid.UUID) error {
 	delete(f.Users, id)
 
 	return nil
+}
+
+func (f *FakeUserRepository) ListTournamentsByUser(
+	_ context.Context,
+	userID uuid.UUID,
+	limit, offset int,
+) ([]tournament.Tournament, int64, error) {
+	if f.Err != nil {
+		return nil, 0, f.Err
+	}
+
+	joined := f.Joined[userID]
+	total := int64(len(joined))
+	if offset >= len(joined) {
+		return []tournament.Tournament{}, total, nil
+	}
+
+	return slices.Clone(joined[offset:min(offset+limit, len(joined))]), total, nil
 }
