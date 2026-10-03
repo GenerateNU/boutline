@@ -25,6 +25,20 @@ const (
 	EventStatusEnded    EventStatus = "ended"
 )
 
+func (s EventStatus) IsValid() bool {
+	return s == EventStatusUpcoming ||
+		s == EventStatusActive ||
+		s == EventStatusEnded
+}
+
+func EventEditableStatuses() []EventStatus {
+	return []EventStatus{EventStatusUpcoming}
+}
+
+func EventDeletableStatuses() []EventStatus {
+	return []EventStatus{EventStatusUpcoming}
+}
+
 type Event struct {
 	ID           uuid.UUID              `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	TournamentID uuid.UUID              `gorm:"type:uuid;not null;index"`
