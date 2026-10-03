@@ -3,6 +3,7 @@ package bout
 import (
 	"time"
 
+	"boutline/internal/features/competitor"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 
@@ -39,11 +40,12 @@ type Bout struct {
 	PointsToWin      int        `gorm:"not null;check:chk_bouts_points_to_win,points_to_win > 0"`
 	GroupNumber      int        `gorm:"not null;default:0;check:chk_bouts_group_number,group_number >= 0"`
 	Status           BoutStatus `gorm:"type:text;not null;index;default:upcoming;check:chk_bouts_status,status IN ('upcoming','active','end')"`
-	// The competitors table has not been merged yet, so these columns have no
-	// foreign key or Competitor association; add both in the migration that
-	// creates that table.
-	Competitor1ID uuid.UUID `gorm:"column:competitor_1_id;type:uuid;not null;index:idx_bouts_competitor_1_id"`
-	Competitor2ID uuid.UUID `gorm:"column:competitor_2_id;type:uuid;not null;index:idx_bouts_competitor_2_id;check:chk_bouts_distinct_competitors,competitor_1_id <> competitor_2_id"`
+	// RESTRICT rather than CASCADE so removing a competitor cannot silently
+	// erase the bouts they fought.
+	Competitor1ID uuid.UUID              `gorm:"column:competitor_1_id;type:uuid;not null;index:idx_bouts_competitor_1_id"`
+	Competitor1   *competitor.Competitor `gorm:"foreignKey:Competitor1ID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
+	Competitor2ID uuid.UUID              `gorm:"column:competitor_2_id;type:uuid;not null;index:idx_bouts_competitor_2_id;check:chk_bouts_distinct_competitors,competitor_1_id <> competitor_2_id"`
+	Competitor2   *competitor.Competitor `gorm:"foreignKey:Competitor2ID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
