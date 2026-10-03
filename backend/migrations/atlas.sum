@@ -1,4 +1,4 @@
-h1:vnWKEeR9DG+bYTZvJhQLfhTFOBBsWJ18ggrWKG0Q310=
+h1:1vbYLO/kiRaZ4x9llNN+GDxC9tleagBGwC0q8IK1vxo=
 20260912065155_create_examples.sql h1:0KjoBLsLY6UbTg23Ctie16NbsSEZPGfFV/QxvOV7NHE=
 20260919030549_create_tournaments.sql h1:x/6bQNnr7O+E76TEIpBmjwvZeZDH9AYV8c6v8SEB0w4=
 20260921045710_create_users.sql h1:sYJ+YDgRgLEeCsWY1twv4IioM7e9VT5NQwjkT99CngM=
@@ -7,3 +7,4 @@ h1:vnWKEeR9DG+bYTZvJhQLfhTFOBBsWJ18ggrWKG0Q310=
 20260926154431_drop_examples.sql h1:psu2gxxa/UdMiShFp9Aut0ZhdpeKMJ/urdGMF15gSwE=
 20260928194120_create_bouts.sql h1:yxgKG8SomWuNCA2G9E6bNw+A7gUYgbpzSAF5zvO0NsA=
 20260928231906_create_competitors.sql h1:/QXMZhiiB5H/rGh3Ta/A1C2J1OAuuA/EpbEoDwfQhJw=
+20261002234712_add_bouts_competitor_foreign_keys.sql h1:Fw5ntkyw+igh1sy68YeFPHgUWXt2s28QLj/lBHuiA7Q=
