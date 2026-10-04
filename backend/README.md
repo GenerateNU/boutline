@@ -110,6 +110,13 @@ by exporting these variables:
 | `DB_MAX_IDLE_CONNS`    | `5`         | Idle connections kept open       |
 | `DB_CONN_MAX_LIFETIME` | `1h`        | Recycle age, any Go duration     |
 
+| Variable         | Default     | Purpose                              |
+| ---------------- | ----------- | ------------------------------------- |
+| `REDIS_HOST`     | `localhost` | Redis host                            |
+| `REDIS_PORT`     | `6379`      | Redis port                            |
+| `REDIS_PASSWORD` | (empty)     | Password, if the server requires one  |
+| `REDIS_DB`       | `0`         | Logical database index                |
+
 Config is loaded and validated once at startup in `internal/config`; nothing
 below `main` reads the environment directly.
 
