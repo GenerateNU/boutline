@@ -19,7 +19,7 @@ type ScoringRepository interface {
 }
 
 type ScoringListFilter struct {
-	MatchID        uuid.UUID
+	MatchID        *uuid.UUID
 	IncludeRevoked bool
 }
 

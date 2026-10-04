@@ -79,7 +79,7 @@ func (s *scoringService) ListScoring(
 	}
 
 	scores, err := s.repo.ListScoring(ctx, ScoringListFilter{
-		MatchID:        matchID,
+		MatchID:        &matchID,
 		IncludeRevoked: input.IncludeRevoked,
 	})
 	if err != nil {
