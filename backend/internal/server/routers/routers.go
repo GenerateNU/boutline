@@ -2,11 +2,11 @@ package routers
 
 import (
 	"boutline/internal/features/bout"
+	"boutline/internal/features/competitor"
 	"boutline/internal/features/health"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 	"boutline/internal/types"
-	"boutline/internal/features/competitor"
 
 	"github.com/gofiber/fiber/v2"
 )

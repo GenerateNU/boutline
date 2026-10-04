@@ -35,8 +35,8 @@ type CompetitorOutput struct {
 type CompetitorCreateBody struct {
 	FirstName string `json:"firstName" minLength:"1" maxLength:"120" doc:"Competitor first name"`
 	LastName  string `json:"lastName" minLength:"1" maxLength:"120" doc:"Competitor last name"`
-	Rating string `json:"rating,omitempty" enum:"A,B,C,D,E,U" doc:"Rating; defaults to U (unrated)"`
-	Team   string `json:"team,omitempty" maxLength:"120" doc:"Club or team; omit if none"`
+	Rating    string `json:"rating,omitempty" enum:"A,B,C,D,E,U" doc:"Rating; defaults to U (unrated)"`
+	Team      string `json:"team,omitempty" maxLength:"120" doc:"Club or team; omit if none"`
 }
 
 type CompetitorCreateInput struct {
