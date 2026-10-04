@@ -6,6 +6,7 @@ import (
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 	"boutline/internal/types"
+	"boutline/internal/features/competitor"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -17,6 +18,7 @@ func SetUpRoutes(app *fiber.App, routeParams types.RouteParams) {
 	tournament.RegisterTournamentRoutes(routeParams.API, routeParams.ServiceParams)
 	bout.RegisterBoutRoutes(routeParams.API, routeParams.ServiceParams)
 	user.RegisterUserRoutes(routeParams.API, routeParams.ServiceParams)
+	competitor.RegisterCompetitorRoutes(routeParams.API, routeParams.ServiceParams)
 
 	// Fiber owns anything Huma did not claim, so the catch-all stays here.
 	setUpNotFoundHandler(app)
