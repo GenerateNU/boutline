@@ -13,10 +13,11 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
-func CreateApp(cfg *config.Configuration, db *gorm.DB) *fiber.App {
+func CreateApp(cfg *config.Configuration, db *gorm.DB, redisClient *redis.Client) *fiber.App {
 	app := fiber.New(fiber.Config{
 		ServerHeader: cfg.App.Name,
 		AppName:      fmt.Sprintf("%s API %s", cfg.App.Name, cfg.App.Version),
@@ -38,6 +39,7 @@ func CreateApp(cfg *config.Configuration, db *gorm.DB) *fiber.App {
 		ServiceParams: &types.ServiceParams{
 			Config: cfg,
 			DB:     db,
+			Redis:  redisClient,
 		},
 	})
 

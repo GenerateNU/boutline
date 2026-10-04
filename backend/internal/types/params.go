@@ -5,6 +5,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/go-playground/validator/v10"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -19,4 +20,5 @@ type RouteParams struct {
 type ServiceParams struct {
 	Config *config.Configuration
 	DB     *gorm.DB
+	Redis  *redis.Client
 }
