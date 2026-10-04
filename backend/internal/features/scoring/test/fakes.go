@@ -68,7 +68,7 @@ func (f *FakeScoringRepository) ListScoring(
 
 	matched := make([]scoring.Scoring, 0, len(f.Scores))
 	for _, candidate := range f.Scores {
-		if candidate.MatchID != *filter.MatchID {
+		if filter.MatchID != nil && candidate.MatchID != *filter.MatchID {
 			continue
 		}
 		if !filter.IncludeRevoked && candidate.RevokedAt != nil {
@@ -89,6 +89,16 @@ func (f *FakeScoringRepository) ListScoring(
 		}
 		return 0
 	})
+
+	if filter.Offset > 0 {
+		if filter.Offset >= len(matched) {
+			return []scoring.Scoring{}, nil
+		}
+		matched = matched[filter.Offset:]
+	}
+	if filter.Limit > 0 && filter.Limit < len(matched) {
+		matched = matched[:filter.Limit]
+	}
 
 	return matched, nil
 }
@@ -129,9 +139,14 @@ func (f *FakeScoringRepository) RevokeScoring(_ context.Context, revoked *scorin
 		return fmt.Errorf("revoke scoring %d: %w", revoked.ID, errs.ErrConflict)
 	}
 
+	now := time.Now()
+	if revoked.RevokedAt == nil {
+		revoked.RevokedAt = &now
+	}
+
 	stored.RevokedAt = revoked.RevokedAt
 	stored.RevokedBy = revoked.RevokedBy
-	stored.UpdatedAt = time.Now()
+	stored.UpdatedAt = now
 	f.Scores[revoked.ID] = stored
 
 	return nil

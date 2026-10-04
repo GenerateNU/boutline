@@ -16,11 +16,14 @@ type ScoringRepository interface {
 	GetScoringByID(ctx context.Context, id int64) (*Scoring, error)
 	ListScoring(ctx context.Context, filter ScoringListFilter) ([]Scoring, error)
 	UpdateScoring(ctx context.Context, scoring *Scoring) error
+	RevokeScoring(ctx context.Context, scoring *Scoring) error
 }
 
 type ScoringListFilter struct {
 	MatchID        *uuid.UUID
 	IncludeRevoked bool
+	Limit          int
+	Offset         int
 }
 
 type scoringRepository struct {
@@ -76,12 +79,36 @@ func (r *scoringRepository) UpdateScoring(ctx context.Context, scoring *Scoring)
 	result := r.db.WithContext(ctx).
 		Model(&Scoring{}).
 		Where("id = ? AND revoked_at IS NULL", scoring.ID).
-		Select("points", "competitor_id", "revoked_at", "revoked_by").
+		Select("points", "competitor_id").
 		Updates(scoring)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
 			return fmt.Errorf("update scoring %d: %w",
-				scoring.ID, errs.Public("competitor_id or revoked_by must reference an existing row", errs.ErrInvalidInput))
+				scoring.ID, errs.Public("competitor_id must reference an existing row", errs.ErrInvalidInput))
+		}
+		return fmt.Errorf("update scoring %d: %w", scoring.ID, result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		if _, err := r.GetScoringByID(ctx, scoring.ID); err != nil {
+			return err
+		}
+		return fmt.Errorf("update scoring %d: %w", scoring.ID, errs.ErrConflict)
+	}
+
+	return nil
+}
+
+func (r *scoringRepository) RevokeScoring(ctx context.Context, scoring *Scoring) error {
+	result := r.db.WithContext(ctx).
+		Model(&Scoring{}).
+		Where("id = ? AND revoked_at IS NULL", scoring.ID).
+		Select("revoked_at", "revoked_by").
+		Updates(scoring)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
+			return fmt.Errorf("update scoring %d: %w",
+				scoring.ID, errs.Public("revoked_by must reference an existing row", errs.ErrInvalidInput))
 		}
 		return fmt.Errorf("update scoring %d: %w", scoring.ID, result.Error)
 	}

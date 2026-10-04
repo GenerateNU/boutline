@@ -156,7 +156,7 @@ func (s *scoringService) RevokeScoring(
 	scoring.RevokedAt = &now
 	scoring.RevokedBy = &revokedBy
 
-	if err := s.repo.UpdateScoring(ctx, scoring); err != nil {
+	if err := s.repo.RevokeScoring(ctx, scoring); err != nil {
 		if errors.Is(err, errs.ErrConflict) {
 			return nil, errs.HumaError(errs.Public("score has already been revoked", errs.ErrConflict))
 		}
