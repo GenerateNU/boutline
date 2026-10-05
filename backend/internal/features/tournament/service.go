@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -26,6 +27,7 @@ const (
 )
 
 type TournamentService interface {
+	// Tournament Endpoints
 	CreateTournament(ctx context.Context, input *TournamentCreateInput) (*TournamentOutput, error)
 	GetTournamentByID(ctx context.Context, input *TournamentIDInput) (*TournamentOutput, error)
 	GetTournamentByCode(ctx context.Context, input *TournamentCodeInput) (*TournamentOutput, error)
@@ -33,14 +35,21 @@ type TournamentService interface {
 	UpdateTournamentByID(ctx context.Context, input *TournamentUpdateInput) (*TournamentOutput, error)
 	StartTournament(ctx context.Context, input *TournamentIDInput) (*TournamentOutput, error)
 	CompleteTournament(ctx context.Context, input *TournamentIDInput) (*TournamentOutput, error)
+
+	// tournamentuser.TournamentUser Endpoints
+	AddTournamentUser(ctx context.Context, input *TournamentUserAddInput) (*TournamentUserOutput, error)
+	ListUsersByTournament(ctx context.Context, input *TournamentUserListInput) (*TournamentUserListOutput, error)
+	UpdateTournamentUserRole(ctx context.Context, input *TournamentUserUpdateRoleInput) (*TournamentUserOutput, error)
+	RemoveTournamentUser(ctx context.Context, input *TournamentUserRemoveInput) (*struct{}, error)
 }
 
 type tournamentService struct {
-	repo TournamentRepository
+	repo           TournamentRepository
+	membershipRepo tournamentuser.TournamentUserRepository
 }
 
-func NewTournamentService(repo TournamentRepository) TournamentService {
-	return &tournamentService{repo: repo}
+func NewTournamentService(repo TournamentRepository, membershipRepo tournamentuser.TournamentUserRepository) TournamentService {
+	return &tournamentService{repo: repo, membershipRepo: membershipRepo}
 }
 
 func NormalizeTournamentCode(code string) string {
@@ -81,7 +90,7 @@ func (s *tournamentService) CreateTournament(
 		return nil, errs.HumaError(err)
 	}
 
-	return &TournamentOutput{Body: newTournamentResponse(*tournament)}, nil
+	return &TournamentOutput{Body: NewTournamentResponse(*tournament)}, nil
 }
 
 func (s *tournamentService) createWithGeneratedCode(ctx context.Context, tournament *Tournament) error {
@@ -133,7 +142,7 @@ func (s *tournamentService) GetTournamentByID(
 		return nil, errs.HumaError(fmt.Errorf("get tournament: %w", err))
 	}
 
-	return &TournamentOutput{Body: newTournamentResponse(*tournament)}, nil
+	return &TournamentOutput{Body: NewTournamentResponse(*tournament)}, nil
 }
 
 func (s *tournamentService) GetTournamentByCode(
@@ -150,7 +159,7 @@ func (s *tournamentService) GetTournamentByCode(
 		return nil, errs.HumaError(fmt.Errorf("get tournament by code: %w", err))
 	}
 
-	return &TournamentOutput{Body: newTournamentResponse(*tournament)}, nil
+	return &TournamentOutput{Body: NewTournamentResponse(*tournament)}, nil
 }
 
 func (s *tournamentService) ListTournaments(
@@ -161,12 +170,7 @@ func (s *tournamentService) ListTournaments(
 		return nil, errs.HumaError(errs.Public(
 			fmt.Sprintf("unknown status %q", input.Status), errs.ErrInvalidInput))
 	}
-	limit := input.Limit
-	if limit <= 0 {
-		limit = TournamentDefaultPageSize
-	}
-	limit = utils.Clamp(limit, TournamentMinPageSize, TournamentMaxPageSize)
-	offset := max(input.Offset, 0)
+	limit, offset := page(input.Limit, input.Offset)
 
 	tournaments, total, err := s.repo.ListTournaments(ctx, TournamentListFilter{
 		Status: input.Status,
@@ -179,7 +183,7 @@ func (s *tournamentService) ListTournaments(
 
 	data := make([]TournamentResponse, 0, len(tournaments))
 	for _, listed := range tournaments {
-		data = append(data, newTournamentResponse(listed))
+		data = append(data, NewTournamentResponse(listed))
 	}
 
 	return &TournamentListOutput{Body: TournamentListBody{
@@ -297,5 +301,129 @@ func (s *tournamentService) afterUpdate(
 		return nil, errs.HumaError(fmt.Errorf("get updated tournament: %w", err))
 	}
 
-	return &TournamentOutput{Body: newTournamentResponse(*tournament)}, nil
+	return &TournamentOutput{Body: NewTournamentResponse(*tournament)}, nil
+}
+
+func (s *tournamentService) AddTournamentUser(
+	ctx context.Context,
+	input *TournamentUserAddInput,
+) (*TournamentUserOutput, error) {
+	tournamentID, userID, err := parseMembershipIDs(input.TournamentID, input.Body.UserID)
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	if !input.Body.Role.IsValid() {
+		return nil, errs.HumaError(errs.Public(
+			fmt.Sprintf("unknown role %q", input.Body.Role), errs.ErrInvalidInput))
+	}
+
+	membership := &tournamentuser.TournamentUser{
+		TournamentID: tournamentID,
+		UserID:       userID,
+		Role:         input.Body.Role,
+	}
+	if err := s.membershipRepo.CreateTournamentUser(ctx, membership); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("add tournament user: %w", err))
+	}
+
+	return &TournamentUserOutput{Body: newTournamentUserResponse(*membership)}, nil
+}
+
+func (s *tournamentService) ListUsersByTournament(
+	ctx context.Context,
+	input *TournamentUserListInput,
+) (*TournamentUserListOutput, error) {
+	tournamentID, err := utils.ParseUUID(input.TournamentID, "id")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	limit, offset := page(input.Limit, input.Offset)
+
+	memberships, err := s.membershipRepo.ListUsersByTournament(ctx, tournamentID, limit, offset)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("list users in tournament: %w", err))
+	}
+
+	total, err := s.membershipRepo.CountUsersByTournament(ctx, tournamentID)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("list users in tournament: %w", err))
+	}
+
+	data := make([]TournamentUserResponse, 0, len(memberships))
+	for _, membership := range memberships {
+		data = append(data, newTournamentUserResponse(membership))
+	}
+
+	return &TournamentUserListOutput{Body: TournamentUserListBody{
+		Data:   data,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}}, nil
+}
+
+func (s *tournamentService) UpdateTournamentUserRole(
+	ctx context.Context,
+	input *TournamentUserUpdateRoleInput,
+) (*TournamentUserOutput, error) {
+	tournamentID, userID, err := parseMembershipIDs(input.TournamentID, input.UserID)
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	if !input.Body.Role.IsValid() {
+		return nil, errs.HumaError(errs.Public(
+			fmt.Sprintf("unknown role %q", input.Body.Role), errs.ErrInvalidInput))
+	}
+
+	if err := s.membershipRepo.UpdateTournamentUserRole(ctx, tournamentID, userID, input.Body.Role); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("update tournament user role: %w", err))
+	}
+
+	membership, err := s.membershipRepo.GetTournamentUser(ctx, tournamentID, userID)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get updated tournament user: %w", err))
+	}
+
+	return &TournamentUserOutput{Body: newTournamentUserResponse(*membership)}, nil
+}
+
+func (s *tournamentService) RemoveTournamentUser(
+	ctx context.Context,
+	input *TournamentUserRemoveInput,
+) (*struct{}, error) {
+	tournamentID, userID, err := parseMembershipIDs(input.TournamentID, input.UserID)
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	if err := s.membershipRepo.DeleteTournamentUser(ctx, tournamentID, userID); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("remove tournament user: %w", err))
+	}
+
+	return nil, nil
+}
+
+func parseMembershipIDs(rawTournamentID, rawUserID string) (uuid.UUID, uuid.UUID, error) {
+	tournamentID, err := utils.ParseUUID(rawTournamentID, "id")
+	if err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+
+	userID, err := utils.ParseUUID(rawUserID, "user_id")
+	if err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+
+	return tournamentID, userID, nil
+}
+
+func page(limit, offset int) (int, int) {
+	if limit <= 0 {
+		limit = TournamentDefaultPageSize
+	}
+
+	return utils.Clamp(limit, TournamentMinPageSize, TournamentMaxPageSize), max(offset, 0)
 }
