@@ -68,7 +68,7 @@ func (f *FakeScoringRepository) ListScoring(
 
 	matched := make([]scoring.Scoring, 0, len(f.Scores))
 	for _, candidate := range f.Scores {
-		if filter.MatchID != nil && candidate.MatchID != *filter.MatchID {
+		if filter.BoutID != nil && candidate.BoutID != *filter.BoutID {
 			continue
 		}
 		if !filter.IncludeRevoked && candidate.RevokedAt != nil {

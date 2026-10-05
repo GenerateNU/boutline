@@ -34,7 +34,7 @@ func decodeBody(t *testing.T, raw []byte) map[string]any {
 	return body
 }
 
-func seeded(id int64, matchID uuid.UUID) scoring.Scoring {
+func seeded(id int64, BoutID uuid.UUID) scoring.Scoring {
 	now := time.Now()
 
 	return scoring.Scoring{
@@ -42,14 +42,14 @@ func seeded(id int64, matchID uuid.UUID) scoring.Scoring {
 		CreatedBy:    uuid.New(),
 		Points:       1,
 		CompetitorID: uuid.New(),
-		MatchID:      matchID,
+		BoutID:       BoutID,
 		CreatedAt:    now.Add(time.Duration(id) * time.Second),
 		UpdatedAt:    now,
 	}
 }
 
-func seededRevoked(id int64, matchID uuid.UUID) scoring.Scoring {
-	s := seeded(id, matchID)
+func seededRevoked(id int64, BoutID uuid.UUID) scoring.Scoring {
+	s := seeded(id, BoutID)
 	revokedAt := time.Now()
 	revokedBy := uuid.New()
 	s.RevokedAt = &revokedAt
@@ -74,13 +74,13 @@ func TestCreateEndpoint(t *testing.T) {
 		{
 			name: "creates a score and echoes the stored row",
 			body: map[string]any{
-				"created_by": creator, "competitor_id": competitor, "match_id": match, "points": 2,
+				"created_by": creator, "competitor_id": competitor, "bout_id": match, "points": 2,
 			},
 			wantStatus: http.StatusCreated,
 			wantFields: map[string]any{
 				"created_by":    creator,
 				"competitor_id": competitor,
-				"match_id":      match,
+				"bout_id":       match,
 				"points":        float64(2),
 				"revoked_at":    nil,
 				"revoked_by":    nil,
@@ -89,7 +89,7 @@ func TestCreateEndpoint(t *testing.T) {
 		{
 			name: "defaults points to 1 when omitted",
 			body: map[string]any{
-				"created_by": creator, "competitor_id": competitor, "match_id": match,
+				"created_by": creator, "competitor_id": competitor, "bout_id": match,
 			},
 			wantStatus: http.StatusCreated,
 			wantFields: map[string]any{"points": float64(1)},
@@ -97,31 +97,31 @@ func TestCreateEndpoint(t *testing.T) {
 		{
 			name: "rejects points below 1 before the handler runs",
 			body: map[string]any{
-				"created_by": creator, "competitor_id": competitor, "match_id": match, "points": 0,
+				"created_by": creator, "competitor_id": competitor, "bout_id": match, "points": 0,
 			},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name:       "rejects a missing competitor_id",
-			body:       map[string]any{"created_by": creator, "match_id": match},
+			body:       map[string]any{"created_by": creator, "bout_id": match},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
-			name:       "rejects a missing match_id",
+			name:       "rejects a missing bout_id",
 			body:       map[string]any{"created_by": creator, "competitor_id": competitor},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
-			name: "rejects a match_id that is not a uuid",
+			name: "rejects a bout_id that is not a uuid",
 			body: map[string]any{
-				"created_by": creator, "competitor_id": competitor, "match_id": "not-a-uuid",
+				"created_by": creator, "competitor_id": competitor, "bout_id": "not-a-uuid",
 			},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name: "refuses a client-supplied revoked_at",
 			body: map[string]any{
-				"created_by": creator, "competitor_id": competitor, "match_id": match,
+				"created_by": creator, "competitor_id": competitor, "bout_id": match,
 				"revoked_at": time.Now().Format(time.RFC3339),
 			},
 			wantStatus: http.StatusUnprocessableEntity,
@@ -282,9 +282,9 @@ func TestUpdateEndpoint(t *testing.T) {
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
-			name:       "refuses to change match_id",
+			name:       "refuses to change bout_id",
 			id:         1,
-			body:       map[string]any{"match_id": uuid.New().String()},
+			body:       map[string]any{"bout_id": uuid.New().String()},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{

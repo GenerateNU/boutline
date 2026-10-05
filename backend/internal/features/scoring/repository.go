@@ -20,7 +20,7 @@ type ScoringRepository interface {
 }
 
 type ScoringListFilter struct {
-	MatchID        *uuid.UUID
+	BoutID         *uuid.UUID
 	IncludeRevoked bool
 	Limit          int
 	Offset         int
@@ -38,7 +38,7 @@ func (r *scoringRepository) CreateScoring(ctx context.Context, scoring *Scoring)
 	if err := r.db.WithContext(ctx).Create(scoring).Error; err != nil {
 		if errors.Is(err, gorm.ErrForeignKeyViolated) {
 			return fmt.Errorf("create scoring: %w",
-				errs.Public("created_by, competitor_id and match_id must reference existing rows", errs.ErrInvalidInput))
+				errs.Public("created_by, competitor_id and bout_id must reference existing rows", errs.ErrInvalidInput))
 		}
 		return fmt.Errorf("create scoring: %w", err)
 	}
@@ -61,7 +61,7 @@ func (r *scoringRepository) GetScoringByID(ctx context.Context, id int64) (*Scor
 }
 
 func (r *scoringRepository) ListScoring(ctx context.Context, filter ScoringListFilter) ([]Scoring, error) {
-	query := r.db.WithContext(ctx).Where("match_id = ?", filter.MatchID)
+	query := r.db.WithContext(ctx).Where("bout_id = ?", filter.BoutID)
 	if !filter.IncludeRevoked {
 		query = query.Where("revoked_at IS NULL")
 	}
@@ -69,7 +69,7 @@ func (r *scoringRepository) ListScoring(ctx context.Context, filter ScoringListF
 	var scores []Scoring
 	err := query.Order("created_at ASC, id ASC").Find(&scores).Error
 	if err != nil {
-		return nil, fmt.Errorf("select scoring for match %s: %w", filter.MatchID, err)
+		return nil, fmt.Errorf("select scoring for match %s: %w", filter.BoutID, err)
 	}
 
 	return scores, nil

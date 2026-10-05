@@ -10,7 +10,7 @@ import (
 
 const (
 	scoringBasePath    = "/api/v1/scoring"
-	scoringByMatchPath = scoringBasePath + "/match/{match_id}"
+	scoringByMatchPath = scoringBasePath + "/match/{bout_id}"
 )
 
 func RegisterScoringRoutes(api huma.API, params *types.ServiceParams) {

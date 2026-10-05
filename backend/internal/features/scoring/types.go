@@ -7,7 +7,7 @@ type ScoringResponse struct {
 	CreatedBy    string     `json:"created_by" format:"uuid"`
 	Points       int        `json:"points" doc:"Points granted for this score"`
 	CompetitorID string     `json:"competitor_id" format:"uuid"`
-	MatchID      string     `json:"match_id" format:"uuid"`
+	BoutID       string     `json:"bout_id" format:"uuid"`
 	RevokedAt    *time.Time `json:"revoked_at" doc:"Set when a referee revokes the score (soft delete), otherwise null"`
 	RevokedBy    *string    `json:"revoked_by" format:"uuid" doc:"Referee who revoked the score, otherwise null"`
 	CreatedAt    time.Time  `json:"created_at"`
@@ -26,7 +26,7 @@ func newScoringResponse(scoring Scoring) ScoringResponse {
 		CreatedBy:    scoring.CreatedBy.String(),
 		Points:       scoring.Points,
 		CompetitorID: scoring.CompetitorID.String(),
-		MatchID:      scoring.MatchID.String(),
+		BoutID:       scoring.BoutID.String(),
 		RevokedAt:    scoring.RevokedAt,
 		RevokedBy:    revokedBy,
 		CreatedAt:    scoring.CreatedAt,
@@ -38,7 +38,7 @@ type ScoringCreateBody struct {
 	CreatedBy    string `json:"created_by" format:"uuid" doc:"User recording the score"`
 	Points       int    `json:"points,omitempty" default:"1" minimum:"1" doc:"Points granted for this score, defaults to 1"`
 	CompetitorID string `json:"competitor_id" format:"uuid" doc:"Competitor who scored"`
-	MatchID      string `json:"match_id" format:"uuid" doc:"Match the score belongs to"`
+	BoutID       string `json:"bout_id" format:"uuid" doc:"Match the score belongs to"`
 }
 
 type ScoringCreateInput struct {
@@ -69,7 +69,7 @@ type ScoringUpdateInput struct {
 }
 
 type ScoringListInput struct {
-	MatchID        string `path:"match_id" format:"uuid" doc:"Match ID"`
+	BoutID         string `path:"bout_id" format:"uuid" doc:"Match ID"`
 	IncludeRevoked bool   `query:"include_revoked" default:"false" doc:"Include revoked scores, for replay"`
 }
 

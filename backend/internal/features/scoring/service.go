@@ -38,7 +38,7 @@ func (s *scoringService) CreateScoring(
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
-	matchID, err := utils.ParseUUID(input.Body.MatchID, "match_id")
+	BoutID, err := utils.ParseUUID(input.Body.BoutID, "bout_id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -47,7 +47,7 @@ func (s *scoringService) CreateScoring(
 		CreatedBy:    createdBy,
 		Points:       input.Body.Points,
 		CompetitorID: competitorID,
-		MatchID:      matchID,
+		BoutID:       BoutID,
 	}
 
 	if err := s.repo.CreateScoring(ctx, scoring); err != nil {
@@ -73,13 +73,13 @@ func (s *scoringService) ListScoring(
 	ctx context.Context,
 	input *ScoringListInput,
 ) (*ScoringListOutput, error) {
-	matchID, err := utils.ParseUUID(input.MatchID, "match_id")
+	BoutID, err := utils.ParseUUID(input.BoutID, "bout_id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
 	scores, err := s.repo.ListScoring(ctx, ScoringListFilter{
-		MatchID:        &matchID,
+		BoutID:         &BoutID,
 		IncludeRevoked: input.IncludeRevoked,
 	})
 	if err != nil {

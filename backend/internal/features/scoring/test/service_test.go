@@ -26,12 +26,12 @@ func apiError(t *testing.T, err error) (int, string) {
 
 func ptr[T any](v T) *T { return &v }
 
-func createInput(createdBy, competitorID, matchID string, points int) *scoring.ScoringCreateInput {
+func createInput(createdBy, competitorID, BoutID string, points int) *scoring.ScoringCreateInput {
 	return &scoring.ScoringCreateInput{
 		Body: scoring.ScoringCreateBody{
 			CreatedBy:    createdBy,
 			CompetitorID: competitorID,
-			MatchID:      matchID,
+			BoutID:       BoutID,
 			Points:       points,
 		},
 	}
@@ -71,7 +71,7 @@ func TestCreateScoring(t *testing.T) {
 			wantCode: http.StatusBadRequest,
 		},
 		{
-			name:     "rejects a match_id that is not a uuid",
+			name:     "rejects a bout_id that is not a uuid",
 			input:    createInput(creator, competitor, "not-a-uuid", 1),
 			wantCode: http.StatusBadRequest,
 		},
@@ -97,7 +97,7 @@ func TestCreateScoring(t *testing.T) {
 			assert.Positive(t, out.Body.ID)
 			assert.Equal(t, tt.wantPoints, out.Body.Points)
 			assert.Equal(t, tt.input.Body.CompetitorID, out.Body.CompetitorID)
-			assert.Equal(t, tt.input.Body.MatchID, out.Body.MatchID)
+			assert.Equal(t, tt.input.Body.BoutID, out.Body.BoutID)
 			assert.Nil(t, out.Body.RevokedAt)
 			assert.Nil(t, out.Body.RevokedBy)
 			assert.Len(t, repo.Scores, 1)
@@ -126,14 +126,14 @@ func TestCreateScoringRejectsAnUnknownReference(t *testing.T) {
 
 	repo := NewFakeScoringRepository()
 	repo.Err = fmt.Errorf("create scoring: %w",
-		errs.Public("match_id must reference an existing match", errs.ErrInvalidInput))
+		errs.Public("bout_id must reference an existing match", errs.ErrInvalidInput))
 
 	_, err := scoring.NewScoringService(repo).CreateScoring(t.Context(),
 		createInput(uuid.New().String(), uuid.New().String(), uuid.New().String(), 1))
 
 	code, detail := apiError(t, err)
 	assert.Equal(t, http.StatusBadRequest, code)
-	assert.Equal(t, "match_id must reference an existing match", detail)
+	assert.Equal(t, "bout_id must reference an existing match", detail)
 }
 
 func TestGetScoringByID(t *testing.T) {
@@ -149,7 +149,7 @@ func TestGetScoringByID(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, stored.ID, out.Body.ID)
-		assert.Equal(t, stored.MatchID.String(), out.Body.MatchID)
+		assert.Equal(t, stored.BoutID.String(), out.Body.BoutID)
 		assert.Equal(t, stored.Points, out.Body.Points)
 	})
 
@@ -187,30 +187,30 @@ func TestListScoring(t *testing.T) {
 	}{
 		{
 			name:      "returns only active scores for the match, oldest first",
-			input:     &scoring.ScoringListInput{MatchID: match.String()},
+			input:     &scoring.ScoringListInput{BoutID: match.String()},
 			wantIDs:   []int64{1, 3},
 			wantTotal: 2,
 		},
 		{
 			name:      "includes revoked scores when asked",
-			input:     &scoring.ScoringListInput{MatchID: match.String(), IncludeRevoked: true},
+			input:     &scoring.ScoringListInput{BoutID: match.String(), IncludeRevoked: true},
 			wantIDs:   []int64{1, 2, 3},
 			wantTotal: 3,
 		},
 		{
 			name:      "keeps other matches out of the result",
-			input:     &scoring.ScoringListInput{MatchID: otherMatch.String()},
+			input:     &scoring.ScoringListInput{BoutID: otherMatch.String()},
 			wantIDs:   []int64{4},
 			wantTotal: 1,
 		},
 		{
 			name:       "returns an empty list for a match with no scores",
-			input:      &scoring.ScoringListInput{MatchID: uuid.New().String()},
+			input:      &scoring.ScoringListInput{BoutID: uuid.New().String()},
 			wantNoRows: true,
 		},
 		{
 			name:     "rejects a match id that is not a uuid",
-			input:    &scoring.ScoringListInput{MatchID: "not-a-uuid"},
+			input:    &scoring.ScoringListInput{BoutID: "not-a-uuid"},
 			wantCode: http.StatusBadRequest,
 		},
 	}
@@ -317,7 +317,7 @@ func TestUpdateScoringByID(t *testing.T) {
 
 			stored := seeded(1, uuid.New())
 			if tt.seedRevoked {
-				stored = seededRevoked(1, stored.MatchID)
+				stored = seededRevoked(1, stored.BoutID)
 			}
 			repo := NewFakeScoringRepository(stored)
 
@@ -350,11 +350,11 @@ func TestUpdateScoringByID(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantPoints, out.Body.Points)
 			assert.Equal(t, wantCompetitor, out.Body.CompetitorID)
-			assert.Equal(t, stored.MatchID.String(), out.Body.MatchID)
+			assert.Equal(t, stored.BoutID.String(), out.Body.BoutID)
 
 			assert.Equal(t, tt.wantPoints, repo.Scores[stored.ID].Points)
 			assert.Equal(t, wantCompetitor, repo.Scores[stored.ID].CompetitorID.String())
-			assert.Equal(t, stored.MatchID, repo.Scores[stored.ID].MatchID)
+			assert.Equal(t, stored.BoutID, repo.Scores[stored.ID].BoutID)
 		})
 	}
 }
@@ -397,7 +397,7 @@ func TestRevokeScoring(t *testing.T) {
 
 			stored := seeded(1, uuid.New())
 			if tt.seedRevoked {
-				stored = seededRevoked(1, stored.MatchID)
+				stored = seededRevoked(1, stored.BoutID)
 			}
 			repo := NewFakeScoringRepository(stored)
 
@@ -449,13 +449,13 @@ func TestRevokedScoreDropsOutOfTheLiveList(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	live, err := service.ListScoring(t.Context(), &scoring.ScoringListInput{MatchID: match.String()})
+	live, err := service.ListScoring(t.Context(), &scoring.ScoringListInput{BoutID: match.String()})
 	require.NoError(t, err)
 	assert.Empty(t, live.Body.Data)
 	assert.Zero(t, live.Body.Total)
 
 	replay, err := service.ListScoring(t.Context(),
-		&scoring.ScoringListInput{MatchID: match.String(), IncludeRevoked: true})
+		&scoring.ScoringListInput{BoutID: match.String(), IncludeRevoked: true})
 	require.NoError(t, err)
 	assert.Len(t, replay.Body.Data, 1)
 }
@@ -467,7 +467,7 @@ func TestRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo.Err = errors.New("connection refused")
 
 	_, err := scoring.NewScoringService(repo).
-		ListScoring(t.Context(), &scoring.ScoringListInput{MatchID: uuid.New().String()})
+		ListScoring(t.Context(), &scoring.ScoringListInput{BoutID: uuid.New().String()})
 
 	code, detail := apiError(t, err)
 	assert.Equal(t, http.StatusInternalServerError, code)
