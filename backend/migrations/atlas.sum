@@ -1,4 +1,4 @@
-h1:1vbYLO/kiRaZ4x9llNN+GDxC9tleagBGwC0q8IK1vxo=
+h1:YZnRvstdpOetWSIzUIwU4RbQjHR4ZvNE2eivJfb1bkw=
 20260912065155_create_examples.sql h1:0KjoBLsLY6UbTg23Ctie16NbsSEZPGfFV/QxvOV7NHE=
 20260919030549_create_tournaments.sql h1:x/6bQNnr7O+E76TEIpBmjwvZeZDH9AYV8c6v8SEB0w4=
 20260921045710_create_users.sql h1:sYJ+YDgRgLEeCsWY1twv4IioM7e9VT5NQwjkT99CngM=
@@ -6,5 +6,6 @@ h1:1vbYLO/kiRaZ4x9llNN+GDxC9tleagBGwC0q8IK1vxo=
 20260924023422_create_tournament_users.sql h1:V5nPX+qrYArlcJeXvLExA9/UOEfpvnI1tSdUU5rb/8c=
 20260926154431_drop_examples.sql h1:psu2gxxa/UdMiShFp9Aut0ZhdpeKMJ/urdGMF15gSwE=
 20260928194120_create_bouts.sql h1:yxgKG8SomWuNCA2G9E6bNw+A7gUYgbpzSAF5zvO0NsA=
-20260928231906_create_competitors.sql h1:/QXMZhiiB5H/rGh3Ta/A1C2J1OAuuA/EpbEoDwfQhJw=
-20261002234712_add_bouts_competitor_foreign_keys.sql h1:Fw5ntkyw+igh1sy68YeFPHgUWXt2s28QLj/lBHuiA7Q=
+20260928200000_create_events.sql h1:v8TkX4pfWDXMwslipit0velL4o+VROaDy3S347qiQTg=
+20260928231906_create_competitors.sql h1:Fzcy1TkJ9opgabnkTcYQzKSach96gQzvb5j3ERxG3KM=
+20261002234712_add_bouts_competitor_foreign_keys.sql h1:uxrgPsjDqm5oRtLw6xCpFYgXvnoL5S5N2ADOUZl8oeY=
