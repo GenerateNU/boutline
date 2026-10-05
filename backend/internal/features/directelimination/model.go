@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Status is the lifecycle state of a direct elimination round.
 type Status string
 
 const (
@@ -21,10 +20,6 @@ func (s Status) IsValid() bool {
 		s == StatusEnd
 }
 
-// DirectElimination is the bracket round of an event. The bracket structure
-// itself lives on the match type, so this model only tracks lifecycle.
-//
-// Deletion is a hard delete for now.
 type DirectElimination struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	Status      Status    `gorm:"type:text;not null;index;default:upcoming;check:chk_direct_eliminations_status,status IN ('upcoming','active','end')"`
@@ -39,8 +34,6 @@ func (DirectElimination) TableName() string {
 	return "direct_eliminations"
 }
 
-// EditableStatuses lists the statuses in which a round may still be edited.
-// An ended round is immutable.
 func DirectEliminationEditableStatuses() []Status {
 	return []Status{StatusUpcoming, StatusActive}
 }

@@ -2,11 +2,14 @@ package directelimination
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"boutline/internal/errs"
 	"boutline/internal/utils"
+
+	"github.com/google/uuid"
 )
 
 type DirectEliminationService interface {
@@ -14,9 +17,9 @@ type DirectEliminationService interface {
 	GetDirectEliminationByID(ctx context.Context, input *DirectEliminationIDInput) (*DirectEliminationOutput, error)
 	ListDirectElimination(ctx context.Context, input *DirectEliminationListInput) (*DirectEliminationListOutput, error)
 	UpdateDirectEliminationByID(ctx context.Context, input *DirectEliminationUpdateInput) (*DirectEliminationOutput, error)
-	DeleteDirectEliminationByID(ctx context.Context, input *DirectEliminationIDInput) error
-	MarkAsStarted(ctx context.Context, input *DirectEliminationIDInput) (*DirectEliminationOutput, error)
-	MarkAsCompleted(ctx context.Context, input *DirectEliminationIDInput) (*DirectEliminationOutput, error)
+	DeleteDirectEliminationByID(ctx context.Context, input *DirectEliminationIDInput) (*struct{}, error)
+	StartDirectElimination(ctx context.Context, input *DirectEliminationIDInput) (*DirectEliminationOutput, error)
+	CompleteDirectElimination(ctx context.Context, input *DirectEliminationIDInput) (*DirectEliminationOutput, error)
 }
 
 type directEliminationService struct {
@@ -25,30 +28,6 @@ type directEliminationService struct {
 
 func NewDirectEliminationService(repo DirectEliminationRepository) DirectEliminationService {
 	return &directEliminationService{repo: repo}
-}
-
-// getEditable loads a round and rejects the request if it has already ended.
-// Every mutating method goes through this so ended rounds are read-only.
-func (s *directEliminationService) getEditable(
-	ctx context.Context,
-	id string,
-) (*DirectElimination, error) {
-	parsed, err := utils.ParseUUID(id, "id")
-	if err != nil {
-		return nil, errs.HumaError(err)
-	}
-
-	de, err := s.repo.GetDirectEliminationByID(ctx, parsed)
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("get direct elimination: %w", err))
-	}
-
-	if de.Status == StatusEnd {
-		return nil, errs.HumaError(errs.Public(
-			"direct elimination round has ended and can no longer be modified", errs.ErrConflict))
-	}
-
-	return de, nil
 }
 
 func (s *directEliminationService) CreateDirectElimination(
@@ -60,7 +39,6 @@ func (s *directEliminationService) CreateDirectElimination(
 		return nil, errs.HumaError(err)
 	}
 
-	// New rounds always begin as upcoming; use MarkAsStarted to begin one.
 	de := &DirectElimination{
 		EventID: eventID,
 		Status:  StatusUpcoming,
@@ -105,6 +83,10 @@ func (s *directEliminationService) ListDirectElimination(
 	}
 
 	if input.Status != "" {
+		if !input.Status.IsValid() {
+			return nil, errs.HumaError(errs.Public(
+				fmt.Sprintf("unknown status %q", input.Status), errs.ErrInvalidInput))
+		}
 		status := input.Status
 		filter.Status = &status
 	}
@@ -129,89 +111,113 @@ func (s *directEliminationService) UpdateDirectEliminationByID(
 	ctx context.Context,
 	input *DirectEliminationUpdateInput,
 ) (*DirectEliminationOutput, error) {
-	if input.Body.EventID == nil {
-		return nil, errs.HumaError(errs.Public("no fields to update", errs.ErrInvalidInput))
-	}
-
-	de, err := s.getEditable(ctx, input.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	eventID, err := utils.ParseUUID(*input.Body.EventID, "event_id")
+	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
-	de.EventID = eventID
 
-	if err := s.repo.UpdateDirectElimination(ctx, de); err != nil {
-		return nil, errs.HumaError(fmt.Errorf("update direct elimination: %w", err))
+	edit, err := directEliminationEditFrom(input.Body)
+	if err != nil {
+		return nil, errs.HumaError(err)
 	}
 
-	return &DirectEliminationOutput{Body: newDirectEliminationResponse(*de)}, nil
+	err = s.repo.EditDirectEliminationByID(ctx, id, edit)
+
+	return s.afterUpdate(ctx, id, err, "direct elimination round has ended and can no longer be edited")
+}
+
+func directEliminationEditFrom(body DirectEliminationUpdateBody) (DirectEliminationEdit, error) {
+	var edit DirectEliminationEdit
+
+	if body.EventID != nil {
+		eventID, err := utils.ParseUUID(*body.EventID, "event_id")
+		if err != nil {
+			return edit, err
+		}
+		edit.EventID = &eventID
+	}
+
+	if edit.EventID == nil {
+		return edit, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
+	}
+
+	return edit, nil
 }
 
 func (s *directEliminationService) DeleteDirectEliminationByID(
 	ctx context.Context,
 	input *DirectEliminationIDInput,
-) error {
+) (*struct{}, error) {
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
-		return errs.HumaError(err)
+		return nil, errs.HumaError(err)
 	}
 
 	if err := s.repo.DeleteDirectElimination(ctx, id); err != nil {
-		return errs.HumaError(fmt.Errorf("delete direct elimination: %w", err))
+		return nil, errs.HumaError(fmt.Errorf("delete direct elimination: %w", err))
 	}
 
-	return nil
+	return nil, nil
 }
 
-func (s *directEliminationService) MarkAsStarted(
+func (s *directEliminationService) StartDirectElimination(
 	ctx context.Context,
 	input *DirectEliminationIDInput,
 ) (*DirectEliminationOutput, error) {
-	de, err := s.getEditable(ctx, input.ID)
+	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
-		return nil, err
+		return nil, errs.HumaError(err)
 	}
 
-	if de.Status != StatusUpcoming {
-		return nil, errs.HumaError(errs.Public(
-			"direct elimination round has already started", errs.ErrConflict))
-	}
+	startedAt := time.Now().UTC()
 
-	now := time.Now()
-	de.Status = StatusActive
-	de.StartedAt = &now
+	err = s.repo.TransitionDirectEliminationByID(ctx, id, DirectEliminationTransition{
+		To:        StatusActive,
+		StartedAt: &startedAt,
+		From:      []Status{StatusUpcoming},
+	})
 
-	if err := s.repo.UpdateDirectElimination(ctx, de); err != nil {
-		return nil, errs.HumaError(fmt.Errorf("mark direct elimination started: %w", err))
-	}
-
-	return &DirectEliminationOutput{Body: newDirectEliminationResponse(*de)}, nil
+	return s.afterUpdate(ctx, id, err, "only an upcoming direct elimination round can be started")
 }
 
-func (s *directEliminationService) MarkAsCompleted(
+func (s *directEliminationService) CompleteDirectElimination(
 	ctx context.Context,
 	input *DirectEliminationIDInput,
 ) (*DirectEliminationOutput, error) {
-	de, err := s.getEditable(ctx, input.ID)
+	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
-		return nil, err
+		return nil, errs.HumaError(err)
 	}
 
-	if de.Status != StatusActive {
-		return nil, errs.HumaError(errs.Public(
-			"direct elimination round must be active before it can be completed", errs.ErrConflict))
+	completedAt := time.Now().UTC()
+
+	err = s.repo.TransitionDirectEliminationByID(ctx, id, DirectEliminationTransition{
+		To:          StatusEnd,
+		CompletedAt: &completedAt,
+		From:        []Status{StatusActive},
+	})
+
+	return s.afterUpdate(ctx, id, err, "only an active direct elimination round can be completed")
+}
+
+func (s *directEliminationService) afterUpdate(
+	ctx context.Context,
+	id uuid.UUID,
+	err error,
+	conflictMessage string,
+) (*DirectEliminationOutput, error) {
+	if err != nil {
+		if errors.Is(err, errs.ErrConflict) {
+			return nil, errs.HumaError(fmt.Errorf("update direct elimination: %w",
+				errs.Public(conflictMessage, err)))
+		}
+
+		return nil, errs.HumaError(fmt.Errorf("update direct elimination: %w", err))
 	}
 
-	now := time.Now()
-	de.Status = StatusEnd
-	de.CompletedAt = &now
-
-	if err := s.repo.UpdateDirectElimination(ctx, de); err != nil {
-		return nil, errs.HumaError(fmt.Errorf("mark direct elimination completed: %w", err))
+	de, err := s.repo.GetDirectEliminationByID(ctx, id)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get updated direct elimination: %w", err))
 	}
 
 	return &DirectEliminationOutput{Body: newDirectEliminationResponse(*de)}, nil

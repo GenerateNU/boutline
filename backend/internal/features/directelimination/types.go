@@ -2,14 +2,6 @@ package directelimination
 
 import "time"
 
-type Status string
-
-const (
-	StatusUpcoming Status = "upcoming"
-	StatusActive   Status = "active"
-	StatusEnd      Status = "end"
-)
-
 type DirectEliminationResponse struct {
 	ID          string     `json:"id" format:"uuid"`
 	Status      Status     `json:"status" enum:"upcoming,active,end" doc:"Lifecycle state of the round"`
@@ -34,7 +26,6 @@ func newDirectEliminationResponse(de DirectElimination) DirectEliminationRespons
 
 type DirectEliminationCreateBody struct {
 	EventID string `json:"event_id" format:"uuid" doc:"Event the round belongs to"`
-	Status  Status `json:"status,omitempty" enum:"upcoming,active,end" default:"upcoming" doc:"Initial status, defaults to upcoming"`
 }
 
 type DirectEliminationCreateInput struct {
@@ -46,9 +37,7 @@ type DirectEliminationIDInput struct {
 }
 
 type DirectEliminationUpdateBody struct {
-	Status      *Status    `json:"status,omitempty" enum:"upcoming,active,end" doc:"New status"`
-	StartedAt   *time.Time `json:"started_at,omitempty" doc:"Override when the round started"`
-	CompletedAt *time.Time `json:"completed_at,omitempty" doc:"Override when the round completed"`
+	EventID *string `json:"event_id,omitempty" format:"uuid" doc:"Move the round to a different event"`
 }
 
 type DirectEliminationUpdateInput struct {
