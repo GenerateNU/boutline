@@ -16,16 +16,16 @@ type EventRepository interface {
 	CreateEvent(ctx context.Context, event *Event) error
 	GetEventByID(ctx context.Context, id uuid.UUID) (*Event, error)
 	ListEvents(ctx context.Context, filter EventListFilter) ([]Event, int64, error)
-	EditEventByID(ctx context.Context, id uuid.UUID, edit EventEdit) error
+	UpdateEventByID(ctx context.Context, id uuid.UUID, update EventUpdate) error
 	DeleteEventByID(ctx context.Context, id uuid.UUID) error
 }
 
-type EventEdit struct {
+type EventUpdate struct {
 	Name      *string
 	StartTime *time.Time
 }
 
-func (e EventEdit) columns() map[string]any {
+func (e EventUpdate) columns() map[string]any {
 	columns := make(map[string]any, 2)
 
 	if e.Name != nil {
@@ -102,11 +102,11 @@ func (r *eventRepository) ListEvents(ctx context.Context, filter EventListFilter
 	return events, total, nil
 }
 
-func (r *eventRepository) EditEventByID(ctx context.Context, id uuid.UUID, edit EventEdit) error {
+func (r *eventRepository) UpdateEventByID(ctx context.Context, id uuid.UUID, update EventUpdate) error {
 	query := r.db.WithContext(ctx).Model(&Event{}).
 		Where("id = ? AND status IN ?", id, EventEditableStatuses())
 
-	result := query.Updates(edit.columns())
+	result := query.Updates(update.columns())
 	if result.Error != nil {
 		return translateEventWriteError(fmt.Sprintf("update event %s", id), result.Error)
 	}

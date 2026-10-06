@@ -109,24 +109,24 @@ func (f *FakeTournamentRepository) ListTournaments(
 	return matched, total, nil
 }
 
-func (f *FakeTournamentRepository) EditTournamentByID(
+func (f *FakeTournamentRepository) UpdateTournamentByID(
 	_ context.Context,
 	id uuid.UUID,
-	edit tournament.TournamentEdit,
+	update tournament.TournamentUpdate,
 ) error {
 	stored, err := f.guard(id, tournament.TournamentEditableStatuses())
 	if err != nil {
 		return err
 	}
 
-	if edit.Name != nil {
-		stored.Name = *edit.Name
+	if update.Name != nil {
+		stored.Name = *update.Name
 	}
-	if edit.Visibility != nil {
-		stored.Visibility = *edit.Visibility
+	if update.Visibility != nil {
+		stored.Visibility = *update.Visibility
 	}
-	if edit.StartTime != nil {
-		stored.StartTime = edit.StartTime
+	if update.StartTime != nil {
+		stored.StartTime = update.StartTime
 	}
 
 	f.save(id, stored)

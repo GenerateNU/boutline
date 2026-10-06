@@ -196,63 +196,63 @@ func (s *boutService) UpdateBoutByID(ctx context.Context, input *BoutUpdateInput
 		return nil, errs.HumaError(err)
 	}
 
-	edit, err := s.boutEditFrom(ctx, id, input.Body)
+	update, err := s.boutUpdateFrom(ctx, id, input.Body)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
-	err = s.repo.EditBoutByID(ctx, id, edit)
+	err = s.repo.UpdateBoutByID(ctx, id, update)
 
 	return s.afterUpdate(ctx, id, err, "only an upcoming bout can be edited")
 }
 
-func (s *boutService) boutEditFrom(ctx context.Context, id uuid.UUID, body BoutUpdateBody) (BoutEdit, error) {
-	var edit BoutEdit
+func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body BoutUpdateBody) (BoutUpdate, error) {
+	var update BoutUpdate
 	var err error
 
-	if edit.RefereeID, err = parseOptionalUUID(body.RefereeID, "referee_id"); err != nil {
-		return edit, err
+	if update.RefereeID, err = parseOptionalUUID(body.RefereeID, "referee_id"); err != nil {
+		return update, err
 	}
 
-	if edit.Competitor1ID, err = parseOptionalUUID(body.Competitor1ID, "competitor_1_id"); err != nil {
-		return edit, err
+	if update.Competitor1ID, err = parseOptionalUUID(body.Competitor1ID, "competitor_1_id"); err != nil {
+		return update, err
 	}
-	if edit.Competitor2ID, err = parseOptionalUUID(body.Competitor2ID, "competitor_2_id"); err != nil {
-		return edit, err
+	if update.Competitor2ID, err = parseOptionalUUID(body.Competitor2ID, "competitor_2_id"); err != nil {
+		return update, err
 	}
-	if err := s.validateCompetitorPair(ctx, id, edit.Competitor1ID, edit.Competitor2ID); err != nil {
-		return edit, err
+	if err := s.validateCompetitorPair(ctx, id, update.Competitor1ID, update.Competitor2ID); err != nil {
+		return update, err
 	}
 
 	if body.PointsToWin != nil {
 		if *body.PointsToWin <= 0 {
-			return edit, errs.Public("points_to_win must be greater than 0", errs.ErrInvalidInput)
+			return update, errs.Public("points_to_win must be greater than 0", errs.ErrInvalidInput)
 		}
-		edit.PointsToWin = body.PointsToWin
+		update.PointsToWin = body.PointsToWin
 	}
 	if body.TimeLimitSeconds != nil {
 		if *body.TimeLimitSeconds <= 0 {
-			return edit, errs.Public("time_limit_seconds must be greater than 0", errs.ErrInvalidInput)
+			return update, errs.Public("time_limit_seconds must be greater than 0", errs.ErrInvalidInput)
 		}
-		edit.TimeLimitSeconds = body.TimeLimitSeconds
+		update.TimeLimitSeconds = body.TimeLimitSeconds
 	}
 	if body.GroupNumber != nil {
 		if *body.GroupNumber < 0 {
-			return edit, errs.Public("group_number must not be negative", errs.ErrInvalidInput)
+			return update, errs.Public("group_number must not be negative", errs.ErrInvalidInput)
 		}
-		edit.GroupNumber = body.GroupNumber
+		update.GroupNumber = body.GroupNumber
 	}
 
-	edit.Location = body.Location
-	edit.StartTime = body.StartTime
+	update.Location = body.Location
+	update.StartTime = body.StartTime
 
-	if edit.Location == nil && edit.StartTime == nil && edit.RefereeID == nil &&
-		edit.TimeLimitSeconds == nil && edit.PointsToWin == nil && edit.GroupNumber == nil &&
-		edit.Competitor1ID == nil && edit.Competitor2ID == nil {
-		return edit, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
+	if update.Location == nil && update.StartTime == nil && update.RefereeID == nil &&
+		update.TimeLimitSeconds == nil && update.PointsToWin == nil && update.GroupNumber == nil &&
+		update.Competitor1ID == nil && update.Competitor2ID == nil {
+		return update, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
 	}
 
-	return edit, nil
+	return update, nil
 }
 
 // When only one competitor is supplied, the other side of the pair comes from

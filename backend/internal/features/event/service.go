@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
@@ -18,8 +19,7 @@ const (
 	EventMaxPageSize     = 100
 )
 
-// TournamentLookup is the slice of tournament.TournamentRepository the event
-// service needs; tournament.TournamentRepository satisfies it.
+// TournamentLookup is the subset of tournament.TournamentRepository the event service needs.
 type TournamentLookup interface {
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*tournament.Tournament, error)
 }
@@ -46,7 +46,7 @@ func (s *eventService) CreateEvent(ctx context.Context, input *EventCreateInput)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
-	if input.Body.Name == "" {
+	if strings.TrimSpace(input.Body.Name) == "" {
 		return nil, errs.HumaError(errs.Public("name must not be blank", errs.ErrInvalidInput))
 	}
 
@@ -137,12 +137,15 @@ func (s *eventService) UpdateEventByID(ctx context.Context, input *EventUpdateIn
 		return nil, errs.HumaError(err)
 	}
 
-	edit, err := eventEditFrom(input.Body)
-	if err != nil {
-		return nil, errs.HumaError(err)
+	body := input.Body
+	if body.Name != nil && strings.TrimSpace(*body.Name) == "" {
+		return nil, errs.HumaError(errs.Public("name must not be blank", errs.ErrInvalidInput))
+	}
+	if body.Name == nil && body.StartTime == nil {
+		return nil, errs.HumaError(errs.Public("provide at least one field to update", errs.ErrInvalidInput))
 	}
 
-	if err := s.repo.EditEventByID(ctx, id, edit); err != nil {
+	if err := s.repo.UpdateEventByID(ctx, id, EventUpdate(body)); err != nil {
 		if errors.Is(err, errs.ErrConflict) {
 			return nil, errs.HumaError(fmt.Errorf("update event: %w",
 				errs.Public("only an upcoming event can be edited", err)))
@@ -156,17 +159,6 @@ func (s *eventService) UpdateEventByID(ctx context.Context, input *EventUpdateIn
 	}
 
 	return &EventOutput{Body: newEventResponse(*event)}, nil
-}
-
-func eventEditFrom(body EventUpdateBody) (EventEdit, error) {
-	if body.Name != nil && *body.Name == "" {
-		return EventEdit{}, errs.Public("name must not be blank", errs.ErrInvalidInput)
-	}
-	if body.Name == nil && body.StartTime == nil {
-		return EventEdit{}, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
-	}
-
-	return EventEdit(body), nil
 }
 
 func (s *eventService) DeleteEventByID(ctx context.Context, input *EventIDInput) (*struct{}, error) {

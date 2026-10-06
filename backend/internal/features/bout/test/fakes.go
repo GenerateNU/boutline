@@ -91,35 +91,35 @@ func (f *FakeBoutRepository) ListBouts(
 	return matched, total, nil
 }
 
-func (f *FakeBoutRepository) EditBoutByID(_ context.Context, id uuid.UUID, edit bout.BoutEdit) error {
+func (f *FakeBoutRepository) UpdateBoutByID(_ context.Context, id uuid.UUID, update bout.BoutUpdate) error {
 	stored, err := f.guard(id, bout.BoutEditableStatuses())
 	if err != nil {
 		return err
 	}
 
-	if edit.Location != nil {
-		stored.Location = edit.Location
+	if update.Location != nil {
+		stored.Location = update.Location
 	}
-	if edit.StartTime != nil {
-		stored.StartTime = edit.StartTime
+	if update.StartTime != nil {
+		stored.StartTime = update.StartTime
 	}
-	if edit.RefereeID != nil {
-		stored.RefereeID = edit.RefereeID
+	if update.RefereeID != nil {
+		stored.RefereeID = update.RefereeID
 	}
-	if edit.TimeLimitSeconds != nil {
-		stored.TimeLimitSeconds = edit.TimeLimitSeconds
+	if update.TimeLimitSeconds != nil {
+		stored.TimeLimitSeconds = update.TimeLimitSeconds
 	}
-	if edit.PointsToWin != nil {
-		stored.PointsToWin = *edit.PointsToWin
+	if update.PointsToWin != nil {
+		stored.PointsToWin = *update.PointsToWin
 	}
-	if edit.GroupNumber != nil {
-		stored.GroupNumber = *edit.GroupNumber
+	if update.GroupNumber != nil {
+		stored.GroupNumber = *update.GroupNumber
 	}
-	if edit.Competitor1ID != nil {
-		stored.Competitor1ID = *edit.Competitor1ID
+	if update.Competitor1ID != nil {
+		stored.Competitor1ID = *update.Competitor1ID
 	}
-	if edit.Competitor2ID != nil {
-		stored.Competitor2ID = *edit.Competitor2ID
+	if update.Competitor2ID != nil {
+		stored.Competitor2ID = *update.Competitor2ID
 	}
 
 	f.save(id, stored)

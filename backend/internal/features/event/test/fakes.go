@@ -91,17 +91,17 @@ func (f *FakeEventRepository) ListEvents(
 	return matched, total, nil
 }
 
-func (f *FakeEventRepository) EditEventByID(_ context.Context, id uuid.UUID, edit event.EventEdit) error {
+func (f *FakeEventRepository) UpdateEventByID(_ context.Context, id uuid.UUID, update event.EventUpdate) error {
 	stored, err := f.guard(id, event.EventEditableStatuses())
 	if err != nil {
 		return err
 	}
 
-	if edit.Name != nil {
-		stored.Name = *edit.Name
+	if update.Name != nil {
+		stored.Name = *update.Name
 	}
-	if edit.StartTime != nil {
-		stored.StartTime = edit.StartTime
+	if update.StartTime != nil {
+		stored.StartTime = update.StartTime
 	}
 
 	f.save(id, stored)

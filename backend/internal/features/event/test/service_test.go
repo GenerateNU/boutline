@@ -85,6 +85,14 @@ func TestCreateEvent(t *testing.T) {
 			wantNoEvent: true,
 		},
 		{
+			name:        "rejects a whitespace-only name",
+			lookup:      NewFakeTournamentLookup(tourney),
+			input:       &event.EventCreateInput{Body: event.EventCreateBody{TournamentID: tourney.ID.String(), Name: "   "}},
+			wantCode:    http.StatusBadRequest,
+			wantDetail:  "name must not be blank",
+			wantNoEvent: true,
+		},
+		{
 			name:        "rejects a bad uuid",
 			lookup:      NewFakeTournamentLookup(tourney),
 			input:       &event.EventCreateInput{Body: event.EventCreateBody{TournamentID: "not-a-uuid", Name: "lightweight"}},
@@ -275,6 +283,20 @@ func TestUpdateEventByID(t *testing.T) {
 
 		_, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
 			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{Name: ptr("")}})
+
+		code, detail := apiError(t, err)
+		assert.Equal(t, http.StatusBadRequest, code)
+		assert.Equal(t, "name must not be blank", detail)
+	})
+
+	t.Run("rejects a whitespace-only name", func(t *testing.T) {
+		t.Parallel()
+
+		stored := seededEvent(event.EventStatusUpcoming, uuid.New())
+		repo := NewFakeEventRepository(stored)
+
+		_, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
+			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{Name: ptr("   ")}})
 
 		code, detail := apiError(t, err)
 		assert.Equal(t, http.StatusBadRequest, code)

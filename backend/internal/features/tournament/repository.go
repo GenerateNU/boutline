@@ -17,17 +17,17 @@ type TournamentRepository interface {
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*Tournament, error)
 	GetTournamentByCode(ctx context.Context, code string) (*Tournament, error)
 	ListTournaments(ctx context.Context, filter TournamentListFilter) ([]Tournament, int64, error)
-	EditTournamentByID(ctx context.Context, id uuid.UUID, edit TournamentEdit) error
+	UpdateTournamentByID(ctx context.Context, id uuid.UUID, update TournamentUpdate) error
 	TransitionTournamentByID(ctx context.Context, id uuid.UUID, transition TournamentTransition) error
 }
 
-type TournamentEdit struct {
+type TournamentUpdate struct {
 	Name       *string
 	Visibility *TournamentVisibility
 	StartTime  *time.Time
 }
 
-func (e TournamentEdit) columns() map[string]any {
+func (e TournamentUpdate) columns() map[string]any {
 	columns := make(map[string]any, 3)
 
 	if e.Name != nil {
@@ -120,12 +120,12 @@ func (r *tournamentRepository) GetTournamentByCode(ctx context.Context, code str
 	return &tournament, nil
 }
 
-func (r *tournamentRepository) EditTournamentByID(
+func (r *tournamentRepository) UpdateTournamentByID(
 	ctx context.Context,
 	id uuid.UUID,
-	edit TournamentEdit,
+	update TournamentUpdate,
 ) error {
-	return r.updateByID(ctx, id, edit.columns(), TournamentEditableStatuses())
+	return r.updateByID(ctx, id, update.columns(), TournamentEditableStatuses())
 }
 
 func (r *tournamentRepository) TransitionTournamentByID(
