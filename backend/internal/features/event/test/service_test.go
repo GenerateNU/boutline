@@ -58,6 +58,7 @@ func TestCreateEvent(t *testing.T) {
 		input       *event.EventCreateInput
 		wantCode    int
 		wantDetail  string
+		wantName    string
 		wantNoEvent bool
 	}{
 		{
@@ -67,6 +68,16 @@ func TestCreateEvent(t *testing.T) {
 				TournamentID: tourney.ID.String(),
 				Name:         "lightweight",
 			}},
+			wantName: "lightweight",
+		},
+		{
+			name:   "stores a name trimmed of surrounding whitespace",
+			lookup: NewFakeTournamentLookup(tourney),
+			input: &event.EventCreateInput{Body: event.EventCreateBody{
+				TournamentID: tourney.ID.String(),
+				Name:         "  lightweight  ",
+			}},
+			wantName: "lightweight",
 		},
 		{
 			name:        "rejects a tournament_id that does not exist",
@@ -132,6 +143,7 @@ func TestCreateEvent(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, event.EventStatusUpcoming, out.Body.Status)
 			assert.Equal(t, event.EventFormatPoolThenDirectElimination, out.Body.Format)
+			assert.Equal(t, tt.wantName, out.Body.Name)
 			assert.Len(t, repo.Events, 1)
 		})
 	}
@@ -226,6 +238,22 @@ func TestUpdateEventByID(t *testing.T) {
 		out, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
 			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{
 				Name: ptr("heavyweight"),
+			}})
+
+		require.NoError(t, err)
+		assert.Equal(t, "heavyweight", out.Body.Name)
+		assert.Equal(t, "heavyweight", repo.Events[stored.ID].Name)
+	})
+
+	t.Run("stores a name trimmed of surrounding whitespace", func(t *testing.T) {
+		t.Parallel()
+
+		stored := seededEvent(event.EventStatusUpcoming, uuid.New())
+		repo := NewFakeEventRepository(stored)
+
+		out, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
+			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{
+				Name: ptr("  heavyweight  "),
 			}})
 
 		require.NoError(t, err)

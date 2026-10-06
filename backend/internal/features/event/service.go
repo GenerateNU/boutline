@@ -19,7 +19,7 @@ const (
 	EventMaxPageSize     = 100
 )
 
-// TournamentLookup is the subset of tournament.TournamentRepository the event service needs.
+// TournamentLookup is the subset of the TournamentRepository interface needed here.
 type TournamentLookup interface {
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*tournament.Tournament, error)
 }
@@ -46,7 +46,8 @@ func (s *eventService) CreateEvent(ctx context.Context, input *EventCreateInput)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
-	if strings.TrimSpace(input.Body.Name) == "" {
+	name := strings.TrimSpace(input.Body.Name)
+	if name == "" {
 		return nil, errs.HumaError(errs.Public("name must not be blank", errs.ErrInvalidInput))
 	}
 
@@ -61,7 +62,7 @@ func (s *eventService) CreateEvent(ctx context.Context, input *EventCreateInput)
 	event := &Event{
 		TournamentID: tournamentID,
 		Format:       EventFormatPoolThenDirectElimination,
-		Name:         input.Body.Name,
+		Name:         name,
 		Status:       EventStatusUpcoming,
 		StartTime:    input.Body.StartTime,
 	}
@@ -138,8 +139,12 @@ func (s *eventService) UpdateEventByID(ctx context.Context, input *EventUpdateIn
 	}
 
 	body := input.Body
-	if body.Name != nil && strings.TrimSpace(*body.Name) == "" {
-		return nil, errs.HumaError(errs.Public("name must not be blank", errs.ErrInvalidInput))
+	if body.Name != nil {
+		name := strings.TrimSpace(*body.Name)
+		if name == "" {
+			return nil, errs.HumaError(errs.Public("name must not be blank", errs.ErrInvalidInput))
+		}
+		body.Name = &name
 	}
 	if body.Name == nil && body.StartTime == nil {
 		return nil, errs.HumaError(errs.Public("provide at least one field to update", errs.ErrInvalidInput))
