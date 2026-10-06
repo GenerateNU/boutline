@@ -7,10 +7,14 @@ services:
       - "8000:8000"
     environment:
       # Everything else falls back to the defaults in internal/config; only the
-      # host differs, since the database is a service on the compose network.
+      # hosts differ, since the database and cache are services on the compose
+      # network rather than localhost.
       DB_HOST: db
+      REDIS_HOST: redis
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
@@ -41,6 +45,16 @@ services:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d boutline"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  redis:
+    image: redis:7.4.2-alpine
+    # No volume: this is a cache, so losing its contents on restart is fine,
+    # and not published to the host for the same reason as db.
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 2s
       timeout: 3s
       retries: 15
