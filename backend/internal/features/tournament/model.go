@@ -3,7 +3,7 @@ package tournament
 import (
 	"time"
 
-	"boutline/internal/features/user"
+	"boutline/internal/features/tournamentuser"
 
 	"github.com/google/uuid"
 )
@@ -38,12 +38,13 @@ type Tournament struct {
 	Code        string               `gorm:"type:text;not null;uniqueIndex:idx_tournaments_code"`
 	Status      TournamentStatus     `gorm:"type:text;not null;index;default:pending;check:chk_tournaments_status,status IN ('pending','active','end')"`
 	CreatedBy   uuid.UUID            `gorm:"type:uuid;not null;index"`
-	Creator     *user.User           `gorm:"foreignKey:CreatedBy;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
 	StartTime   *time.Time
 	StartedAt   *time.Time
 	CompletedAt *time.Time
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+
+	Memberships []tournamentuser.TournamentUser `gorm:"foreignKey:TournamentID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 }
 
 func (v TournamentVisibility) IsValid() bool {

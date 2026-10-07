@@ -201,7 +201,7 @@ func (r *boutRepository) DeleteBoutByID(ctx context.Context, id uuid.UUID) error
 func translateBoutWriteError(op string, err error) error {
 	if errors.Is(err, gorm.ErrForeignKeyViolated) {
 		return fmt.Errorf("%s: %w", op,
-			errs.Public("tournament_id or referee_id does not reference an existing record", errs.ErrInvalidInput))
+			errs.Public("tournament_id, referee_id, or a competitor id does not reference an existing record", errs.ErrInvalidInput))
 	}
 	if errors.Is(err, gorm.ErrCheckConstraintViolated) {
 		return fmt.Errorf("%s: %w", op,
