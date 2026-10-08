@@ -1,13 +1,13 @@
-import { ExampleList } from "@/features/example/components/ExampleList";
-import { getExamples } from "@/features/example/services/getExamples";
+import { Counter } from "@/features/example/components/Counter";
+import { getCounterConfig } from "@/features/example/services/getCounterConfig";
 
 export default async function ExamplePage() {
-  const examples = await getExamples();
+  const config = await getCounterConfig();
 
   return (
     <main className="flex flex-col gap-6 p-24">
-      <h1 className="text-3xl font-bold">Examples</h1>
-      <ExampleList examples={examples} />
+      <h1 className="text-3xl font-bold">Counter</h1>
+      <Counter config={config} />
     </main>
   );
 }
