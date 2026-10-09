@@ -1,22 +1,22 @@
 import { Ellipsis } from "lucide-react";
 
-import { Avatar, AvatarFallback } from "@/components/avatar/avatar";
-import { Button } from "@/components/button/button";
-import { Checkbox } from "@/components/checkbox/checkbox";
-import { Chip } from "@/components/chip/chip";
-import { Radio, RadioItem } from "@/components/radio/radio";
-import { SegmentItem } from "@/components/segment-item/segment-item";
+import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
+import { Button } from "@/components/primitives/button";
+import { Checkbox } from "@/components/primitives/checkbox";
+import { Chip } from "@/components/primitives/chip";
+import { Radio, RadioItem } from "@/components/primitives/radio";
+import { SegmentItem } from "@/components/primitives/segment-item";
 import {
   SegmentedButton,
   SegmentedButtonItem,
-} from "@/components/segmented-button/segmented-button";
-import { Slider } from "@/components/slider/slider";
-import { Toggle } from "@/components/toggle/toggle";
+} from "@/components/primitives/segmented-button";
+import { Slider } from "@/components/primitives/slider";
+import { Toggle } from "@/components/primitives/toggle";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/tooltip/tooltip";
+} from "@/components/primitives/tooltip";
 
 function Section({
   title,
