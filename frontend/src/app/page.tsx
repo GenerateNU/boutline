@@ -142,10 +142,10 @@ export default function Home() {
               <Button variant="outline">Rich tooltip</Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="flex flex-col gap-2 py-3">
-              <span className="font-medium">Supporting text</span>
-              <span className="text-background/70">
+              <p className="font-medium">Supporting text</p>
+              <p className="text-background/70">
                 A second line of detail for the richer variant.
-              </span>
+              </p>
             </TooltipContent>
           </Tooltip>
         </div>
