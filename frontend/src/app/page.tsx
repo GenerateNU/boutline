@@ -19,8 +19,6 @@ import {
 } from "@/components/primitives/tooltip";
 import { Section } from "@/components/primitives/section";
 
-const segmentCounts = [2, 3, 4, 5];
-
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 py-10">
@@ -113,7 +111,7 @@ export default function Home() {
 
       <Section title="Segmented buttons">
         <div className="flex flex-col items-start gap-4">
-          {segmentCounts.map((count) => (
+          {[2, 3, 4, 5].map((count) => (
             <SegmentedButton
               key={count}
               type="single"
