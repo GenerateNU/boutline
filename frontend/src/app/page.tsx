@@ -17,23 +17,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="flex flex-col gap-4">
-      <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
+import { Section } from "@/components/primitives/section";
 
 const segmentCounts = [2, 3, 4, 5];
 
