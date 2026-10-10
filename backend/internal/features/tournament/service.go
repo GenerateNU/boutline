@@ -203,42 +203,42 @@ func (s *tournamentService) UpdateTournamentByID(
 		return nil, errs.HumaError(err)
 	}
 
-	edit, err := tournamentEditFrom(input.Body)
+	update, err := tournamentUpdateFrom(input.Body)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
-	err = s.repo.EditTournamentByID(ctx, id, edit)
+	err = s.repo.UpdateTournamentByID(ctx, id, update)
 
 	return s.afterUpdate(ctx, id, err, "tournament has ended and can no longer be edited")
 }
 
-func tournamentEditFrom(body TournamentUpdateBody) (TournamentEdit, error) {
-	var edit TournamentEdit
+func tournamentUpdateFrom(body TournamentUpdateBody) (TournamentUpdate, error) {
+	var update TournamentUpdate
 
 	if body.Name != nil {
 		name := strings.TrimSpace(*body.Name)
 		if name == "" {
-			return edit, errs.Public("name must not be blank", errs.ErrInvalidInput)
+			return update, errs.Public("name must not be blank", errs.ErrInvalidInput)
 		}
-		edit.Name = &name
+		update.Name = &name
 	}
 
 	if body.Visibility != nil {
 		if !body.Visibility.IsValid() {
-			return edit, errs.Public(
+			return update, errs.Public(
 				fmt.Sprintf("unknown visibility %q", *body.Visibility), errs.ErrInvalidInput)
 		}
-		edit.Visibility = body.Visibility
+		update.Visibility = body.Visibility
 	}
 
-	edit.StartTime = body.StartTime
+	update.StartTime = body.StartTime
 
-	if edit.Name == nil && edit.Visibility == nil && edit.StartTime == nil {
-		return edit, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
+	if update.Name == nil && update.Visibility == nil && update.StartTime == nil {
+		return update, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
 	}
 
-	return edit, nil
+	return update, nil
 }
 
 func (s *tournamentService) StartTournament(

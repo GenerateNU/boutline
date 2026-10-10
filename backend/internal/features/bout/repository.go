@@ -16,12 +16,12 @@ type BoutRepository interface {
 	CreateBout(ctx context.Context, bout *Bout) error
 	GetBoutByID(ctx context.Context, id uuid.UUID) (*Bout, error)
 	ListBouts(ctx context.Context, filter BoutListFilter) ([]Bout, int64, error)
-	EditBoutByID(ctx context.Context, id uuid.UUID, edit BoutEdit) error
+	UpdateBoutByID(ctx context.Context, id uuid.UUID, update BoutUpdate) error
 	TransitionBoutByID(ctx context.Context, id uuid.UUID, transition BoutTransition) error
 	DeleteBoutByID(ctx context.Context, id uuid.UUID) error
 }
 
-type BoutEdit struct {
+type BoutUpdate struct {
 	Location         *string
 	StartTime        *time.Time
 	RefereeID        *uuid.UUID
@@ -32,7 +32,7 @@ type BoutEdit struct {
 	Competitor2ID    *uuid.UUID
 }
 
-func (e BoutEdit) columns() map[string]any {
+func (e BoutUpdate) columns() map[string]any {
 	columns := make(map[string]any, 8)
 
 	if e.Location != nil {
@@ -146,8 +146,8 @@ func (r *boutRepository) ListBouts(ctx context.Context, filter BoutListFilter) (
 	return bouts, total, nil
 }
 
-func (r *boutRepository) EditBoutByID(ctx context.Context, id uuid.UUID, edit BoutEdit) error {
-	return r.updateByID(ctx, id, edit.columns(), BoutEditableStatuses())
+func (r *boutRepository) UpdateBoutByID(ctx context.Context, id uuid.UUID, update BoutUpdate) error {
+	return r.updateByID(ctx, id, update.columns(), BoutEditableStatuses())
 }
 
 func (r *boutRepository) TransitionBoutByID(ctx context.Context, id uuid.UUID, transition BoutTransition) error {
