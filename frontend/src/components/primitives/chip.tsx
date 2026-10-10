@@ -1,7 +1,7 @@
 import { cn } from "cn";
 import { ChevronDown, X } from "lucide-react";
 
-type ChipProps = React.ComponentProps<"span"> & {
+type ChipProps = React.ComponentProps<"div"> & {
   icon?: React.ReactNode;
   dismissible?: boolean;
   onDismiss?: () => void;
@@ -18,7 +18,7 @@ function Chip({
   ...props
 }: ChipProps) {
   return (
-    <span
+    <div
       data-slot="chip"
       className={cn(
         "inline-flex items-center gap-2 border border-foreground px-3 py-1.5 text-sm [&_svg]:size-4 [&_svg]:shrink-0",
@@ -39,7 +39,7 @@ function Chip({
           <X aria-hidden />
         </button>
       ) : null}
-    </span>
+    </div>
   );
 }
 
