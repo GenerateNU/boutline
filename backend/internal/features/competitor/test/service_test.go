@@ -183,6 +183,72 @@ func TestListCompetitors(t *testing.T) {
 	}
 }
 
+func TestListCompetitorsFilters(t *testing.T) {
+	t.Parallel()
+	seed := []competitor.Competitor{
+		seeded("A", "Adams", competitor.RatingA, "NU Fencing"),
+		seeded("B", "Baker", competitor.RatingA, "BU Fencing"),
+		seeded("C", "Clark", competitor.RatingC, "NU Fencing"),
+	}
+
+	tests := []struct {
+		name     string
+		input    *competitor.CompetitorListInput
+		wantLast []string
+	}{
+		{
+			name:     "filters by rating",
+			input:    &competitor.CompetitorListInput{Rating: "A"},
+			wantLast: []string{"Adams", "Baker"},
+		},
+		{
+			name:     "filters by team",
+			input:    &competitor.CompetitorListInput{Team: "NU Fencing"},
+			wantLast: []string{"Adams", "Clark"},
+		},
+		{
+			name:     "combines rating and team",
+			input:    &competitor.CompetitorListInput{Rating: "A", Team: "NU Fencing"},
+			wantLast: []string{"Adams"},
+		},
+		{
+			name:     "trims the team before matching",
+			input:    &competitor.CompetitorListInput{Team: "  NU Fencing  "},
+			wantLast: []string{"Adams", "Clark"},
+		},
+		{
+			name:     "returns an empty page when nothing matches",
+			input:    &competitor.CompetitorListInput{Rating: "E"},
+			wantLast: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			out, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
+				ListCompetitors(t.Context(), tt.input)
+			require.NoError(t, err)
+
+			// total counts only the matches, not every competitor
+			assert.Equal(t, int64(len(tt.wantLast)), out.Body.Total)
+			lastNames := make([]string, 0, len(out.Body.Data))
+			for _, listed := range out.Body.Data {
+				lastNames = append(lastNames, listed.LastName)
+			}
+			assert.Equal(t, tt.wantLast, lastNames)
+		})
+	}
+
+	t.Run("rejects an invalid rating", func(t *testing.T) {
+		t.Parallel()
+		_, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
+			ListCompetitors(t.Context(), &competitor.CompetitorListInput{Rating: "Z"})
+		code, _ := apiError(t, err)
+		assert.Equal(t, http.StatusBadRequest, code)
+	})
+}
+
 func TestUpdateCompetitorByID(t *testing.T) {
 	t.Parallel()
 	stored := seeded("Lee", "Kiefer", competitor.RatingB, "NU Fencing")
