@@ -111,6 +111,38 @@ func TestListEndpoint(t *testing.T) {
 		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?limit=500")
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
+
+	t.Run("filters by rating from the query string", func(t *testing.T) {
+		t.Parallel()
+		mixed := []competitor.Competitor{
+			seeded("A", "Adams", competitor.RatingA, ""),
+			seeded("B", "Baker", competitor.RatingB, ""),
+		}
+		resp := newTestAPI(t, mixed...).Get("/api/v1/competitors?rating=A")
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 1)
+		assert.InDelta(t, 1, body["total"], 0)
+	})
+
+	t.Run("filters by team from the query string", func(t *testing.T) {
+		t.Parallel()
+		mixed := []competitor.Competitor{
+			seeded("A", "Adams", competitor.RatingU, "NU Fencing"),
+			seeded("B", "Baker", competitor.RatingU, "BU Fencing"),
+		}
+		resp := newTestAPI(t, mixed...).Get("/api/v1/competitors?team=NU%20Fencing")
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 1)
+		assert.InDelta(t, 1, body["total"], 0)
+	})
+
+	t.Run("rejects a rating outside the enum", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?rating=Z")
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
 }
 
 func TestUpdateEndpoint(t *testing.T) {
@@ -124,6 +156,13 @@ func TestUpdateEndpoint(t *testing.T) {
 		body := decodeBody(t, resp.Body.Bytes())
 		assert.Equal(t, "A", body["rating"])
 		assert.Equal(t, "NU Fencing", body["team"])
+	})
+	t.Run("clears the team when an empty string is provided", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, stored).Patch("/api/v1/competitors/"+stored.ID.String(), map[string]any{"team": ""})
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Equal(t, "", body["team"])
 	})
 
 	t.Run("rejects an empty patch", func(t *testing.T) {
