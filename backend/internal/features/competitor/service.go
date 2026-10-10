@@ -7,8 +7,6 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/utils"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -46,7 +44,6 @@ func (s *competitorService) CreateCompetitor(
 		return nil, errs.HumaError(errs.Public("last name must not be blank", errs.ErrInvalidInput))
 	}
 
-	// Set default rating to 'U' here
 	rating := RatingU
 	if input.Body.Rating != "" {
 		parsed, err := parseRating(input.Body.Rating)
@@ -73,7 +70,7 @@ func (s *competitorService) GetCompetitorByID(
 	ctx context.Context,
 	input *CompetitorIDInput,
 ) (*CompetitorOutput, error) {
-	id, err := parseCompetitorID(input.ID)
+	id, err := utils.ParseUUID(input.ID, "competitor id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -89,7 +86,7 @@ func (s *competitorService) UpdateCompetitorByID(
 	ctx context.Context,
 	input *CompetitorUpdateInput,
 ) (*CompetitorOutput, error) {
-	id, err := parseCompetitorID(input.ID)
+	id, err := utils.ParseUUID(input.ID, "competitor id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -108,8 +105,6 @@ func (s *competitorService) UpdateCompetitorByID(
 	return &CompetitorOutput{Body: newCompetitorResponse(*competitor)}, nil
 }
 
-// competitorUpdateFrom applies the create rules to whichever fields the patch
-// carries, and refuses a patch that would change nothing.
 func competitorUpdateFrom(body CompetitorUpdateBody) (*CompetitorUpdate, error) {
 	var update CompetitorUpdate
 	if body.FirstName != nil {
@@ -179,7 +174,7 @@ func (s *competitorService) DeleteCompetitor(
 	ctx context.Context,
 	input *CompetitorIDInput,
 ) (*struct{}, error) {
-	id, err := parseCompetitorID(input.ID)
+	id, err := utils.ParseUUID(input.ID, "competitor id")
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -189,18 +184,8 @@ func (s *competitorService) DeleteCompetitor(
 	return nil, nil
 }
 
-func parseCompetitorID(raw string) (uuid.UUID, error) {
-	id, err := uuid.Parse(raw)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("parse competitor id %q: %w", raw, errs.ErrInvalidInput)
-	}
-	return id, nil
-}
-
-// Huma's enum tag rejects a bad rating over HTTP; this check covers callers
-// that do not come through a request.
 func parseRating(raw string) (Rating, error) {
-	rating := Rating(strings.TrimSpace(raw))
+	rating := Rating(strings.TrimSpace(raw).ToUpper())
 	if !rating.IsValid() {
 		return "", errs.Public("rating must be one of A, B, C, D, E, or U", errs.ErrInvalidInput)
 	}
