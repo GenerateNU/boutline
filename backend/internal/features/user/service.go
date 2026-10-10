@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/tournament"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -25,6 +26,7 @@ type UserService interface {
 	ListUsers(ctx context.Context, input *UserListInput) (*UserListOutput, error)
 	UpdateUserByID(ctx context.Context, input *UserUpdateInput) (*UserOutput, error)
 	DeleteUser(ctx context.Context, input *UserIDInput) (*struct{}, error)
+	ListTournamentsByUser(ctx context.Context, input *UserTournamentsInput) (*UserTournamentsOutput, error)
 }
 
 type userService struct {
@@ -211,4 +213,39 @@ func parseUserEmail(raw string) (string, error) {
 
 	email = strings.ToLower(addr.Address)
 	return email, nil
+}
+
+func (s *userService) ListTournamentsByUser(
+	ctx context.Context,
+	input *UserTournamentsInput,
+) (*UserTournamentsOutput, error) {
+	id, err := utils.ParseUUID(input.ID, "id")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	limit := input.Limit
+	if limit <= 0 {
+		limit = UserDefaultPageSize
+	}
+	limit = utils.Clamp(limit, UserMinPageSize, UserMaxPageSize)
+
+	offset := max(input.Offset, 0)
+
+	tournaments, total, err := s.repo.ListTournamentsByUser(ctx, id, limit, offset)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("list tournaments for user: %w", err))
+	}
+
+	data := make([]tournament.TournamentResponse, 0, len(tournaments))
+	for _, listed := range tournaments {
+		data = append(data, tournament.NewTournamentResponse(listed))
+	}
+
+	return &UserTournamentsOutput{Body: UserTournamentsBody{
+		Data:   data,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}}, nil
 }

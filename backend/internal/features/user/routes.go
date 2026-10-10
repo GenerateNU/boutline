@@ -57,4 +57,12 @@ func RegisterUserService(api huma.API, service UserService) {
 		Tags:          []string{"Users"},
 		DefaultStatus: http.StatusNoContent,
 	}, service.DeleteUser)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listTournamentsByUser",
+		Method:      http.MethodGet,
+		Path:        userBasePath + "/{id}/tournaments",
+		Summary:     "List the tournaments a user belongs to",
+		Tags:        []string{"Users"},
+	}, service.ListTournamentsByUser)
 }
