@@ -150,10 +150,23 @@ func (s *competitorService) ListCompetitors(
 	limit = utils.Clamp(limit, CompetitorMinPageSize, CompetitorMaxPageSize)
 	offset := max(input.Offset, 0)
 
-	competitors, total, err := s.repo.ListCompetitors(ctx, CompetitorListFilter{
+	filter := CompetitorListFilter{
 		Limit:  limit,
 		Offset: offset,
-	})
+	}
+	if input.Rating != "" {
+		rating, err := parseRating(input.Rating)
+		if err != nil {
+			return nil, errs.HumaError(err)
+		}
+		filter.Rating = &rating
+	}
+	if team := strings.TrimSpace(input.Team); team != "" {
+		filter.Team = &team
+	}
+
+	competitors, total, err := s.repo.ListCompetitors(ctx, filter)
+
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list competitors: %w", err))
 	}
@@ -185,7 +198,7 @@ func (s *competitorService) DeleteCompetitor(
 }
 
 func parseRating(raw string) (Rating, error) {
-	rating := Rating(strings.TrimSpace(raw).ToUpper())
+	rating := Rating(strings.TrimSpace(raw))
 	if !rating.IsValid() {
 		return "", errs.Public("rating must be one of A, B, C, D, E, or U", errs.ErrInvalidInput)
 	}

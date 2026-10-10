@@ -62,6 +62,12 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 	}
 	matched := make([]competitor.Competitor, 0, len(f.Competitors))
 	for _, candidate := range f.Competitors {
+		if filter.Rating != nil && candidate.Rating != *filter.Rating {
+			continue
+		}
+		if filter.Team != nil && candidate.Team != *filter.Team {
+			continue
+		}
 		matched = append(matched, candidate)
 	}
 	// Ordered by last name rather than created_at, so iterating a map still

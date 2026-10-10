@@ -56,8 +56,10 @@ type CompetitorUpdateInput struct {
 }
 
 type CompetitorListInput struct {
-	Limit  int `query:"limit" default:"20" minimum:"1" maximum:"100"`
-	Offset int `query:"offset" default:"0" minimum:"0"`
+	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset int    `query:"offset" default:"0" minimum:"0"`
+	Rating string `query:"rating" enum:"A,B,C,D,E,U" doc:"Only competitors with this rating"`
+	Team   string `query:"team" maxLength:"120" doc:"Only competitors on this team (exact match)"`
 }
 
 type CompetitorListBody struct {

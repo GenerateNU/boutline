@@ -19,7 +19,6 @@ type CompetitorRepository interface {
 	DeleteCompetitor(ctx context.Context, id uuid.UUID) error
 }
 
-// CompetitorUpdate holds the fields a patch changes; a nil field is left alone.
 type CompetitorUpdate struct {
 	FirstName *string
 	LastName  *string
@@ -28,7 +27,8 @@ type CompetitorUpdate struct {
 }
 
 type CompetitorListFilter struct {
-	// TODO: filter by team or rating
+	Rating *Rating // nil means don't filter by rating
+	Team   *string // nil means don't filter by team
 	Limit  int
 	Offset int
 }
@@ -99,8 +99,13 @@ func (r *competitorRepository) ListCompetitors(
 	ctx context.Context,
 	filter CompetitorListFilter,
 ) ([]Competitor, int64, error) {
-	query := r.db.WithContext(ctx).Model(&Competitor{}).Session(&gorm.Session{})
-	// TODO: apply team / rating filters here, and other filters as needed
+	query := r.db.WithContext(ctx).Model(&Competitor{})
+	if filter.Rating != nil {
+		query = query.Where("rating = ?", string(*filter.Rating))
+	}
+	if filter.Team != nil {
+		query = query.Where("team = ?", *filter.Team)
+	}
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
