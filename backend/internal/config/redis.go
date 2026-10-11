@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -46,5 +48,5 @@ func LoadRedisConfig() (*RedisConfig, error) {
 }
 
 func (c RedisConfig) Addr() string {
-	return fmt.Sprintf("%s:%d", c.Host, c.Port)
+	return net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
 }
