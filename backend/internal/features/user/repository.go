@@ -129,6 +129,9 @@ func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) (
 func (r *userRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	result := r.db.WithContext(ctx).Delete(&User{}, "id = ?", id)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
+			return fmt.Errorf("delete user %s: %w", id, errs.ErrConflict)
+		}
 		return fmt.Errorf("delete user %s: %w", id, result.Error)
 	}
 
