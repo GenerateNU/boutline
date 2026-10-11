@@ -99,7 +99,7 @@ jobs:
                   marker,
                   '### :rocket: Preview backend ready',
                   '',
-                  `API: **https://${process.env.PREVIEW_HOST}** ([docs](https://${process.env.PREVIEW_HOST}/docs))`,
+                  `API docs: **https://${process.env.PREVIEW_HOST}/docs**`,
                   '',
                   `Built from \`${process.env.SHA.slice(0, 7)}\`, with its own database migrated from this branch.`,
                   '',
