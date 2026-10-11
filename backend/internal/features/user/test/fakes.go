@@ -20,7 +20,9 @@ type FakeUserRepository struct {
 	Users map[uuid.UUID]user.User
 	// Tournaments each user belongs to, in seed order.
 	Joined map[uuid.UUID][]tournament.Tournament
-	Err    error // when set, every method fails with it
+	// Users a tournament or bout still points at, which the database refuses to delete.
+	Referenced map[uuid.UUID]bool
+	Err        error // when set, every method fails with it
 }
 
 func NewFakeUserRepository(seed ...user.User) *FakeUserRepository {
@@ -130,6 +132,9 @@ func (f *FakeUserRepository) DeleteUser(_ context.Context, id uuid.UUID) error {
 
 	if _, ok := f.Users[id]; !ok {
 		return fmt.Errorf("delete user %s: %w", id, errs.ErrNotFound)
+	}
+	if f.Referenced[id] {
+		return fmt.Errorf("delete user %s: %w", id, errs.ErrConflict)
 	}
 
 	delete(f.Users, id)
