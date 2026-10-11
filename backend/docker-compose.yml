@@ -55,7 +55,7 @@ services:
     # and not published to the host for the same reason as db.
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 2s
+      interval: 10s
       timeout: 3s
       retries: 15
 

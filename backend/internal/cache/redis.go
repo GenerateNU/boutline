@@ -13,6 +13,8 @@ import (
 // without the ping a bad host or password would only surface on the first
 // request.
 func Connect(ctx context.Context, cfg config.RedisConfig) (*redis.Client, error) {
+	// No TLS currently (Options takes a TLSConfig *tls.Config), to be added once
+	// Redis is set up in prod
 	client := redis.NewClient(&redis.Options{
 		Addr:     cfg.Addr(),
 		Password: cfg.Password,
