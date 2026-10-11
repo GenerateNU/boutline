@@ -4,8 +4,8 @@
 # from the exact commit the tag points at, so what ships is always what was
 # tagged.
 #
-# Migrations are NOT run here. A TL applies them to Supabase by hand
-# (`make migrate-deploy` from backend/) so schema changes get a human review.
+# Postgres runs on the droplet too, so migrations run here: the compose stack
+# applies them before the new backend starts.
 name: Deploy production
 
 on:
@@ -70,6 +70,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build and push the migration image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile.migrate
+          push: true
+          tags: ${{ env.IMAGE_REPO }}/migrate:${{ env.DEPLOY_SHA }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Configure SSH
         run: |
           set -euo pipefail
@@ -85,6 +95,7 @@ jobs:
         env:
           DROPLET: ${{ vars.DROPLET_USER }}@${{ vars.DROPLET_HOST }}
           IMAGE: ${{ env.IMAGE_REPO }}/backend:${{ env.DEPLOY_SHA }}
+          MIGRATE_IMAGE: ${{ env.IMAGE_REPO }}/migrate:${{ env.DEPLOY_SHA }}
           API_DOMAIN: ${{ vars.API_DOMAIN }}
         run: |
           set -euo pipefail
@@ -96,9 +107,14 @@ jobs:
           # Ship the compose file too, so the droplet runs what this commit
           # describes rather than drifting from a hand-edited copy.
           scp deploy/app/docker-compose.yml "$DROPLET:/opt/boutline/docker-compose.yml"
+          # Migrations first, as their own step: if they fail, the && chain
+          # stops before `up` and the old backend keeps serving.
           ssh "$DROPLET" \
             "cd /opt/boutline \
-             && BACKEND_IMAGE='$IMAGE' APP_VERSION='$DEPLOY_SHA' API_DOMAIN='$API_DOMAIN' docker compose up -d --pull always \
+             && export BACKEND_IMAGE='$IMAGE' MIGRATE_IMAGE='$MIGRATE_IMAGE' APP_VERSION='$DEPLOY_SHA' API_DOMAIN='$API_DOMAIN' \
+             && docker pull --quiet '$MIGRATE_IMAGE' \
+             && docker compose --env-file backend.env run --rm migrate \
+             && docker compose --env-file backend.env up -d --pull always \
              && docker image prune -f"
 
       # Matching the version, not just a 200, proves the NEW container is the

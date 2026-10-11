@@ -132,8 +132,7 @@ migration. Read the generated SQL before committing it;
 
 ## Deployment
 
-The backend deploys to Generate's shared DigitalOcean droplet and the frontend
-to Vercel, with production data in Supabase. Publishing a GitHub Release ships
-production. Every pull request gets its own preview backend, preview database,
+The backend and its Postgres deploy to Generate's shared DigitalOcean droplet,
+and the frontend to Vercel. Publishing a GitHub Release ships production. Every pull request gets its own preview backend, preview database,
 and Vercel frontend preview. See [DEPLOYMENT.md](DEPLOYMENT.md) for
 day-to-day use and [deploy/](deploy/) for the droplet.

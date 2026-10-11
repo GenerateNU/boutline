@@ -12,12 +12,20 @@ droplet
 ├── caddy                    shared: TLS + routing from container labels
 ├── preview-db               shared: disposable preview databases
 ├── boutline-backend         →  api.<boutline-domain>      (deploy/app/)
+├── boutline-db              production Postgres, boutline's network only
 └── boutline-pr-<n>          →  boutline-pr-<n>.<preview-domain>
                                 database boutline_pr_<n>
 ```
 
-**Nothing irreplaceable lives here.** Production data is in Supabase; the
-droplet only holds containers and throwaway preview databases.
+**Production data lives here and nothing backs it up.** That is a deliberate
+choice while boutline has no real users. It sits in the `boutline_pgdata`
+volume, so a lost droplet or a `docker compose down --volumes` deletes it.
+Before real users arrive, add off-droplet backups (a nightly `pg_dump` to
+DigitalOcean Spaces) or move to Managed PostgreSQL.
+
+`boutline-db` is only on boutline's own `internal` network, never on the shared
+`edge` network. Preview containers join `edge`, and none of them should be able
+to reach production data.
 
 Preview container, database, and hostname are all prefixed with `boutline`
 because every project shares one `preview-db` and one preview wildcard. A bare
@@ -37,8 +45,12 @@ cd /opt/boutline
 chmod 600 backend.env preview.env
 
 # The shared preview domain, read by preview-up.sh:
-echo "preview.generatenu.com" > preview-domain
+echo "boutline-preview.generatenu.com" > preview-domain
 ```
+
+`DB_PASSWORD` in `backend.env` is a new password for boutline's production
+database (`openssl rand -hex 32`). It initialises `boutline-db` the first time
+the stack starts.
 
 `DB_PASSWORD` in `preview.env` must match `PREVIEW_DB_PASSWORD` in
 `/opt/shared/.env`. Preview containers connect to that Postgres as superuser,
@@ -57,7 +69,7 @@ owner can see.
 | Record | Points at | Purpose |
 | --- | --- | --- |
 | `api.<boutline-domain>` | droplet IP | Production backend |
-| `*.<preview-domain>` | droplet IP | Already exists for the shared stack; covers `boutline-pr-<n>` |
+| `*.<preview-domain>` | droplet IP | Every `boutline-pr-<n>` preview hostname |
 
 ## Day-to-day
 
@@ -71,6 +83,12 @@ ssh deploy@<droplet-ip> 'docker exec -it preview-db psql -U postgres -d boutline
 
 ```sh
 ssh deploy@<droplet-ip> bash -s -- 123 < deploy/preview-down.sh
+```
+
+**Open a shell on the production database.**
+
+```sh
+ssh deploy@<droplet-ip> 'docker exec -it boutline-db psql -U postgres -d boutline'
 ```
 
 **Logs.** `ssh deploy@<droplet-ip> docker logs --tail 100 boutline-backend`

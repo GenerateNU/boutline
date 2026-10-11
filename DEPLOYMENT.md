@@ -6,7 +6,7 @@
 | Frontend (production) | Vercel | A GitHub Release is published |
 | Backend (PR preview) | Same droplet, one container + database per PR | Automatically, on every PR |
 | Frontend (PR preview) | Vercel preview deployment | Automatically, on every PR |
-| Production data | Supabase (plain Postgres) | Migrations are applied by hand |
+| Production database | Postgres container on the same droplet | Migrations run on every release |
 
 Merging to `main` deploys nothing. To ship, cut a release, and both halves go
 out together.
@@ -15,7 +15,7 @@ out together.
 
 ```
 https://<site>   (Vercel, Next.js)             https://api.<domain>  (droplet)
-├── /api/*  ── rewritten in next.config.ts ──▶ boutline-backend ──▶ Supabase
+├── /api/*  ── rewritten in next.config.ts ──▶ boutline-backend ──▶ boutline-db
 └── everything else: the Next.js app
 ```
 
@@ -33,30 +33,19 @@ The droplet is described in [deploy/README.md](deploy/README.md).
 
 ### Ship to production
 
-Apply pending migrations **first**. Deploys never touch the database, so a TL
-reviews and runs them:
-
-```sh
-cd backend
-DATABASE_URL='postgres://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require&search_path=public' \
-  make migrate-deploy
-```
-
-`search_path=public` matters: Supabase ships other schemas (`auth`, `storage`,
-...), and without it Atlas sees them and refuses to run against a database
-that is "not clean". Release code whose schema is already in place, and keep
-migrations safe for the version still running.
-
-Then:
-
 ```sh
 git checkout main && git pull
 gh release create v1.2.0 --generate-notes
 ```
 
-The workflow builds the backend image from the tagged commit, deploys it, waits
-until `/healthcheck` reports **that commit** as its version, and only then
-builds and publishes the frontend.
+The workflow builds the backend and migration images from the tagged commit.
+On the droplet it applies pending migrations as a separate step, then replaces
+the backend. A failed migration stops the deploy, and the old backend keeps
+serving. The workflow waits until `/healthcheck` reports **that commit** as its
+version, and only then builds and publishes the frontend.
+
+Migrations run while the old backend is still up, so keep them safe for the
+version still running.
 
 ### Roll back
 
@@ -83,14 +72,6 @@ their PR's backend, give `API_PROXY_TARGET` a different value for the
 **Preview** environment in Vercel.
 
 ## Setup
-
-### Supabase
-
-Create a project and use it only as Postgres; boutline does not use Supabase
-auth. Under **Connect**, copy the **session pooler** connection details into
-`backend.env` on the droplet (see `deploy/app/backend.env.example`). The direct
-host is IPv6-only on the free plan, and the transaction pooler breaks gorm's
-prepared statements.
 
 ### Vercel
 
