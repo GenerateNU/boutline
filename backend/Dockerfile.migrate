@@ -1,0 +1,8 @@
+# Applies ./migrations to whatever Postgres DATABASE_URL points at. Used to
+# migrate each PR preview's database before its backend starts, and by
+# `make migrate-deploy` for production, so both run the same Atlas build.
+FROM arigaio/atlas:1.3.3-community-alpine
+
+COPY migrations /migrations
+
+ENTRYPOINT ["/bin/sh", "-c", "atlas migrate apply --dir file:///migrations --url \"$DATABASE_URL\""]

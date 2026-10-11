@@ -132,8 +132,8 @@ migration. Read the generated SQL before committing it;
 
 ## Deployment
 
-Nothing is deployed yet. The backend ships a `Dockerfile` and a
-`docker-compose.yml` covering the API, Postgres, and a one-shot migration step;
-the frontend has neither. Reusable workflows live in
-[Shiperate](https://github.com/GenerateNU/shiperate/tree/main), and a Technical
-Chief can help with the first deploy.
+The backend deploys to Generate's shared DigitalOcean droplet and the frontend
+to Vercel, with production data in Supabase. Publishing a GitHub Release ships
+production. Every pull request gets its own preview backend, preview database,
+and Vercel frontend preview. See [DEPLOYMENT.md](DEPLOYMENT.md) for
+day-to-day use and [deploy/](deploy/) for the droplet.

@@ -49,6 +49,14 @@ migrate-apply:
 migrate-status:
 	$(COMPOSE) run --rm migrate 'atlas migrate status --dir file:///migrations --url "$$ATLAS_URL"'
 
+# Apply ./migrations to production, by hand and before a release. DATABASE_URL
+# is the Supabase session-pooler URL with ?sslmode=require&search_path=public.
+# Runs the same image PR previews migrate with.
+migrate-deploy:
+	@test -n "$$DATABASE_URL" || { echo "DATABASE_URL is required; see DEPLOYMENT.md"; exit 1; }
+	docker build --quiet --file Dockerfile.migrate --tag boutline-migrate .
+	docker run --rm -e DATABASE_URL boutline-migrate
+
 # Build the image from ./Dockerfile and run it against a Postgres container.
 dev-up:
 	$(COMPOSE) up --build --detach
@@ -90,6 +98,6 @@ vuln:
 	go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
 
 .PHONY: build run clean test test-cover test-pkg test-unit test-integration \
-	migrate-new migrate-apply migrate-status \
+	migrate-new migrate-apply migrate-status migrate-deploy \
 	dev-up dev-down dev-reset dev-logs dev-psql vet lint format format-check \
 	tidy-check tidy vuln
