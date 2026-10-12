@@ -1,10 +1,22 @@
-import { Ellipsis } from "lucide-react";
+import { Ellipsis, Grip } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Chip } from "@/components/primitives/chip";
+import { List, ListItem } from "@/components/primitives/list";
+import { Menu, MenuItem } from "@/components/primitives/menu";
+import {
+  Modal,
+  ModalClose,
+  ModalContent,
+  ModalDescription,
+  ModalFooter,
+  ModalTitle,
+  ModalTrigger,
+} from "@/components/primitives/modal";
 import { Radio, RadioItem } from "@/components/primitives/radio";
+import { SearchBar } from "@/components/primitives/search-bar";
 import { SegmentItem } from "@/components/primitives/segment-item";
 import {
   SegmentedButton,
@@ -18,6 +30,38 @@ import {
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
 import { Section } from "@/components/primitives/section";
+
+function DialogAvatar() {
+  return (
+    <Avatar className="size-8">
+      <AvatarFallback className="text-xs">LA</AvatarFallback>
+    </Avatar>
+  );
+}
+
+function DialogList() {
+  const dialogItems = Array.from({ length: 10 }, (_, index) => String(index));
+
+  return (
+    <Radio
+      defaultValue="0"
+      aria-label="Dialog options"
+      className="min-h-0 flex-col gap-0"
+    >
+      <List className="overflow-y-auto">
+        {dialogItems.map((value) => (
+          <ListItem
+            key={value}
+            leading={<DialogAvatar />}
+            trailing={<RadioItem value={value} aria-label={`Option ${value}`} />}
+          >
+            Dialog title
+          </ListItem>
+        ))}
+      </List>
+    </Radio>
+  );
+}
 
 export default function Home() {
   return (
@@ -148,6 +192,75 @@ export default function Home() {
               </p>
             </TooltipContent>
           </Tooltip>
+        </div>
+      </Section>
+
+      <Section title="Modal">
+        <Modal>
+          <ModalTrigger asChild>
+            <Button variant="outline">Open modal</Button>
+          </ModalTrigger>
+          <ModalContent>
+            <ModalTitle>
+              <Grip aria-hidden />
+              Modal title
+            </ModalTitle>
+            <ModalDescription>
+              A type of modal window that appears in front of app content to
+              provide critical information, or prompt for a decision to be made
+            </ModalDescription>
+            <DialogList />
+            <ModalFooter>
+              <ModalClose asChild>
+                <Button variant="text">Label</Button>
+              </ModalClose>
+              <ModalClose asChild>
+                <Button variant="text">Label</Button>
+              </ModalClose>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      </Section>
+
+      <Section title="List">
+        <DialogList />
+      </Section>
+
+      <Section title="Menu">
+        <Menu>
+          {Array.from({ length: 10 }, (_, index) => (
+            <MenuItem key={index} icon={<Ellipsis aria-hidden />}>
+              Dialog title
+            </MenuItem>
+          ))}
+        </Menu>
+      </Section>
+
+      <Section title="Search bar">
+        <div className="flex flex-col gap-6">
+          <SearchBar
+            placeholder="Enter search text"
+            aria-label="Search"
+            trailing={
+              <Avatar className="size-8">
+                <AvatarFallback />
+              </Avatar>
+            }
+          />
+
+          <SearchBar expanded defaultValue="Input" aria-label="Search">
+            <div className="h-24" />
+          </SearchBar>
+
+          <SearchBar expanded defaultValue="Input" aria-label="Search">
+            <List className="border-0">
+              {Array.from({ length: 4 }, (_, index) => (
+                <ListItem key={index} leading={<DialogAvatar />}>
+                  Dialog title
+                </ListItem>
+              ))}
+            </List>
+          </SearchBar>
         </div>
       </Section>
     </main>
