@@ -45,7 +45,11 @@ function SearchBar({
         {trailing}
       </div>
       {open ? (
-        <div data-slot="search-bar-results" className="border-t border-border">
+        <div
+          data-slot="search-bar-results"
+          className="border-t border-border"
+          onMouseDown={(event) => event.preventDefault()}
+        >
           {children}
         </div>
       ) : null}
