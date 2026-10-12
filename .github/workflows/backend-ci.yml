@@ -94,6 +94,61 @@ jobs:
             exit 1
           fi
 
+  seed:
+    name: Seed data
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.11-alpine
+        env:
+          POSTGRES_DB: boutline
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d boutline"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/boutline?sslmode=disable
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ariga/setup-atlas@v0
+        with:
+          version: v1.3.3
+
+      - run: atlas migrate apply --dir file://migrations --url "$DATABASE_URL"
+
+      # The counts are built from pg_tables, so a new table is covered without
+      # touching this job: it fails until seeds/seed.sql gives that table rows.
+      # The second run must change nothing, which catches a row added without
+      # a fixed id.
+      - name: Seed applies, covers every table, and reruns cleanly
+        run: |
+          count_rows() {
+            psql "$DATABASE_URL" -At -c "SELECT string_agg(format('SELECT %L, count(*) FROM %I', tablename, tablename), ' UNION ALL ' ORDER BY tablename) FROM pg_tables WHERE schemaname = 'public'" \
+              | psql "$DATABASE_URL" -At
+          }
+
+          psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f seeds/seed.sql
+          first=$(count_rows)
+          echo "$first"
+
+          empty=$(echo "$first" | awk -F'|' '$2 == 0 { print $1 }')
+          if [ -n "$empty" ]; then
+            echo "::error::seeds/seed.sql leaves these tables empty: $empty"
+            exit 1
+          fi
+
+          psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f seeds/seed.sql
+          if [ "$(count_rows)" != "$first" ]; then
+            echo "::error::a second seed run inserted rows — give every seeded row a fixed id"
+            exit 1
+          fi
+
   image:
     name: Docker image
     runs-on: ubuntu-latest
