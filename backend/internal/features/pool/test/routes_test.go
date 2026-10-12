@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"boutline/internal/features/pool"
-	"boutline/internal/features/poolstage"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
@@ -197,40 +196,4 @@ func TestDeleteEndpointRefusesPoolWithBouts(t *testing.T) {
 
 	require.Equal(t, http.StatusConflict, resp.Code, "body: %s", resp.Body)
 	assert.Equal(t, "a pool with bouts cannot be deleted", decodeBody(t, resp.Body.Bytes())["detail"])
-}
-
-func TestLifecycleEndpoints(t *testing.T) {
-	t.Parallel()
-
-	stage := seededPoolStage()
-	stage.Status = poolstage.PoolStageStatusActive
-	stored := seededPool(stage.ID)
-	stored.RefereeID = ptr(uuid.New())
-
-	repo := NewFakePoolRepository(stored)
-	repo.OpenBouts[stored.ID] = 1
-	api := newTestAPI(t, repo, NewFakePoolStageLookup(stage))
-	base := "/api/v1/pools/" + stored.ID.String()
-
-	assert.Equal(t, http.StatusConflict, api.Post(base+"/end").Code, "cannot end before starting")
-
-	started := api.Post(base + "/start")
-	require.Equal(t, http.StatusOK, started.Code, "body: %s", started.Body)
-	startedBody := decodeBody(t, started.Body.Bytes())
-	assert.NotNil(t, startedBody["started_at"])
-	assert.Nil(t, startedBody["completed_at"])
-
-	assert.Equal(t, http.StatusConflict, api.Post(base+"/start").Code, "cannot start twice")
-	assert.Equal(t, http.StatusConflict, api.Post(base+"/end").Code, "open bouts block the end")
-
-	repo.OpenBouts[stored.ID] = 0
-	ended := api.Post(base + "/end")
-	require.Equal(t, http.StatusOK, ended.Code, "body: %s", ended.Body)
-	endedBody := decodeBody(t, ended.Body.Bytes())
-	assert.Equal(t, startedBody["started_at"], endedBody["started_at"])
-	assert.NotNil(t, endedBody["completed_at"])
-
-	assert.Equal(t, http.StatusConflict, api.Post(base+"/end").Code, "cannot end twice")
-	assert.Equal(t, http.StatusNotFound, api.Post("/api/v1/pools/"+uuid.New().String()+"/start").Code)
-	assert.Equal(t, http.StatusNotFound, api.Post("/api/v1/pools/"+uuid.New().String()+"/end").Code)
 }

@@ -15,14 +15,10 @@ import (
 
 var _ poolstage.PoolStageRepository = (*FakePoolStageRepository)(nil)
 
-// PoolCount is a stage's pool tally; a stage with no entry has no pools.
-type PoolCount struct{ Total, Open int64 }
-
 type FakePoolStageRepository struct {
 	PoolStages map[uuid.UUID]poolstage.PoolStage
 	WithBouts  map[uuid.UUID]bool // stages whose pools have bouts, so a delete is refused
-	PoolCounts map[uuid.UUID]PoolCount
-	Err        error // when set, every method fails with it
+	Err        error              // when set, every method fails with it
 }
 
 func NewFakePoolStageRepository(seed ...poolstage.PoolStage) *FakePoolStageRepository {
@@ -31,11 +27,7 @@ func NewFakePoolStageRepository(seed ...poolstage.PoolStage) *FakePoolStageRepos
 		stages[seeded.ID] = seeded
 	}
 
-	return &FakePoolStageRepository{
-		PoolStages: stages,
-		WithBouts:  map[uuid.UUID]bool{},
-		PoolCounts: map[uuid.UUID]PoolCount{},
-	}
+	return &FakePoolStageRepository{PoolStages: stages, WithBouts: map[uuid.UUID]bool{}}
 }
 
 func (f *FakePoolStageRepository) CreatePoolStage(_ context.Context, toCreate *poolstage.PoolStage) error {
@@ -120,39 +112,6 @@ func (f *FakePoolStageRepository) UpdatePoolStageByID(
 	f.save(id, stored)
 
 	return nil
-}
-
-func (f *FakePoolStageRepository) TransitionPoolStageByID(
-	_ context.Context,
-	id uuid.UUID,
-	transition poolstage.PoolStageTransition,
-) error {
-	stored, err := f.guard(id, transition.From)
-	if err != nil {
-		return err
-	}
-
-	stored.Status = transition.To
-	if transition.StartedAt != nil {
-		stored.StartedAt = transition.StartedAt
-	}
-	if transition.CompletedAt != nil {
-		stored.CompletedAt = transition.CompletedAt
-	}
-
-	f.save(id, stored)
-
-	return nil
-}
-
-func (f *FakePoolStageRepository) CountPoolStagePools(_ context.Context, id uuid.UUID) (int64, int64, error) {
-	if f.Err != nil {
-		return 0, 0, f.Err
-	}
-
-	counts := f.PoolCounts[id]
-
-	return counts.Total, counts.Open, nil
 }
 
 func (f *FakePoolStageRepository) DeletePoolStageByID(_ context.Context, id uuid.UUID) error {

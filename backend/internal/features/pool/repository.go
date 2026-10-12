@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"boutline/internal/errs"
 
@@ -19,14 +18,8 @@ type PoolRepository interface {
 	GetPoolTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	ListPools(ctx context.Context, filter PoolListFilter) ([]Pool, int64, error)
 	UpdatePoolByID(ctx context.Context, id uuid.UUID, update PoolUpdate) error
-	StartPoolByID(ctx context.Context, id uuid.UUID, startedAt time.Time) error
-	EndPoolByID(ctx context.Context, id uuid.UUID, completedAt time.Time) error
-	CountOpenPoolBouts(ctx context.Context, id uuid.UUID) (int64, error)
 	DeletePoolByID(ctx context.Context, id uuid.UUID) error
 }
-
-// Mirrors bout.BoutStatusEnd; the bout package imports this one, so it cannot be referenced here.
-const endedBoutStatus = "end"
 
 type PoolUpdate struct {
 	RefereeID *uuid.UUID
@@ -135,45 +128,6 @@ func (r *poolRepository) UpdatePoolByID(ctx context.Context, id uuid.UUID, updat
 	}
 
 	return nil
-}
-
-func (r *poolRepository) StartPoolByID(ctx context.Context, id uuid.UUID, startedAt time.Time) error {
-	return r.stampByID(ctx, id, "started_at IS NULL", map[string]any{"started_at": startedAt})
-}
-
-func (r *poolRepository) EndPoolByID(ctx context.Context, id uuid.UUID, completedAt time.Time) error {
-	return r.stampByID(ctx, id, "started_at IS NOT NULL AND completed_at IS NULL",
-		map[string]any{"completed_at": completedAt})
-}
-
-func (r *poolRepository) stampByID(ctx context.Context, id uuid.UUID, guard string, columns map[string]any) error {
-	result := r.db.WithContext(ctx).Model(&Pool{}).Where("id = ?", id).Where(guard).Updates(columns)
-	if result.Error != nil {
-		return fmt.Errorf("update pool %s: %w", id, result.Error)
-	}
-
-	if result.RowsAffected == 0 {
-		if _, err := r.GetPoolByID(ctx, id); err != nil {
-			return err
-		}
-		return fmt.Errorf("update pool %s: %w", id, errs.ErrConflict)
-	}
-
-	return nil
-}
-
-func (r *poolRepository) CountOpenPoolBouts(ctx context.Context, id uuid.UUID) (int64, error) {
-	var open int64
-
-	err := r.db.WithContext(ctx).
-		Table("bouts").
-		Where("pool_id = ? AND status <> ?", id, endedBoutStatus).
-		Count(&open).Error
-	if err != nil {
-		return 0, fmt.Errorf("count open bouts of pool %s: %w", id, err)
-	}
-
-	return open, nil
 }
 
 func (r *poolRepository) DeletePoolByID(ctx context.Context, id uuid.UUID) error {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"boutline/internal/errs"
 	"boutline/internal/features/event"
@@ -19,9 +18,6 @@ const (
 	PoolStageMaxPageSize     = 100
 
 	minCompetitorsPerPool = 2
-
-	msgOnlyUpcomingCanStart = "only an upcoming pool stage can be started"
-	msgOnlyActiveCanEnd     = "only an active pool stage can be ended"
 )
 
 // EventLookup is the subset of the EventRepository interface needed here.
@@ -34,8 +30,6 @@ type PoolStageService interface {
 	GetPoolStageByID(ctx context.Context, input *PoolStageIDInput) (*PoolStageOutput, error)
 	ListPoolStages(ctx context.Context, input *PoolStageListInput) (*PoolStageListOutput, error)
 	UpdatePoolStageByID(ctx context.Context, input *PoolStageUpdateInput) (*PoolStageOutput, error)
-	StartPoolStage(ctx context.Context, input *PoolStageIDInput) (*PoolStageOutput, error)
-	EndPoolStage(ctx context.Context, input *PoolStageIDInput) (*PoolStageOutput, error)
 	DeletePoolStageByID(ctx context.Context, input *PoolStageIDInput) (*struct{}, error)
 }
 
@@ -168,95 +162,11 @@ func (s *poolStageService) UpdatePoolStageByID(
 		return nil, errs.HumaError(errMaxCompetitorPerPoolTooSmall())
 	}
 
-	err = s.repo.UpdatePoolStageByID(ctx, id, PoolStageUpdate(body))
-
-	return s.afterUpdate(ctx, id, err, "only an upcoming pool stage can be edited")
-}
-
-func (s *poolStageService) StartPoolStage(
-	ctx context.Context,
-	input *PoolStageIDInput,
-) (*PoolStageOutput, error) {
-	id, err := utils.ParseUUID(input.ID, "id")
-	if err != nil {
-		return nil, errs.HumaError(err)
-	}
-
-	stage, err := s.repo.GetPoolStageByID(ctx, id)
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("get pool stage: %w", err))
-	}
-	if stage.Status != PoolStageStatusUpcoming {
-		return nil, errs.HumaError(errs.Public(msgOnlyUpcomingCanStart, errs.ErrConflict))
-	}
-
-	total, _, err := s.repo.CountPoolStagePools(ctx, id)
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("count pool stage pools: %w", err))
-	}
-	if total == 0 {
-		return nil, errs.HumaError(errs.Public(
-			"a pool stage needs at least one pool before it can start", errs.ErrConflict))
-	}
-
-	now := time.Now().UTC()
-	err = s.repo.TransitionPoolStageByID(ctx, id, PoolStageTransition{
-		To:        PoolStageStatusActive,
-		StartedAt: &now,
-		From:      []PoolStageStatus{PoolStageStatusUpcoming},
-	})
-
-	return s.afterUpdate(ctx, id, err, msgOnlyUpcomingCanStart)
-}
-
-func (s *poolStageService) EndPoolStage(
-	ctx context.Context,
-	input *PoolStageIDInput,
-) (*PoolStageOutput, error) {
-	id, err := utils.ParseUUID(input.ID, "id")
-	if err != nil {
-		return nil, errs.HumaError(err)
-	}
-
-	stage, err := s.repo.GetPoolStageByID(ctx, id)
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("get pool stage: %w", err))
-	}
-	if stage.Status != PoolStageStatusActive {
-		return nil, errs.HumaError(errs.Public(msgOnlyActiveCanEnd, errs.ErrConflict))
-	}
-
-	_, open, err := s.repo.CountPoolStagePools(ctx, id)
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("count pool stage pools: %w", err))
-	}
-	if open > 0 {
-		return nil, errs.HumaError(errs.Public(
-			"every pool must end before the pool stage can end", errs.ErrConflict))
-	}
-
-	now := time.Now().UTC()
-	err = s.repo.TransitionPoolStageByID(ctx, id, PoolStageTransition{
-		To:          PoolStageStatusEnded,
-		CompletedAt: &now,
-		From:        []PoolStageStatus{PoolStageStatusActive},
-	})
-
-	return s.afterUpdate(ctx, id, err, msgOnlyActiveCanEnd)
-}
-
-func (s *poolStageService) afterUpdate(
-	ctx context.Context,
-	id uuid.UUID,
-	err error,
-	conflictMessage string,
-) (*PoolStageOutput, error) {
-	if err != nil {
+	if err := s.repo.UpdatePoolStageByID(ctx, id, PoolStageUpdate(body)); err != nil {
 		if errors.Is(err, errs.ErrConflict) {
 			return nil, errs.HumaError(fmt.Errorf("update pool stage: %w",
-				errs.Public(conflictMessage, err)))
+				errs.Public("only an upcoming pool stage can be edited", err)))
 		}
-
 		return nil, errs.HumaError(fmt.Errorf("update pool stage: %w", err))
 	}
 

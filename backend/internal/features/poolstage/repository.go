@@ -17,8 +17,6 @@ type PoolStageRepository interface {
 	GetPoolStageByID(ctx context.Context, id uuid.UUID) (*PoolStage, error)
 	ListPoolStages(ctx context.Context, filter PoolStageListFilter) ([]PoolStage, int64, error)
 	UpdatePoolStageByID(ctx context.Context, id uuid.UUID, update PoolStageUpdate) error
-	TransitionPoolStageByID(ctx context.Context, id uuid.UUID, transition PoolStageTransition) error
-	CountPoolStagePools(ctx context.Context, id uuid.UUID) (total, open int64, err error)
 	DeletePoolStageByID(ctx context.Context, id uuid.UUID) error
 }
 
@@ -35,25 +33,6 @@ func (p PoolStageUpdate) columns() map[string]any {
 	}
 	if p.StartTime != nil {
 		columns["start_time"] = *p.StartTime
-	}
-
-	return columns
-}
-
-type PoolStageTransition struct {
-	To          PoolStageStatus
-	StartedAt   *time.Time
-	CompletedAt *time.Time
-	From        []PoolStageStatus
-}
-
-func (t PoolStageTransition) columns() map[string]any {
-	columns := map[string]any{"status": t.To}
-	if t.StartedAt != nil {
-		columns["started_at"] = *t.StartedAt
-	}
-	if t.CompletedAt != nil {
-		columns["completed_at"] = *t.CompletedAt
 	}
 
 	return columns
@@ -127,29 +106,10 @@ func (r *poolStageRepository) ListPoolStages(
 }
 
 func (r *poolStageRepository) UpdatePoolStageByID(ctx context.Context, id uuid.UUID, update PoolStageUpdate) error {
-	return r.updateByID(ctx, id, update.columns(), PoolStageEditableStatuses())
-}
+	query := r.db.WithContext(ctx).Model(&PoolStage{}).
+		Where("id = ? AND status IN ?", id, PoolStageEditableStatuses())
 
-func (r *poolStageRepository) TransitionPoolStageByID(
-	ctx context.Context,
-	id uuid.UUID,
-	transition PoolStageTransition,
-) error {
-	return r.updateByID(ctx, id, transition.columns(), transition.From)
-}
-
-func (r *poolStageRepository) updateByID(
-	ctx context.Context,
-	id uuid.UUID,
-	columns map[string]any,
-	allowedStatuses []PoolStageStatus,
-) error {
-	query := r.db.WithContext(ctx).Model(&PoolStage{}).Where("id = ?", id)
-	if len(allowedStatuses) > 0 {
-		query = query.Where("status IN ?", allowedStatuses)
-	}
-
-	result := query.Updates(columns)
+	result := query.Updates(update.columns())
 	if result.Error != nil {
 		return translatePoolStageWriteError(fmt.Sprintf("update pool stage %s", id), result.Error)
 	}
@@ -162,19 +122,6 @@ func (r *poolStageRepository) updateByID(
 	}
 
 	return nil
-}
-
-// Reads the pools table by name because the pool package imports this one.
-func (r *poolStageRepository) CountPoolStagePools(ctx context.Context, id uuid.UUID) (total, open int64, err error) {
-	err = r.db.WithContext(ctx).Table("pools").
-		Select("count(*), count(*) FILTER (WHERE completed_at IS NULL)").
-		Where("pool_stage_id = ?", id).
-		Row().Scan(&total, &open)
-	if err != nil {
-		return 0, 0, fmt.Errorf("count pools of pool stage %s: %w", id, err)
-	}
-
-	return total, open, nil
 }
 
 func (r *poolStageRepository) DeletePoolStageByID(ctx context.Context, id uuid.UUID) error {
