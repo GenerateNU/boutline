@@ -2,6 +2,7 @@ import { Ellipsis } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
+import { DatePicker } from "@/components/primitives/date-picker";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Chip } from "@/components/primitives/chip";
 import { Radio, RadioItem } from "@/components/primitives/radio";
@@ -149,6 +150,10 @@ export default function Home() {
             </TooltipContent>
           </Tooltip>
         </div>
+      </Section>
+
+      <Section title="Date picker">
+        <DatePicker />
       </Section>
     </main>
   );
