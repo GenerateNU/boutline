@@ -66,6 +66,10 @@ dev-logs:
 dev-psql:
 	$(COMPOSE) exec db psql -U postgres -d boutline
 
+# Rows already present are skipped, so this is safe to rerun.
+dev-seed:
+	$(COMPOSE) exec -T db psql -U postgres -d boutline -q -v ON_ERROR_STOP=1 < seeds/seed.sql
+
 vet:
 	go vet ./...
 
@@ -91,5 +95,5 @@ vuln:
 
 .PHONY: build run clean test test-cover test-pkg test-unit test-integration \
 	migrate-new migrate-apply migrate-status \
-	dev-up dev-down dev-reset dev-logs dev-psql vet lint format format-check \
+	dev-up dev-down dev-reset dev-logs dev-psql dev-seed vet lint format format-check \
 	tidy-check tidy vuln

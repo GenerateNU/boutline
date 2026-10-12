@@ -85,6 +85,22 @@ the repo root for everything [Backend CI](../.github/workflows/backend-ci.yml)
 gates on. CI additionally builds the Docker image and re-diffs the models against
 `./migrations` so a model change without a migration cannot merge.
 
+## Seed data
+
+```sh
+make dev-seed    # or `make db-seed` from the repo root
+```
+
+loads `seeds/seed.sql` into the dev database: five users, three tournaments
+(one each pending, active, and ended) with their memberships and events,
+twelve competitors, and bouts in every status. Every seeded account's password
+is `password123`. Every row has a fixed id and conflicts are skipped, so
+rerunning it changes nothing; `make dev-reset` first for a clean set. Run it
+after `make dev-up`, since it needs the current schema. A new table or a new
+`NOT NULL` column needs rows or a value added here: CI seeds a freshly
+migrated database twice and fails if any table is left empty or the second
+run inserts anything.
+
 ## Configuration
 
 Every value has a default, so the server runs with no environment set. Override
