@@ -1,0 +1,2 @@
+# atlas.sum hashes the exact bytes, so CRLF checkouts on Windows break CI.
+* text eol=lf
