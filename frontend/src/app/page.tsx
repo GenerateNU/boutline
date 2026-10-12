@@ -1,4 +1,4 @@
-import { Ellipsis, Settings, Shapes } from "lucide-react";
+import { Ellipsis, EllipsisVertical, Settings, Shapes } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
@@ -19,6 +19,8 @@ import {
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
 import { Section } from "@/components/primitives/section";
+import { ProfileTopAppBar } from "@/components/primitives/profile-top-app-bar";
+import { SubTopAppBar } from "@/components/primitives/sub-top-app-bar";
 
 import { NavigationBar } from "@/components/primitives/navigation-bar";
 import { NavigationDrawer } from "@/components/primitives/navigation-drawer";
@@ -194,6 +196,27 @@ export default function Home() {
           footerItems={drawerFooter}
           userName="User name"
           className="h-[950px]"
+        />
+      </Section>
+
+      <Section title="Profile top app bar">
+        <ProfileTopAppBar title="Profile" />
+      </Section>
+
+      <Section title="Sub top app bar">
+        <SubTopAppBar
+          title="Title"
+          backHref="/"
+          actions={
+            <>
+              <Button variant="text" size="icon" aria-label="Action">
+                <Shapes />
+              </Button>
+              <Button variant="text" size="icon" aria-label="More options">
+                <EllipsisVertical />
+              </Button>
+            </>
+          }
         />
       </Section>
     </main>
