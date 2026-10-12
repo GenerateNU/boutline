@@ -34,7 +34,7 @@ function Chip({
           type="button"
           aria-label="Remove"
           onClick={onDismiss}
-          className="outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <X aria-hidden />
         </button>
