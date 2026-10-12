@@ -13,7 +13,7 @@ function Toggle({
     <SwitchPrimitive.Root
       data-slot="toggle"
       className={cn(
-        "inline-flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 data-[state=checked]:bg-selected data-[state=unchecked]:bg-foreground",
+        "inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full p-0.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-selected data-[state=unchecked]:bg-foreground",
         className,
       )}
       {...props}

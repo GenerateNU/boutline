@@ -12,7 +12,7 @@ endif
 .PHONY: help setup dev test check docker-up \
 	fe-install fe-dev fe-build fe-lint fe-typecheck fe-test fe-check \
 	be-deps be-up be-down be-logs be-build be-test be-lint be-check \
-	db-shell db-reset migrate-new migrate-status
+	db-shell db-seed db-reset migrate-new migrate-status
 
 help: ## List available commands
 	@awk 'BEGIN {FS = ":.*## "} \
@@ -79,6 +79,9 @@ be-check: ## Everything backend CI gates on
 
 db-shell: docker-up ## Open a psql shell on the dev database
 	@$(BE) dev-psql
+
+db-seed: docker-up ## Load sample rows into the dev database; safe to rerun
+	@$(BE) dev-seed
 
 db-reset: docker-up ## Wipe the database and bring it back up, migrations applied
 	@printf "This deletes every row in the dev database. Continue? [y/N] "; \
