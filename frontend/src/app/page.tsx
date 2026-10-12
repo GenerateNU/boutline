@@ -22,6 +22,23 @@ import { Section } from "@/components/primitives/section";
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 py-10">
+      <Section title="Home Page">
+        <div className="flex items-center gap-4">
+          <p>This is the home page.</p>
+          <p>quick links:</p>
+          <ul className="flex flex-col gap-2">
+            <li>
+              <a href="/tournaments" className="text-primary underline">
+                Tournaments
+              </a>
+            </li>
+           
+          </ul>
+        </div>
+      </Section>
+
+      <hr />
+      
       <Section title="Avatar">
         <div className="flex items-center gap-4">
           <Avatar>
