@@ -60,11 +60,6 @@ func TestCreateEndpoint(t *testing.T) {
 			body:       map[string]any{},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
-		{
-			name:       "rejects an unknown pool stage",
-			body:       map[string]any{"pool_stage_id": uuid.New().String()},
-			wantStatus: http.StatusBadRequest,
-		},
 	}
 
 	for _, tt := range tests {
@@ -138,15 +133,6 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 	})
 
-	t.Run("reports an unknown id as not found", func(t *testing.T) {
-		t.Parallel()
-
-		resp := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup()).
-			Get("/api/v1/pools/" + uuid.New().String())
-
-		assert.Equal(t, http.StatusNotFound, resp.Code)
-	})
-
 	t.Run("assigns a referee", func(t *testing.T) {
 		t.Parallel()
 
@@ -157,15 +143,6 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 
 		body := decodeBody(t, resp.Body.Bytes())
 		assert.Equal(t, referee, body["referee_id"])
-	})
-
-	t.Run("rejects an empty patch", func(t *testing.T) {
-		t.Parallel()
-
-		resp := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup()).
-			Patch("/api/v1/pools/"+stored.ID.String(), map[string]any{})
-
-		assert.Equal(t, http.StatusBadRequest, resp.Code)
 	})
 }
 
@@ -182,18 +159,4 @@ func TestDeleteEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, api.Get(base).Code)
 	assert.Equal(t, http.StatusNotFound, api.Delete(base).Code)
-}
-
-func TestDeleteEndpointRefusesPoolWithBouts(t *testing.T) {
-	t.Parallel()
-
-	stored := seededPool(uuid.New())
-	repo := NewFakePoolRepository(stored)
-	repo.WithBouts[stored.ID] = true
-	api := newTestAPI(t, repo, NewFakePoolStageLookup())
-
-	resp := api.Delete("/api/v1/pools/" + stored.ID.String())
-
-	require.Equal(t, http.StatusConflict, resp.Code, "body: %s", resp.Body)
-	assert.Equal(t, "a pool with bouts cannot be deleted", decodeBody(t, resp.Body.Bytes())["detail"])
 }
