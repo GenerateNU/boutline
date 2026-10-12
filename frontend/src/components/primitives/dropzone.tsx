@@ -7,8 +7,8 @@ import { type Accept, useDropzone } from "react-dropzone";
 type DropzoneProps = {
   label: string;
   accept: Accept;
-  onFile: (file: File) => void;
-  onReject: (message: string) => void;
+  onFile?: (file: File) => void;
+  onReject?: (message: string) => void;
   className?: string;
 };
 
@@ -16,8 +16,8 @@ function Dropzone({ label, accept, onFile, onReject, className }: DropzoneProps)
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept,
     multiple: false,
-    onDropAccepted: ([file]) => onFile(file),
-    onDropRejected: ([rejection]) => onReject(rejection.errors[0].message),
+    onDropAccepted: ([file]) => onFile?.(file),
+    onDropRejected: ([rejection]) => onReject?.(rejection.errors[0].message),
   });
 
   return (
