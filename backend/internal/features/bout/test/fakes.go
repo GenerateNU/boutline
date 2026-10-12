@@ -68,6 +68,9 @@ func (f *FakeBoutRepository) ListBouts(
 		if filter.TournamentID != nil && candidate.TournamentID != *filter.TournamentID {
 			continue
 		}
+		if filter.PoolID != nil && (candidate.PoolID == nil || *candidate.PoolID != *filter.PoolID) {
+			continue
+		}
 		if filter.Status != "" && candidate.Status != filter.Status {
 			continue
 		}
@@ -105,6 +108,9 @@ func (f *FakeBoutRepository) UpdateBoutByID(_ context.Context, id uuid.UUID, upd
 	}
 	if update.RefereeID != nil {
 		stored.RefereeID = update.RefereeID
+	}
+	if update.PoolID != nil {
+		stored.PoolID = update.PoolID
 	}
 	if update.TimeLimitSeconds != nil {
 		stored.TimeLimitSeconds = update.TimeLimitSeconds

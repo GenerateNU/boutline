@@ -53,6 +53,10 @@ func (s *boutService) CreateBout(ctx context.Context, input *BoutCreateInput) (*
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
+	poolID, err := parseOptionalUUID(input.Body.PoolID, "pool_id")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
 	competitor1ID, err := utils.ParseUUID(input.Body.Competitor1ID, "competitor_1_id")
 	if err != nil {
 		return nil, errs.HumaError(err)
@@ -87,6 +91,7 @@ func (s *boutService) CreateBout(ctx context.Context, input *BoutCreateInput) (*
 		Location:         input.Body.Location,
 		StartTime:        input.Body.StartTime,
 		RefereeID:        refereeID,
+		PoolID:           poolID,
 		TimeLimitSeconds: input.Body.TimeLimitSeconds,
 		PointsToWin:      input.Body.PointsToWin,
 		GroupNumber:      input.Body.GroupNumber,
@@ -131,6 +136,14 @@ func parseOptionalUUID(raw *string, field string) (*uuid.UUID, error) {
 	return &id, nil
 }
 
+func parseOptionalQueryUUID(raw string, field string) (*uuid.UUID, error) {
+	if raw == "" {
+		return nil, nil
+	}
+
+	return parseOptionalUUID(&raw, field)
+}
+
 func (s *boutService) GetBoutByID(ctx context.Context, input *BoutIDInput) (*BoutOutput, error) {
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
@@ -151,13 +164,13 @@ func (s *boutService) ListBouts(ctx context.Context, input *BoutListInput) (*Bou
 			fmt.Sprintf("unknown status %q", input.Status), errs.ErrInvalidInput))
 	}
 
-	var tournamentID *uuid.UUID
-	if input.TournamentID != "" {
-		id, err := utils.ParseUUID(input.TournamentID, "tournament_id")
-		if err != nil {
-			return nil, errs.HumaError(err)
-		}
-		tournamentID = &id
+	tournamentID, err := parseOptionalQueryUUID(input.TournamentID, "tournament_id")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+	poolID, err := parseOptionalQueryUUID(input.PoolID, "pool_id")
+	if err != nil {
+		return nil, errs.HumaError(err)
 	}
 
 	limit := input.Limit
@@ -169,6 +182,7 @@ func (s *boutService) ListBouts(ctx context.Context, input *BoutListInput) (*Bou
 
 	bouts, total, err := s.repo.ListBouts(ctx, BoutListFilter{
 		TournamentID: tournamentID,
+		PoolID:       poolID,
 		Status:       input.Status,
 		Limit:        limit,
 		Offset:       offset,
@@ -213,6 +227,9 @@ func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body Bou
 	if update.RefereeID, err = parseOptionalUUID(body.RefereeID, "referee_id"); err != nil {
 		return update, err
 	}
+	if update.PoolID, err = parseOptionalUUID(body.PoolID, "pool_id"); err != nil {
+		return update, err
+	}
 
 	if update.Competitor1ID, err = parseOptionalUUID(body.Competitor1ID, "competitor_1_id"); err != nil {
 		return update, err
@@ -246,7 +263,7 @@ func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body Bou
 	update.Location = body.Location
 	update.StartTime = body.StartTime
 
-	if update.Location == nil && update.StartTime == nil && update.RefereeID == nil &&
+	if update.Location == nil && update.StartTime == nil && update.RefereeID == nil && update.PoolID == nil &&
 		update.TimeLimitSeconds == nil && update.PointsToWin == nil && update.GroupNumber == nil &&
 		update.Competitor1ID == nil && update.Competitor2ID == nil {
 		return update, errs.Public("provide at least one field to update", errs.ErrInvalidInput)

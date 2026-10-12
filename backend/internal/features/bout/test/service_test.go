@@ -91,6 +91,14 @@ func TestCreateBout(t *testing.T) {
 			input:  createInput(activeTournament.ID.String(), nil, competitor1, competitor2, 11),
 		},
 		{
+			name:   "creates a bout inside a pool",
+			lookup: NewFakeTournamentLookup(activeTournament),
+			input: &bout.BoutCreateInput{Body: bout.BoutCreateBody{
+				TournamentID: activeTournament.ID.String(), PoolID: ptr(uuid.New().String()),
+				Competitor1ID: competitor1, Competitor2ID: competitor2, PointsToWin: 5,
+			}},
+		},
+		{
 			name:        "rejects a tournament_id that does not exist",
 			lookup:      NewFakeTournamentLookup(),
 			input:       createInput(uuid.New().String(), ptr(referee), competitor1, competitor2, 11),
@@ -163,6 +171,17 @@ func TestCreateBout(t *testing.T) {
 			wantNoBouts: true,
 		},
 		{
+			name:   "rejects a bad pool_id",
+			lookup: NewFakeTournamentLookup(activeTournament),
+			input: &bout.BoutCreateInput{Body: bout.BoutCreateBody{
+				TournamentID: activeTournament.ID.String(), PoolID: ptr("not-a-uuid"),
+				Competitor1ID: competitor1, Competitor2ID: competitor2, PointsToWin: 5,
+			}},
+			wantCode:    http.StatusBadRequest,
+			wantDetail:  "pool_id must be a valid uuid",
+			wantNoBouts: true,
+		},
+		{
 			name:        "reports a tournament lookup failure as a server error",
 			lookup:      &FakeTournamentLookup{Err: errors.New("connection refused")},
 			input:       createInput(activeTournament.ID.String(), ptr(referee), competitor1, competitor2, 11),
@@ -193,6 +212,7 @@ func TestCreateBout(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, bout.BoutStatusUpcoming, out.Body.Status)
+			assert.Equal(t, tt.input.Body.PoolID, out.Body.PoolID)
 			assert.Len(t, repo.Bouts, 1)
 		})
 	}
@@ -203,9 +223,13 @@ func TestListBouts(t *testing.T) {
 
 	tournamentID := uuid.New()
 	otherTournamentID := uuid.New()
+	poolID := uuid.New()
+
+	pooled := seededBout(bout.BoutStatusUpcoming, tournamentID)
+	pooled.PoolID = &poolID
 
 	mixed := []bout.Bout{
-		seededBout(bout.BoutStatusUpcoming, tournamentID),
+		pooled,
 		seededBout(bout.BoutStatusActive, tournamentID),
 		seededBout(bout.BoutStatusUpcoming, otherTournamentID),
 	}
@@ -223,6 +247,13 @@ func TestListBouts(t *testing.T) {
 			seed:      mixed,
 			input:     &bout.BoutListInput{TournamentID: tournamentID.String()},
 			wantTotal: 2,
+			wantLimit: bout.BoutDefaultPageSize,
+		},
+		{
+			name:      "filters by pool_id",
+			seed:      mixed,
+			input:     &bout.BoutListInput{PoolID: poolID.String()},
+			wantTotal: 1,
 			wantLimit: bout.BoutDefaultPageSize,
 		},
 		{
@@ -249,6 +280,12 @@ func TestListBouts(t *testing.T) {
 			name:     "rejects a bad tournament_id",
 			seed:     mixed,
 			input:    &bout.BoutListInput{TournamentID: "not-a-uuid"},
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:     "rejects a bad pool_id",
+			seed:     mixed,
+			input:    &bout.BoutListInput{PoolID: "not-a-uuid"},
 			wantCode: http.StatusBadRequest,
 		},
 	}
@@ -292,6 +329,23 @@ func TestUpdateBoutByID(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 21, out.Body.PointsToWin)
 		assert.Equal(t, 21, repo.Bouts[stored.ID].PointsToWin)
+	})
+
+	t.Run("moves an upcoming bout into a pool", func(t *testing.T) {
+		t.Parallel()
+
+		stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
+		repo := NewFakeBoutRepository(stored)
+		poolID := uuid.New()
+
+		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup()).UpdateBoutByID(t.Context(),
+			&bout.BoutUpdateInput{ID: stored.ID.String(), Body: bout.BoutUpdateBody{
+				PoolID: ptr(poolID.String()),
+			}})
+
+		require.NoError(t, err)
+		assert.Equal(t, ptr(poolID.String()), out.Body.PoolID)
+		assert.Equal(t, &poolID, repo.Bouts[stored.ID].PoolID)
 	})
 
 	t.Run("refuses to edit an active bout", func(t *testing.T) {
