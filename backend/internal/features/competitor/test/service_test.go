@@ -327,6 +327,94 @@ func TestUpdateCompetitorByID(t *testing.T) {
 	}
 }
 
+func TestSearchCompetitors(t *testing.T) {
+	t.Parallel()
+	seed := []competitor.Competitor{
+		seeded("Lee", "Kiefer", competitor.RatingA, "NU Fencing"),
+		seeded("Race", "Imboden", competitor.RatingA, "St. John's Fencing"),
+	}
+
+	tests := []struct {
+		name       string
+		input      *competitor.CompetitorSearchInput
+		wantLast   []string
+		wantTotal  int64
+		wantLimit  int
+		wantOffset int
+		wantCode   int
+		wantDetail string
+	}{
+		{
+			name:      "defaults to matching by name",
+			input:     &competitor.CompetitorSearchInput{Query: "kiefer"},
+			wantLast:  []string{"Kiefer"},
+			wantTotal: 1,
+			wantLimit: competitor.CompetitorDefaultPageSize,
+		},
+		{
+			name:      "matches by team when asked",
+			input:     &competitor.CompetitorSearchInput{Query: "john", By: "team"},
+			wantLast:  []string{"Imboden"},
+			wantTotal: 1,
+			wantLimit: competitor.CompetitorDefaultPageSize,
+		},
+		{
+			name:       "rejects a blank term",
+			input:      &competitor.CompetitorSearchInput{Query: "   "},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "search term must not be blank",
+		},
+		{
+			name:       "rejects an unknown field",
+			input:      &competitor.CompetitorSearchInput{Query: "lee", By: "nickname"},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "search field must be name or team",
+		},
+		{
+			name:       "applies limit and offset",
+			input:      &competitor.CompetitorSearchInput{Query: "fencing", By: "team", Limit: 1, Offset: 1},
+			wantLast:   []string{"Kiefer"},
+			wantTotal:  2,
+			wantLimit:  1,
+			wantOffset: 1,
+		},
+		{
+			name:      "clamps a limit above the maximum",
+			input:     &competitor.CompetitorSearchInput{Query: "fencing", By: "team", Limit: competitor.CompetitorMaxPageSize + 50},
+			wantLast:  []string{"Imboden", "Kiefer"},
+			wantTotal: 2,
+			wantLimit: competitor.CompetitorMaxPageSize,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			out, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
+				SearchCompetitors(t.Context(), tt.input)
+
+			if tt.wantCode != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+				assert.Equal(t, tt.wantDetail, detail)
+				assert.Nil(t, out)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantTotal, out.Body.Total)
+			assert.Equal(t, tt.wantLimit, out.Body.Limit)
+			assert.Equal(t, tt.wantOffset, out.Body.Offset)
+
+			lastNames := make([]string, 0, len(out.Body.Data))
+			for _, listed := range out.Body.Data {
+				lastNames = append(lastNames, listed.LastName)
+			}
+			assert.Equal(t, tt.wantLast, lastNames)
+		})
+	}
+}
+
 func TestDeleteCompetitor(t *testing.T) {
 	t.Parallel()
 

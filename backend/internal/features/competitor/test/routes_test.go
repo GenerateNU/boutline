@@ -145,6 +145,45 @@ func TestListEndpoint(t *testing.T) {
 	})
 }
 
+func TestSearchEndpoint(t *testing.T) {
+	t.Parallel()
+	seed := []competitor.Competitor{
+		seeded("Lee", "Kiefer", competitor.RatingA, "NU Fencing"),
+		seeded("Race", "Imboden", competitor.RatingA, "St. John's Fencing"),
+	}
+
+	t.Run("matches by name and reports the total", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors/search?q=kiefer")
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 1)
+		assert.InDelta(t, 1, body["total"], 0)
+	})
+
+	t.Run("matches by team when asked", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors/search?q=john&by=team")
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 1)
+	})
+
+	t.Run("rejects an unknown field before the handler runs", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors/search?q=kiefer&by=nickname")
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+
+	t.Run("rejects a missing query", func(t *testing.T) {
+		t.Parallel()
+		// An absent query param skips Huma's minLength check entirely, so this
+		// is the service's own blank-term guard, not schema validation.
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors/search")
+		assert.Equal(t, http.StatusBadRequest, resp.Code)
+	})
+}
+
 func TestUpdateEndpoint(t *testing.T) {
 	t.Parallel()
 	stored := seeded("Lee", "Kiefer", competitor.RatingB, "NU Fencing")

@@ -376,6 +376,84 @@ func TestListTournaments(t *testing.T) {
 	}
 }
 
+func TestSearchTournaments(t *testing.T) {
+	t.Parallel()
+
+	seed := []tournament.Tournament{
+		seeded("Northwestern Open", tournament.TournamentStatusPending),
+		seeded("Big Ten Championship", tournament.TournamentStatusActive),
+	}
+
+	tests := []struct {
+		name       string
+		input      *tournament.TournamentSearchInput
+		wantNames  []string
+		wantTotal  int64
+		wantLimit  int
+		wantOffset int
+		wantCode   int
+		wantDetail string
+	}{
+		{
+			name:      "matches on the tournament name",
+			input:     &tournament.TournamentSearchInput{Query: "northwestern"},
+			wantNames: []string{"Northwestern Open"},
+			wantTotal: 1,
+			wantLimit: tournament.TournamentDefaultPageSize,
+		},
+		{
+			name:       "rejects a blank term",
+			input:      &tournament.TournamentSearchInput{Query: "   "},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "search term must not be blank",
+		},
+		{
+			name:       "applies limit and offset",
+			input:      &tournament.TournamentSearchInput{Query: "n", Limit: 1, Offset: 1},
+			wantNames:  []string{"Northwestern Open"},
+			wantTotal:  2,
+			wantLimit:  1,
+			wantOffset: 1,
+		},
+		{
+			name:      "clamps a limit above the maximum",
+			input:     &tournament.TournamentSearchInput{Query: "n", Limit: tournament.TournamentMaxPageSize + 50},
+			wantNames: []string{"Big Ten Championship", "Northwestern Open"},
+			wantTotal: 2,
+			wantLimit: tournament.TournamentMaxPageSize,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakeTournamentRepository(seed...)
+			out, err := tournament.NewTournamentService(repo, NewFakeTournamentUserRepository()).
+				SearchTournaments(t.Context(), tt.input)
+
+			if tt.wantCode != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+				assert.Equal(t, tt.wantDetail, detail)
+				assert.Nil(t, out)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantTotal, out.Body.Total)
+			assert.Equal(t, tt.wantLimit, out.Body.Limit)
+			assert.Equal(t, tt.wantOffset, out.Body.Offset)
+
+			names := make([]string, 0, len(out.Body.Data))
+			for _, listed := range out.Body.Data {
+				names = append(names, listed.Name)
+			}
+			assert.Equal(t, tt.wantNames, names)
+		})
+	}
+}
+
 func TestUpdateTournamentByID(t *testing.T) {
 	t.Parallel()
 

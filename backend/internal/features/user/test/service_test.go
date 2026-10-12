@@ -318,6 +318,82 @@ func TestUpdateUserByID(t *testing.T) {
 	}
 }
 
+func TestSearchUsers(t *testing.T) {
+	t.Parallel()
+
+	seed := []user.User{
+		seeded("ada@example.com", "Ada", "Lovelace"),
+		seeded("grace@example.com", "Grace", "Hopper"),
+	}
+
+	tests := []struct {
+		name       string
+		input      *user.UserSearchInput
+		wantEmails []string
+		wantTotal  int64
+		wantLimit  int
+		wantOffset int
+		wantCode   int
+		wantDetail string
+	}{
+		{
+			name:       "matches on first and last name",
+			input:      &user.UserSearchInput{Query: "lovelace"},
+			wantEmails: []string{"ada@example.com"},
+			wantTotal:  1,
+			wantLimit:  user.UserDefaultPageSize,
+		},
+		{
+			name:       "rejects a blank term",
+			input:      &user.UserSearchInput{Query: "   "},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "search term must not be blank",
+		},
+		{
+			name:       "applies limit and offset",
+			input:      &user.UserSearchInput{Query: "e", Limit: 1, Offset: 1},
+			wantEmails: []string{"grace@example.com"},
+			wantTotal:  2,
+			wantLimit:  1,
+			wantOffset: 1,
+		},
+		{
+			name:       "clamps a limit above the maximum",
+			input:      &user.UserSearchInput{Query: "e", Limit: user.UserMaxPageSize + 50},
+			wantEmails: []string{"ada@example.com", "grace@example.com"},
+			wantTotal:  2,
+			wantLimit:  user.UserMaxPageSize,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			out, err := user.NewUserService(NewFakeUserRepository(seed...)).SearchUsers(t.Context(), tt.input)
+
+			if tt.wantCode != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+				assert.Equal(t, tt.wantDetail, detail)
+				assert.Nil(t, out)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantTotal, out.Body.Total)
+			assert.Equal(t, tt.wantLimit, out.Body.Limit)
+			assert.Equal(t, tt.wantOffset, out.Body.Offset)
+
+			emails := make([]string, 0, len(out.Body.Data))
+			for _, listed := range out.Body.Data {
+				emails = append(emails, listed.Email)
+			}
+			assert.Equal(t, tt.wantEmails, emails)
+		})
+	}
+}
+
 func TestDeleteUser(t *testing.T) {
 	t.Parallel()
 

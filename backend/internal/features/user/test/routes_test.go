@@ -155,6 +155,37 @@ func TestListEndpoint(t *testing.T) {
 	})
 }
 
+func TestSearchEndpoint(t *testing.T) {
+	t.Parallel()
+
+	seed := []user.User{
+		seeded("ada@example.com", "Ada", "Lovelace"),
+		seeded("grace@example.com", "Grace", "Hopper"),
+	}
+
+	t.Run("matches by name and reports the total", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, seed...).Get("/api/v1/users/search?q=lovelace")
+
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+		body := decodeBody(t, resp.Body.Bytes())
+		require.Len(t, body["data"], 1)
+		assert.InDelta(t, 1, body["total"], 0)
+	})
+
+	t.Run("rejects a missing query", func(t *testing.T) {
+		t.Parallel()
+
+		// An absent query param skips Huma's minLength check entirely, so this
+		// is the service's own blank-term guard, not schema validation.
+		resp := newTestAPI(t, seed...).Get("/api/v1/users/search")
+
+		assert.Equal(t, http.StatusBadRequest, resp.Code)
+	})
+}
+
 func TestDeleteEndpoint(t *testing.T) {
 	t.Parallel()
 
