@@ -189,7 +189,7 @@ func TestListEndpoint(t *testing.T) {
 
 	base := "/api/v1/scoring/match/"
 
-	t.Run("returns only active scores for the match, in order", func(t *testing.T) {
+	t.Run("returns only active scores for the match, newest first", func(t *testing.T) {
 		t.Parallel()
 
 		resp := newTestAPI(t, seed...).Get(base + match.String())
@@ -201,8 +201,8 @@ func TestListEndpoint(t *testing.T) {
 		require.True(t, ok)
 		require.Len(t, data, 2)
 		assert.InDelta(t, 2, body["total"], 0)
-		assert.InDelta(t, 1, data[0].(map[string]any)["id"], 0)
-		assert.InDelta(t, 3, data[1].(map[string]any)["id"], 0)
+		assert.InDelta(t, 3, data[0].(map[string]any)["id"], 0)
+		assert.InDelta(t, 1, data[1].(map[string]any)["id"], 0)
 	})
 
 	t.Run("includes revoked scores when asked", func(t *testing.T) {

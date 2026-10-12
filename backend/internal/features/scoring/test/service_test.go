@@ -182,19 +182,21 @@ func TestListScoring(t *testing.T) {
 		input      *scoring.ScoringListInput
 		wantIDs    []int64
 		wantTotal  int64
+		wantLimit  int
+		wantOffset int
 		wantCode   int
 		wantNoRows bool
 	}{
 		{
-			name:      "returns only active scores for the match, oldest first",
+			name:      "returns only active scores for the match, newest first",
 			input:     &scoring.ScoringListInput{BoutID: match.String()},
-			wantIDs:   []int64{1, 3},
+			wantIDs:   []int64{3, 1},
 			wantTotal: 2,
 		},
 		{
 			name:      "includes revoked scores when asked",
 			input:     &scoring.ScoringListInput{BoutID: match.String(), IncludeRevoked: true},
-			wantIDs:   []int64{1, 2, 3},
+			wantIDs:   []int64{3, 2, 1},
 			wantTotal: 3,
 		},
 		{
@@ -202,6 +204,23 @@ func TestListScoring(t *testing.T) {
 			input:     &scoring.ScoringListInput{BoutID: otherMatch.String()},
 			wantIDs:   []int64{4},
 			wantTotal: 1,
+		},
+		{
+			name: "pages through scores while total counts every match",
+			input: &scoring.ScoringListInput{
+				BoutID: match.String(), IncludeRevoked: true, Limit: 1, Offset: 1,
+			},
+			wantIDs:    []int64{2},
+			wantTotal:  3,
+			wantLimit:  1,
+			wantOffset: 1,
+		},
+		{
+			name:      "clamps an oversized limit and a negative offset",
+			input:     &scoring.ScoringListInput{BoutID: match.String(), Limit: 1000, Offset: -5},
+			wantIDs:   []int64{3, 1},
+			wantTotal: 2,
+			wantLimit: scoring.ScoringMaxPageSize,
 		},
 		{
 			name:       "returns an empty list for a match with no scores",
@@ -232,6 +251,10 @@ func TestListScoring(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantTotal, out.Body.Total)
+			if tt.wantLimit != 0 {
+				assert.Equal(t, tt.wantLimit, out.Body.Limit)
+				assert.Equal(t, tt.wantOffset, out.Body.Offset)
+			}
 
 			if tt.wantNoRows {
 				assert.NotNil(t, out.Body.Data, "an empty list should serialise as [] rather than null")

@@ -14,7 +14,7 @@ import (
 type ScoringRepository interface {
 	CreateScoring(ctx context.Context, scoring *Scoring) error
 	GetScoringByID(ctx context.Context, id int64) (*Scoring, error)
-	ListScoring(ctx context.Context, filter ScoringListFilter) ([]Scoring, error)
+	ListScoring(ctx context.Context, filter ScoringListFilter) ([]Scoring, int64, error)
 	UpdateScoring(ctx context.Context, scoring *Scoring) error
 	RevokeScoring(ctx context.Context, scoring *Scoring) error
 }
@@ -60,19 +60,28 @@ func (r *scoringRepository) GetScoringByID(ctx context.Context, id int64) (*Scor
 	return &scoring, nil
 }
 
-func (r *scoringRepository) ListScoring(ctx context.Context, filter ScoringListFilter) ([]Scoring, error) {
-	query := r.db.WithContext(ctx).Where("bout_id = ?", filter.BoutID)
+func (r *scoringRepository) ListScoring(ctx context.Context, filter ScoringListFilter) ([]Scoring, int64, error) {
+	query := r.db.WithContext(ctx).Model(&Scoring{}).Where("bout_id = ?", filter.BoutID)
 	if !filter.IncludeRevoked {
 		query = query.Where("revoked_at IS NULL")
 	}
 
-	var scores []Scoring
-	err := query.Order("created_at ASC, id ASC").Find(&scores).Error
-	if err != nil {
-		return nil, fmt.Errorf("select scoring for match %s: %w", filter.BoutID, err)
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count scoring for match %s: %w", filter.BoutID, err)
 	}
 
-	return scores, nil
+	scores := make([]Scoring, 0, filter.Limit)
+	err := query.
+		Order("created_at DESC, id ASC").
+		Limit(filter.Limit).
+		Offset(filter.Offset).
+		Find(&scores).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("select scoring for match %s: %w", filter.BoutID, err)
+	}
+
+	return scores, total, nil
 }
 
 func (r *scoringRepository) UpdateScoring(ctx context.Context, scoring *Scoring) error {

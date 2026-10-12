@@ -10,6 +10,12 @@ import (
 	"boutline/internal/utils"
 )
 
+const (
+	ScoringMinPageSize     = 1
+	ScoringDefaultPageSize = 20
+	ScoringMaxPageSize     = 100
+)
+
 type ScoringService interface {
 	CreateScoring(ctx context.Context, input *ScoringCreateInput) (*ScoringOutput, error)
 	GetScoringByID(ctx context.Context, input *ScoringIDInput) (*ScoringOutput, error)
@@ -78,9 +84,18 @@ func (s *scoringService) ListScoring(
 		return nil, errs.HumaError(err)
 	}
 
-	scores, err := s.repo.ListScoring(ctx, ScoringListFilter{
+	limit := input.Limit
+	if limit <= 0 {
+		limit = ScoringDefaultPageSize
+	}
+	limit = utils.Clamp(limit, ScoringMinPageSize, ScoringMaxPageSize)
+	offset := max(input.Offset, 0)
+
+	scores, total, err := s.repo.ListScoring(ctx, ScoringListFilter{
 		BoutID:         &BoutID,
 		IncludeRevoked: input.IncludeRevoked,
+		Limit:          limit,
+		Offset:         offset,
 	})
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list scoring: %w", err))
@@ -92,8 +107,10 @@ func (s *scoringService) ListScoring(
 	}
 
 	return &ScoringListOutput{Body: ScoringListBody{
-		Data:  data,
-		Total: int64(len(data)),
+		Data:   data,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
 	}}, nil
 }
 

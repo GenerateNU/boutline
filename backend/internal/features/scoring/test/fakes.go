@@ -61,9 +61,9 @@ func (f *FakeScoringRepository) GetScoringByID(_ context.Context, id int64) (*sc
 func (f *FakeScoringRepository) ListScoring(
 	_ context.Context,
 	filter scoring.ScoringListFilter,
-) ([]scoring.Scoring, error) {
+) ([]scoring.Scoring, int64, error) {
 	if f.Err != nil {
-		return nil, f.Err
+		return nil, 0, f.Err
 	}
 
 	matched := make([]scoring.Scoring, 0, len(f.Scores))
@@ -78,7 +78,7 @@ func (f *FakeScoringRepository) ListScoring(
 	}
 
 	slices.SortFunc(matched, func(a, b scoring.Scoring) int {
-		if c := a.CreatedAt.Compare(b.CreatedAt); c != 0 {
+		if c := b.CreatedAt.Compare(a.CreatedAt); c != 0 {
 			return c
 		}
 		switch {
@@ -90,9 +90,10 @@ func (f *FakeScoringRepository) ListScoring(
 		return 0
 	})
 
+	total := int64(len(matched))
 	if filter.Offset > 0 {
 		if filter.Offset >= len(matched) {
-			return []scoring.Scoring{}, nil
+			return []scoring.Scoring{}, total, nil
 		}
 		matched = matched[filter.Offset:]
 	}
@@ -100,7 +101,7 @@ func (f *FakeScoringRepository) ListScoring(
 		matched = matched[:filter.Limit]
 	}
 
-	return matched, nil
+	return matched, total, nil
 }
 
 func (f *FakeScoringRepository) UpdateScoring(_ context.Context, updated *scoring.Scoring) error {
