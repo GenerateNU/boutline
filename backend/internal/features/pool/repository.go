@@ -123,8 +123,10 @@ func (r *poolRepository) UpdatePoolByID(ctx context.Context, id uuid.UUID, updat
 	}
 
 	if result.RowsAffected == 0 {
-		_, err := r.GetPoolByID(ctx, id)
-		return err
+		if _, err := r.GetPoolByID(ctx, id); err != nil {
+			return err
+		}
+		return fmt.Errorf("update pool %s: no row updated", id)
 	}
 
 	return nil
