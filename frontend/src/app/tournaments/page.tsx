@@ -1,4 +1,5 @@
 import { Section } from "@/components/primitives/section";
+import Link from "next/link";
 
 export default function TournamentsPage() {
   return (
@@ -18,9 +19,9 @@ export default function TournamentsPage() {
       <Section title="quick link" className="flex flex-col gap-4">
         <ul className="flex flex-col gap-2">
           <li>
-            <a href="/tournaments/2" className="text-primary underline">
+            <Link href="/tournaments/2" className="text-primary underline">
               some random id
-            </a>
+            </Link>
           </li>
         </ul>
       </Section>

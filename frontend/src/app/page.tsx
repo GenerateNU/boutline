@@ -18,6 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
 import { Section } from "@/components/primitives/section";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -28,17 +29,21 @@ export default function Home() {
           <p>quick links:</p>
           <ul className="flex flex-col gap-2">
             <li>
-              <a href="/tournaments" className="text-primary underline">
-                Tournaments
-              </a>
+              <Link href="/login" className="text-primary underline">
+                login
+              </Link>
             </li>
-           
+            <li>
+              <Link href="/tournaments" className="text-primary underline">
+                Tournaments
+              </Link>
+            </li>
           </ul>
         </div>
       </Section>
 
       <hr />
-      
+
       <Section title="Avatar">
         <div className="flex items-center gap-4">
           <Avatar>
