@@ -27,10 +27,10 @@ function NewTournamentForm() {
   const router = useRouter();
   const [eventCount, setEventCount] = useState(0);
 
-  // No backend yet: submitting discards the form and returns to the dashboard.
+  // No backend yet: submitting discards the form and returns to the tournament list.
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    router.push("/admin");
+    router.push("/admin/tournaments");
   }
 
   return (
