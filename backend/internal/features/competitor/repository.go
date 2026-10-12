@@ -6,9 +6,15 @@ import (
 	"fmt"
 
 	"boutline/internal/errs"
+	"boutline/internal/utils"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+)
+
+const (
+	competitorNameTrigramExpr = "first_name || ' ' || last_name"
+	competitorTeamTrigramExpr = "team"
 )
 
 type CompetitorRepository interface {
@@ -17,6 +23,21 @@ type CompetitorRepository interface {
 	ListCompetitors(ctx context.Context, filter CompetitorListFilter) ([]Competitor, int64, error)
 	UpdateCompetitorByID(ctx context.Context, id uuid.UUID, update CompetitorUpdate) error
 	DeleteCompetitor(ctx context.Context, id uuid.UUID) error
+	SearchCompetitors(ctx context.Context, filter CompetitorSearchFilter) ([]Competitor, int64, error)
+}
+
+type CompetitorSearchField string
+
+const (
+	CompetitorSearchFieldName CompetitorSearchField = "name"
+	CompetitorSearchFieldTeam CompetitorSearchField = "team"
+)
+
+type CompetitorSearchFilter struct {
+	Field  CompetitorSearchField
+	Term   string
+	Limit  int
+	Offset int
 }
 
 type CompetitorUpdate struct {
@@ -122,6 +143,34 @@ func (r *competitorRepository) ListCompetitors(
 		Find(&competitors).Error
 	if err != nil {
 		return nil, 0, fmt.Errorf("select competitors: %w", err)
+	}
+	return competitors, total, nil
+}
+
+func (r *competitorRepository) SearchCompetitors(
+	ctx context.Context,
+	filter CompetitorSearchFilter,
+) ([]Competitor, int64, error) {
+	expr := competitorNameTrigramExpr
+	if filter.Field == CompetitorSearchFieldTeam {
+		expr = competitorTeamTrigramExpr
+	}
+
+	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&Competitor{}), expr, filter.Term)
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count competitor search: %w", err)
+	}
+
+	competitors := make([]Competitor, 0, filter.Limit)
+
+	err := utils.TrigramOrder(query, expr, filter.Term).
+		Limit(filter.Limit).
+		Offset(filter.Offset).
+		Find(&competitors).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("search competitors: %w", err)
 	}
 	return competitors, total, nil
 }

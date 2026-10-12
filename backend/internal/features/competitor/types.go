@@ -72,3 +72,14 @@ type CompetitorListBody struct {
 type CompetitorListOutput struct {
 	Body CompetitorListBody
 }
+
+type CompetitorSearchInput struct {
+	Query  string `query:"q" minLength:"1" maxLength:"120" doc:"Fuzzy match term"`
+	By     string `query:"by" enum:"name,team" default:"name" doc:"Field to match against"`
+	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset int    `query:"offset" default:"0" minimum:"0"`
+}
+
+type CompetitorSearchOutput struct {
+	Body CompetitorListBody
+}

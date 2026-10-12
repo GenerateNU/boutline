@@ -73,6 +73,16 @@ type UserListOutput struct {
 	Body UserListBody
 }
 
+type UserSearchInput struct {
+	Query  string `query:"q" minLength:"1" maxLength:"120" doc:"Fuzzy match against first and last name"`
+	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset int    `query:"offset" default:"0" minimum:"0"`
+}
+
+type UserSearchOutput struct {
+	Body UserListBody
+}
+
 type UserTournamentsInput struct {
 	ID     string `path:"id" format:"uuid" doc:"User ID"`
 	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`

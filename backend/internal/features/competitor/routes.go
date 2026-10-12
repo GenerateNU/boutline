@@ -33,6 +33,14 @@ func RegisterCompetitorService(api huma.API, service CompetitorService) {
 	}, service.ListCompetitors)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "searchCompetitors",
+		Method:      http.MethodGet,
+		Path:        competitorBasePath + "/search",
+		Summary:     "Search competitors by name or team",
+		Tags:        []string{"Competitors"},
+	}, service.SearchCompetitors)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "getCompetitorByID",
 		Method:      http.MethodGet,
 		Path:        competitorBasePath + "/{id}",

@@ -98,6 +98,40 @@ func (f *FakeUserRepository) ListUsers(
 	return matched, total, nil
 }
 
+func (f *FakeUserRepository) SearchUsers(
+	_ context.Context,
+	filter user.UserSearchFilter,
+) ([]user.User, int64, error) {
+	if f.Err != nil {
+		return nil, 0, f.Err
+	}
+
+	term := strings.ToLower(filter.Term)
+	matched := make([]user.User, 0, len(f.Users))
+	for _, candidate := range f.Users {
+		name := strings.ToLower(candidate.FirstName + " " + candidate.LastName)
+		if strings.Contains(name, term) {
+			matched = append(matched, candidate)
+		}
+	}
+
+	slices.SortFunc(matched, func(a, b user.User) int {
+		return strings.Compare(a.Email, b.Email)
+	})
+
+	total := int64(len(matched))
+	if filter.Offset >= len(matched) {
+		return []user.User{}, total, nil
+	}
+
+	matched = matched[filter.Offset:]
+	if filter.Limit < len(matched) {
+		matched = matched[:filter.Limit]
+	}
+
+	return matched, total, nil
+}
+
 func (f *FakeUserRepository) UpdateUserByID(
 	_ context.Context,
 	id uuid.UUID,

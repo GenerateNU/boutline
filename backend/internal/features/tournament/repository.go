@@ -7,16 +7,22 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/utils"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+// tournamentNameTrigramExpr must match the expression indexed by
+// idx_tournaments_name_trgm exactly, or the search falls back to a sequential scan.
+const tournamentNameTrigramExpr = "name"
 
 type TournamentRepository interface {
 	CreateTournament(ctx context.Context, tournament *Tournament) error
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*Tournament, error)
 	GetTournamentByCode(ctx context.Context, code string) (*Tournament, error)
 	ListTournaments(ctx context.Context, filter TournamentListFilter) ([]Tournament, int64, error)
+	SearchTournaments(ctx context.Context, filter TournamentSearchFilter) ([]Tournament, int64, error)
 	UpdateTournamentByID(ctx context.Context, id uuid.UUID, update TournamentUpdate) error
 	TransitionTournamentByID(ctx context.Context, id uuid.UUID, transition TournamentTransition) error
 }
@@ -65,6 +71,12 @@ func (t TournamentTransition) columns() map[string]any {
 // TODO: support timestamp filtering (started_at ranges)
 type TournamentListFilter struct {
 	Status TournamentStatus
+	Limit  int
+	Offset int
+}
+
+type TournamentSearchFilter struct {
+	Term   string
 	Limit  int
 	Offset int
 }
@@ -181,6 +193,29 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 		Find(&tournaments).Error
 	if err != nil {
 		return nil, 0, fmt.Errorf("select tournaments: %w", err)
+	}
+
+	return tournaments, total, nil
+}
+
+func (r *tournamentRepository) SearchTournaments(
+	ctx context.Context,
+	filter TournamentSearchFilter,
+) ([]Tournament, int64, error) {
+	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&Tournament{}), tournamentNameTrigramExpr, filter.Term)
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count tournament search: %w", err)
+	}
+
+	tournaments := make([]Tournament, 0, filter.Limit)
+	err := utils.TrigramOrder(query, tournamentNameTrigramExpr, filter.Term).
+		Limit(filter.Limit).
+		Offset(filter.Offset).
+		Find(&tournaments).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("search tournaments: %w", err)
 	}
 
 	return tournaments, total, nil

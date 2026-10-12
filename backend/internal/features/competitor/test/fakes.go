@@ -88,6 +88,41 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 	return matched, total, nil
 }
 
+func (f *FakeCompetitorRepository) SearchCompetitors(
+	_ context.Context,
+	filter competitor.CompetitorSearchFilter,
+) ([]competitor.Competitor, int64, error) {
+	if f.Err != nil {
+		return nil, 0, f.Err
+	}
+	term := strings.ToLower(filter.Term)
+	matched := make([]competitor.Competitor, 0, len(f.Competitors))
+	for _, candidate := range f.Competitors {
+		var haystack string
+		if filter.Field == competitor.CompetitorSearchFieldTeam {
+			haystack = candidate.Team
+		} else {
+			haystack = candidate.FirstName + " " + candidate.LastName
+		}
+		if strings.Contains(strings.ToLower(haystack), term) {
+			matched = append(matched, candidate)
+		}
+	}
+	slices.SortFunc(matched, func(a, b competitor.Competitor) int {
+		return strings.Compare(a.LastName, b.LastName)
+	})
+
+	total := int64(len(matched))
+	if filter.Offset >= len(matched) {
+		return []competitor.Competitor{}, total, nil
+	}
+	matched = matched[filter.Offset:]
+	if filter.Limit < len(matched) {
+		matched = matched[:filter.Limit]
+	}
+	return matched, total, nil
+}
+
 func (f *FakeCompetitorRepository) UpdateCompetitorByID(
 	_ context.Context,
 	id uuid.UUID,

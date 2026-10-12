@@ -33,6 +33,14 @@ func RegisterUserService(api huma.API, service UserService) {
 	}, service.ListUsers)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "searchUsers",
+		Method:      http.MethodGet,
+		Path:        userBasePath + "/search",
+		Summary:     "Search users by name",
+		Tags:        []string{"Users"},
+	}, service.SearchUsers)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "getUserByID",
 		Method:      http.MethodGet,
 		Path:        userBasePath + "/{id}",
