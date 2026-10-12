@@ -39,11 +39,8 @@ func run() error {
 		&tournamentuser.TournamentUser{},
 		&user.User{},
 		&competitor.Competitor{},
-<<<<<<< HEAD
 		&directelimination.DirectElimination{},
-=======
 		&scoring.Scoring{},
->>>>>>> 3f1dc8327ad0c6d41872000c01e5929bb62cdc8a
 	)
 	if err != nil {
 		return fmt.Errorf("load gorm schema: %w", err)
