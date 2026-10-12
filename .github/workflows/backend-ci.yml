@@ -149,6 +149,16 @@ jobs:
             exit 1
           fi
 
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      # DB_* defaults in internal/config already match this job's postgres
+      # service (localhost:5432, db boutline, user/password postgres,
+      # sslmode disable), so no env is needed beyond what Go test picks up.
+      - run: go test ./internal/tests/... -race
+
   image:
     name: Docker image
     runs-on: ubuntu-latest

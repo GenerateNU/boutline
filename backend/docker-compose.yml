@@ -19,6 +19,30 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # Runs the integration suite (internal/tests) against the real, migrated,
+  # seeded db/redis on this network — the same database `make dev-seed` loads,
+  # unreachable directly from the host for the same reason as db/redis below.
+  # `target: build` stops at the golang stage of ./Dockerfile instead of the
+  # final distroless one, so the toolchain and source are still there to test.
+  test:
+    build:
+      context: .
+      target: build
+    environment:
+      DB_HOST: db
+      REDIS_HOST: redis
+    # No -race here: the build stage is Alpine/musl with no C toolchain
+    # installed (it's CGO_ENABLED=0 for the shipped binary), and -race needs
+    # cgo. CI runs the same package with -race on a normal Go toolchain.
+    command: ["go", "test", "./internal/tests/..."]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
   # Applies pending migrations once, between the database being ready and the
   # api starting. Generate them first with `make migrate-new NAME=...`.
   migrate:

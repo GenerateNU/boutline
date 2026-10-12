@@ -36,6 +36,7 @@ generated spec is at `/openapi.json` and Swagger UI at `/docs`.
 make test              # go test ./... -race
 make test-unit         # everything except internal/tests
 make test-integration  # internal/tests only
+make test-integration-db  # internal/tests against a real, seeded Postgres — run dev-up and dev-seed first
 make test-cover        # every package, with a coverage summary
 make vet
 make lint              # golangci-lint

@@ -34,6 +34,12 @@ test-unit:
 test-integration:
 	go test ./internal/tests/... -race
 
+# Runs the integration suite against a real, migrated, seeded Postgres instead
+# of the fakes test-integration uses. Needs dev-up and dev-seed first; the test
+# service builds and runs on the same compose network as the db it reads.
+test-integration-db:
+	$(COMPOSE) run --rm --build test
+
 # Write the next versioned migration by diffing the gorm models against
 # ./migrations. Needs the atlas CLI and Docker, and should be run before
 # dev-up so the stack has a schema to apply.
