@@ -1,4 +1,4 @@
-import { Ellipsis } from "lucide-react";
+import { Ellipsis, Settings, Shapes } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
@@ -19,6 +19,24 @@ import {
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
 import { Section } from "@/components/primitives/section";
+
+import { NavigationBar } from "@/components/primitives/navigation-bar";
+import { NavigationDrawer } from "@/components/primitives/navigation-drawer";
+import { NavigationItem } from "@/components/primitives/navigation-item";
+const barItems = Array.from({ length: 5 }, (_, index) => ({
+  id: `bar-${index}`,
+  label: "Label",
+  icon: <Shapes />,
+}));
+
+const drawerItems = Array.from({ length: 7 }, (_, index) => ({
+  id: `drawer-${index}`,
+  label: "Label",
+  icon: <Shapes />,
+  badge: "100+",
+}));
+
+const drawerFooter = [{ id: "settings", label: "Settings", icon: <Settings /> }];
 
 export default function Home() {
   return (
@@ -154,6 +172,29 @@ export default function Home() {
 
       <Section title="Date picker">
         <DatePicker />
+      </Section>
+      
+      <Section title="Navigation item">
+        <div className="flex items-center gap-4">
+          <NavigationItem icon={<Shapes />} label="Label" />
+          <NavigationItem icon={<Shapes />} aria-label="Label" />
+          <NavigationItem icon={<Shapes />} label="Label" selected />
+          <NavigationItem icon={<Shapes />} aria-label="Label" selected />
+        </div>
+      </Section>
+
+      <Section title="Navigation bar">
+        <NavigationBar items={barItems} />
+      </Section>
+
+      <Section title="Navigation drawer">
+        <NavigationDrawer
+          title="Title"
+          items={drawerItems}
+          footerItems={drawerFooter}
+          userName="User name"
+          className="h-[950px]"
+        />
       </Section>
     </main>
   );
