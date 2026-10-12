@@ -108,6 +108,13 @@ function EventFields({ index }: EventFieldsProps) {
         <Checkbox name={name("qualifier")} />
         Qualifier
       </label>
+      <label className="flex flex-col gap-2 text-sm">
+        Referees
+        <Input
+          name={name("referees")}
+          placeholder="Add referees by name or email, separated by commas"
+        />
+      </label>
     </fieldset>
   );
 }
