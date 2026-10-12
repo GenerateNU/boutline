@@ -1,0 +1,88 @@
+# boutline's production stack on the shared droplet: Postgres, a one-shot
+# migration, and the backend -- the same shape as backend/docker-compose.yml.
+#
+# One of these per project, each in its own directory under /opt. Projects are
+# separate compose projects but share the `edge` network and Caddy from the
+# droplet's shared stack (see deploy/README.md).
+#
+# Run with `--env-file backend.env` so DB_PASSWORD there is also what Postgres
+# is initialised with. The data lives in the pgdata volume, which nothing backs
+# up: `docker compose down --volumes` deletes it.
+name: boutline
+
+x-database: &database
+  DB_HOST: db
+  DB_PORT: "5432"
+  DB_NAME: boutline
+  DB_USER: postgres
+  DB_SSL_MODE: disable
+
+services:
+  backend:
+    # Set by the deploy workflow to an immutable GHCR tag, so a rollback is
+    # just re-running the deploy with an older tag.
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE}
+    container_name: boutline-backend
+    restart: unless-stopped
+    env_file:
+      - backend.env
+    environment:
+      <<: *database
+      # Reported by /healthcheck, which is how the deploy confirms the new
+      # container, not the old one, is the one answering.
+      APP_VERSION: ${APP_VERSION:?set APP_VERSION}
+    networks:
+      - edge
+      - internal
+    labels:
+      # Caddy picks these up from the Docker socket and provisions TLS for the
+      # hostname automatically, as long as DNS already points here.
+      caddy: ${API_DOMAIN:?set API_DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 8000}}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Run on its own by the deploy (`docker compose run --rm migrate`) before
+  # `up` touches the backend. As a depends_on of the backend instead, compose
+  # stops the old backend first, so a failed migration would mean downtime.
+  # The profile keeps a plain `up` from starting it.
+  migrate:
+    image: ${MIGRATE_IMAGE:?set MIGRATE_IMAGE}
+    profiles: [migrate]
+    environment:
+      DATABASE_URL: postgres://postgres:${DB_PASSWORD:?set DB_PASSWORD in backend.env}@db:5432/boutline?sslmode=disable
+    networks:
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Only on `internal`, never `edge`: preview containers join `edge`, and none
+  # of them should be able to reach production data.
+  db:
+    image: postgres:17.11-alpine
+    container_name: boutline-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: boutline
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in backend.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d boutline"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+networks:
+  edge:
+    name: edge
+    external: true
+  internal:
+
+volumes:
+  pgdata:
