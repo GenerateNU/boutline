@@ -216,3 +216,27 @@ func (f *FakeTournamentLookup) GetTournamentByID(_ context.Context, id uuid.UUID
 
 	return &found, nil
 }
+
+var _ bout.PoolLookup = (*FakePoolLookup)(nil)
+
+type FakePoolLookup struct {
+	Tournaments map[uuid.UUID]uuid.UUID // pool id to its tournament
+	Err         error
+}
+
+func NewFakePoolLookup(tournamentsByPool map[uuid.UUID]uuid.UUID) *FakePoolLookup {
+	return &FakePoolLookup{Tournaments: tournamentsByPool}
+}
+
+func (f *FakePoolLookup) GetPoolTournamentID(_ context.Context, id uuid.UUID) (uuid.UUID, error) {
+	if f.Err != nil {
+		return uuid.Nil, f.Err
+	}
+
+	tournamentID, ok := f.Tournaments[id]
+	if !ok {
+		return uuid.Nil, fmt.Errorf("select pool %s tournament: %w", id, errs.ErrNotFound)
+	}
+
+	return tournamentID, nil
+}

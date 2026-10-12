@@ -25,6 +25,12 @@ type TournamentLookup interface {
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*tournament.Tournament, error)
 }
 
+// PoolLookup is the slice of pool.PoolRepository the bout service needs;
+// pool.PoolRepository satisfies it.
+type PoolLookup interface {
+	GetPoolTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
+}
+
 type BoutService interface {
 	CreateBout(ctx context.Context, input *BoutCreateInput) (*BoutOutput, error)
 	GetBoutByID(ctx context.Context, input *BoutIDInput) (*BoutOutput, error)
@@ -38,10 +44,11 @@ type BoutService interface {
 type boutService struct {
 	repo        BoutRepository
 	tournaments TournamentLookup
+	pools       PoolLookup
 }
 
-func NewBoutService(repo BoutRepository, tournaments TournamentLookup) BoutService {
-	return &boutService{repo: repo, tournaments: tournaments}
+func NewBoutService(repo BoutRepository, tournaments TournamentLookup, pools PoolLookup) BoutService {
+	return &boutService{repo: repo, tournaments: tournaments, pools: pools}
 }
 
 func (s *boutService) CreateBout(ctx context.Context, input *BoutCreateInput) (*BoutOutput, error) {
@@ -85,6 +92,9 @@ func (s *boutService) CreateBout(ctx context.Context, input *BoutCreateInput) (*
 		return nil, errs.HumaError(errs.Public(
 			"bouts can only be created in an active tournament", errs.ErrConflict))
 	}
+	if err := s.validatePool(ctx, poolID, tournamentID); err != nil {
+		return nil, errs.HumaError(err)
+	}
 
 	bout := &Bout{
 		TournamentID:     tournamentID,
@@ -118,6 +128,27 @@ func validateBoutFields(competitor1ID, competitor2ID uuid.UUID, pointsToWin int,
 	}
 	if groupNumber < 0 {
 		return errs.Public("group_number must not be negative", errs.ErrInvalidInput)
+	}
+
+	return nil
+}
+
+// A pool reaches its tournament through its stage and event, so the database
+// cannot enforce that a bout and its pool share a tournament.
+func (s *boutService) validatePool(ctx context.Context, poolID *uuid.UUID, tournamentID uuid.UUID) error {
+	if poolID == nil {
+		return nil
+	}
+
+	poolTournamentID, err := s.pools.GetPoolTournamentID(ctx, *poolID)
+	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			return errs.Public("pool_id must reference an existing pool", errs.ErrInvalidInput)
+		}
+		return fmt.Errorf("get pool tournament: %w", err)
+	}
+	if poolTournamentID != tournamentID {
+		return errs.Public("pool_id must reference a pool in the bout's tournament", errs.ErrInvalidInput)
 	}
 
 	return nil
@@ -230,6 +261,9 @@ func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body Bou
 	if update.PoolID, err = parseOptionalUUID(body.PoolID, "pool_id"); err != nil {
 		return update, err
 	}
+	if err := s.validateUpdatedPool(ctx, id, update.PoolID); err != nil {
+		return update, err
+	}
 
 	if update.Competitor1ID, err = parseOptionalUUID(body.Competitor1ID, "competitor_1_id"); err != nil {
 		return update, err
@@ -270,6 +304,19 @@ func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body Bou
 	}
 
 	return update, nil
+}
+
+func (s *boutService) validateUpdatedPool(ctx context.Context, id uuid.UUID, poolID *uuid.UUID) error {
+	if poolID == nil {
+		return nil
+	}
+
+	stored, err := s.repo.GetBoutByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	return s.validatePool(ctx, poolID, stored.TournamentID)
 }
 
 // When only one competitor is supplied, the other side of the pair comes from

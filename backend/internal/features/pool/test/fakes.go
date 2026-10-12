@@ -16,9 +16,10 @@ import (
 var _ pool.PoolRepository = (*FakePoolRepository)(nil)
 
 type FakePoolRepository struct {
-	Pools     map[uuid.UUID]pool.Pool
-	WithBouts map[uuid.UUID]bool // pools the real database would refuse to delete
-	Err       error              // when set, every method fails with it
+	Pools       map[uuid.UUID]pool.Pool
+	WithBouts   map[uuid.UUID]bool      // pools the real database would refuse to delete
+	Tournaments map[uuid.UUID]uuid.UUID // pool id to the tournament its stage's event belongs to
+	Err         error                   // when set, every method fails with it
 }
 
 func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
@@ -27,7 +28,7 @@ func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
 		pools[seeded.ID] = seeded
 	}
 
-	return &FakePoolRepository{Pools: pools, WithBouts: map[uuid.UUID]bool{}}
+	return &FakePoolRepository{Pools: pools, WithBouts: map[uuid.UUID]bool{}, Tournaments: map[uuid.UUID]uuid.UUID{}}
 }
 
 func (f *FakePoolRepository) CreatePool(_ context.Context, toCreate *pool.Pool) error {
@@ -54,6 +55,19 @@ func (f *FakePoolRepository) GetPoolByID(_ context.Context, id uuid.UUID) (*pool
 	}
 
 	return &found, nil
+}
+
+func (f *FakePoolRepository) GetPoolTournamentID(_ context.Context, id uuid.UUID) (uuid.UUID, error) {
+	if f.Err != nil {
+		return uuid.Nil, f.Err
+	}
+
+	tournamentID, ok := f.Tournaments[id]
+	if !ok {
+		return uuid.Nil, fmt.Errorf("select pool %s tournament: %w", id, errs.ErrNotFound)
+	}
+
+	return tournamentID, nil
 }
 
 func (f *FakePoolRepository) ListPools(

@@ -3,6 +3,7 @@ package bout
 import (
 	"net/http"
 
+	"boutline/internal/features/pool"
 	"boutline/internal/features/tournament"
 	"boutline/internal/types"
 
@@ -12,7 +13,11 @@ import (
 const boutBasePath = "/api/v1/bouts"
 
 func RegisterBoutRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterBoutService(api, NewBoutService(NewBoutRepository(params.DB), tournament.NewTournamentRepository(params.DB)))
+	RegisterBoutService(api, NewBoutService(
+		NewBoutRepository(params.DB),
+		tournament.NewTournamentRepository(params.DB),
+		pool.NewPoolRepository(params.DB),
+	))
 }
 
 func RegisterBoutService(api huma.API, service BoutService) {
