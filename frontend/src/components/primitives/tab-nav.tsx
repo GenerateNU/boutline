@@ -3,30 +3,30 @@
 import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
 
-// `segment` is the child directory under tournaments/[id]; null is the [id] page itself.
-const tabs = [
-  { label: "Overview", segment: null },
-  { label: "Fencers", segment: "fencers" },
-  { label: "Clubs", segment: "clubs" },
-  { label: "Events", segment: "events" },
-] as const;
-
-type TournamentTabsProps = {
-  id: string;
+// `segment` is a child directory of the layout rendering this nav; null is that layout's own page.
+type Tab = {
+  label: string;
+  segment: string | null;
 };
 
-function TournamentTabs({ id }: TournamentTabsProps) {
+type TabNavProps = {
+  label: string;
+  basePath: string;
+  tabs: Tab[];
+};
+
+function TabNav({ label, basePath, tabs }: TabNavProps) {
   const activeSegment = useSelectedLayoutSegment();
 
   return (
     <nav
-      aria-label="Tournament sections"
+      aria-label={label}
       className="flex overflow-hidden rounded-full border border-foreground"
     >
       {tabs.map(({ label, segment }) => (
         <Link
           key={label}
-          href={segment ? `/tournaments/${id}/${segment}` : `/tournaments/${id}`}
+          href={segment ? `${basePath}/${segment}` : basePath}
           aria-current={segment === activeSegment ? "page" : undefined}
           className="flex-1 border-l border-foreground px-5 py-2 text-center text-sm whitespace-nowrap outline-none transition-colors first:border-l-0 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset aria-[current=page]:text-selected"
         >
@@ -37,4 +37,4 @@ function TournamentTabs({ id }: TournamentTabsProps) {
   );
 }
 
-export { TournamentTabs };
+export { TabNav };
