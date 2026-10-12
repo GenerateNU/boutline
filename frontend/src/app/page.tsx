@@ -2,8 +2,17 @@ import { Ellipsis } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardHeader,
+  CardMedia,
+  CardTitle,
+} from "@/components/primitives/card";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Chip } from "@/components/primitives/chip";
+import { CircularProgress } from "@/components/primitives/circular-progress";
 import { Radio, RadioItem } from "@/components/primitives/radio";
 import { SegmentItem } from "@/components/primitives/segment-item";
 import {
@@ -11,12 +20,24 @@ import {
   SegmentedButtonItem,
 } from "@/components/primitives/segmented-button";
 import { Slider } from "@/components/primitives/slider";
+import { Tabs, TabsList, TabsTrigger } from "@/components/primitives/tabs";
+import { TextField } from "@/components/primitives/text-field";
+import {
+  Toast,
+  ToastAction,
+  ToastClose,
+  ToastDescription,
+  ToastFooter,
+  ToastProvider,
+  ToastViewport,
+} from "@/components/primitives/toast";
 import { Toggle } from "@/components/primitives/toggle";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
+import { LinearProgress } from "@/components/primitives/linear-progress";
 import { Section } from "@/components/primitives/section";
 import Link from "next/link";
 
@@ -170,6 +191,103 @@ export default function Home() {
               </p>
             </TooltipContent>
           </Tooltip>
+        </div>
+      </Section>
+
+      <Section title="Linear progress">
+        <div className="flex flex-col gap-6">
+          {[25, 50, 75, 100].map((value) => (
+            <LinearProgress key={value} value={value} aria-label={`${value}%`} />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Circular progress">
+        <div className="flex items-center gap-4">
+          {[25, 50, 75, 100].map((value) => (
+            <CircularProgress
+              key={value}
+              value={value}
+              aria-label={`${value}%`}
+            />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Card">
+        <div className="flex flex-col gap-4">
+          <Card className="w-64">
+            <CardMedia />
+            <CardHeader>
+              <CardTitle>Header</CardTitle>
+              <CardDescription>Subhead</CardDescription>
+              <CardAction>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="More"
+                  className="bg-background"
+                >
+                  <Ellipsis />
+                </Button>
+              </CardAction>
+            </CardHeader>
+          </Card>
+          <Card orientation="horizontal">
+            <CardMedia />
+            <CardHeader>
+              <CardTitle>Header</CardTitle>
+              <CardDescription>Subhead</CardDescription>
+              <CardAction>
+                <Button variant="outline" size="icon" aria-label="More">
+                  <Ellipsis />
+                </Button>
+              </CardAction>
+            </CardHeader>
+          </Card>
+        </div>
+      </Section>
+
+      <Section title="Toast">
+        <ToastProvider duration={Infinity}>
+          <Toast defaultOpen stacked>
+            <ToastDescription>
+              Toasts provide brief messages about app processes at the bottom
+              of the screen
+            </ToastDescription>
+            <ToastFooter>
+              <ToastAction altText="Label">Label</ToastAction>
+              <ToastClose />
+            </ToastFooter>
+          </Toast>
+          <ToastViewport className="static max-w-none translate-x-0 p-0" />
+        </ToastProvider>
+      </Section>
+      <Section title="Tabs">
+        <div className="flex flex-col gap-8">
+          {(["stacked", "line"] as const).map((variant) => (
+            <Tabs key={variant} defaultValue="one">
+              <TabsList variant={variant}>
+                {["one", "two", "three"].map((value) => (
+                  <TabsTrigger key={value} value={value} icon={<Ellipsis />}>
+                    Tab
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Textfield">
+        <div className="flex flex-col gap-6">
+          <TextField
+            label="Label"
+            placeholder="Placeholder text"
+            supportingText="Supporting text"
+            leading={<Ellipsis aria-hidden />}
+            trailing={<Ellipsis aria-hidden />}
+          />
         </div>
       </Section>
     </main>
