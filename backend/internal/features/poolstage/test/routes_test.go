@@ -213,6 +213,39 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 	})
 }
 
+func TestLifecycleEndpoints(t *testing.T) {
+	t.Parallel()
+
+	stored := seededPoolStage(poolstage.PoolStageStatusUpcoming, uuid.New())
+	repo := NewFakePoolStageRepository(stored)
+	repo.PoolCounts[stored.ID] = PoolCount{Total: 2, Open: 2}
+	api := newTestAPI(t, repo, NewFakeEventLookup())
+	base := "/api/v1/pool-stages/" + stored.ID.String()
+
+	started := api.Post(base + "/start")
+	require.Equal(t, http.StatusOK, started.Code, "body: %s", started.Body)
+	startedBody := decodeBody(t, started.Body.Bytes())
+	assert.Equal(t, "active", startedBody["status"])
+	assert.NotNil(t, startedBody["started_at"])
+
+	assert.Equal(t, http.StatusConflict, api.Post(base+"/start").Code)
+
+	blocked := api.Post(base + "/end")
+	require.Equal(t, http.StatusConflict, blocked.Code, "body: %s", blocked.Body)
+	assert.Contains(t, blocked.Body.String(), "every pool must end before the pool stage can end")
+
+	repo.PoolCounts[stored.ID] = PoolCount{Total: 2}
+
+	ended := api.Post(base + "/end")
+	require.Equal(t, http.StatusOK, ended.Code, "body: %s", ended.Body)
+	endedBody := decodeBody(t, ended.Body.Bytes())
+	assert.Equal(t, "ended", endedBody["status"])
+	assert.NotNil(t, endedBody["completed_at"])
+
+	assert.Equal(t, http.StatusConflict, api.Post(base+"/end").Code)
+	assert.Equal(t, http.StatusConflict, api.Post(base+"/start").Code)
+}
+
 func TestDeleteEndpoint(t *testing.T) {
 	t.Parallel()
 

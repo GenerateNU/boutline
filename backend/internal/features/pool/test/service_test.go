@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
 	"boutline/internal/features/pool"
 	"boutline/internal/features/poolstage"
@@ -330,4 +331,206 @@ func TestPoolRepositoryFailureIsNotAClientError(t *testing.T) {
 	code, detail := apiError(t, err)
 	assert.Equal(t, http.StatusInternalServerError, code)
 	assert.Equal(t, "internal server error", detail)
+}
+
+func TestStartPool(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		arrange    func(p *pool.Pool, stage *poolstage.PoolStage)
+		stageErr   error
+		repoErr    error
+		id         string
+		wantCode   int
+		wantDetail string
+	}{
+		{name: "starts a pool with a referee in an active stage"},
+		{
+			name:       "rejects a bad id",
+			id:         "not-a-uuid",
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "id must be a valid uuid",
+		},
+		{
+			name:     "reports an unknown id as not found",
+			id:       uuid.New().String(),
+			wantCode: http.StatusNotFound,
+		},
+		{
+			name: "refuses a pool that already started",
+			arrange: func(p *pool.Pool, _ *poolstage.PoolStage) {
+				p.StartedAt = ptr(time.Now().Add(-time.Hour))
+			},
+			wantCode:   http.StatusConflict,
+			wantDetail: "this pool has already started",
+		},
+		{
+			name:       "refuses a pool without a referee",
+			arrange:    func(p *pool.Pool, _ *poolstage.PoolStage) { p.RefereeID = nil },
+			wantCode:   http.StatusConflict,
+			wantDetail: "a referee must be assigned before the pool can start",
+		},
+		{
+			name:       "refuses an upcoming pool stage",
+			arrange:    func(_ *pool.Pool, s *poolstage.PoolStage) { s.Status = poolstage.PoolStageStatusUpcoming },
+			wantCode:   http.StatusConflict,
+			wantDetail: "pools can only be started in an active pool stage",
+		},
+		{
+			name:       "refuses an ended pool stage",
+			arrange:    func(_ *pool.Pool, s *poolstage.PoolStage) { s.Status = poolstage.PoolStageStatusEnded },
+			wantCode:   http.StatusConflict,
+			wantDetail: "pools can only be started in an active pool stage",
+		},
+		{
+			name:       "reports a pool stage lookup failure as a server error",
+			stageErr:   errors.New("connection refused"),
+			wantCode:   http.StatusInternalServerError,
+			wantDetail: "internal server error",
+		},
+		{
+			name:       "reports a repository failure as a server error",
+			repoErr:    errors.New("connection refused"),
+			wantCode:   http.StatusInternalServerError,
+			wantDetail: "internal server error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			stage := seededPoolStage()
+			stage.Status = poolstage.PoolStageStatusActive
+			stored := seededPool(stage.ID)
+			stored.RefereeID = ptr(uuid.New())
+			if tt.arrange != nil {
+				tt.arrange(&stored, &stage)
+			}
+
+			repo := NewFakePoolRepository(stored)
+			repo.Err = tt.repoErr
+			lookup := NewFakePoolStageLookup(stage)
+			lookup.Err = tt.stageErr
+
+			id := stored.ID.String()
+			if tt.id != "" {
+				id = tt.id
+			}
+
+			out, err := pool.NewPoolService(repo, lookup).StartPool(t.Context(), &pool.PoolIDInput{ID: id})
+
+			if tt.wantCode != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+				if tt.wantDetail != "" {
+					assert.Equal(t, tt.wantDetail, detail)
+				}
+				assert.Nil(t, out)
+				assert.Equal(t, stored.StartedAt, repo.Pools[stored.ID].StartedAt)
+
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, out.Body.StartedAt)
+			assert.Nil(t, out.Body.CompletedAt)
+			assert.Equal(t, repo.Pools[stored.ID].StartedAt, out.Body.StartedAt)
+		})
+	}
+}
+
+func TestEndPool(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		arrange    func(p *pool.Pool)
+		openBouts  int64
+		repoErr    error
+		id         string
+		wantCode   int
+		wantDetail string
+	}{
+		{name: "ends a started pool whose bouts have all ended"},
+		{
+			name:       "rejects a bad id",
+			id:         "not-a-uuid",
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "id must be a valid uuid",
+		},
+		{
+			name:     "reports an unknown id as not found",
+			id:       uuid.New().String(),
+			wantCode: http.StatusNotFound,
+		},
+		{
+			name:       "refuses a pool that never started",
+			arrange:    func(p *pool.Pool) { p.StartedAt = nil },
+			wantCode:   http.StatusConflict,
+			wantDetail: "a pool must start before it can end",
+		},
+		{
+			name: "refuses a pool that already ended",
+			arrange: func(p *pool.Pool) {
+				p.CompletedAt = ptr(time.Now().Add(-time.Minute))
+			},
+			wantCode:   http.StatusConflict,
+			wantDetail: "this pool has already ended",
+		},
+		{
+			name:       "refuses a pool with bouts still open",
+			openBouts:  2,
+			wantCode:   http.StatusConflict,
+			wantDetail: "every bout in the pool must end before the pool can end",
+		},
+		{
+			name:       "reports a repository failure as a server error",
+			repoErr:    errors.New("connection refused"),
+			wantCode:   http.StatusInternalServerError,
+			wantDetail: "internal server error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			stored := seededPool(uuid.New())
+			stored.StartedAt = ptr(time.Now().Add(-time.Hour))
+			if tt.arrange != nil {
+				tt.arrange(&stored)
+			}
+
+			repo := NewFakePoolRepository(stored)
+			repo.OpenBouts[stored.ID] = tt.openBouts
+			repo.Err = tt.repoErr
+
+			id := stored.ID.String()
+			if tt.id != "" {
+				id = tt.id
+			}
+
+			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
+				EndPool(t.Context(), &pool.PoolIDInput{ID: id})
+
+			if tt.wantCode != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+				if tt.wantDetail != "" {
+					assert.Equal(t, tt.wantDetail, detail)
+				}
+				assert.Nil(t, out)
+				assert.Equal(t, stored.CompletedAt, repo.Pools[stored.ID].CompletedAt)
+
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, out.Body.CompletedAt)
+			assert.Equal(t, stored.StartedAt, out.Body.StartedAt)
+			assert.Equal(t, repo.Pools[stored.ID].CompletedAt, out.Body.CompletedAt)
+		})
+	}
 }
