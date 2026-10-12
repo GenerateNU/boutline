@@ -9,14 +9,16 @@ import (
 	"syscall"
 	"time"
 
+	"boutline/internal/cache"
 	"boutline/internal/config"
 	"boutline/internal/database"
 	"boutline/internal/server"
 )
 
 const (
-	shutdownTimeout  = 10 * time.Second
-	dbConnectTimeout = 10 * time.Second
+	shutdownTimeout     = 10 * time.Second
+	dbConnectTimeout    = 10 * time.Second
+	redisConnectTimeout = 10 * time.Second
 )
 
 func main() {
@@ -47,7 +49,22 @@ func run() error {
 
 	slog.Info("database connected", "host", cfg.Database.Host, "database", cfg.Database.Name)
 
-	app := server.CreateApp(cfg, db)
+	redisConnectCtx, cancelRedisConnect := context.WithTimeout(context.Background(), redisConnectTimeout)
+	defer cancelRedisConnect()
+
+	redisClient, err := cache.Connect(redisConnectCtx, cfg.Redis)
+	if err != nil {
+		return fmt.Errorf("connect redis: %w", err)
+	}
+	defer func() {
+		if err := cache.Close(redisClient); err != nil {
+			slog.Error("close redis", "err", err)
+		}
+	}()
+
+	slog.Info("redis connected", "host", cfg.Redis.Host)
+
+	app := server.CreateApp(cfg, db, redisClient)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

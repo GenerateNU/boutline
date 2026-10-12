@@ -40,7 +40,7 @@ func decodeDirectEliminationBody(t *testing.T, raw []byte) map[string]any {
 
 func seededDirectElimination(
 	eventID uuid.UUID,
-	status directelimination.Status,
+	status directelimination.DirectEliminationStatus,
 ) directelimination.DirectElimination {
 	now := time.Now()
 
@@ -120,7 +120,7 @@ func TestDirectEliminationCreateEndpoint(t *testing.T) {
 func TestDirectEliminationGetByIDEndpoint(t *testing.T) {
 	t.Parallel()
 
-	stored := seededDirectElimination(uuid.New(), directelimination.StatusUpcoming)
+	stored := seededDirectElimination(uuid.New(), directelimination.DirectEliminationStatusUpcoming)
 
 	tests := []struct {
 		name       string
@@ -149,9 +149,9 @@ func TestDirectEliminationListEndpoint(t *testing.T) {
 	eventA := uuid.New()
 	eventB := uuid.New()
 	seed := []directelimination.DirectElimination{
-		seededDirectElimination(eventA, directelimination.StatusUpcoming),
-		seededDirectElimination(eventA, directelimination.StatusActive),
-		seededDirectElimination(eventB, directelimination.StatusActive),
+		seededDirectElimination(eventA, directelimination.DirectEliminationStatusUpcoming),
+		seededDirectElimination(eventA, directelimination.DirectEliminationStatusActive),
+		seededDirectElimination(eventB, directelimination.DirectEliminationStatusActive),
 	}
 
 	tests := []struct {
@@ -169,7 +169,7 @@ func TestDirectEliminationListEndpoint(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantTotal:  1,
 		},
-		{name: "returns an empty list when nothing matches", query: "?status=end", wantStatus: http.StatusOK, wantTotal: 0},
+		{name: "returns an empty list when nothing matches", query: "?status=ended", wantStatus: http.StatusOK, wantTotal: 0},
 		{name: "rejects a status outside the enum", query: "?status=nope", wantStatus: http.StatusUnprocessableEntity},
 		{name: "rejects an event_id that is not a uuid", query: "?event_id=nope", wantStatus: http.StatusUnprocessableEntity},
 	}
@@ -196,7 +196,7 @@ func TestDirectEliminationUpdateEndpoint(t *testing.T) {
 
 	oldEvent := uuid.New()
 	newEvent := uuid.New().String()
-	stored := seededDirectElimination(oldEvent, directelimination.StatusUpcoming)
+	stored := seededDirectElimination(oldEvent, directelimination.DirectEliminationStatusUpcoming)
 
 	tests := []struct {
 		name       string
@@ -221,7 +221,7 @@ func TestDirectEliminationUpdateEndpoint(t *testing.T) {
 		{
 			name:       "refuses to set status through a patch",
 			path:       stored.ID.String(),
-			body:       map[string]any{"status": "end"},
+			body:       map[string]any{"status": "ended"},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
@@ -267,7 +267,7 @@ func TestDirectEliminationDeleteEndpoint(t *testing.T) {
 	t.Run("deletes the round and then reports it as not found", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededDirectElimination(uuid.New(), directelimination.StatusUpcoming)
+		stored := seededDirectElimination(uuid.New(), directelimination.DirectEliminationStatusUpcoming)
 		api := newDirectEliminationTestAPI(t, stored)
 		path := directEliminationsPath + "/" + stored.ID.String()
 
@@ -298,7 +298,7 @@ func TestDirectEliminationDeleteEndpoint(t *testing.T) {
 func TestDirectEliminationLifecycleEndpoints(t *testing.T) {
 	t.Parallel()
 
-	stored := seededDirectElimination(uuid.New(), directelimination.StatusUpcoming)
+	stored := seededDirectElimination(uuid.New(), directelimination.DirectEliminationStatusUpcoming)
 	api := newDirectEliminationTestAPI(t, stored)
 	base := directEliminationsPath + "/" + stored.ID.String()
 
@@ -329,7 +329,7 @@ func TestDirectEliminationLifecycleEndpoints(t *testing.T) {
 	require.Equal(t, http.StatusOK, completed.Code, "body: %s", completed.Body)
 
 	completedBody := decodeDirectEliminationBody(t, completed.Body.Bytes())
-	assert.Equal(t, "end", completedBody["status"])
+	assert.Equal(t, "ended", completedBody["status"])
 	assert.NotNil(t, completedBody["started_at"])
 	assert.NotNil(t, completedBody["completed_at"])
 

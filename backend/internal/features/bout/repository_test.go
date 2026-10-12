@@ -24,7 +24,7 @@ func TestTranslateBoutWriteError(t *testing.T) {
 			name:       "foreign key violation becomes an invalid input",
 			err:        fmt.Errorf("%w: boom", gorm.ErrForeignKeyViolated),
 			wantStatus: http.StatusBadRequest,
-			wantMsg:    "tournament_id or referee_id does not reference an existing record",
+			wantMsg:    "tournament_id, referee_id, or a competitor id does not reference an existing record",
 		},
 		{
 			name:       "check constraint violation becomes an invalid input",

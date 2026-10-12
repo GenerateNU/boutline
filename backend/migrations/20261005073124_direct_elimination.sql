@@ -8,7 +8,7 @@ CREATE TABLE "direct_eliminations" (
   "created_at" timestamptz NULL,
   "updated_at" timestamptz NULL,
   PRIMARY KEY ("id"),
-  CONSTRAINT "chk_direct_eliminations_status" CHECK (status = ANY (ARRAY['upcoming'::text, 'active'::text, 'end'::text]))
+  CONSTRAINT "chk_direct_eliminations_status" CHECK (status = ANY (ARRAY['upcoming'::text, 'active'::text, 'ended'::text]))
 );
 -- Create index "idx_direct_eliminations_event_id" to table: "direct_eliminations"
 CREATE INDEX "idx_direct_eliminations_event_id" ON "direct_eliminations" ("event_id");

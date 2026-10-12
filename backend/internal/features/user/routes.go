@@ -54,7 +54,16 @@ func RegisterUserService(api huma.API, service UserService) {
 		Method:        http.MethodDelete,
 		Path:          userBasePath + "/{id}",
 		Summary:       "Delete a user",
+		Description:   "A user who created a tournament or referees a bout cannot be deleted.",
 		Tags:          []string{"Users"},
 		DefaultStatus: http.StatusNoContent,
 	}, service.DeleteUser)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listTournamentsByUser",
+		Method:      http.MethodGet,
+		Path:        userBasePath + "/{id}/tournaments",
+		Summary:     "List the tournaments a user belongs to",
+		Tags:        []string{"Users"},
+	}, service.ListTournamentsByUser)
 }

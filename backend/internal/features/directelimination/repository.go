@@ -15,10 +15,10 @@ import (
 type DirectEliminationRepository interface {
 	CreateDirectElimination(ctx context.Context, de *DirectElimination) error
 	GetDirectEliminationByID(ctx context.Context, id uuid.UUID) (*DirectElimination, error)
-	ListDirectElimination(ctx context.Context, filter DirectEliminationListFilter) ([]DirectElimination, error)
-	EditDirectEliminationByID(ctx context.Context, id uuid.UUID, edit DirectEliminationEdit) error
+	ListDirectElimination(ctx context.Context, filter DirectEliminationListFilter) ([]DirectElimination, int64, error)
+	UpdateDirectEliminationByID(ctx context.Context, id uuid.UUID, edit DirectEliminationEdit) error
 	TransitionDirectEliminationByID(ctx context.Context, id uuid.UUID, transition DirectEliminationTransition) error
-	DeleteDirectElimination(ctx context.Context, id uuid.UUID) error
+	DeleteDirectEliminationByID(ctx context.Context, id uuid.UUID) error
 }
 
 type DirectEliminationEdit struct {
@@ -36,10 +36,10 @@ func (e DirectEliminationEdit) columns() map[string]any {
 }
 
 type DirectEliminationTransition struct {
-	To          Status
+	To          DirectEliminationStatus
 	StartedAt   *time.Time
 	CompletedAt *time.Time
-	From        []Status
+	From        []DirectEliminationStatus
 }
 
 func (t DirectEliminationTransition) columns() map[string]any {
@@ -56,7 +56,9 @@ func (t DirectEliminationTransition) columns() map[string]any {
 
 type DirectEliminationListFilter struct {
 	EventID *uuid.UUID
-	Status  *Status
+	Status  *DirectEliminationStatus
+	Limit   int
+	Offset  int
 }
 
 type directEliminationRepository struct {
@@ -105,7 +107,7 @@ func (r *directEliminationRepository) GetDirectEliminationByID(
 func (r *directEliminationRepository) ListDirectElimination(
 	ctx context.Context,
 	filter DirectEliminationListFilter,
-) ([]DirectElimination, error) {
+) ([]DirectElimination, int64, error) {
 	query := r.db.WithContext(ctx).Model(&DirectElimination{})
 	if filter.EventID != nil {
 		query = query.Where("event_id = ?", *filter.EventID)
@@ -114,15 +116,25 @@ func (r *directEliminationRepository) ListDirectElimination(
 		query = query.Where("status = ?", *filter.Status)
 	}
 
-	rounds := make([]DirectElimination, 0)
-	if err := query.Order("created_at DESC").Find(&rounds).Error; err != nil {
-		return nil, fmt.Errorf("select direct eliminations: %w", err)
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count direct eliminations: %w", err)
 	}
 
-	return rounds, nil
+	rounds := make([]DirectElimination, 0, filter.Limit)
+	err := query.
+		Order("created_at DESC").
+		Limit(filter.Limit).
+		Offset(filter.Offset).
+		Find(&rounds).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("select direct eliminations: %w", err)
+	}
+
+	return rounds, total, nil
 }
 
-func (r *directEliminationRepository) EditDirectEliminationByID(
+func (r *directEliminationRepository) UpdateDirectEliminationByID(
 	ctx context.Context,
 	id uuid.UUID,
 	edit DirectEliminationEdit,
@@ -146,7 +158,7 @@ func (r *directEliminationRepository) updateByID(
 	ctx context.Context,
 	id uuid.UUID,
 	columns map[string]any,
-	allowedStatuses []Status,
+	allowedStatuses []DirectEliminationStatus,
 ) error {
 	query := r.db.WithContext(ctx).Model(&DirectElimination{}).Where("id = ?", id)
 	if len(allowedStatuses) > 0 {
@@ -172,7 +184,7 @@ func (r *directEliminationRepository) updateByID(
 	return nil
 }
 
-func (r *directEliminationRepository) DeleteDirectElimination(
+func (r *directEliminationRepository) DeleteDirectEliminationByID(
 	ctx context.Context,
 	id uuid.UUID,
 ) error {

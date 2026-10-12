@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/tournament"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -17,6 +18,11 @@ type UserRepository interface {
 	ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error)
 	UpdateUserByID(ctx context.Context, id uuid.UUID, update UserUpdate) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
+	ListTournamentsByUser(
+		ctx context.Context,
+		userID uuid.UUID,
+		limit, offset int,
+	) ([]tournament.Tournament, int64, error)
 }
 
 // Any non-nil fields to be applied as updates
@@ -123,6 +129,9 @@ func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) (
 func (r *userRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	result := r.db.WithContext(ctx).Delete(&User{}, "id = ?", id)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
+			return fmt.Errorf("delete user %s: %w", id, errs.ErrConflict)
+		}
 		return fmt.Errorf("delete user %s: %w", id, result.Error)
 	}
 
@@ -131,4 +140,33 @@ func (r *userRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	}
 
 	return nil
+}
+
+func (r *userRepository) ListTournamentsByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	limit, offset int,
+) ([]tournament.Tournament, int64, error) {
+	query := r.db.WithContext(ctx).
+		Model(&tournament.Tournament{}).
+		Joins("JOIN tournament_users ON tournament_users.tournament_id = tournaments.id").
+		Where("tournament_users.user_id = ?", userID)
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count tournaments for user %s: %w", userID, err)
+	}
+
+	tournaments := make([]tournament.Tournament, 0, limit)
+	err := query.
+		Select("tournaments.*").
+		Order("tournaments.created_at DESC, tournaments.id").
+		Limit(limit).
+		Offset(offset).
+		Find(&tournaments).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("select tournaments for user %s: %w", userID, err)
+	}
+
+	return tournaments, total, nil
 }

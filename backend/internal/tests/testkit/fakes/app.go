@@ -21,9 +21,10 @@ var (
 // parallel tests share one instance.
 func GetSharedTestApp() *fiber.App {
 	once.Do(func() {
-		// nil DB: the app builds and every route registers, but a test that
-		// actually hits a database-backed feature needs a real connection here.
-		sharedApp = server.CreateApp(TestConfiguration(), nil)
+		// nil DB and nil Redis: the app builds and every route registers, but a
+		// test that actually hits a database- or cache-backed feature needs a
+		// real connection here.
+		sharedApp = server.CreateApp(TestConfiguration(), nil, nil)
 	})
 
 	return sharedApp
@@ -50,6 +51,12 @@ func TestConfiguration() *config.Configuration {
 			MaxOpenConns:    config.DefaultDBMaxOpenConns,
 			MaxIdleConns:    config.DefaultDBMaxIdleConns,
 			ConnMaxLifetime: config.DefaultDBConnMaxLifetime,
+		},
+		Redis: config.RedisConfig{
+			Host:     config.DefaultRedisHost,
+			Port:     config.DefaultRedisPort,
+			Password: config.DefaultRedisPassword,
+			DB:       config.DefaultRedisDB,
 		},
 		Environment: TestEnvironment,
 	}

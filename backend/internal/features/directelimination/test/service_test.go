@@ -45,7 +45,7 @@ func TestCreateDirectElimination(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, eventID, out.Body.EventID)
-		assert.Equal(t, directelimination.StatusUpcoming, out.Body.Status)
+		assert.Equal(t, directelimination.DirectEliminationStatusUpcoming, out.Body.Status)
 		assert.Nil(t, out.Body.StartedAt)
 		assert.Nil(t, out.Body.CompletedAt)
 		assert.Len(t, repo.DirectEliminations, 1)
@@ -89,7 +89,7 @@ func TestCreateDirectElimination(t *testing.T) {
 func TestGetDirectEliminationByID(t *testing.T) {
 	t.Parallel()
 
-	stored := seededDirectElimination(uuid.New(), directelimination.StatusUpcoming)
+	stored := seededDirectElimination(uuid.New(), directelimination.DirectEliminationStatusUpcoming)
 	service := directelimination.NewDirectEliminationService(NewFakeDirectEliminationRepository(stored))
 
 	t.Run("returns the stored round", func(t *testing.T) {
@@ -129,18 +129,21 @@ func TestListDirectElimination(t *testing.T) {
 	eventA := uuid.New()
 	eventB := uuid.New()
 	seed := []directelimination.DirectElimination{
-		seededDirectElimination(eventA, directelimination.StatusUpcoming),
-		seededDirectElimination(eventA, directelimination.StatusActive),
-		seededDirectElimination(eventB, directelimination.StatusActive),
+		seededDirectElimination(eventA, directelimination.DirectEliminationStatusUpcoming),
+		seededDirectElimination(eventA, directelimination.DirectEliminationStatusActive),
+		seededDirectElimination(eventB, directelimination.DirectEliminationStatusActive),
 	}
 	eventAString := eventA.String()
-	active := directelimination.StatusActive
-	ended := directelimination.StatusEnd
+	active := directelimination.DirectEliminationStatusActive
+	ended := directelimination.DirectEliminationStatusEnded
 
 	tests := []struct {
 		name       string
 		input      *directelimination.DirectEliminationListInput
 		wantTotal  int64
+		wantRows   int
+		wantLimit  int
+		wantOffset int
 		wantCode   int
 		wantDetail string
 	}{
@@ -170,6 +173,21 @@ func TestListDirectElimination(t *testing.T) {
 			wantTotal: 0,
 		},
 		{
+			name:       "pages through rounds while total counts every match",
+			input:      &directelimination.DirectEliminationListInput{Limit: 1, Offset: 1},
+			wantTotal:  3,
+			wantRows:   1,
+			wantLimit:  1,
+			wantOffset: 1,
+		},
+		{
+			name:      "clamps an oversized limit and a negative offset",
+			input:     &directelimination.DirectEliminationListInput{Limit: 1000, Offset: -5},
+			wantTotal: 3,
+			wantRows:  3,
+			wantLimit: directelimination.DirectEliminationMaxPageSize,
+		},
+		{
 			name:       "rejects an event_id that is not a uuid",
 			input:      &directelimination.DirectEliminationListInput{EventID: "not-a-uuid"},
 			wantCode:   http.StatusBadRequest,
@@ -177,7 +195,7 @@ func TestListDirectElimination(t *testing.T) {
 		},
 		{
 			name:       "rejects an unknown status",
-			input:      &directelimination.DirectEliminationListInput{Status: directelimination.Status("nope")},
+			input:      &directelimination.DirectEliminationListInput{Status: directelimination.DirectEliminationStatus("nope")},
 			wantCode:   http.StatusBadRequest,
 			wantDetail: `unknown status "nope"`,
 		},
@@ -201,7 +219,14 @@ func TestListDirectElimination(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantTotal, out.Body.Total)
-			assert.Len(t, out.Body.Data, int(tt.wantTotal))
+			if tt.wantLimit == 0 {
+				assert.Len(t, out.Body.Data, int(tt.wantTotal))
+
+				return
+			}
+			assert.Len(t, out.Body.Data, tt.wantRows)
+			assert.Equal(t, tt.wantLimit, out.Body.Limit)
+			assert.Equal(t, tt.wantOffset, out.Body.Offset)
 		})
 	}
 }
@@ -215,7 +240,7 @@ func TestUpdateDirectEliminationByID(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		seedStatus   directelimination.Status
+		seedStatus   directelimination.DirectEliminationStatus
 		body         directelimination.DirectEliminationUpdateBody
 		useUnknownID bool
 		wantCode     int
@@ -223,38 +248,38 @@ func TestUpdateDirectEliminationByID(t *testing.T) {
 	}{
 		{
 			name:       "moves an upcoming round to another event",
-			seedStatus: directelimination.StatusUpcoming,
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
 			body:       directelimination.DirectEliminationUpdateBody{EventID: &newEventString},
 		},
 		{
 			name:       "still allows an edit while active",
-			seedStatus: directelimination.StatusActive,
+			seedStatus: directelimination.DirectEliminationStatusActive,
 			body:       directelimination.DirectEliminationUpdateBody{EventID: &newEventString},
 		},
 		{
 			name:       "refuses a patch that would change nothing",
-			seedStatus: directelimination.StatusUpcoming,
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
 			body:       directelimination.DirectEliminationUpdateBody{},
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "provide at least one field to update",
 		},
 		{
 			name:       "rejects an event_id that is not a uuid",
-			seedStatus: directelimination.StatusUpcoming,
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
 			body:       directelimination.DirectEliminationUpdateBody{EventID: &badEvent},
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "event_id must be a valid uuid",
 		},
 		{
 			name:       "refuses to edit a round that has ended",
-			seedStatus: directelimination.StatusEnd,
+			seedStatus: directelimination.DirectEliminationStatusEnded,
 			body:       directelimination.DirectEliminationUpdateBody{EventID: &newEventString},
 			wantCode:   http.StatusConflict,
 			wantDetail: "direct elimination round has ended and can no longer be edited",
 		},
 		{
 			name:         "reports an unknown id as not found",
-			seedStatus:   directelimination.StatusUpcoming,
+			seedStatus:   directelimination.DirectEliminationStatusUpcoming,
 			body:         directelimination.DirectEliminationUpdateBody{EventID: &newEventString},
 			useUnknownID: true,
 			wantCode:     http.StatusNotFound,
@@ -305,7 +330,7 @@ func TestDeleteDirectEliminationByID(t *testing.T) {
 	t.Run("removes the round", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededDirectElimination(uuid.New(), directelimination.StatusUpcoming)
+		stored := seededDirectElimination(uuid.New(), directelimination.DirectEliminationStatusUpcoming)
 		repo := NewFakeDirectEliminationRepository(stored)
 		service := directelimination.NewDirectEliminationService(repo)
 
@@ -345,27 +370,27 @@ func TestStartDirectElimination(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		seedStatus   directelimination.Status
+		seedStatus   directelimination.DirectEliminationStatus
 		useUnknownID bool
 		wantCode     int
 		wantDetail   string
 	}{
-		{name: "moves an upcoming round to active", seedStatus: directelimination.StatusUpcoming},
+		{name: "moves an upcoming round to active", seedStatus: directelimination.DirectEliminationStatusUpcoming},
 		{
 			name:       "refuses a round that has already started",
-			seedStatus: directelimination.StatusActive,
+			seedStatus: directelimination.DirectEliminationStatusActive,
 			wantCode:   http.StatusConflict,
 			wantDetail: "only an upcoming direct elimination round can be started",
 		},
 		{
 			name:       "refuses a round that has ended",
-			seedStatus: directelimination.StatusEnd,
+			seedStatus: directelimination.DirectEliminationStatusEnded,
 			wantCode:   http.StatusConflict,
 			wantDetail: "only an upcoming direct elimination round can be started",
 		},
 		{
 			name:         "reports an unknown id as not found",
-			seedStatus:   directelimination.StatusUpcoming,
+			seedStatus:   directelimination.DirectEliminationStatusUpcoming,
 			useUnknownID: true,
 			wantCode:     http.StatusNotFound,
 		},
@@ -400,8 +425,8 @@ func TestStartDirectElimination(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, directelimination.StatusActive, out.Body.Status)
-			assert.Equal(t, directelimination.StatusActive, repo.DirectEliminations[stored.ID].Status)
+			assert.Equal(t, directelimination.DirectEliminationStatusActive, out.Body.Status)
+			assert.Equal(t, directelimination.DirectEliminationStatusActive, repo.DirectEliminations[stored.ID].Status)
 			require.NotNil(t, out.Body.StartedAt)
 			assert.WithinDuration(t, time.Now(), *out.Body.StartedAt, 5*time.Second)
 			assert.NotNil(t, repo.DirectEliminations[stored.ID].StartedAt)
@@ -417,27 +442,27 @@ func TestCompleteDirectElimination(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		seedStatus   directelimination.Status
+		seedStatus   directelimination.DirectEliminationStatus
 		useUnknownID bool
 		wantCode     int
 		wantDetail   string
 	}{
-		{name: "moves an active round to end", seedStatus: directelimination.StatusActive},
+		{name: "moves an active round to ended", seedStatus: directelimination.DirectEliminationStatusActive},
 		{
 			name:       "refuses a round that has not started",
-			seedStatus: directelimination.StatusUpcoming,
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
 			wantCode:   http.StatusConflict,
 			wantDetail: "only an active direct elimination round can be completed",
 		},
 		{
 			name:       "refuses a round that has already ended",
-			seedStatus: directelimination.StatusEnd,
+			seedStatus: directelimination.DirectEliminationStatusEnded,
 			wantCode:   http.StatusConflict,
 			wantDetail: "only an active direct elimination round can be completed",
 		},
 		{
 			name:         "reports an unknown id as not found",
-			seedStatus:   directelimination.StatusActive,
+			seedStatus:   directelimination.DirectEliminationStatusActive,
 			useUnknownID: true,
 			wantCode:     http.StatusNotFound,
 		},
@@ -448,7 +473,7 @@ func TestCompleteDirectElimination(t *testing.T) {
 			t.Parallel()
 
 			stored := seededDirectElimination(uuid.New(), tt.seedStatus)
-			if tt.seedStatus != directelimination.StatusUpcoming {
+			if tt.seedStatus != directelimination.DirectEliminationStatusUpcoming {
 				stored.StartedAt = &startedAt
 			}
 			repo := NewFakeDirectEliminationRepository(stored)
@@ -475,7 +500,7 @@ func TestCompleteDirectElimination(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, directelimination.StatusEnd, out.Body.Status)
+			assert.Equal(t, directelimination.DirectEliminationStatusEnded, out.Body.Status)
 			require.NotNil(t, out.Body.CompletedAt)
 			assert.WithinDuration(t, time.Now(), *out.Body.CompletedAt, 5*time.Second)
 			assert.NotNil(t, repo.DirectEliminations[stored.ID].CompletedAt)

@@ -3,13 +3,13 @@ package directelimination
 import "time"
 
 type DirectEliminationResponse struct {
-	ID          string     `json:"id" format:"uuid"`
-	Status      Status     `json:"status" enum:"upcoming,active,end" doc:"Lifecycle state of the round"`
-	EventID     string     `json:"event_id" format:"uuid" doc:"Event this direct elimination round belongs to"`
-	StartedAt   *time.Time `json:"started_at" doc:"Set when the round starts, otherwise null"`
-	CompletedAt *time.Time `json:"completed_at" doc:"Set when the round ends, otherwise null"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID          string                  `json:"id" format:"uuid"`
+	Status      DirectEliminationStatus `json:"status" enum:"upcoming,active,ended" doc:"Lifecycle state of the round"`
+	EventID     string                  `json:"event_id" format:"uuid" doc:"Event this direct elimination round belongs to"`
+	StartedAt   *time.Time              `json:"started_at" doc:"Set when the round starts, otherwise null"`
+	CompletedAt *time.Time              `json:"completed_at" doc:"Set when the round ends, otherwise null"`
+	CreatedAt   time.Time               `json:"created_at"`
+	UpdatedAt   time.Time               `json:"updated_at"`
 }
 
 func newDirectEliminationResponse(de DirectElimination) DirectEliminationResponse {
@@ -46,8 +46,10 @@ type DirectEliminationUpdateInput struct {
 }
 
 type DirectEliminationListInput struct {
-	EventID string `query:"event_id" format:"uuid" required:"false" doc:"Filter by event ID"`
-	Status  Status `query:"status" enum:"upcoming,active,end" required:"false" doc:"Filter by status"`
+	EventID string                  `query:"event_id" format:"uuid" required:"false" doc:"Filter by event ID"`
+	Status  DirectEliminationStatus `query:"status" enum:"upcoming,active,ended" required:"false" doc:"Filter by status"`
+	Limit   int                     `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset  int                     `query:"offset" default:"0" minimum:"0"`
 }
 
 type DirectEliminationOutput struct {
@@ -55,8 +57,10 @@ type DirectEliminationOutput struct {
 }
 
 type DirectEliminationListBody struct {
-	Data  []DirectEliminationResponse `json:"data"`
-	Total int64                       `json:"total" doc:"Direct elimination rounds returned"`
+	Data   []DirectEliminationResponse `json:"data"`
+	Total  int64                       `json:"total" doc:"Rows matching the filter, ignoring the page"`
+	Limit  int                         `json:"limit"`
+	Offset int                         `json:"offset"`
 }
 
 type DirectEliminationListOutput struct {

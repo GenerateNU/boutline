@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
@@ -169,6 +170,43 @@ func TestDeleteEndpoint(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, api.Get(path).Code)
 		assert.Equal(t, http.StatusNotFound, api.Delete(path).Code)
 	})
+
+	tests := []struct {
+		name       string
+		path       string
+		referenced bool
+		wantStatus int
+		wantDetail string
+	}{
+		{name: "reports an unknown id as not found", path: uuid.New().String(), wantStatus: http.StatusNotFound},
+		{name: "rejects an id that is not a uuid", path: "not-a-uuid", wantStatus: http.StatusUnprocessableEntity},
+		{
+			name:       "refuses a user a tournament or bout still points at",
+			path:       stored.ID.String(),
+			referenced: true,
+			wantStatus: http.StatusConflict,
+			wantDetail: "a user who created a tournament or referees a bout cannot be deleted",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakeUserRepository(stored)
+			repo.Referenced = map[uuid.UUID]bool{stored.ID: tt.referenced}
+			_, api := humatest.New(t)
+			user.RegisterUserService(api, user.NewUserService(repo))
+
+			resp := api.Delete("/api/v1/users/" + tt.path)
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+			if tt.wantDetail != "" {
+				assert.Equal(t, tt.wantDetail, decodeBody(t, resp.Body.Bytes())["detail"])
+			}
+			assert.Contains(t, repo.Users, stored.ID, "a refused delete must leave the user in place")
+		})
+	}
 }
 
 func TestUpdateEndpoint(t *testing.T) {
@@ -219,4 +257,30 @@ func TestUpdateEndpoint(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestListTournamentsByUserEndpoint(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	joined := tournament.Tournament{ID: uuid.New(), Name: "joined", Status: tournament.TournamentStatusPending}
+
+	repo := NewFakeUserRepository()
+	repo.Joined[userID] = []tournament.Tournament{joined}
+
+	_, api := humatest.New(t)
+	user.RegisterUserService(api, user.NewUserService(repo))
+
+	resp := api.Get("/api/v1/users/" + userID.String() + "/tournaments")
+	require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+	body := decodeBody(t, resp.Body.Bytes())
+	require.Len(t, body["data"], 1)
+	assert.InDelta(t, 1, body["total"], 0)
+
+	listed, ok := body["data"].([]any)[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "joined", listed["name"])
+
+	assert.Equal(t, http.StatusUnprocessableEntity, api.Get("/api/v1/users/not-a-uuid/tournaments").Code)
 }

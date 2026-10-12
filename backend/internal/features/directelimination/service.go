@@ -12,6 +12,15 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	DirectEliminationMinPageSize     = 1
+	DirectEliminationDefaultPageSize = 20
+	DirectEliminationMaxPageSize     = 100
+)
+
+/*
+DirectElimination mainly exists to show the type of a tournament stage, so we might not use all of these methods (as in, the work is deferred to the tournament service to change/update the state of a tournament).
+*/
 type DirectEliminationService interface {
 	CreateDirectElimination(ctx context.Context, input *DirectEliminationCreateInput) (*DirectEliminationOutput, error)
 	GetDirectEliminationByID(ctx context.Context, input *DirectEliminationIDInput) (*DirectEliminationOutput, error)
@@ -41,7 +50,7 @@ func (s *directEliminationService) CreateDirectElimination(
 
 	de := &DirectElimination{
 		EventID: eventID,
-		Status:  StatusUpcoming,
+		Status:  DirectEliminationStatusUpcoming,
 	}
 
 	if err := s.repo.CreateDirectElimination(ctx, de); err != nil {
@@ -91,7 +100,14 @@ func (s *directEliminationService) ListDirectElimination(
 		filter.Status = &status
 	}
 
-	rounds, err := s.repo.ListDirectElimination(ctx, filter)
+	limit := input.Limit
+	if limit <= 0 {
+		limit = DirectEliminationDefaultPageSize
+	}
+	filter.Limit = utils.Clamp(limit, DirectEliminationMinPageSize, DirectEliminationMaxPageSize)
+	filter.Offset = max(input.Offset, 0)
+
+	rounds, total, err := s.repo.ListDirectElimination(ctx, filter)
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list direct elimination: %w", err))
 	}
@@ -102,8 +118,10 @@ func (s *directEliminationService) ListDirectElimination(
 	}
 
 	return &DirectEliminationListOutput{Body: DirectEliminationListBody{
-		Data:  data,
-		Total: int64(len(data)),
+		Data:   data,
+		Total:  total,
+		Limit:  filter.Limit,
+		Offset: filter.Offset,
 	}}, nil
 }
 
@@ -121,7 +139,7 @@ func (s *directEliminationService) UpdateDirectEliminationByID(
 		return nil, errs.HumaError(err)
 	}
 
-	err = s.repo.EditDirectEliminationByID(ctx, id, edit)
+	err = s.repo.UpdateDirectEliminationByID(ctx, id, edit)
 
 	return s.afterUpdate(ctx, id, err, "direct elimination round has ended and can no longer be edited")
 }
@@ -153,7 +171,7 @@ func (s *directEliminationService) DeleteDirectEliminationByID(
 		return nil, errs.HumaError(err)
 	}
 
-	if err := s.repo.DeleteDirectElimination(ctx, id); err != nil {
+	if err := s.repo.DeleteDirectEliminationByID(ctx, id); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("delete direct elimination: %w", err))
 	}
 
@@ -172,9 +190,9 @@ func (s *directEliminationService) StartDirectElimination(
 	startedAt := time.Now().UTC()
 
 	err = s.repo.TransitionDirectEliminationByID(ctx, id, DirectEliminationTransition{
-		To:        StatusActive,
+		To:        DirectEliminationStatusActive,
 		StartedAt: &startedAt,
-		From:      []Status{StatusUpcoming},
+		From:      []DirectEliminationStatus{DirectEliminationStatusUpcoming},
 	})
 
 	return s.afterUpdate(ctx, id, err, "only an upcoming direct elimination round can be started")
@@ -192,9 +210,9 @@ func (s *directEliminationService) CompleteDirectElimination(
 	completedAt := time.Now().UTC()
 
 	err = s.repo.TransitionDirectEliminationByID(ctx, id, DirectEliminationTransition{
-		To:          StatusEnd,
+		To:          DirectEliminationStatusEnded,
 		CompletedAt: &completedAt,
-		From:        []Status{StatusActive},
+		From:        []DirectEliminationStatus{DirectEliminationStatusActive},
 	})
 
 	return s.afterUpdate(ctx, id, err, "only an active direct elimination round can be completed")

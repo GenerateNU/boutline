@@ -1,6 +1,10 @@
 package user
 
-import "time"
+import (
+	"time"
+
+	"boutline/internal/features/tournament"
+)
 
 type UserResponse struct {
 	ID        string    `json:"id" format:"uuid"`
@@ -67,4 +71,21 @@ type UserListBody struct {
 
 type UserListOutput struct {
 	Body UserListBody
+}
+
+type UserTournamentsInput struct {
+	ID     string `path:"id" format:"uuid" doc:"User ID"`
+	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset int    `query:"offset" default:"0" minimum:"0"`
+}
+
+type UserTournamentsBody struct {
+	Data   []tournament.TournamentResponse `json:"data"`
+	Total  int64                           `json:"total" doc:"Tournaments this user belongs to"`
+	Limit  int                             `json:"limit"`
+	Offset int                             `json:"offset"`
+}
+
+type UserTournamentsOutput struct {
+	Body UserTournamentsBody
 }

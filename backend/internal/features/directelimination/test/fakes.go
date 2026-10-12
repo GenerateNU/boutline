@@ -66,9 +66,9 @@ func (f *FakeDirectEliminationRepository) GetDirectEliminationByID(
 func (f *FakeDirectEliminationRepository) ListDirectElimination(
 	_ context.Context,
 	filter directelimination.DirectEliminationListFilter,
-) ([]directelimination.DirectElimination, error) {
+) ([]directelimination.DirectElimination, int64, error) {
 	if f.Err != nil {
-		return nil, f.Err
+		return nil, 0, f.Err
 	}
 
 	matched := make([]directelimination.DirectElimination, 0, len(f.DirectEliminations))
@@ -90,10 +90,19 @@ func (f *FakeDirectEliminationRepository) ListDirectElimination(
 		return strings.Compare(a.ID.String(), b.ID.String())
 	})
 
-	return matched, nil
+	total := int64(len(matched))
+	if filter.Offset >= len(matched) {
+		return []directelimination.DirectElimination{}, total, nil
+	}
+	matched = matched[filter.Offset:]
+	if filter.Limit > 0 && filter.Limit < len(matched) {
+		matched = matched[:filter.Limit]
+	}
+
+	return matched, total, nil
 }
 
-func (f *FakeDirectEliminationRepository) EditDirectEliminationByID(
+func (f *FakeDirectEliminationRepository) UpdateDirectEliminationByID(
 	_ context.Context,
 	id uuid.UUID,
 	edit directelimination.DirectEliminationEdit,
@@ -135,7 +144,7 @@ func (f *FakeDirectEliminationRepository) TransitionDirectEliminationByID(
 	return nil
 }
 
-func (f *FakeDirectEliminationRepository) DeleteDirectElimination(
+func (f *FakeDirectEliminationRepository) DeleteDirectEliminationByID(
 	_ context.Context,
 	id uuid.UUID,
 ) error {
@@ -154,7 +163,7 @@ func (f *FakeDirectEliminationRepository) DeleteDirectElimination(
 
 func (f *FakeDirectEliminationRepository) guard(
 	id uuid.UUID,
-	allowedStatuses []directelimination.Status,
+	allowedStatuses []directelimination.DirectEliminationStatus,
 ) (directelimination.DirectElimination, error) {
 	if f.Err != nil {
 		return directelimination.DirectElimination{}, f.Err
