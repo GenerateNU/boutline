@@ -19,7 +19,8 @@
     "next": "16.3.4",
     "radix-ui": "1.7.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "react-dropzone": "20.1.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
