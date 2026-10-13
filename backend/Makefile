@@ -46,6 +46,7 @@ test-integration-db:
 migrate-new:
 	@test -n "$(NAME)" || { echo "NAME is required, e.g. make migrate-new NAME=create_examples"; exit 1; }
 	@command -v atlas >/dev/null || { echo "atlas CLI not found: brew install ariga/tap/atlas"; exit 1; }
+	docker build --tag postgres:17-trgm atlas/dev-db
 	atlas migrate diff $(NAME) --env local
 
 # dev-up applies migrations on its own; these are for doing it out of band.

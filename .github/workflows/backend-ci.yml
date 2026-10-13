@@ -78,6 +78,12 @@ jobs:
         with:
           version: v1.3.3
 
+      # atlas.hcl's dev container needs pg_trgm already in template1 (see
+      # atlas/dev-db) so it can validate the trigram indexes without
+      # declaring the extension itself, which Atlas Community blocks. Tagged
+      # to match what atlas's docker://postgres/17-trgm/dev url pulls.
+      - run: docker build --tag postgres:17-trgm atlas/dev-db
+
       # Checksum integrity: catches a hand-edited migration that was never
       # re-signed with `atlas migrate hash`.
       - run: atlas migrate validate --env local
