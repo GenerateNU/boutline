@@ -79,6 +79,15 @@ INSERT INTO bouts (id, tournament_id, location, start_time, started_at, complete
   ('e0000000-0000-4000-8000-000000000017', 'b0000000-0000-4000-8000-000000000003', 'Strip 1', now() - interval '90 days' + interval '7 hours', now() - interval '90 days' + interval '7 hours', now() - interval '90 days' + interval '7 hours 30 minutes', 'a0000000-0000-4000-8000-000000000003', 540, 15, 0, 'end', 'd0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000005', now() - interval '91 days', now())
 ON CONFLICT DO NOTHING;
 
+-- Open Épée's round is the finished table above; Mixed Épée's waits on its pools.
+INSERT INTO direct_eliminations (id, status, event_id, started_at, completed_at, created_at, updated_at) VALUES
+  ('f0000000-0000-4000-8000-000000000001', 'ended',    'c0000000-0000-4000-8000-000000000004', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '7 hours 30 minutes', now() - interval '91 days', now()),
+  ('f0000000-0000-4000-8000-000000000002', 'upcoming', 'c0000000-0000-4000-8000-000000000001', NULL,                                          NULL,                                                      now() - interval '1 day',  now())
+ON CONFLICT DO NOTHING;
+
+-- Fixed ids bypass the sequence, so move it past them or the API's next insert collides.
+DO $$ BEGIN PERFORM setval('scorings_id_seq', (SELECT max(id) FROM scorings)); END $$;
+
 -- Touches for Maya's finished 5-2 win over Liam and her live bout against Diego,
 -- where one touch was revoked so replay has something to show.
 INSERT INTO scorings (id, created_by, points, competitor_id, bout_id, revoked_at, revoked_by, created_at, updated_at) VALUES
