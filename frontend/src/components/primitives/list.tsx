@@ -10,10 +10,10 @@ function List({ className, ...props }: React.ComponentProps<"ul">) {
   );
 }
 
-type ListItemProps = React.ComponentProps<"li"> & {
+interface ListItemProps extends React.ComponentProps<"li"> {
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
-};
+}
 
 function ListItem({
   className,

@@ -44,23 +44,22 @@ function DialogList() {
   const dialogItems = Array.from({ length: 10 }, (_, index) => String(index));
 
   return (
-    <Radio
-      defaultValue="0"
-      aria-label="Dialog options"
-      className="min-h-0 flex-col gap-0"
-    >
-      <List className="overflow-y-auto">
-        {dialogItems.map((value) => (
-          <ListItem
-            key={value}
-            leading={<DialogAvatar />}
-            trailing={<RadioItem value={value} aria-label={`Option ${value}`} />}
-          >
-            Dialog title
-          </ListItem>
-        ))}
-      </List>
-    </Radio>
+    <List aria-label="Dialog options" className="min-h-0 overflow-y-auto">
+      {dialogItems.map((value) => (
+        <ListItem
+          key={value}
+          leading={<DialogAvatar />}
+          trailing={
+            <Checkbox
+              defaultChecked={Number(value) < 2}
+              aria-label={`Option ${value}`}
+            />
+          }
+        >
+          Dialog title
+        </ListItem>
+      ))}
+    </List>
   );
 }
 
@@ -234,7 +233,7 @@ export default function Home() {
             <DialogList />
             <ModalFooter>
               <ModalClose asChild>
-                <Button variant="text">Label</Button>
+                <Button variant="text">Cancel</Button>
               </ModalClose>
               <ModalClose asChild>
                 <Button variant="text">Label</Button>

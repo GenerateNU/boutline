@@ -4,12 +4,14 @@ import { cn } from "cn";
 import { Menu as MenuIcon, Search } from "lucide-react";
 import { useState } from "react";
 
-type SearchBarProps = React.ComponentProps<"input"> & {
+import { Input } from "@/components/primitives/input";
+
+interface SearchBarProps extends React.ComponentProps<"input"> {
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
   expanded?: boolean;
   children?: React.ReactNode;
-};
+}
 
 function SearchBar({
   className,
@@ -36,9 +38,9 @@ function SearchBar({
     >
       <div className="flex items-center gap-3 px-3 py-2">
         {leading ?? <MenuIcon aria-hidden className="size-5" />}
-        <input
+        <Input
           type="text"
-          className="min-w-0 flex-1 text-sm outline-none placeholder:text-muted-foreground"
+          className="h-auto w-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 focus-visible:ring-0"
           {...props}
         />
         <Search aria-hidden className="size-5" />

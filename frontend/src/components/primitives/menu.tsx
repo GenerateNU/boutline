@@ -1,6 +1,8 @@
 import { cn } from "cn";
 import { ChevronRight } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+
 function Menu({ className, ...props }: React.ComponentProps<"ul">) {
   return (
     <ul
@@ -11,18 +13,19 @@ function Menu({ className, ...props }: React.ComponentProps<"ul">) {
   );
 }
 
-type MenuItemProps = React.ComponentProps<"button"> & {
+interface MenuItemProps extends React.ComponentProps<typeof Button> {
   icon?: React.ReactNode;
-};
+}
 
 function MenuItem({ className, icon, children, ...props }: MenuItemProps) {
   return (
     <li>
-      <button
+      <Button
         type="button"
+        variant="text"
         data-slot="menu-item"
         className={cn(
-          "flex w-full items-center gap-3 px-3 py-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-4",
+          "flex h-auto w-full justify-start gap-3 px-3 py-2 text-left font-normal",
           className,
         )}
         {...props}
@@ -30,7 +33,7 @@ function MenuItem({ className, icon, children, ...props }: MenuItemProps) {
         {icon}
         <p className="flex-1 truncate">{children}</p>
         <ChevronRight aria-hidden />
-      </button>
+      </Button>
     </li>
   );
 }
