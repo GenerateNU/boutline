@@ -91,4 +91,30 @@ INSERT INTO bouts (id, tournament_id, location, start_time, started_at, complete
   ('e0000000-0000-4000-8000-000000000017', 'b0000000-0000-4000-8000-000000000003', 'Strip 1', now() - interval '90 days' + interval '7 hours', now() - interval '90 days' + interval '7 hours', now() - interval '90 days' + interval '7 hours 30 minutes', 'a0000000-0000-4000-8000-000000000003', 540, 15, 0, 'end', 'd0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000005', NULL, now() - interval '91 days', now())
 ON CONFLICT DO NOTHING;
 
+-- Open Épée's round is the finished table above; Mixed Épée's waits on its pools.
+INSERT INTO direct_eliminations (id, status, event_id, started_at, completed_at, created_at, updated_at) VALUES
+  ('f0000000-0000-4000-8000-000000000001', 'ended',    'c0000000-0000-4000-8000-000000000004', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '7 hours 30 minutes', now() - interval '91 days', now()),
+  ('f0000000-0000-4000-8000-000000000002', 'upcoming', 'c0000000-0000-4000-8000-000000000001', NULL,                                          NULL,                                                      now() - interval '1 day',  now())
+ON CONFLICT DO NOTHING;
+
+-- Fixed ids bypass the sequence, so move it past them or the API's next insert collides.
+DO $$ BEGIN PERFORM setval('scorings_id_seq', (SELECT max(id) FROM scorings)); END $$;
+
+-- Touches for Maya's finished 5-2 win over Liam and her live bout against Diego,
+-- where one touch was revoked so replay has something to show.
+INSERT INTO scorings (id, created_by, points, competitor_id, bout_id, revoked_at, revoked_by, created_at, updated_at) VALUES
+  (1,  'a0000000-0000-4000-8000-000000000002', 1, 'd0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000001', NULL,                          NULL,                                   now() - interval '179 minutes', now() - interval '179 minutes'),
+  (2,  'a0000000-0000-4000-8000-000000000002', 1, 'd0000000-0000-4000-8000-000000000002', 'e0000000-0000-4000-8000-000000000001', NULL,                          NULL,                                   now() - interval '178 minutes', now() - interval '178 minutes'),
+  (3,  'a0000000-0000-4000-8000-000000000002', 1, 'd0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000001', NULL,                          NULL,                                   now() - interval '177 minutes', now() - interval '177 minutes'),
+  (4,  'a0000000-0000-4000-8000-000000000002', 1, 'd0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000001', NULL,                          NULL,                                   now() - interval '175 minutes', now() - interval '175 minutes'),
+  (5,  'a0000000-0000-4000-8000-000000000002', 1, 'd0000000-0000-4000-8000-000000000002', 'e0000000-0000-4000-8000-000000000001', NULL,                          NULL,                                   now() - interval '174 minutes', now() - interval '174 minutes'),
+  (6,  'a0000000-0000-4000-8000-000000000002', 1, 'd0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000001', NULL,                          NULL,                                   now() - interval '172 minutes', now() - interval '172 minutes'),
+  (7,  'a0000000-0000-4000-8000-000000000002', 1, 'd0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000001', NULL,                          NULL,                                   now() - interval '171 minutes', now() - interval '171 minutes'),
+  (8,  'a0000000-0000-4000-8000-000000000002', 1, 'd0000000-0000-4000-8000-000000000004', 'e0000000-0000-4000-8000-000000000005', NULL,                          NULL,                                   now() - interval '4 minutes',   now() - interval '4 minutes'),
+  (9,  'a0000000-0000-4000-8000-000000000002', 1, 'd0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000005', NULL,                          NULL,                                   now() - interval '3 minutes',   now() - interval '3 minutes'),
+  (10, 'a0000000-0000-4000-8000-000000000002', 1, 'd0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000005', now() - interval '2 minutes', 'a0000000-0000-4000-8000-000000000002', now() - interval '150 seconds', now() - interval '2 minutes'),
+  (11, 'a0000000-0000-4000-8000-000000000002', 1, 'd0000000-0000-4000-8000-000000000004', 'e0000000-0000-4000-8000-000000000005', NULL,                          NULL,                                   now() - interval '1 minute',    now() - interval '1 minute'),
+  (12, 'a0000000-0000-4000-8000-000000000002', 1, 'd0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000005', NULL,                          NULL,                                   now() - interval '30 seconds',  now() - interval '30 seconds')
+ON CONFLICT DO NOTHING;
+
 COMMIT;

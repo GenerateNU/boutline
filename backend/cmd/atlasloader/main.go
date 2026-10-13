@@ -14,6 +14,7 @@ import (
 
 	"boutline/internal/features/bout"
 	"boutline/internal/features/competitor"
+	"boutline/internal/features/directelimination"
 	"boutline/internal/features/event"
 	"boutline/internal/features/pool"
 	"boutline/internal/features/poolstage"
@@ -42,6 +43,7 @@ func run() error {
 		&competitor.Competitor{},
 		&poolstage.PoolStage{},
 		&pool.Pool{},
+		&directelimination.DirectElimination{},
 		&scoring.Scoring{},
 	)
 	if err != nil {
