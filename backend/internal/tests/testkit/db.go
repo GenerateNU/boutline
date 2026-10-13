@@ -2,6 +2,7 @@ package testkit
 
 import (
 	"context"
+	"os"
 	"sync"
 	"testing"
 
@@ -23,7 +24,10 @@ var (
 // connection, read from the same DB_* env vars production uses. Most local
 // runs of `go test ./...` have no database reachable, so a test calling this
 // is skipped rather than failed when the connection can't be made -- only
-// `make test-integration-db` and CI's `seed` job provide one.
+// `make test-integration-db` and CI's `seed` job provide one. Those set
+// REQUIRE_DB, which turns a connection failure into a hard failure instead of
+// a skip, so a flaky or misconfigured database can't make the suite pass
+// green without running.
 func GetDBTestApp(t *testing.T) *fiber.App {
 	t.Helper()
 
@@ -44,6 +48,9 @@ func GetDBTestApp(t *testing.T) *fiber.App {
 	})
 
 	if dbErr != nil {
+		if os.Getenv("REQUIRE_DB") != "" {
+			t.Fatalf("database required but setup failed: %v", dbErr)
+		}
 		t.Skipf("no database reachable, skipping: %v", dbErr)
 	}
 

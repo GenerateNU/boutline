@@ -163,7 +163,9 @@ jobs:
       # DB_* defaults in internal/config already match this job's postgres
       # service (localhost:5432, db boutline, user/password postgres,
       # sslmode disable), so no env is needed beyond what Go test picks up.
-      - run: go test ./internal/tests/... -race
+      - env:
+          REQUIRE_DB: "1"
+        run: go test ./internal/tests/... -race
 
   image:
     name: Docker image

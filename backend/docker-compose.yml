@@ -25,12 +25,14 @@ services:
   # `target: build` stops at the golang stage of ./Dockerfile instead of the
   # final distroless one, so the toolchain and source are still there to test.
   test:
+    profiles: ["test"]
     build:
       context: .
       target: build
     environment:
       DB_HOST: db
       REDIS_HOST: redis
+      REQUIRE_DB: "1"
     # No -race here: the build stage is Alpine/musl with no C toolchain
     # installed (it's CGO_ENABLED=0 for the shipped binary), and -race needs
     # cgo. CI runs the same package with -race on a normal Go toolchain.
