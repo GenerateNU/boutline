@@ -1,45 +1,56 @@
 import { apiRequest } from "@/services/api-request";
 import type { Bout } from "@/types/bout";
 import type { Competitor } from "@/types/competitor";
-import type { Scoring } from "@/types/scoring";
+import type { Scoring, ScoringHistoryPage } from "@/types/scoring";
 
-function getBout(boutId: string) {
+import type { Board } from "../_types/board";
+
+export function getBout(boutId: string) {
   return apiRequest<Bout>(`/bouts/${boutId}`);
 }
 
-function endBout(boutId: string) {
+export function startBout(boutId: string) {
+  return apiRequest<Bout>(`/bouts/${boutId}/start`, { method: "POST" });
+}
+
+export function endBout(boutId: string) {
   return apiRequest<Bout>(`/bouts/${boutId}/end`, { method: "POST" });
 }
 
-function getCompetitor(competitorId: string) {
+export function getCompetitor(competitorId: string) {
   return apiRequest<Competitor>(`/competitors/${competitorId}`);
 }
 
+export async function getBoard(boutId: string): Promise<Board> {
+  const bout = await getBout(boutId);
+  const competitors = await Promise.all([
+    getCompetitor(bout.competitor_1_id),
+    getCompetitor(bout.competitor_2_id),
+  ]);
+  return { bout, competitors };
+}
+
 // A bout has at most a few dozen live touches, so one maximum-size page holds all of them.
-async function listScoring(boutId: string) {
+export async function listScoring(boutId: string) {
   const { data } = await apiRequest<{ data: Scoring[] }>(`/scoring/match/${boutId}?limit=100`);
   return data;
 }
 
-function createScoring(boutId: string, competitorId: string, createdBy: string) {
+export async function getScoringHistory(boutId: string) {
+  const { data } = await apiRequest<ScoringHistoryPage>(`/scoring/match/${boutId}/history?limit=100`);
+  return data;
+}
+
+export function createScoring(boutId: string, competitorId: string, createdBy: string) {
   return apiRequest<Scoring>("/scoring", {
     method: "POST",
     body: JSON.stringify({ bout_id: boutId, competitor_id: competitorId, created_by: createdBy }),
   });
 }
 
-function revokeScoring(scoringId: number, revokedBy: string) {
+export function revokeScoring(scoringId: number, revokedBy: string) {
   return apiRequest<Scoring>(`/scoring/${scoringId}/revoke`, {
     method: "POST",
     body: JSON.stringify({ revoked_by: revokedBy }),
   });
 }
-
-export {
-  createScoring,
-  endBout,
-  getBout,
-  getCompetitor,
-  listScoring,
-  revokeScoring,
-};

@@ -12,7 +12,9 @@ interface BoutPageProps
 export default async function BoutPage({ params }: BoutPageProps) {
   const { tournamentId, eventId, boutId } = await params;
   const bout = findBout(boutId);
-  if (!bout) notFound();
+  if (!bout) {
+    notFound();
+  }
 
   const { round, left, right, audit } = bout;
 

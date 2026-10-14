@@ -7,18 +7,18 @@ interface ScorePanelProps {
   name: string;
   team: string;
   score: number;
-  boutOver: boolean;
+  scoringClosed: boolean;
   // TODO: restore the referee gate once the fallback scorer is removed.
   // disabled: boolean;
   onTouch: () => void;
 }
 
-export function ScorePanel({ name, team, score, boutOver, /* disabled, */ onTouch }: ScorePanelProps) {
+export function ScorePanel({ name, team, score, scoringClosed, /* disabled, */ onTouch }: ScorePanelProps) {
   return (
     <div
       className={cn(
         "flex flex-col items-center gap-4 rounded-lg border border-foreground px-3",
-        boutOver ? "py-10" : "py-6",
+        scoringClosed ? "py-10" : "py-6",
       )}
     >
       <div className="flex w-full flex-col items-center gap-1 text-center">
@@ -27,11 +27,11 @@ export function ScorePanel({ name, team, score, boutOver, /* disabled, */ onTouc
       </div>
       <output
         aria-label={`${name} score`}
-        className={cn("font-medium tabular-nums", boutOver ? "text-9xl" : "text-8xl")}
+        className={cn("font-medium tabular-nums", scoringClosed ? "text-9xl" : "text-8xl")}
       >
         {score}
       </output>
-      {!boutOver && (
+      {!scoringClosed && (
         <Button
           aria-label={`Touch ${name}`}
           // TODO: restore the referee gate once the fallback scorer is removed.

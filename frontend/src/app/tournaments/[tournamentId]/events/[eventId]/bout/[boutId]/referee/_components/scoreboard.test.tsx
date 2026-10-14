@@ -1,119 +1,11 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 
-import type { BoutStatus } from "@/types/bout";
+import { ALICE, BEN, BOUT_ID, REFEREE_ID, installBackend, settle } from "../fake-backend";
 
 import { Scoreboard } from "./scoreboard";
 
-const BOUT_ID = "b0000000-0000-4000-8000-000000000000";
-const REFEREE_ID = "r0000000-0000-4000-8000-000000000000";
-const ALICE = { id: "c1", firstName: "Alice", lastName: "Chen", team: "Boston FC" };
-const BEN = { id: "c2", firstName: "Ben", lastName: "Ortiz", team: "" };
-const RECORDED_AT = "2026-10-14T12:00:00Z";
-
-interface StoredScore {
-  id: number;
-  competitor_id: string;
-  points: number;
-  revoked: boolean;
-  created_at: string;
-  created_by?: string;
-}
-
-interface FakeBackend {
-  scores: StoredScore[];
-  status: BoutStatus;
-  failNextCreate: boolean;
-}
-
-interface BackendOptions {
-  refereeId?: string | null;
-  status?: BoutStatus;
-}
-
-function reply(status: number, body: unknown) {
-  return { ok: status < 400, status, json: async () => body } as unknown as Response;
-}
-
-// Mirrors the scoring routes closely enough to check what the referee sees
-// against what the server ended up storing.
-function installBackend(
-  initial: Pick<StoredScore, "id" | "competitor_id" | "points">[],
-  { refereeId = REFEREE_ID, status = "active" }: BackendOptions = {},
-) {
-  const backend: FakeBackend = {
-    scores: initial.map((score) => ({ ...score, revoked: false, created_at: RECORDED_AT })),
-    status,
-    failNextCreate: false,
-  };
-  const boutBody = () => ({
-    id: BOUT_ID,
-    referee_id: refereeId,
-    competitor_1_id: ALICE.id,
-    competitor_2_id: BEN.id,
-    points_to_win: 5,
-    status: backend.status,
-  });
-  const live = () => backend.scores.filter((score) => !score.revoked);
-
-  global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = String(input);
-    const body = init?.body ? JSON.parse(String(init.body)) : null;
-
-    if (url === `/api/v1/bouts/${BOUT_ID}`) return reply(200, boutBody());
-    if (url === `/api/v1/bouts/${BOUT_ID}/end`) {
-      if (backend.status !== "active") return reply(409, { detail: "only an active bout can be ended" });
-      backend.status = "end";
-      return reply(200, boutBody());
-    }
-    if (url === "/api/v1/bouts/p1") {
-      return reply(422, {
-        detail: "validation failed",
-        errors: [{ location: "path.id", message: "expected string to be RFC 4122 uuid", value: "p1" }],
-      });
-    }
-    if (url === `/api/v1/competitors/${ALICE.id}`) return reply(200, ALICE);
-    if (url === `/api/v1/competitors/${BEN.id}`) return reply(200, BEN);
-    if (url.startsWith(`/api/v1/scoring/match/${BOUT_ID}`)) {
-      // The real endpoint returns newest first.
-      return reply(200, { data: [...live()].reverse() });
-    }
-    if (url === "/api/v1/scoring" && init?.method === "POST") {
-      if (backend.failNextCreate) {
-        backend.failNextCreate = false;
-        return reply(500, { detail: "database unavailable" });
-      }
-      const created = {
-        id: Math.max(0, ...backend.scores.map((score) => score.id)) + 1,
-        competitor_id: body.competitor_id,
-        created_by: body.created_by,
-        points: 1,
-        revoked: false,
-        created_at: RECORDED_AT,
-      };
-      backend.scores.push(created);
-      return reply(201, created);
-    }
-    const revoke = url.match(/^\/api\/v1\/scoring\/(\d+)\/revoke$/);
-    if (revoke) {
-      const target = backend.scores.find((score) => score.id === Number(revoke[1]));
-      if (!target || target.revoked) return reply(409, { detail: "score has already been revoked" });
-      target.revoked = true;
-      return reply(200, target);
-    }
-    return reply(404, { detail: "not found" });
-  }) as typeof fetch;
-
-  return { backend, live };
-}
-
 function scoreOf(name: string) {
   return screen.getByLabelText(`${name} score`).textContent;
-}
-
-async function settle() {
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
 }
 
 describe("Scoreboard", () => {
@@ -200,8 +92,11 @@ describe("Scoreboard", () => {
     await screen.findByLabelText("Alice Chen score");
 
     const shown = screen.queryByRole("status", { name: "Match point" });
-    if (banner === null) expect(shown).not.toBeInTheDocument();
-    else expect(shown).toHaveTextContent(banner);
+    if (banner === null) {
+      expect(shown).not.toBeInTheDocument();
+    } else {
+      expect(shown).toHaveTextContent(banner);
+    }
   });
 
   it("flashes the match point banner as soon as the touch is tapped", async () => {
@@ -245,28 +140,128 @@ describe("Scoreboard", () => {
 
   const aliceOnMatchPoint = [1, 2, 3, 4].map((id) => ({ id, competitor_id: ALICE.id, points: 1 }));
 
-  it.each([
-    { name: "an active bout ends on the server", status: "active" as const, expectedStatus: "end" },
-    // The backend refuses to end a bout that never started, so it stays as it was.
-    { name: "an upcoming bout locks without ending", status: "upcoming" as const, expectedStatus: "upcoming" },
-  ])("the winning touch: $name", async ({ status, expectedStatus }) => {
-    const { backend, live } = installBackend(aliceOnMatchPoint, { status });
+  describe("confirming the result", () => {
+    async function showConfirming(initial = aliceOnMatchPoint) {
+      const installed = installBackend(initial);
+      render(<Scoreboard boutId={BOUT_ID} />);
+      await screen.findByLabelText("Alice Chen score");
+      fireEvent.click(screen.getByRole("button", { name: "Touch Alice Chen" }));
+      await settle();
+      return installed;
+    }
+
+    it("the winning touch asks both fencers to confirm instead of ending the bout", async () => {
+      const { backend } = await showConfirming();
+
+      expect(screen.getByRole("status", { name: "Confirm result" })).toHaveTextContent(
+        "Alice Chen wins 5 - 0",
+      );
+      expect(screen.queryByRole("button", { name: /^Touch / })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Confirm Alice Chen" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Confirm Ben Ortiz" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Undo last touch" })).toBeEnabled();
+      expect(backend.status).toBe("active");
+    });
+
+    it.each([
+      {
+        name: "one confirmation keeps the bout open",
+        confirms: ["Confirm Alice Chen"],
+        over: false,
+        status: "active",
+      },
+      {
+        name: "both confirmations end the bout",
+        confirms: ["Confirm Alice Chen", "Confirm Ben Ortiz"],
+        over: true,
+        status: "end",
+      },
+    ])("$name", async ({ confirms, over, status }) => {
+      const { backend } = await showConfirming();
+
+      for (const label of confirms) {
+        fireEvent.click(screen.getByRole("button", { name: label }));
+      }
+      await settle();
+
+      const bout = screen.queryByRole("status", { name: "Bout over" });
+      if (over) {
+        expect(bout).toHaveTextContent("Alice Chen wins");
+        expect(screen.queryByRole("button")).not.toBeInTheDocument();
+      } else {
+        expect(bout).not.toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Alice Chen confirmed" })).toBeDisabled();
+      }
+      expect(backend.status).toBe(status);
+    });
+
+    it("undo after one confirmation reopens scoring and resets the confirmations", async () => {
+      await showConfirming();
+
+      fireEvent.click(screen.getByRole("button", { name: "Confirm Alice Chen" }));
+      fireEvent.click(screen.getByRole("button", { name: "Undo last touch" }));
+      await settle();
+
+      expect(screen.getByRole("button", { name: "Touch Alice Chen" })).toBeInTheDocument();
+      expect(scoreOf("Alice Chen")).toBe("4");
+      expect(scoreOf("Ben Ortiz")).toBe("0");
+      expect(screen.queryByRole("button", { name: /^Confirm / })).not.toBeInTheDocument();
+      expect(historyRows()[0]).toContain("Alice Chen5 - 0Revoked");
+      expect(historyRows()[1]).toContain("Alice Chen4 - 0");
+
+      fireEvent.click(screen.getByRole("button", { name: "Touch Alice Chen" }));
+      await settle();
+      expect(screen.getByRole("button", { name: "Confirm Alice Chen" })).toBeEnabled();
+    });
+
+    it("shows the error and asks again when the bout cannot be ended", async () => {
+      const { backend } = await showConfirming();
+
+      backend.failNextEnd = true;
+      fireEvent.click(screen.getByRole("button", { name: "Confirm Alice Chen" }));
+      fireEvent.click(screen.getByRole("button", { name: "Confirm Ben Ortiz" }));
+      await settle();
+
+      expect(screen.getByRole("alert")).toHaveTextContent("could not end bout");
+      expect(screen.getByRole("status", { name: "Confirm result" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Confirm Alice Chen" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Confirm Ben Ortiz" })).toBeEnabled();
+      expect(backend.status).toBe("active");
+    });
+  });
+
+  it("an upcoming bout shows Start match instead of scoring, and starting opens the normal flow", async () => {
+    const { backend } = installBackend([], { status: "upcoming" });
     render(<Scoreboard boutId={BOUT_ID} />);
     await screen.findByLabelText("Alice Chen score");
 
-    fireEvent.click(screen.getByRole("button", { name: "Touch Alice Chen" }));
+    expect(screen.queryByRole("status", { name: "Bout over" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Touch Alice Chen" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Undo last touch" })).not.toBeInTheDocument();
 
-    // The buttons go the moment the winning touch is tapped, not once it is saved.
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Start match" }));
+    expect(screen.getByRole("button", { name: "Starting…" })).toBeDisabled();
     await settle();
 
-    expect(screen.getByRole("status", { name: "Bout over" })).toHaveTextContent("Alice Chen wins");
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(scoreOf("Alice Chen")).toBe("5");
-    expect(scoreOf("Ben Ortiz")).toBe("0");
-    expect(live()).toHaveLength(5);
-    expect(backend.status).toBe(expectedStatus);
+    expect(backend.status).toBe("active");
+    expect(screen.queryByRole("button", { name: "Start match" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Touch Alice Chen" }));
+    await settle();
+    expect(scoreOf("Alice Chen")).toBe("1");
+  });
+
+  it("keeps Start match and shows the reason when the backend refuses to start", async () => {
+    const { backend } = installBackend([], { status: "upcoming", refereeId: null });
+    render(<Scoreboard boutId={BOUT_ID} />);
+    await screen.findByLabelText("Alice Chen score");
+
+    fireEvent.click(screen.getByRole("button", { name: "Start match" }));
+    await settle();
+
+    expect(screen.getByRole("alert")).toHaveTextContent("a bout needs a referee to start");
+    expect(screen.getByRole("button", { name: "Start match" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Touch Alice Chen" })).not.toBeInTheDocument();
+    expect(backend.status).toBe("upcoming");
   });
 
   it("shows only the final score for a bout that has already ended, without naming a winner short of the target", async () => {
@@ -299,16 +294,21 @@ describe("Scoreboard", () => {
     expect(rows).toHaveLength(3);
     expect(rows[0]).toContain("Saving…");
     expect(rows.map((row) => row?.replace(/^.*Touch /, ""))).toEqual([
-      "Ben Ortiz1 - 2",
+      "Ben Ortiz",
       "Ben Ortiz1 - 1",
       "Alice Chen1 - 0",
     ]);
 
     await settle();
-    expect(historyRows()[0]).not.toContain("Saving…");
+    expect(historyRows().map((row) => row?.replace(/^.*Touch /, ""))).toEqual([
+      "Ben Ortiz1 - 2",
+      "Ben Ortiz1 - 1",
+      "Alice Chen1 - 0",
+    ]);
+    expect(historyRows().join()).not.toContain("Saving…");
   });
 
-  it("drops an undone touch from the history", async () => {
+  it("keeps an undone touch in the history with the score it produced, marked Revoked", async () => {
     installBackend([
       { id: 1, competitor_id: ALICE.id, points: 1 },
       { id: 2, competitor_id: BEN.id, points: 1 },
@@ -317,10 +317,14 @@ describe("Scoreboard", () => {
     await screen.findByLabelText("Alice Chen score");
 
     fireEvent.click(screen.getByRole("button", { name: "Undo last touch" }));
-    fireEvent.click(screen.getByRole("button", { name: "Undo last touch" }));
+    // Nothing is marked until the server confirms the undo.
+    expect(historyRows().some((row) => row?.includes("Revoked"))).toBe(false);
     await settle();
 
-    expect(screen.queryByRole("list", { name: "Score history" })).not.toBeInTheDocument();
-    expect(screen.getByText("No touches yet.")).toBeInTheDocument();
+    expect(scoreOf("Ben Ortiz")).toBe("0");
+    expect(historyRows().map((row) => row?.replace(/^.*Touch /, ""))).toEqual([
+      "Ben Ortiz1 - 1Revoked",
+      "Alice Chen1 - 0",
+    ]);
   });
 });

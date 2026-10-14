@@ -1,37 +1,36 @@
+import { cn } from "cn";
+
 import { Section } from "@/components/primitives/section";
 
-import type { HistoryEntry } from "../_types/tally";
+import type { HistoryRow } from "../_types/history-row";
+import { formatTime } from "../_utils/format-time";
 
 interface ScoreHistoryProps {
-  history: HistoryEntry[];
+  rows: HistoryRow[];
   nameOf: (competitorId: string) => string;
 }
 
-function formatTime(recordedAt: string | null) {
-  if (recordedAt === null) return "Saving…";
-  return new Date(recordedAt).toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-function ScoreHistory({ history, nameOf }: ScoreHistoryProps) {
+export function ScoreHistory({ rows, nameOf }: ScoreHistoryProps) {
   return (
     <Section title="Score history">
-      {history.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">No touches yet.</p>
       ) : (
         <ol aria-label="Score history" className="flex flex-col divide-y divide-border text-sm">
-          {[...history].reverse().map(({ key, scorerId, recordedAt, scores }) => (
+          {rows.map(({ key, scorerId, recordedAt, scores, revoked }) => (
             <li key={key} className="flex items-center justify-between gap-4 py-2">
               <p className="text-xs text-muted-foreground tabular-nums">
                 {formatTime(recordedAt)}
               </p>
-              <p className="flex-1">Touch {nameOf(scorerId)}</p>
-              <p className="font-medium tabular-nums">
-                {scores[0]} - {scores[1]}
+              <p className={cn("flex-1", revoked && "text-muted-foreground")}>
+                Touch {nameOf(scorerId)}
               </p>
+              {scores !== null && (
+                <p className={cn("font-medium tabular-nums", revoked && "text-muted-foreground")}>
+                  {scores[0]} - {scores[1]}
+                </p>
+              )}
+              {revoked && <p className="text-xs text-muted-foreground">Revoked</p>}
             </li>
           ))}
         </ol>
@@ -39,5 +38,3 @@ function ScoreHistory({ history, nameOf }: ScoreHistoryProps) {
     </Section>
   );
 }
-
-export { ScoreHistory };

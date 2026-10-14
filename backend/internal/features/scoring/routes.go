@@ -3,6 +3,7 @@ package scoring
 import (
 	"net/http"
 
+	"boutline/internal/features/bout"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -14,7 +15,7 @@ const (
 )
 
 func RegisterScoringRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterScoringService(api, NewScoringService(NewScoringRepository(params.DB)))
+	RegisterScoringService(api, NewScoringService(NewScoringRepository(params.DB), bout.NewBoutRepository(params.DB)))
 }
 
 func RegisterScoringService(api huma.API, service ScoringService) {
@@ -62,4 +63,13 @@ func RegisterScoringService(api huma.API, service ScoringService) {
 		Description: "A scoring that has been revoked cannot be edited.",
 		Tags:        []string{"Scoring"},
 	}, service.UpdateScoringByID)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "getScoringHistory",
+		Method:      http.MethodGet,
+		Path:        scoringByMatchPath + "/history",
+		Summary:     "List a match's score history",
+		Description: "Returns a match's scores newest first, undone ones included and marked with revoked_at, each with both competitors' running scores.",
+		Tags:        []string{"Scoring"},
+	}, service.GetScoringHistory)
 }

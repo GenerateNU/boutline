@@ -19,9 +19,9 @@ export function BoutList({ bouts, eventPath }: BoutListProps) {
             <p className="text-xs text-muted-foreground">{round}</p>
             <p className="text-sm">
               {left.name}{" "}
-              <p className="font-medium">
+              <span className="font-medium">
                 {left.score} - {right.score}
-              </p>{" "}
+              </span>{" "}
               {right.name}
             </p>
           </Link>

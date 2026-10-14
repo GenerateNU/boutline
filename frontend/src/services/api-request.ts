@@ -15,14 +15,14 @@ function problemMessage(body: unknown, status: number) {
 }
 
 // Paths are relative to /api/v1, which Next proxies to the backend (see next.config.ts).
-async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api/v1${path}`, {
     ...init,
     headers: { "Content-Type": "application/json" },
   });
   const body: unknown = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(problemMessage(body, response.status));
+  if (!response.ok) {
+    throw new Error(problemMessage(body, response.status));
+  }
   return body as T;
 }
-
-export { apiRequest };

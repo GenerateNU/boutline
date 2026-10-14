@@ -21,3 +21,6 @@ export interface Bout {
   right: BoutFencer;
   audit: Touch[];
 }
+
+// A fencer as the seed defines them; the score comes from replaying their touches.
+export type SeededFencer = Pick<BoutFencer, "name" | "club">;
