@@ -1,10 +1,10 @@
+"use client";
+
+import Link from "next/link";
 import { Ellipsis, EllipsisVertical, Settings, Shapes } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
-import { DatePicker } from "@/components/primitives/date-picker";
-"use client";
-
 import {
   Card,
   CardAction,
@@ -16,7 +16,10 @@ import {
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Chip } from "@/components/primitives/chip";
 import { CircularProgress } from "@/components/primitives/circular-progress";
+import { DatePicker } from "@/components/primitives/date-picker";
+import { LinearProgress } from "@/components/primitives/linear-progress";
 import { Radio, RadioItem } from "@/components/primitives/radio";
+import { Section } from "@/components/primitives/section";
 import { SegmentItem } from "@/components/primitives/segment-item";
 import {
   SegmentedButton,
@@ -32,15 +35,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
-import { LinearProgress } from "@/components/primitives/linear-progress";
-import { Section } from "@/components/primitives/section";
 import { ProfileTopAppBar } from "@/components/primitives/profile-top-app-bar";
 import { SubTopAppBar } from "@/components/primitives/sub-top-app-bar";
 
 import { NavigationBar } from "@/components/primitives/navigation/navigation-bar";
 import { NavigationDrawer } from "@/components/primitives/navigation/navigation-drawer";
-import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
 import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
+import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
 
 const barItems = Array.from({ length: 5 }, (_, index) => ({
   id: `bar-${index}`,
@@ -56,8 +57,6 @@ const drawerItems = Array.from({ length: 7 }, (_, index) => ({
 }));
 
 const drawerFooter = [{ id: "settings", label: "Settings", icon: <Settings /> }];
-import Link from "next/link";
-
 
 export default function Home() {
   const { toast } = useToast();
@@ -217,7 +216,7 @@ export default function Home() {
       <Section title="Date picker">
         <DatePicker />
       </Section>
-      
+
       <Section title="Navigation item">
         <div className="flex items-center gap-4">
           <NavigationItem icon={<Shapes />} label="Label" />
@@ -230,7 +229,12 @@ export default function Home() {
       <Section title="Navigation drawer item">
         <div className="flex flex-col gap-2">
           <NavigationDrawerItem icon={<Shapes />} label="Label" badge="100+" />
-          <NavigationDrawerItem icon={<Shapes />} label="Label" badge="100+" selected />
+          <NavigationDrawerItem
+            icon={<Shapes />}
+            label="Label"
+            badge="100+"
+            selected
+          />
         </div>
       </Section>
 
@@ -267,6 +271,8 @@ export default function Home() {
             </>
           }
         />
+      </Section>
+
       <Section title="Linear progress">
         <div className="flex flex-col gap-6">
           {[25, 50, 75, 100].map((value) => (
@@ -335,6 +341,7 @@ export default function Home() {
           Show toast
         </Button>
       </Section>
+
       <Section title="Tabs">
         <div className="flex flex-col gap-8">
           {(["stacked", "line"] as const).map((variant) => (
