@@ -22,9 +22,11 @@ import { Section } from "@/components/primitives/section";
 import { ProfileTopAppBar } from "@/components/primitives/profile-top-app-bar";
 import { SubTopAppBar } from "@/components/primitives/sub-top-app-bar";
 
-import { NavigationBar } from "@/components/primitives/navigation-bar";
-import { NavigationDrawer } from "@/components/primitives/navigation-drawer";
-import { NavigationItem } from "@/components/primitives/navigation-item";
+import { NavigationBar } from "@/components/primitives/navigation/navigation-bar";
+import { NavigationDrawer } from "@/components/primitives/navigation/navigation-drawer";
+import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
+
 const barItems = Array.from({ length: 5 }, (_, index) => ({
   id: `bar-${index}`,
   label: "Label",
@@ -182,6 +184,13 @@ export default function Home() {
           <NavigationItem icon={<Shapes />} aria-label="Label" />
           <NavigationItem icon={<Shapes />} label="Label" selected />
           <NavigationItem icon={<Shapes />} aria-label="Label" selected />
+        </div>
+      </Section>
+
+      <Section title="Navigation drawer item">
+        <div className="flex flex-col gap-2">
+          <NavigationDrawerItem icon={<Shapes />} label="Label" badge="100+" />
+          <NavigationDrawerItem icon={<Shapes />} label="Label" badge="100+" selected />
         </div>
       </Section>
 
