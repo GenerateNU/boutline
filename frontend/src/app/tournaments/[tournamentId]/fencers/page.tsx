@@ -1,33 +1,81 @@
-import Link from "next/link";
+import { Pagination } from "@/components/primitives/pagination";
 import { Section } from "@/components/primitives/section";
+import { listCompetitors } from "@/lib/competitors";
 
-export default function FencersTab() {
+import { SearchForm } from "../_components/search-form";
+
+export default async function FencersTab({
+  params,
+  searchParams,
+}: PageProps<"/tournaments/[tournamentId]/fencers">) {
+  const [{ tournamentId }, query] = await Promise.all([params, searchParams]);
+
+  const search = typeof query.q === "string" ? query.q.trim() : "";
+  const offset = Math.max(0, Number(query.offset) || 0);
+  const basePath = `/tournaments/${tournamentId}/fencers`;
+
+  const { data, total, limit } = await listCompetitors({
+    tournamentId,
+    search,
+    offset,
+  });
+
   return (
-    <>
-      <Section title="Fencers Tab" className="flex flex-col gap-4">
-        <p>This is the fencers tab.</p>
-        <p>lists of fencers</p>
-        <p>also have a space to enter in a &apos;private code&apos;</p>
-        <p>also they should be able to login/register here via navbar</p>
-        <p>
-          they should also be able to search / filter for fencers here. There
-          will be a calendar / weekly view that displays past, present, and
-          future fencers
-        </p>
-      </Section>
+    <Section title="Fencers">
+      <SearchForm
+        action={basePath}
+        placeholder="Search fencers"
+        defaultValue={search}
+      />
 
-      <Section title="quick link" className="flex flex-col gap-4">
-        <ul className="flex flex-col gap-2">
-          <li>
-            <Link
-              href="/tournaments/2/fencers"
-              className="text-primary underline"
-            >
-              some random id
-            </Link>
-          </li>
-        </ul>
-      </Section>
-    </>
+      {data.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {search
+            ? `No fencers match “${search}”.`
+            : "No fencers have entered this tournament yet."}
+        </p>
+      ) : (
+        <table className="w-full border-collapse text-sm">
+          {/* TODO(#107): decide whether List/ListItem from
+              vindema/lofi-components-4 should replace this table. ListItem
+              offers only leading/children/trailing and has no column headers,
+              so Name/Club/Rating may not survive. */}
+          <thead>
+            <tr className="border-b border-foreground text-xs text-muted-foreground uppercase">
+              <th scope="col" className="py-2 text-left font-medium">
+                Name
+              </th>
+              <th scope="col" className="py-2 text-left font-medium">
+                Club
+              </th>
+              <th scope="col" className="py-2 text-right font-medium">
+                Rating
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map(({ id, firstName, lastName, team, rating }) => (
+              <tr key={id} className="border-b border-border">
+                <td className="py-3 pr-3">
+                  {firstName} {lastName}
+                </td>
+                <td className="max-w-0 truncate py-3 pr-3 text-muted-foreground">
+                  {team || "—"}
+                </td>
+                <td className="py-3 text-right tabular-nums">{rating}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <Pagination
+        total={total}
+        limit={limit}
+        offset={offset}
+        basePath={basePath}
+        search={search}
+      />
+    </Section>
   );
 }
