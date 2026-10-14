@@ -1,5 +1,7 @@
 import { cn } from "cn";
 
+import { Button } from "@/components/primitives/button";
+
 type NavItem = {
   id: string;
   label: string;
@@ -21,11 +23,12 @@ function NavigationItem({
   ...props
 }: NavigationItemProps) {
   return (
-    <button
+    <Button
       type="button"
+      variant="text"
       aria-current={selected ? "page" : undefined}
       className={cn(
-        "flex size-16 flex-col items-center justify-center gap-1 border text-xs transition-colors hover:bg-muted [&_svg]:size-5",
+        "size-16 flex-col gap-1 border px-0 text-xs font-normal [&_svg]:size-5",
         selected ? "border-foreground" : "border-transparent",
         className,
       )}
@@ -33,7 +36,7 @@ function NavigationItem({
     >
       {icon}
       {label && <span>{label}</span>}
-    </button>
+    </Button>
   );
 }
 
@@ -53,20 +56,21 @@ function NavigationDrawerItem({
   ...props
 }: NavigationDrawerItemProps) {
   return (
-    <button
+    <Button
       type="button"
+      variant="text"
       aria-current={selected ? "page" : undefined}
       className={cn(
-        "flex h-14 w-full items-center gap-3 border px-4 text-left transition-colors hover:bg-muted [&_svg]:size-5",
+        "h-14 w-full justify-start gap-3 border px-4 text-base font-normal [&_svg]:size-5",
         selected ? "border-foreground" : "border-transparent",
         className,
       )}
       {...props}
     >
       {icon}
-      <span className="flex-1">{label}</span>
+      <span className="flex-1 text-left">{label}</span>
       {badge && <span className="text-sm">{badge}</span>}
-    </button>
+    </Button>
   );
 }
 
