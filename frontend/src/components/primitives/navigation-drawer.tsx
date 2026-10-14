@@ -9,7 +9,7 @@ import { Button } from "@/components/primitives/button";
 import {
   NavigationDrawerItem,
   NavigationItem,
-  type NavItem,
+  NavItem,
 } from "@/components/primitives/navigation-item";
 
 type NavigationDrawerProps = {

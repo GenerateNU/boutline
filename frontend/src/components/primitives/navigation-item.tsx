@@ -2,12 +2,12 @@ import { cn } from "cn";
 
 import { Button } from "@/components/primitives/button";
 
-type NavItem = {
+export interface NavItem {
   id: string;
   label: string;
   icon: React.ReactNode;
   badge?: string;
-};
+}
 
 type NavigationItemProps = React.ComponentProps<"button"> & {
   icon: React.ReactNode;
@@ -74,4 +74,4 @@ function NavigationDrawerItem({
   );
 }
 
-export { NavigationItem, NavigationDrawerItem, type NavItem };
+export { NavigationItem, NavigationDrawerItem };
