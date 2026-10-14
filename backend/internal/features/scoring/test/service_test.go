@@ -507,6 +507,20 @@ func touch(id int64, boutID, competitorID uuid.UUID, points int) scoring.Scoring
 	return s
 }
 
+// lateSavedFixture is a bout whose second touch was saved first, so its ids disagree with its timestamps,
+// and whose last two touches share a timestamp.
+func lateSavedFixture() (bout.Bout, []scoring.Scoring) {
+	c1, c2 := uuid.New(), uuid.New()
+	match := bout.Bout{ID: uuid.New(), Competitor1ID: c1, Competitor2ID: c2}
+	at := time.Now()
+	scores := []scoring.Scoring{touch(10, match.ID, c1, 1), touch(11, match.ID, c2, 1), touch(12, match.ID, c1, 1)}
+	scores[0].CreatedAt = at.Add(2 * time.Second)
+	scores[1].CreatedAt = at.Add(time.Second)
+	scores[2].CreatedAt = at.Add(2 * time.Second)
+
+	return match, scores
+}
+
 // historyFixture is one bout with a revoked touch, a touch on another bout and a touch by a stranger.
 func historyFixture() (bout.Bout, []scoring.Scoring) {
 	c1, c2 := uuid.New(), uuid.New()
@@ -535,6 +549,8 @@ func TestGetScoringHistory(t *testing.T) {
 	t.Parallel()
 
 	match, seed := historyFixture()
+	lateSaved, lateSeed := lateSavedFixture()
+	seed = append(seed, lateSeed...)
 	emptyMatch := bout.Bout{ID: uuid.New(), Competitor1ID: uuid.New(), Competitor2ID: uuid.New()}
 
 	tests := []struct {
@@ -552,6 +568,11 @@ func TestGetScoringHistory(t *testing.T) {
 			want: []historyEntryWant{
 				{6, 3, 1, false}, {4, 3, 1, false}, {3, 2, 1, true}, {2, 1, 1, false}, {1, 1, 0, false},
 			},
+		},
+		{
+			name:   "orders by when each score was recorded, then by id, even when ids were assigned out of order",
+			boutID: lateSaved.ID.String(),
+			want:   []historyEntryWant{{12, 2, 1, false}, {10, 1, 1, false}, {11, 0, 1, false}},
 		},
 		{
 			name:   "returns an empty list for a bout with no scores",
@@ -591,7 +612,7 @@ func TestGetScoringHistory(t *testing.T) {
 
 			repo := NewFakeScoringRepository(seed...)
 			repo.Err = tt.repoErr
-			bouts := NewFakeBoutLookup(match, emptyMatch)
+			bouts := NewFakeBoutLookup(match, lateSaved, emptyMatch)
 			bouts.Err = tt.lookupErr
 
 			out, err := scoring.NewScoringService(repo, bouts).

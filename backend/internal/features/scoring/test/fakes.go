@@ -1,6 +1,7 @@
 package test
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"slices"
@@ -197,7 +198,13 @@ func (f *FakeScoringRepository) ListScoringHistory(_ context.Context, boutID uui
 			scores = append(scores, candidate)
 		}
 	}
-	slices.SortFunc(scores, func(a, b scoring.Scoring) int { return int(b.ID - a.ID) })
+	slices.SortFunc(scores, func(a, b scoring.Scoring) int {
+		if c := b.CreatedAt.Compare(a.CreatedAt); c != 0 {
+			return c
+		}
+
+		return cmp.Compare(b.ID, a.ID)
+	})
 
 	return scores, nil
 }

@@ -138,7 +138,7 @@ func (r *scoringRepository) ListScoringHistory(ctx context.Context, boutID uuid.
 	err := r.db.WithContext(ctx).
 		Select("id", "competitor_id", "points", "created_at", "revoked_at").
 		Where("bout_id = ?", boutID).
-		Order("id DESC").
+		Order("created_at DESC NULLS LAST, id DESC").
 		Find(&scores).Error
 	if err != nil {
 		return nil, fmt.Errorf("select scoring history for match %s: %w", boutID, err)
