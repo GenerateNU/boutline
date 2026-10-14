@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Bout } from "@/types/bout";
 import type { Scoring } from "@/types/scoring";
+import { errorMessage } from "@/utils/error-message";
 
 import { getBoard, listScoring } from "../_services/scoring-api";
 import type { Board } from "../_types/board";
-import { errorMessage } from "../_utils/error-message";
 import { byRecordedOrder } from "../tally-helper";
 
 export function useBoard(boutId: string, refreshHistory: () => Promise<void>) {

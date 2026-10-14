@@ -1,9 +1,9 @@
 import { cn } from "cn";
 
 import { Section } from "@/components/primitives/section";
+import { formatTime } from "@/utils/format-time";
 
 import type { HistoryRow } from "../_types/history-row";
-import { formatTime } from "../_utils/format-time";
 
 interface ScoreHistoryProps {
   rows: HistoryRow[];

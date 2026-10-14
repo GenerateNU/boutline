@@ -2,6 +2,7 @@ import { useCallback, useRef, useState, type RefObject } from "react";
 
 import type { Bout } from "@/types/bout";
 import type { Scoring } from "@/types/scoring";
+import { errorMessage } from "@/utils/error-message";
 
 import {
   createScoring,
@@ -13,7 +14,6 @@ import {
 } from "../_services/scoring-api";
 import type { Board } from "../_types/board";
 import type { ScoringAction } from "../_types/scoring-state";
-import { errorMessage } from "../_utils/error-message";
 import { byRecordedOrder } from "../tally-helper";
 
 // TODO: remove this bypass once bouts always have a referee (or scoring uses the
