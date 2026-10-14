@@ -10,7 +10,7 @@ import {
   NavigationDrawerItem,
   NavigationItem,
   NavItem,
-} from "@/components/primitives/navigation-item";
+} from "@/components/primitives/navigation/navigation-item";
 
 interface NavigationDrawerProps {
   title: string;

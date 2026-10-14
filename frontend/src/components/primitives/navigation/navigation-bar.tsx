@@ -6,7 +6,7 @@ import { cn } from "cn";
 import {
   NavigationItem,
   NavItem,
-} from "@/components/primitives/navigation-item";
+} from "@/components/primitives/navigation/navigation-item";
 
 interface NavigationBarProps {
   items: NavItem[];
