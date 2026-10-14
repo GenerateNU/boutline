@@ -3,24 +3,26 @@ package competitor
 import "time"
 
 type CompetitorResponse struct {
-	ID        string    `json:"id" format:"uuid"`
-	FirstName string    `json:"firstName"`
-	LastName  string    `json:"lastName"`
-	Rating    string    `json:"rating" enum:"A,B,C,D,E,U"`
-	Team      string    `json:"team"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID           string    `json:"id" format:"uuid"`
+	TournamentID string    `json:"tournamentId" format:"uuid"`
+	FirstName    string    `json:"firstName"`
+	LastName     string    `json:"lastName"`
+	Rating       string    `json:"rating" enum:"A,B,C,D,E,U"`
+	Team         string    `json:"team"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 func newCompetitorResponse(competitor Competitor) CompetitorResponse {
 	return CompetitorResponse{
-		ID:        competitor.ID.String(),
-		FirstName: competitor.FirstName,
-		LastName:  competitor.LastName,
-		Rating:    string(competitor.Rating),
-		Team:      competitor.Team,
-		CreatedAt: competitor.CreatedAt,
-		UpdatedAt: competitor.UpdatedAt,
+		ID:           competitor.ID.String(),
+		TournamentID: competitor.TournamentID.String(),
+		FirstName:    competitor.FirstName,
+		LastName:     competitor.LastName,
+		Rating:       string(competitor.Rating),
+		Team:         competitor.Team,
+		CreatedAt:    competitor.CreatedAt,
+		UpdatedAt:    competitor.UpdatedAt,
 	}
 }
 
@@ -33,10 +35,11 @@ type CompetitorOutput struct {
 }
 
 type CompetitorCreateBody struct {
-	FirstName string `json:"firstName" minLength:"1" maxLength:"120" doc:"Competitor first name"`
-	LastName  string `json:"lastName" minLength:"1" maxLength:"120" doc:"Competitor last name"`
-	Rating    string `json:"rating,omitempty" enum:"A,B,C,D,E,U" doc:"Rating; defaults to U (unrated)"`
-	Team      string `json:"team,omitempty" maxLength:"120" doc:"Club or team; omit if none"`
+	TournamentID string `json:"tournamentId" format:"uuid" doc:"Tournament the competitor is entered in"`
+	FirstName    string `json:"firstName" minLength:"1" maxLength:"120" doc:"Competitor first name"`
+	LastName     string `json:"lastName" minLength:"1" maxLength:"120" doc:"Competitor last name"`
+	Rating       string `json:"rating,omitempty" enum:"A,B,C,D,E,U" doc:"Rating; defaults to U (unrated)"`
+	Team         string `json:"team,omitempty" maxLength:"120" doc:"Club or team; omit if none"`
 }
 
 type CompetitorCreateInput struct {
@@ -56,10 +59,12 @@ type CompetitorUpdateInput struct {
 }
 
 type CompetitorListInput struct {
-	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
-	Offset int    `query:"offset" default:"0" minimum:"0"`
-	Rating string `query:"rating" enum:"A,B,C,D,E,U" doc:"Only competitors with this rating"`
-	Team   string `query:"team" maxLength:"120" doc:"Only competitors on this team (exact match)"`
+	Limit        int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset       int    `query:"offset" default:"0" minimum:"0"`
+	TournamentID string `query:"tournament_id" doc:"Only competitors entered in this tournament"`
+	Rating       string `query:"rating" enum:"A,B,C,D,E,U" doc:"Only competitors with this rating"`
+	Team         string `query:"team" maxLength:"120" doc:"Only competitors on this team (exact match)"`
+	Search       string `query:"search" maxLength:"120" doc:"Case-insensitive match anywhere in the full name"`
 }
 
 type CompetitorListBody struct {
@@ -71,4 +76,27 @@ type CompetitorListBody struct {
 
 type CompetitorListOutput struct {
 	Body CompetitorListBody
+}
+
+type TeamResponse struct {
+	Name            string `json:"name"`
+	CompetitorCount int64  `json:"competitorCount"`
+}
+
+type TeamListInput struct {
+	TournamentID string `path:"id" format:"uuid" doc:"Tournament ID"`
+	Limit        int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset       int    `query:"offset" default:"0" minimum:"0"`
+	Search       string `query:"search" maxLength:"120" doc:"Case-insensitive match anywhere in the club name"`
+}
+
+type TeamListBody struct {
+	Data   []TeamResponse `json:"data"`
+	Total  int64          `json:"total" doc:"Clubs matching the filter, ignoring the page"`
+	Limit  int            `json:"limit"`
+	Offset int            `json:"offset"`
+}
+
+type TeamListOutput struct {
+	Body TeamListBody
 }

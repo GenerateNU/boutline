@@ -15,6 +15,7 @@ type CompetitorRepository interface {
 	CreateCompetitor(ctx context.Context, competitor *Competitor) error
 	GetCompetitorByID(ctx context.Context, id uuid.UUID) (*Competitor, error)
 	ListCompetitors(ctx context.Context, filter CompetitorListFilter) ([]Competitor, int64, error)
+	ListTeamsByTournament(ctx context.Context, filter TeamListFilter) ([]TeamCount, int64, error)
 	UpdateCompetitorByID(ctx context.Context, id uuid.UUID, update CompetitorUpdate) error
 	DeleteCompetitor(ctx context.Context, id uuid.UUID) error
 }
@@ -27,10 +28,24 @@ type CompetitorUpdate struct {
 }
 
 type CompetitorListFilter struct {
-	Rating *Rating // nil means don't filter by rating
-	Team   *string // nil means don't filter by team
-	Limit  int
-	Offset int
+	TournamentID *uuid.UUID
+	Rating       *Rating
+	Team         *string
+	Search       *string
+	Limit        int
+	Offset       int
+}
+
+type TeamCount struct {
+	Team            string
+	CompetitorCount int64
+}
+
+type TeamListFilter struct {
+	TournamentID uuid.UUID
+	Search       *string
+	Limit        int
+	Offset       int
 }
 
 type competitorRepository struct {
@@ -100,11 +115,17 @@ func (r *competitorRepository) ListCompetitors(
 	filter CompetitorListFilter,
 ) ([]Competitor, int64, error) {
 	query := r.db.WithContext(ctx).Model(&Competitor{})
+	if filter.TournamentID != nil {
+		query = query.Where("tournament_id = ?", *filter.TournamentID)
+	}
 	if filter.Rating != nil {
 		query = query.Where("rating = ?", string(*filter.Rating))
 	}
 	if filter.Team != nil {
 		query = query.Where("team = ?", *filter.Team)
+	}
+	if filter.Search != nil {
+		query = query.Where("first_name || ' ' || last_name ILIKE ?", "%"+*filter.Search+"%")
 	}
 
 	var total int64
@@ -115,7 +136,8 @@ func (r *competitorRepository) ListCompetitors(
 	competitors := make([]Competitor, 0, filter.Limit)
 
 	err := query.
-		Order("created_at DESC").
+		Order("last_name").
+		Order("first_name").
 		Order("id").
 		Limit(filter.Limit).
 		Offset(filter.Offset).
@@ -124,6 +146,40 @@ func (r *competitorRepository) ListCompetitors(
 		return nil, 0, fmt.Errorf("select competitors: %w", err)
 	}
 	return competitors, total, nil
+}
+
+func (r *competitorRepository) ListTeamsByTournament(
+	ctx context.Context,
+	filter TeamListFilter,
+) ([]TeamCount, int64, error) {
+	base := func() *gorm.DB {
+		query := r.db.WithContext(ctx).Model(&Competitor{}).
+			Where("tournament_id = ?", filter.TournamentID).
+			Where("team <> ''")
+		if filter.Search != nil {
+			query = query.Where("team ILIKE ?", "%"+*filter.Search+"%")
+		}
+		return query
+	}
+
+	var total int64
+	if err := base().Distinct("team").Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count teams: %w", err)
+	}
+
+	teams := make([]TeamCount, 0, filter.Limit)
+
+	err := base().
+		Select("team, count(*) AS competitor_count").
+		Group("team").
+		Order("team").
+		Limit(filter.Limit).
+		Offset(filter.Offset).
+		Scan(&teams).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("select teams: %w", err)
+	}
+	return teams, total, nil
 }
 
 func (r *competitorRepository) DeleteCompetitor(ctx context.Context, id uuid.UUID) error {

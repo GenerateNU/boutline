@@ -3,15 +3,22 @@ package competitor
 import (
 	"net/http"
 
+	"boutline/internal/features/tournament"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
 )
 
-const competitorBasePath = "/api/v1/competitors"
+const (
+	competitorBasePath  = "/api/v1/competitors"
+	tournamentTeamsPath = "/api/v1/tournaments/{id}/teams"
+)
 
 func RegisterCompetitorRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterCompetitorService(api, NewCompetitorService(NewCompetitorRepository(params.DB)))
+	RegisterCompetitorService(api, NewCompetitorService(
+		NewCompetitorRepository(params.DB),
+		tournament.NewTournamentRepository(params.DB),
+	))
 }
 
 func RegisterCompetitorService(api huma.API, service CompetitorService) {
@@ -31,6 +38,15 @@ func RegisterCompetitorService(api huma.API, service CompetitorService) {
 		Summary:     "List competitors",
 		Tags:        []string{"Competitors"},
 	}, service.ListCompetitors)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listTournamentTeams",
+		Method:      http.MethodGet,
+		Path:        tournamentTeamsPath,
+		Summary:     "List the clubs competing in a tournament",
+		Description: "Clubs are the distinct teams of the tournament's competitors; unaffiliated competitors are left out.",
+		Tags:        []string{"Tournaments"},
+	}, service.ListTeamsByTournament)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getCompetitorByID",

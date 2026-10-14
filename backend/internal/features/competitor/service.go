@@ -2,12 +2,20 @@ package competitor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/tournament"
 	"boutline/internal/utils"
+
+	"github.com/google/uuid"
 )
+
+type TournamentLookup interface {
+	GetTournamentByID(ctx context.Context, id uuid.UUID) (*tournament.Tournament, error)
+}
 
 const (
 	CompetitorDefaultPageSize = 20
@@ -21,20 +29,34 @@ type CompetitorService interface {
 	ListCompetitors(ctx context.Context, input *CompetitorListInput) (*CompetitorListOutput, error)
 	UpdateCompetitorByID(ctx context.Context, input *CompetitorUpdateInput) (*CompetitorOutput, error)
 	DeleteCompetitor(ctx context.Context, input *CompetitorIDInput) (*struct{}, error)
+	ListTeamsByTournament(ctx context.Context, input *TeamListInput) (*TeamListOutput, error)
 }
 
 type competitorService struct {
-	repo CompetitorRepository
+	repo        CompetitorRepository
+	tournaments TournamentLookup
 }
 
-func NewCompetitorService(repo CompetitorRepository) CompetitorService {
-	return &competitorService{repo: repo}
+func NewCompetitorService(repo CompetitorRepository, tournaments TournamentLookup) CompetitorService {
+	return &competitorService{repo: repo, tournaments: tournaments}
 }
 
 func (s *competitorService) CreateCompetitor(
 	ctx context.Context,
 	input *CompetitorCreateInput,
 ) (*CompetitorOutput, error) {
+	tournamentID, err := utils.ParseUUID(input.Body.TournamentID, "tournamentId")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+	if _, err := s.tournaments.GetTournamentByID(ctx, tournamentID); err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.HumaError(errs.Public(
+				"tournamentId must reference an existing tournament", errs.ErrInvalidInput))
+		}
+		return nil, errs.HumaError(fmt.Errorf("get tournament: %w", err))
+	}
+
 	firstName := strings.TrimSpace(input.Body.FirstName)
 	lastName := strings.TrimSpace(input.Body.LastName)
 	if firstName == "" {
@@ -54,10 +76,11 @@ func (s *competitorService) CreateCompetitor(
 	}
 
 	competitor := &Competitor{
-		FirstName: firstName,
-		LastName:  lastName,
-		Rating:    rating,
-		Team:      strings.TrimSpace(input.Body.Team),
+		TournamentID: tournamentID,
+		FirstName:    firstName,
+		LastName:     lastName,
+		Rating:       rating,
+		Team:         strings.TrimSpace(input.Body.Team),
 	}
 
 	if err := s.repo.CreateCompetitor(ctx, competitor); err != nil {
@@ -143,16 +166,21 @@ func (s *competitorService) ListCompetitors(
 	ctx context.Context,
 	input *CompetitorListInput,
 ) (*CompetitorListOutput, error) {
-	limit := input.Limit
-	if limit <= 0 {
-		limit = CompetitorDefaultPageSize
-	}
-	limit = utils.Clamp(limit, CompetitorMinPageSize, CompetitorMaxPageSize)
-	offset := max(input.Offset, 0)
+	limit, offset := page(input.Limit, input.Offset)
 
 	filter := CompetitorListFilter{
 		Limit:  limit,
 		Offset: offset,
+	}
+	if input.TournamentID != "" {
+		tournamentID, err := utils.ParseUUID(input.TournamentID, "tournament_id")
+		if err != nil {
+			return nil, errs.HumaError(err)
+		}
+		filter.TournamentID = &tournamentID
+	}
+	if search := strings.TrimSpace(input.Search); search != "" {
+		filter.Search = &search
 	}
 	if input.Rating != "" {
 		rating, err := parseRating(input.Rating)
@@ -195,6 +223,54 @@ func (s *competitorService) DeleteCompetitor(
 		return nil, errs.HumaError(fmt.Errorf("delete competitor: %w", err))
 	}
 	return nil, nil
+}
+
+func (s *competitorService) ListTeamsByTournament(
+	ctx context.Context,
+	input *TeamListInput,
+) (*TeamListOutput, error) {
+	tournamentID, err := utils.ParseUUID(input.TournamentID, "tournament id")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+	if _, err := s.tournaments.GetTournamentByID(ctx, tournamentID); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get tournament: %w", err))
+	}
+
+	limit, offset := page(input.Limit, input.Offset)
+
+	filter := TeamListFilter{
+		TournamentID: tournamentID,
+		Limit:        limit,
+		Offset:       offset,
+	}
+	if search := strings.TrimSpace(input.Search); search != "" {
+		filter.Search = &search
+	}
+
+	teams, total, err := s.repo.ListTeamsByTournament(ctx, filter)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("list teams: %w", err))
+	}
+
+	data := make([]TeamResponse, 0, len(teams))
+	for _, team := range teams {
+		data = append(data, TeamResponse{Name: team.Team, CompetitorCount: team.CompetitorCount})
+	}
+	return &TeamListOutput{Body: TeamListBody{
+		Data:   data,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}}, nil
+}
+
+func page(limit, offset int) (int, int) {
+	if limit <= 0 {
+		limit = CompetitorDefaultPageSize
+	}
+
+	return utils.Clamp(limit, CompetitorMinPageSize, CompetitorMaxPageSize), max(offset, 0)
 }
 
 func parseRating(raw string) (Rating, error) {
