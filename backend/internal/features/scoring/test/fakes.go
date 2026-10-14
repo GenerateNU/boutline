@@ -7,10 +7,43 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/bout"
 	"boutline/internal/features/scoring"
+
+	"github.com/google/uuid"
 )
 
-var _ scoring.ScoringRepository = (*FakeScoringRepository)(nil)
+var (
+	_ scoring.ScoringRepository = (*FakeScoringRepository)(nil)
+	_ scoring.BoutLookup        = (*FakeBoutLookup)(nil)
+)
+
+type FakeBoutLookup struct {
+	Bouts map[uuid.UUID]bout.Bout
+	Err   error // when set, every lookup fails with it
+}
+
+func NewFakeBoutLookup(seed ...bout.Bout) *FakeBoutLookup {
+	bouts := make(map[uuid.UUID]bout.Bout, len(seed))
+	for _, seeded := range seed {
+		bouts[seeded.ID] = seeded
+	}
+
+	return &FakeBoutLookup{Bouts: bouts}
+}
+
+func (f *FakeBoutLookup) GetBoutByID(_ context.Context, id uuid.UUID) (*bout.Bout, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	found, ok := f.Bouts[id]
+	if !ok {
+		return nil, fmt.Errorf("select bout %s: %w", id, errs.ErrNotFound)
+	}
+
+	return &found, nil
+}
 
 type FakeScoringRepository struct {
 	Scores map[int64]scoring.Scoring
@@ -151,4 +184,43 @@ func (f *FakeScoringRepository) RevokeScoring(_ context.Context, revoked *scorin
 	f.Scores[revoked.ID] = stored
 
 	return nil
+}
+
+func (f *FakeScoringRepository) ListScoringHistory(
+	_ context.Context,
+	filter scoring.ScoringHistoryFilter,
+) (scoring.ScoringHistoryPage, error) {
+	if f.Err != nil {
+		return scoring.ScoringHistoryPage{}, f.Err
+	}
+
+	forBout := make([]scoring.Scoring, 0, len(f.Scores))
+	for _, candidate := range f.Scores {
+		if candidate.BoutID == filter.BoutID {
+			forBout = append(forBout, candidate)
+		}
+	}
+	slices.SortFunc(forBout, func(a, b scoring.Scoring) int { return int(b.ID - a.ID) })
+
+	page := scoring.ScoringHistoryPage{
+		Scores:       []scoring.Scoring{},
+		Total:        int64(len(forBout)),
+		PointsBefore: map[uuid.UUID]int{},
+	}
+	if filter.Offset >= len(forBout) {
+		return page, nil
+	}
+
+	rest := forBout[filter.Offset:]
+	page.Scores = rest[:min(filter.Limit, len(rest))]
+
+	oldestID := page.Scores[len(page.Scores)-1].ID
+	for _, earlier := range forBout {
+		isEarlierLive := earlier.ID < oldestID && earlier.RevokedAt == nil
+		if isEarlierLive {
+			page.PointsBefore[earlier.CompetitorID] += earlier.Points
+		}
+	}
+
+	return page, nil
 }
