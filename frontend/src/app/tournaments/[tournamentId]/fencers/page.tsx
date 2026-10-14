@@ -2,6 +2,7 @@ import { Pagination } from "@/components/primitives/pagination";
 import { Section } from "@/components/primitives/section";
 import { listCompetitors } from "@/lib/competitors";
 
+import { MockCountry } from "../_components/mock-country";
 import { SearchForm } from "../_components/search-form";
 
 export default async function FencersTab({
@@ -42,6 +43,9 @@ export default async function FencersTab({
               so Name/Club/Rating may not survive. */}
           <thead>
             <tr className="border-b border-foreground text-xs text-muted-foreground uppercase">
+              <th scope="col" className="w-6 py-2 text-left font-medium">
+                C
+              </th>
               <th scope="col" className="py-2 text-left font-medium">
                 Name
               </th>
@@ -56,7 +60,10 @@ export default async function FencersTab({
           <tbody>
             {data.map(({ id, firstName, lastName, team, rating }) => (
               <tr key={id} className="border-b border-border">
-                <td className="py-3 pr-3">
+                <td className="py-3 pr-2">
+                  <MockCountry />
+                </td>
+                <td className="max-w-0 truncate py-3 pr-3">
                   {firstName} {lastName}
                 </td>
                 <td className="max-w-0 truncate py-3 pr-3 text-muted-foreground">
