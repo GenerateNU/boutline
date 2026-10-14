@@ -14,7 +14,11 @@ import (
 
 	"boutline/internal/features/bout"
 	"boutline/internal/features/competitor"
+	"boutline/internal/features/directelimination"
 	"boutline/internal/features/event"
+	"boutline/internal/features/pool"
+	"boutline/internal/features/poolstage"
+	"boutline/internal/features/scoring"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
 	"boutline/internal/features/user"
@@ -37,6 +41,10 @@ func run() error {
 		&tournamentuser.TournamentUser{},
 		&user.User{},
 		&competitor.Competitor{},
+		&poolstage.PoolStage{},
+		&pool.Pool{},
+		&directelimination.DirectElimination{},
+		&scoring.Scoring{},
 	)
 	if err != nil {
 		return fmt.Errorf("load gorm schema: %w", err)

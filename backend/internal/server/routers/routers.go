@@ -3,8 +3,12 @@ package routers
 import (
 	"boutline/internal/features/bout"
 	"boutline/internal/features/competitor"
+	"boutline/internal/features/directelimination"
 	"boutline/internal/features/event"
 	"boutline/internal/features/health"
+	"boutline/internal/features/pool"
+	"boutline/internal/features/poolstage"
+	"boutline/internal/features/scoring"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 	"boutline/internal/types"
@@ -17,10 +21,14 @@ import (
 func SetUpRoutes(app *fiber.App, routeParams types.RouteParams) {
 	health.RegisterHealthRoutes(routeParams.API, routeParams.ServiceParams)
 	tournament.RegisterTournamentRoutes(routeParams.API, routeParams.ServiceParams)
+	scoring.RegisterScoringRoutes(routeParams.API, routeParams.ServiceParams)
 	bout.RegisterBoutRoutes(routeParams.API, routeParams.ServiceParams)
+	directelimination.RegisterDirectEliminationRoutes(routeParams.API, routeParams.ServiceParams)
 	event.RegisterEventRoutes(routeParams.API, routeParams.ServiceParams)
 	user.RegisterUserRoutes(routeParams.API, routeParams.ServiceParams)
 	competitor.RegisterCompetitorRoutes(routeParams.API, routeParams.ServiceParams)
+	poolstage.RegisterPoolStageRoutes(routeParams.API, routeParams.ServiceParams)
+	pool.RegisterPoolRoutes(routeParams.API, routeParams.ServiceParams)
 
 	// Fiber owns anything Huma did not claim, so the catch-all stays here.
 	setUpNotFoundHandler(app)

@@ -18,7 +18,7 @@ func newTestAPI(t *testing.T, tournaments *FakeTournamentLookup, seed ...bout.Bo
 	t.Helper()
 
 	_, api := humatest.New(t)
-	bout.RegisterBoutService(api, bout.NewBoutService(NewFakeBoutRepository(seed...), tournaments))
+	bout.RegisterBoutService(api, bout.NewBoutService(NewFakeBoutRepository(seed...), tournaments, NewFakePoolLookup(nil)))
 
 	return api
 }

@@ -1,11 +1,16 @@
 package bout
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type BoutResponse struct {
 	ID               string     `json:"id" format:"uuid"`
 	TournamentID     string     `json:"tournament_id" format:"uuid"`
 	RefereeID        *string    `json:"referee_id" format:"uuid" doc:"Null until a referee is assigned"`
+	PoolID           *string    `json:"pool_id" format:"uuid" doc:"Null for a bout outside the pool stage"`
 	Competitor1ID    string     `json:"competitor_1_id" format:"uuid"`
 	Competitor2ID    string     `json:"competitor_2_id" format:"uuid"`
 	Location         *string    `json:"location"`
@@ -21,16 +26,11 @@ type BoutResponse struct {
 }
 
 func newBoutResponse(bout Bout) BoutResponse {
-	var refereeID *string
-	if bout.RefereeID != nil {
-		id := bout.RefereeID.String()
-		refereeID = &id
-	}
-
 	return BoutResponse{
 		ID:               bout.ID.String(),
 		TournamentID:     bout.TournamentID.String(),
-		RefereeID:        refereeID,
+		RefereeID:        optionalUUIDString(bout.RefereeID),
+		PoolID:           optionalUUIDString(bout.PoolID),
 		Competitor1ID:    bout.Competitor1ID.String(),
 		Competitor2ID:    bout.Competitor2ID.String(),
 		Location:         bout.Location,
@@ -46,9 +46,19 @@ func newBoutResponse(bout Bout) BoutResponse {
 	}
 }
 
+func optionalUUIDString(id *uuid.UUID) *string {
+	if id == nil {
+		return nil
+	}
+
+	formatted := id.String()
+	return &formatted
+}
+
 type BoutCreateBody struct {
 	TournamentID     string     `json:"tournament_id" format:"uuid" doc:"Tournament this bout belongs to"`
 	RefereeID        *string    `json:"referee_id,omitempty" format:"uuid" doc:"Can be assigned later, but a bout needs one to start"`
+	PoolID           *string    `json:"pool_id,omitempty" format:"uuid" doc:"Pool this bout is fought in, if any"`
 	Competitor1ID    string     `json:"competitor_1_id" format:"uuid"`
 	Competitor2ID    string     `json:"competitor_2_id" format:"uuid"`
 	PointsToWin      int        `json:"points_to_win" minimum:"1"`
@@ -68,6 +78,7 @@ type BoutIDInput struct {
 
 type BoutUpdateBody struct {
 	RefereeID        *string    `json:"referee_id,omitempty" format:"uuid"`
+	PoolID           *string    `json:"pool_id,omitempty" format:"uuid"`
 	Competitor1ID    *string    `json:"competitor_1_id,omitempty" format:"uuid"`
 	Competitor2ID    *string    `json:"competitor_2_id,omitempty" format:"uuid"`
 	PointsToWin      *int       `json:"points_to_win,omitempty" minimum:"1"`
@@ -82,11 +93,12 @@ type BoutUpdateInput struct {
 	Body BoutUpdateBody
 }
 
-// TournamentID has no format:"uuid" tag because Huma rejects an empty
+// TournamentID and PoolID have no format:"uuid" tag because Huma rejects an empty
 // optional query string against that format; an empty value is validated by
 // utils.ParseUUID only when it is actually set.
 type BoutListInput struct {
 	TournamentID string     `query:"tournament_id" doc:"Filter by tournament"`
+	PoolID       string     `query:"pool_id" doc:"Filter by pool"`
 	Status       BoutStatus `query:"status" enum:"upcoming,active,end" doc:"Filter by status"`
 	Limit        int        `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset       int        `query:"offset" default:"0" minimum:"0"`

@@ -1,0 +1,126 @@
+# Per-PR backend preview on the shared droplet. A preview costs a container and
+# a database -- RAM, not money -- so it runs on every PR with no label needed.
+name: Preview backend
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+concurrency:
+  group: droplet-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Deploy preview backend
+    runs-on: ubuntu-latest
+    # Forked PRs cannot read secrets, so a deploy there would fail with a
+    # misleading auth error.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Check out the PR branch
+        uses: actions/checkout@v5
+
+      # GHCR repository names must be lowercase, but github.repository keeps the
+      # org's capitalisation (GenerateNU), which buildx rejects outright.
+      - name: Compute the image repository
+        run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push the backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_REPO }}/backend:pr-${{ env.PR }}-${{ env.SHA }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push the migration image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile.migrate
+          push: true
+          tags: ${{ env.IMAGE_REPO }}/migrate:pr-${{ env.PR }}-${{ env.SHA }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Configure SSH
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.DROPLET_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      # Piped over stdin, so the droplet needs no checkout of this repo.
+      - name: Bring the preview up
+        env:
+          DROPLET: ${{ vars.DROPLET_USER }}@${{ vars.DROPLET_HOST }}
+        run: |
+          set -euo pipefail
+          ssh "$DROPLET" bash -s -- "$PR" "$SHA" \
+            "$IMAGE_REPO/backend:pr-$PR-$SHA" \
+            "$IMAGE_REPO/migrate:pr-$PR-$SHA" < deploy/preview-up.sh
+
+      - name: Comment the result
+        # Not always(): a run cancelled by a newer push must not report failure.
+        if: success() || failure()
+        uses: actions/github-script@v7
+        env:
+          OUTCOME: ${{ job.status }}
+          PREVIEW_HOST: boutline-pr-${{ github.event.pull_request.number }}.${{ vars.PREVIEW_DOMAIN }}
+        with:
+          script: |
+            const marker = '<!-- droplet-preview -->';
+            const { owner, repo } = context.repo;
+            const body = process.env.OUTCOME === 'success'
+              ? [
+                  marker,
+                  '### :rocket: Preview backend ready',
+                  '',
+                  `API docs: **https://${process.env.PREVIEW_HOST}/docs**`,
+                  '',
+                  `Built from \`${process.env.SHA.slice(0, 7)}\`, with its own database migrated from this branch.`,
+                  '',
+                  'Vercel comments its frontend preview separately. That frontend proxies to the',
+                  'production API unless a Preview-scoped `API_PROXY_TARGET` is set in Vercel.',
+                ].join('\n')
+              : [
+                  marker,
+                  '### :x: Preview backend failed',
+                  '',
+                  `[View the logs](https://github.com/${owner}/${repo}/actions/runs/${context.runId})`,
+                ].join('\n');
+
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number,
+            });
+            const existing = comments.find((c) => c.body?.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }

@@ -3,8 +3,19 @@ import { Ellipsis, EllipsisVertical, Settings, Shapes } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
 import { DatePicker } from "@/components/primitives/date-picker";
+"use client";
+
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardHeader,
+  CardMedia,
+  CardTitle,
+} from "@/components/primitives/card";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Chip } from "@/components/primitives/chip";
+import { CircularProgress } from "@/components/primitives/circular-progress";
 import { Radio, RadioItem } from "@/components/primitives/radio";
 import { SegmentItem } from "@/components/primitives/segment-item";
 import {
@@ -12,12 +23,16 @@ import {
   SegmentedButtonItem,
 } from "@/components/primitives/segmented-button";
 import { Slider } from "@/components/primitives/slider";
+import { Tabs, TabsList, TabsTrigger } from "@/components/primitives/tabs";
+import { TextField } from "@/components/primitives/text-field";
+import { useToast } from "@/components/primitives/toast";
 import { Toggle } from "@/components/primitives/toggle";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
+import { LinearProgress } from "@/components/primitives/linear-progress";
 import { Section } from "@/components/primitives/section";
 import { ProfileTopAppBar } from "@/components/primitives/profile-top-app-bar";
 import { SubTopAppBar } from "@/components/primitives/sub-top-app-bar";
@@ -41,10 +56,35 @@ const drawerItems = Array.from({ length: 7 }, (_, index) => ({
 }));
 
 const drawerFooter = [{ id: "settings", label: "Settings", icon: <Settings /> }];
+import Link from "next/link";
+
 
 export default function Home() {
+  const { toast } = useToast();
+
   return (
     <main className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 py-10">
+      <Section title="Home Page">
+        <div className="flex items-center gap-4">
+          <p>This is the home page.</p>
+          <p>quick links:</p>
+          <ul className="flex flex-col gap-2">
+            <li>
+              <Link href="/login" className="text-primary underline">
+                login
+              </Link>
+            </li>
+            <li>
+              <Link href="/tournaments" className="text-primary underline">
+                Tournaments
+              </Link>
+            </li>
+          </ul>
+        </div>
+      </Section>
+
+      <hr />
+
       <Section title="Avatar">
         <div className="flex items-center gap-4">
           <Avatar>
@@ -227,6 +267,100 @@ export default function Home() {
             </>
           }
         />
+      <Section title="Linear progress">
+        <div className="flex flex-col gap-6">
+          {[25, 50, 75, 100].map((value) => (
+            <LinearProgress key={value} value={value} aria-label={`${value}%`} />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Circular progress">
+        <div className="flex items-center gap-4">
+          {[25, 50, 75, 100].map((value) => (
+            <CircularProgress
+              key={value}
+              value={value}
+              aria-label={`${value}%`}
+            />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Card">
+        <div className="flex flex-col gap-4">
+          <Card className="w-64">
+            <CardMedia />
+            <CardHeader>
+              <CardTitle>Header</CardTitle>
+              <CardDescription>Subhead</CardDescription>
+              <CardAction>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="More"
+                  className="bg-background"
+                >
+                  <Ellipsis />
+                </Button>
+              </CardAction>
+            </CardHeader>
+          </Card>
+          <Card orientation="horizontal">
+            <CardMedia />
+            <CardHeader>
+              <CardTitle>Header</CardTitle>
+              <CardDescription>Subhead</CardDescription>
+              <CardAction>
+                <Button variant="outline" size="icon" aria-label="More">
+                  <Ellipsis />
+                </Button>
+              </CardAction>
+            </CardHeader>
+          </Card>
+        </div>
+      </Section>
+
+      <Section title="Toast">
+        <Button
+          onClick={() =>
+            toast({
+              description:
+                "Toasts provide brief messages about app processes at the bottom of the screen",
+              action: { label: "Label", altText: "Label" },
+              stacked: true,
+            })
+          }
+        >
+          Show toast
+        </Button>
+      </Section>
+      <Section title="Tabs">
+        <div className="flex flex-col gap-8">
+          {(["stacked", "line"] as const).map((variant) => (
+            <Tabs key={variant} defaultValue="one">
+              <TabsList variant={variant}>
+                {["one", "two", "three"].map((value) => (
+                  <TabsTrigger key={value} value={value} icon={<Ellipsis />}>
+                    Tab
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Textfield">
+        <div className="flex flex-col gap-6">
+          <TextField
+            label="Label"
+            placeholder="Placeholder text"
+            supportingText="Supporting text"
+            leading={<Ellipsis aria-hidden />}
+            trailing={<Ellipsis aria-hidden />}
+          />
+        </div>
       </Section>
     </main>
   );
