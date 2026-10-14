@@ -13,7 +13,8 @@ function Menu({ className, ...props }: React.ComponentProps<"ul">) {
   );
 }
 
-interface MenuItemProps extends React.ComponentProps<typeof Button> {
+interface MenuItemProps
+  extends Omit<React.ComponentProps<typeof Button>, "asChild"> {
   icon?: React.ReactNode;
 }
 
