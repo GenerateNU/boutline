@@ -92,8 +92,6 @@ type ScoringListOutput struct {
 
 type ScoringHistoryInput struct {
 	BoutID string `path:"bout_id" format:"uuid" doc:"Match ID"`
-	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
-	Offset int    `query:"offset" default:"0" minimum:"0"`
 }
 
 type ScoringHistoryEntry struct {
@@ -107,10 +105,7 @@ type ScoringHistoryEntry struct {
 }
 
 type ScoringHistoryBody struct {
-	Data   []ScoringHistoryEntry `json:"data"`
-	Total  int64                 `json:"total" doc:"Live scores for the match, ignoring the page"`
-	Limit  int                   `json:"limit"`
-	Offset int                   `json:"offset"`
+	Data []ScoringHistoryEntry `json:"data"`
 }
 
 type ScoringHistoryOutput struct {

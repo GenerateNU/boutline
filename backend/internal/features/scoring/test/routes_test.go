@@ -405,9 +405,6 @@ func TestHistoryEndpoint(t *testing.T) {
 		{name: "returns the history with running totals", path: match.ID.String() + "/history", wantCode: http.StatusOK},
 		{name: "reports an unknown bout as not found", path: uuid.NewString() + "/history", wantCode: http.StatusNotFound},
 		{name: "rejects a bout id that is not a uuid", path: "not-a-uuid/history", wantCode: http.StatusUnprocessableEntity},
-		{name: "rejects a zero limit", path: match.ID.String() + "/history?limit=0", wantCode: http.StatusUnprocessableEntity},
-		{name: "rejects a limit over the maximum", path: match.ID.String() + "/history?limit=101", wantCode: http.StatusUnprocessableEntity},
-		{name: "rejects a negative offset", path: match.ID.String() + "/history?offset=-1", wantCode: http.StatusUnprocessableEntity},
 	}
 
 	for _, tt := range tests {
@@ -428,7 +425,7 @@ func TestHistoryEndpoint(t *testing.T) {
 			first := data[0].(map[string]any)
 			assert.InDelta(t, 3, first["competitor_1_score"], 0)
 			assert.InDelta(t, 1, first["competitor_2_score"], 0)
-			assert.InDelta(t, 5, body["total"], 0)
+			assert.Len(t, data, 5)
 
 			revokedAt, present := first["revoked_at"]
 			assert.True(t, present, "a live score still sends revoked_at, as null")

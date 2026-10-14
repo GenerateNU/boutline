@@ -536,95 +536,49 @@ func TestGetScoringHistory(t *testing.T) {
 
 	match, seed := historyFixture()
 	emptyMatch := bout.Bout{ID: uuid.New(), Competitor1ID: uuid.New(), Competitor2ID: uuid.New()}
-	allHistory := []historyEntryWant{
-		{6, 3, 1, false}, {4, 3, 1, false}, {3, 2, 1, true}, {2, 1, 1, false}, {1, 1, 0, false},
-	}
 
 	tests := []struct {
 		name       string
-		input      *scoring.ScoringHistoryInput
+		boutID     string
 		repoErr    error
 		lookupErr  error
 		want       []historyEntryWant
-		wantTotal  int64
-		wantLimit  int
-		wantOffset int
 		wantCode   int
 		wantDetail string
 	}{
 		{
-			name:      "lists every score newest first; a revoked one shows the score it produced but later scores skip it",
-			input:     &scoring.ScoringHistoryInput{BoutID: match.ID.String(), Limit: 20},
-			want:      allHistory,
-			wantTotal: 5,
-			wantLimit: 20,
+			name:   "lists every score newest first; a revoked one shows the score it produced but later scores skip it",
+			boutID: match.ID.String(),
+			want: []historyEntryWant{
+				{6, 3, 1, false}, {4, 3, 1, false}, {3, 2, 1, true}, {2, 1, 1, false}, {1, 1, 0, false},
+			},
 		},
 		{
-			name:       "carries earlier points into a later page",
-			input:      &scoring.ScoringHistoryInput{BoutID: match.ID.String(), Limit: 1, Offset: 1},
-			want:       []historyEntryWant{{4, 3, 1, false}},
-			wantTotal:  5,
-			wantLimit:  1,
-			wantOffset: 1,
-		},
-		{
-			name:       "shows the score a revoked touch produced on a page that starts at it",
-			input:      &scoring.ScoringHistoryInput{BoutID: match.ID.String(), Limit: 1, Offset: 2},
-			want:       []historyEntryWant{{3, 2, 1, true}},
-			wantTotal:  5,
-			wantLimit:  1,
-			wantOffset: 2,
-		},
-		{
-			name:       "starts from zero on the oldest page",
-			input:      &scoring.ScoringHistoryInput{BoutID: match.ID.String(), Limit: 1, Offset: 4},
-			want:       []historyEntryWant{{1, 1, 0, false}},
-			wantTotal:  5,
-			wantLimit:  1,
-			wantOffset: 4,
-		},
-		{
-			name:       "returns an empty page past the end",
-			input:      &scoring.ScoringHistoryInput{BoutID: match.ID.String(), Limit: 20, Offset: 10},
-			want:       []historyEntryWant{},
-			wantTotal:  5,
-			wantLimit:  20,
-			wantOffset: 10,
-		},
-		{
-			name:      "clamps an oversized limit and a negative offset",
-			input:     &scoring.ScoringHistoryInput{BoutID: match.ID.String(), Limit: 1000, Offset: -5},
-			want:      allHistory,
-			wantTotal: 5,
-			wantLimit: scoring.ScoringMaxPageSize,
-		},
-		{
-			name:      "returns an empty list for a bout with no scores",
-			input:     &scoring.ScoringHistoryInput{BoutID: emptyMatch.ID.String(), Limit: 20},
-			want:      []historyEntryWant{},
-			wantLimit: 20,
+			name:   "returns an empty list for a bout with no scores",
+			boutID: emptyMatch.ID.String(),
+			want:   []historyEntryWant{},
 		},
 		{
 			name:       "reports an unknown bout as not found",
-			input:      &scoring.ScoringHistoryInput{BoutID: uuid.New().String(), Limit: 20},
+			boutID:     uuid.New().String(),
 			wantCode:   http.StatusNotFound,
 			wantDetail: "not found",
 		},
 		{
 			name:     "rejects a bout id that is not a uuid",
-			input:    &scoring.ScoringHistoryInput{BoutID: "not-a-uuid", Limit: 20},
+			boutID:   "not-a-uuid",
 			wantCode: http.StatusBadRequest,
 		},
 		{
 			name:       "reports a repository failure as a server error",
-			input:      &scoring.ScoringHistoryInput{BoutID: match.ID.String(), Limit: 20},
+			boutID:     match.ID.String(),
 			repoErr:    errors.New("connection refused"),
 			wantCode:   http.StatusInternalServerError,
 			wantDetail: "internal server error",
 		},
 		{
 			name:       "reports a bout lookup failure as a server error",
-			input:      &scoring.ScoringHistoryInput{BoutID: match.ID.String(), Limit: 20},
+			boutID:     match.ID.String(),
 			lookupErr:  errors.New("connection refused"),
 			wantCode:   http.StatusInternalServerError,
 			wantDetail: "internal server error",
@@ -640,7 +594,8 @@ func TestGetScoringHistory(t *testing.T) {
 			bouts := NewFakeBoutLookup(match, emptyMatch)
 			bouts.Err = tt.lookupErr
 
-			out, err := scoring.NewScoringService(repo, bouts).GetScoringHistory(t.Context(), tt.input)
+			out, err := scoring.NewScoringService(repo, bouts).
+				GetScoringHistory(t.Context(), &scoring.ScoringHistoryInput{BoutID: tt.boutID})
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -660,9 +615,6 @@ func TestGetScoringHistory(t *testing.T) {
 				got = append(got, historyEntryWant{entry.ID, entry.Competitor1Score, entry.Competitor2Score, entry.RevokedAt != nil})
 			}
 			assert.Equal(t, tt.want, got)
-			assert.Equal(t, tt.wantTotal, out.Body.Total)
-			assert.Equal(t, tt.wantLimit, out.Body.Limit)
-			assert.Equal(t, tt.wantOffset, out.Body.Offset)
 		})
 	}
 }

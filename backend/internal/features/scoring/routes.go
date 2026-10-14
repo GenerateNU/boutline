@@ -69,7 +69,7 @@ func RegisterScoringService(api huma.API, service ScoringService) {
 		Method:      http.MethodGet,
 		Path:        scoringByMatchPath + "/history",
 		Summary:     "List a match's score history",
-		Description: "Returns a match's scores newest first, undone ones included and marked with revoked_at, each with both competitors' running scores.",
+		Description: "Returns all of a match's scores newest first, undone ones included and marked with revoked_at, each with both competitors' running scores. Not paginated: a bout's scores are bounded by its points_to_win.",
 		Tags:        []string{"Scoring"},
 	}, service.GetScoringHistory)
 }

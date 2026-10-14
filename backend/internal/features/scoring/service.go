@@ -42,14 +42,6 @@ func NewScoringService(repo ScoringRepository, bouts BoutLookup) ScoringService 
 	return &scoringService{repo: repo, bouts: bouts}
 }
 
-func clampPage(limit, offset int) (int, int) {
-	if limit <= 0 {
-		limit = ScoringDefaultPageSize
-	}
-
-	return utils.Clamp(limit, ScoringMinPageSize, ScoringMaxPageSize), max(offset, 0)
-}
-
 func (s *scoringService) CreateScoring(
 	ctx context.Context,
 	input *ScoringCreateInput,
@@ -102,7 +94,12 @@ func (s *scoringService) ListScoring(
 		return nil, errs.HumaError(err)
 	}
 
-	limit, offset := clampPage(input.Limit, input.Offset)
+	limit := input.Limit
+	if limit <= 0 {
+		limit = ScoringDefaultPageSize
+	}
+	limit = utils.Clamp(limit, ScoringMinPageSize, ScoringMaxPageSize)
+	offset := max(input.Offset, 0)
 
 	scores, total, err := s.repo.ListScoring(ctx, ScoringListFilter{
 		BoutID:         &BoutID,
@@ -205,38 +202,26 @@ func (s *scoringService) GetScoringHistory(
 		return nil, errs.HumaError(err)
 	}
 
-	limit, offset := clampPage(input.Limit, input.Offset)
-
 	match, err := s.bouts.GetBoutByID(ctx, boutID)
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("get bout: %w", err))
 	}
 
-	page, err := s.repo.ListScoringHistory(ctx, ScoringHistoryFilter{
-		BoutID: boutID,
-		Limit:  limit,
-		Offset: offset,
-	})
+	scores, err := s.repo.ListScoringHistory(ctx, boutID)
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list scoring history: %w", err))
 	}
 
-	return &ScoringHistoryOutput{Body: ScoringHistoryBody{
-		Data:   newHistoryEntries(match, page),
-		Total:  page.Total,
-		Limit:  limit,
-		Offset: offset,
-	}}, nil
+	return &ScoringHistoryOutput{Body: ScoringHistoryBody{Data: newHistoryEntries(match, scores)}}, nil
 }
 
-// newHistoryEntries replays the page oldest to newest on top of the points scored before it.
-func newHistoryEntries(match *bout.Bout, page ScoringHistoryPage) []ScoringHistoryEntry {
-	competitor1 := page.PointsBefore[match.Competitor1ID]
-	competitor2 := page.PointsBefore[match.Competitor2ID]
+// newHistoryEntries replays the scores, which arrive newest first, from the oldest.
+func newHistoryEntries(match *bout.Bout, scores []Scoring) []ScoringHistoryEntry {
+	competitor1, competitor2 := 0, 0
 
-	entries := make([]ScoringHistoryEntry, len(page.Scores))
-	for i := len(page.Scores) - 1; i >= 0; i-- {
-		scoring := page.Scores[i]
+	entries := make([]ScoringHistoryEntry, len(scores))
+	for i := len(scores) - 1; i >= 0; i-- {
+		scoring := scores[i]
 		scored1, scored2 := competitor1, competitor2
 		switch scoring.CompetitorID {
 		case match.Competitor1ID:

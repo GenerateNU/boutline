@@ -186,41 +186,18 @@ func (f *FakeScoringRepository) RevokeScoring(_ context.Context, revoked *scorin
 	return nil
 }
 
-func (f *FakeScoringRepository) ListScoringHistory(
-	_ context.Context,
-	filter scoring.ScoringHistoryFilter,
-) (scoring.ScoringHistoryPage, error) {
+func (f *FakeScoringRepository) ListScoringHistory(_ context.Context, boutID uuid.UUID) ([]scoring.Scoring, error) {
 	if f.Err != nil {
-		return scoring.ScoringHistoryPage{}, f.Err
+		return nil, f.Err
 	}
 
-	forBout := make([]scoring.Scoring, 0, len(f.Scores))
+	scores := []scoring.Scoring{}
 	for _, candidate := range f.Scores {
-		if candidate.BoutID == filter.BoutID {
-			forBout = append(forBout, candidate)
+		if candidate.BoutID == boutID {
+			scores = append(scores, candidate)
 		}
 	}
-	slices.SortFunc(forBout, func(a, b scoring.Scoring) int { return int(b.ID - a.ID) })
+	slices.SortFunc(scores, func(a, b scoring.Scoring) int { return int(b.ID - a.ID) })
 
-	page := scoring.ScoringHistoryPage{
-		Scores:       []scoring.Scoring{},
-		Total:        int64(len(forBout)),
-		PointsBefore: map[uuid.UUID]int{},
-	}
-	if filter.Offset >= len(forBout) {
-		return page, nil
-	}
-
-	rest := forBout[filter.Offset:]
-	page.Scores = rest[:min(filter.Limit, len(rest))]
-
-	oldestID := page.Scores[len(page.Scores)-1].ID
-	for _, earlier := range forBout {
-		isEarlierLive := earlier.ID < oldestID && earlier.RevokedAt == nil
-		if isEarlierLive {
-			page.PointsBefore[earlier.CompetitorID] += earlier.Points
-		}
-	}
-
-	return page, nil
+	return scores, nil
 }

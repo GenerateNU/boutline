@@ -2,7 +2,6 @@ package scoring
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 
@@ -18,7 +17,7 @@ type ScoringRepository interface {
 	ListScoring(ctx context.Context, filter ScoringListFilter) ([]Scoring, int64, error)
 	UpdateScoring(ctx context.Context, scoring *Scoring) error
 	RevokeScoring(ctx context.Context, scoring *Scoring) error
-	ListScoringHistory(ctx context.Context, filter ScoringHistoryFilter) (ScoringHistoryPage, error)
+	ListScoringHistory(ctx context.Context, boutID uuid.UUID) ([]Scoring, error)
 }
 
 type ScoringListFilter struct {
@@ -26,23 +25,6 @@ type ScoringListFilter struct {
 	IncludeRevoked bool
 	Limit          int
 	Offset         int
-}
-
-type ScoringHistoryFilter struct {
-	BoutID uuid.UUID
-	Limit  int
-	Offset int
-}
-
-type ScoringHistoryPage struct {
-	Scores       []Scoring         // live and revoked, newest first
-	Total        int64             // live and revoked scores for the bout, ignoring the page
-	PointsBefore map[uuid.UUID]int // live points per competitor older than the page
-}
-
-type competitorPoints struct {
-	CompetitorID uuid.UUID
-	Points       int
 }
 
 type scoringRepository struct {
@@ -151,60 +133,16 @@ func (r *scoringRepository) RevokeScoring(ctx context.Context, scoring *Scoring)
 	return nil
 }
 
-func (r *scoringRepository) ListScoringHistory(
-	ctx context.Context,
-	filter ScoringHistoryFilter,
-) (ScoringHistoryPage, error) {
-	page := ScoringHistoryPage{
-		Scores:       make([]Scoring, 0, filter.Limit),
-		PointsBefore: map[uuid.UUID]int{},
-	}
-
-	forBout := func(tx *gorm.DB) *gorm.DB {
-		return tx.Model(&Scoring{}).Where("bout_id = ?", filter.BoutID)
-	}
-	live := func(tx *gorm.DB) *gorm.DB {
-		return forBout(tx).Where("revoked_at IS NULL")
-	}
-
-	// One snapshot so the page, the count and the earlier totals agree while touches are being written.
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := forBout(tx).Count(&page.Total).Error; err != nil {
-			return fmt.Errorf("count scoring history for match %s: %w", filter.BoutID, err)
-		}
-
-		err := forBout(tx).
-			Select("id", "competitor_id", "points", "created_at", "revoked_at").
-			Order("id DESC").
-			Limit(filter.Limit).
-			Offset(filter.Offset).
-			Find(&page.Scores).Error
-		if err != nil {
-			return fmt.Errorf("select scoring history for match %s: %w", filter.BoutID, err)
-		}
-		if len(page.Scores) == 0 {
-			return nil
-		}
-
-		oldestID := page.Scores[len(page.Scores)-1].ID
-		var earlier []competitorPoints
-		err = live(tx).
-			Select("competitor_id, SUM(points) AS points").
-			Where("id < ?", oldestID).
-			Group("competitor_id").
-			Scan(&earlier).Error
-		if err != nil {
-			return fmt.Errorf("sum earlier scoring for match %s: %w", filter.BoutID, err)
-		}
-		for _, row := range earlier {
-			page.PointsBefore[row.CompetitorID] = row.Points
-		}
-
-		return nil
-	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+func (r *scoringRepository) ListScoringHistory(ctx context.Context, boutID uuid.UUID) ([]Scoring, error) {
+	scores := []Scoring{}
+	err := r.db.WithContext(ctx).
+		Select("id", "competitor_id", "points", "created_at", "revoked_at").
+		Where("bout_id = ?", boutID).
+		Order("id DESC").
+		Find(&scores).Error
 	if err != nil {
-		return ScoringHistoryPage{}, err
+		return nil, fmt.Errorf("select scoring history for match %s: %w", boutID, err)
 	}
 
-	return page, nil
+	return scores, nil
 }
