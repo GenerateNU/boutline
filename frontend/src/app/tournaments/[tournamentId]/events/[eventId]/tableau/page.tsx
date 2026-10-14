@@ -1,11 +1,12 @@
 import { Section } from "@/components/primitives/section";
 
 import { BoutList } from "../_components/bout-list";
-import { bouts } from "../_data/bouts";
+import { bouts } from "../_services/bouts";
 
-export default async function TableauTab({
-  params,
-}: PageProps<"/tournaments/[tournamentId]/events/[eventId]/tableau">) {
+interface TableauTabProps
+  extends PageProps<"/tournaments/[tournamentId]/events/[eventId]/tableau"> {}
+
+export default async function TableauTab({ params }: TableauTabProps) {
   const { tournamentId, eventId } = await params;
 
   return (
