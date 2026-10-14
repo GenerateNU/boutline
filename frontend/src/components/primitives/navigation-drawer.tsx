@@ -12,13 +12,13 @@ import {
   NavItem,
 } from "@/components/primitives/navigation-item";
 
-type NavigationDrawerProps = {
+interface NavigationDrawerProps {
   title: string;
   items: NavItem[];
   footerItems?: NavItem[];
   userName: string;
   className?: string;
-};
+}
 
 function NavigationDrawer({
   title,

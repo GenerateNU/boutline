@@ -8,10 +8,10 @@ import {
   NavItem,
 } from "@/components/primitives/navigation-item";
 
-type NavigationBarProps = {
+interface NavigationBarProps {
   items: NavItem[];
   className?: string;
-};
+}
 
 function NavigationBar({ items, className }: NavigationBarProps) {
   const [selected, setSelected] = React.useState(items[0]?.id);

@@ -9,11 +9,11 @@ export interface NavItem {
   badge?: string;
 }
 
-type NavigationItemProps = React.ComponentProps<"button"> & {
+interface NavigationItemProps extends React.ComponentProps<"button"> {
   icon: React.ReactNode;
   label?: string;
   selected?: boolean;
-};
+}
 
 function NavigationItem({
   icon,
@@ -40,12 +40,12 @@ function NavigationItem({
   );
 }
 
-type NavigationDrawerItemProps = React.ComponentProps<"button"> & {
+interface NavigationDrawerItemProps extends React.ComponentProps<"button"> {
   icon: React.ReactNode;
   label: string;
   badge?: string;
   selected?: boolean;
-};
+}
 
 function NavigationDrawerItem({
   icon,
