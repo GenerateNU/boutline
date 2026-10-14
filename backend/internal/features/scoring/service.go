@@ -7,7 +7,10 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/bout"
 	"boutline/internal/utils"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -22,14 +25,21 @@ type ScoringService interface {
 	RevokeScoring(ctx context.Context, input *ScoringRevokeInput) (*ScoringOutput, error)
 	ListScoring(ctx context.Context, input *ScoringListInput) (*ScoringListOutput, error)
 	UpdateScoringByID(ctx context.Context, input *ScoringUpdateInput) (*ScoringOutput, error)
+	GetScoringHistory(ctx context.Context, input *ScoringHistoryInput) (*ScoringHistoryOutput, error)
+}
+
+// BoutLookup is the slice of bout.BoutRepository the scoring service needs.
+type BoutLookup interface {
+	GetBoutByID(ctx context.Context, id uuid.UUID) (*bout.Bout, error)
 }
 
 type scoringService struct {
-	repo ScoringRepository
+	repo  ScoringRepository
+	bouts BoutLookup
 }
 
-func NewScoringService(repo ScoringRepository) ScoringService {
-	return &scoringService{repo: repo}
+func NewScoringService(repo ScoringRepository, bouts BoutLookup) ScoringService {
+	return &scoringService{repo: repo, bouts: bouts}
 }
 
 func (s *scoringService) CreateScoring(
@@ -181,4 +191,59 @@ func (s *scoringService) RevokeScoring(
 	}
 
 	return &ScoringOutput{Body: newScoringResponse(*scoring)}, nil
+}
+
+func (s *scoringService) GetScoringHistory(
+	ctx context.Context,
+	input *ScoringHistoryInput,
+) (*ScoringHistoryOutput, error) {
+	boutID, err := utils.ParseUUID(input.BoutID, "bout_id")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	match, err := s.bouts.GetBoutByID(ctx, boutID)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get bout: %w", err))
+	}
+
+	scores, err := s.repo.ListScoringHistory(ctx, boutID)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("list scoring history: %w", err))
+	}
+
+	return &ScoringHistoryOutput{Body: ScoringHistoryBody{Data: newHistoryEntries(match, scores)}}, nil
+}
+
+// newHistoryEntries replays the scores, which arrive newest first, from the oldest.
+func newHistoryEntries(match *bout.Bout, scores []Scoring) []ScoringHistoryEntry {
+	competitor1, competitor2 := 0, 0
+
+	entries := make([]ScoringHistoryEntry, len(scores))
+	for i := len(scores) - 1; i >= 0; i-- {
+		scoring := scores[i]
+		scored1, scored2 := competitor1, competitor2
+		switch scoring.CompetitorID {
+		case match.Competitor1ID:
+			scored1 += scoring.Points
+		case match.Competitor2ID:
+			scored2 += scoring.Points
+		}
+		// A revoked score still shows the score it produced, but later scores no longer build on it.
+		if scoring.RevokedAt == nil {
+			competitor1, competitor2 = scored1, scored2
+		}
+
+		entries[i] = ScoringHistoryEntry{
+			ID:               scoring.ID,
+			CompetitorID:     scoring.CompetitorID.String(),
+			Points:           scoring.Points,
+			CreatedAt:        scoring.CreatedAt,
+			RevokedAt:        scoring.RevokedAt,
+			Competitor1Score: scored1,
+			Competitor2Score: scored2,
+		}
+	}
+
+	return entries
 }
