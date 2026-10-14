@@ -3,10 +3,8 @@
 import * as React from "react";
 import { cn } from "cn";
 
-import {
-  NavigationItem,
-  NavItem,
-} from "@/components/primitives/navigation/navigation-item";
+import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+import { NavItem } from "@/components/primitives/navigation/types";
 
 interface NavigationBarProps {
   items: NavItem[];

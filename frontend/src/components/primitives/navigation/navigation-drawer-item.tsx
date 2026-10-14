@@ -30,8 +30,8 @@ function NavigationDrawerItem({
       {...props}
     >
       {icon}
-      <span className="flex-1 text-left">{label}</span>
-      {badge && <span className="text-sm">{badge}</span>}
+      <p className="flex-1 text-left">{label}</p>
+      {badge && <p className="text-sm">{badge}</p>}
     </Button>
   );
 }

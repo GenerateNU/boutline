@@ -6,11 +6,9 @@ import { cn } from "cn";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
-import {
-  NavigationDrawerItem,
-  NavigationItem,
-  NavItem,
-} from "@/components/primitives/navigation/navigation-item";
+import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
+import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+import { NavItem } from "@/components/primitives/navigation/types";
 
 interface NavigationDrawerProps {
   title: string;

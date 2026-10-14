@@ -28,7 +28,7 @@ function NavigationItem({
       {...props}
     >
       {icon}
-      {label && <span>{label}</span>}
+      {label && <p>{label}</p>}
     </Button>
   );
 }
