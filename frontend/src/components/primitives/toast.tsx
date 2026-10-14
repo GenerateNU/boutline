@@ -3,8 +3,7 @@
 import { cn } from "cn";
 import { X } from "lucide-react";
 import { Toast as ToastPrimitive } from "radix-ui";
-
-const ToastProvider = ToastPrimitive.Provider;
+import { createContext, useContext, useRef, useState } from "react";
 
 function ToastViewport({
   className,
@@ -22,9 +21,9 @@ function ToastViewport({
   );
 }
 
-type ToastProps = React.ComponentProps<typeof ToastPrimitive.Root> & {
+interface ToastProps extends React.ComponentProps<typeof ToastPrimitive.Root> {
   stacked?: boolean;
-};
+}
 
 function Toast({ className, stacked, ...props }: ToastProps) {
   return (
@@ -98,8 +97,73 @@ function ToastClose({
   );
 }
 
+interface ToastOptions {
+  description: React.ReactNode;
+  action?: { label: React.ReactNode; altText: string; onClick?: () => void };
+  stacked?: boolean;
+  duration?: number;
+}
+
+interface QueuedToast extends ToastOptions {
+  id: number;
+}
+
+const ToastContext = createContext<((options: ToastOptions) => void) | null>(
+  null,
+);
+
+function Toaster({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = useState<QueuedToast[]>([]);
+  const nextId = useRef(0);
+
+  function toast(options: ToastOptions) {
+    const id = nextId.current++;
+    setToasts((current) => [...current, { ...options, id }]);
+  }
+
+  function dismiss(id: number) {
+    setToasts((current) => current.filter((t) => t.id !== id));
+  }
+
+  return (
+    <ToastContext value={toast}>
+      <ToastPrimitive.Provider>
+        {children}
+        {toasts.map(({ id, description, action, stacked, duration }) => (
+          <Toast
+            key={id}
+            stacked={stacked}
+            duration={duration}
+            onOpenChange={(open) => {
+              if (!open) dismiss(id);
+            }}
+          >
+            <ToastDescription>{description}</ToastDescription>
+            <ToastFooter>
+              {action ? (
+                <ToastAction altText={action.altText} onClick={action.onClick}>
+                  {action.label}
+                </ToastAction>
+              ) : null}
+              <ToastClose />
+            </ToastFooter>
+          </Toast>
+        ))}
+        <ToastViewport />
+      </ToastPrimitive.Provider>
+    </ToastContext>
+  );
+}
+
+function useToast() {
+  const toast = useContext(ToastContext);
+  if (!toast) throw new Error("useToast must be used inside <Toaster>");
+  return { toast };
+}
+
 export {
-  ToastProvider,
+  Toaster,
+  useToast,
   ToastViewport,
   Toast,
   ToastDescription,
@@ -107,3 +171,4 @@ export {
   ToastAction,
   ToastClose,
 };
+export type { ToastOptions };

@@ -1,3 +1,5 @@
+"use client";
+
 import { Ellipsis } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
@@ -22,15 +24,7 @@ import {
 import { Slider } from "@/components/primitives/slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/primitives/tabs";
 import { TextField } from "@/components/primitives/text-field";
-import {
-  Toast,
-  ToastAction,
-  ToastClose,
-  ToastDescription,
-  ToastFooter,
-  ToastProvider,
-  ToastViewport,
-} from "@/components/primitives/toast";
+import { useToast } from "@/components/primitives/toast";
 import { Toggle } from "@/components/primitives/toggle";
 import {
   Tooltip,
@@ -41,7 +35,10 @@ import { LinearProgress } from "@/components/primitives/linear-progress";
 import { Section } from "@/components/primitives/section";
 import Link from "next/link";
 
+
 export default function Home() {
+  const { toast } = useToast();
+
   return (
     <main className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 py-10">
       <Section title="Home Page">
@@ -249,19 +246,18 @@ export default function Home() {
       </Section>
 
       <Section title="Toast">
-        <ToastProvider duration={Infinity}>
-          <Toast defaultOpen stacked>
-            <ToastDescription>
-              Toasts provide brief messages about app processes at the bottom
-              of the screen
-            </ToastDescription>
-            <ToastFooter>
-              <ToastAction altText="Label">Label</ToastAction>
-              <ToastClose />
-            </ToastFooter>
-          </Toast>
-          <ToastViewport className="static max-w-none translate-x-0 p-0" />
-        </ToastProvider>
+        <Button
+          onClick={() =>
+            toast({
+              description:
+                "Toasts provide brief messages about app processes at the bottom of the screen",
+              action: { label: "Label", altText: "Label" },
+              stacked: true,
+            })
+          }
+        >
+          Show toast
+        </Button>
       </Section>
       <Section title="Tabs">
         <div className="flex flex-col gap-8">

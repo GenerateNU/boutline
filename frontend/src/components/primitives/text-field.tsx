@@ -3,12 +3,12 @@ import { useId } from "react";
 
 import { Input } from "@/components/primitives/input";
 
-type TextFieldProps = React.ComponentProps<"input"> & {
+interface TextFieldProps extends React.ComponentProps<"input"> {
   label: React.ReactNode;
   supportingText?: React.ReactNode;
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
-};
+}
 
 function TextField({
   className,
@@ -17,14 +17,22 @@ function TextField({
   supportingText,
   leading,
   trailing,
+  "aria-describedby": ariaDescribedBy,
   ...props
 }: TextFieldProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const supportingId = `${inputId}-supporting`;
+  const describedBy =
+    [ariaDescribedBy, supportingText ? supportingId : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
 
   return (
-    <div data-slot="text-field" className={cn("flex flex-col gap-1", className)}>
+    <div
+      data-slot="text-field"
+      className={cn("flex flex-col gap-1", className)}
+    >
       <label htmlFor={inputId} className="text-base">
         {label}
       </label>
@@ -35,7 +43,7 @@ function TextField({
         {leading}
         <Input
           id={inputId}
-          aria-describedby={supportingText ? supportingId : undefined}
+          aria-describedby={describedBy}
           className="h-auto flex-1 rounded-none border-0 bg-transparent px-0 text-base focus-visible:ring-0 disabled:opacity-100"
           {...props}
         />

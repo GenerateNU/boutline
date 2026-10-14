@@ -18,9 +18,11 @@ function Tabs({
   );
 }
 
-type TabsListProps = React.ComponentProps<typeof TabsPrimitive.List> & {
+interface TabsListProps extends React.ComponentProps<
+  typeof TabsPrimitive.List
+> {
   variant?: "line" | "stacked";
-};
+}
 
 function TabsList({ className, variant = "line", ...props }: TabsListProps) {
   return (
@@ -33,11 +35,18 @@ function TabsList({ className, variant = "line", ...props }: TabsListProps) {
   );
 }
 
-type TabsTriggerProps = React.ComponentProps<typeof TabsPrimitive.Trigger> & {
+interface TabsTriggerProps extends React.ComponentProps<
+  typeof TabsPrimitive.Trigger
+> {
   icon?: React.ReactNode;
-};
+}
 
-function TabsTrigger({ className, icon, children, ...props }: TabsTriggerProps) {
+function TabsTrigger({
+  className,
+  icon,
+  children,
+  ...props
+}: TabsTriggerProps) {
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"

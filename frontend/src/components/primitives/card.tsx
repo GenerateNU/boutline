@@ -1,8 +1,8 @@
 import { cn } from "cn";
 
-type CardProps = React.ComponentProps<"div"> & {
+interface CardProps extends React.ComponentProps<"div"> {
   orientation?: "vertical" | "horizontal";
-};
+}
 
 function Card({ className, orientation = "vertical", ...props }: CardProps) {
   return (
