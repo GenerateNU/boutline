@@ -220,14 +220,14 @@ func TestSearchEndpoint(t *testing.T) {
 		assert.InDelta(t, 1, body["total"], 0)
 	})
 
-	t.Run("rejects a missing query", func(t *testing.T) {
+	t.Run("a missing query matches every tournament", func(t *testing.T) {
 		t.Parallel()
 
-		// An absent query param skips Huma's minLength check entirely, so this
-		// is the service's own blank-term guard, not schema validation.
 		resp := newTestAPI(t, seed...).Get("/api/v1/tournaments/search")
 
-		assert.Equal(t, http.StatusBadRequest, resp.Code)
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 2)
 	})
 }
 

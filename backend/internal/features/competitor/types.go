@@ -74,7 +74,7 @@ type CompetitorListOutput struct {
 }
 
 type CompetitorSearchInput struct {
-	Query  string `query:"q" minLength:"1" maxLength:"120" doc:"Fuzzy match term"`
+	Query  string `query:"q" maxLength:"120" doc:"Fuzzy match term; omit to return every competitor"`
 	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset int    `query:"offset" default:"0" minimum:"0"`
 }
@@ -89,7 +89,7 @@ type TeamSearchResult struct {
 }
 
 type CompetitorTeamSearchInput struct {
-	Query        string `query:"q" minLength:"1" maxLength:"120" doc:"Fuzzy match term"`
+	Query        string `query:"q" maxLength:"120" doc:"Fuzzy match term; omit to return every team"`
 	TournamentID string `query:"tournament_id" format:"uuid" doc:"Only teams with a competitor in this tournament"`
 	Limit        int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset       int    `query:"offset" default:"0" minimum:"0"`

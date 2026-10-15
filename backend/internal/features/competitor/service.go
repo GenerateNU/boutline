@@ -204,9 +204,6 @@ func (s *competitorService) SearchCompetitors(
 	input *CompetitorSearchInput,
 ) (*CompetitorSearchOutput, error) {
 	term := strings.TrimSpace(input.Query)
-	if term == "" {
-		return nil, errs.HumaError(errs.Public("search term must not be blank", errs.ErrInvalidInput))
-	}
 
 	limit := input.Limit
 	if limit <= 0 {
@@ -243,9 +240,6 @@ func (s *competitorService) SearchCompetitorTeams(
 	input *CompetitorTeamSearchInput,
 ) (*CompetitorTeamSearchOutput, error) {
 	term := strings.TrimSpace(input.Query)
-	if term == "" {
-		return nil, errs.HumaError(errs.Public("search term must not be blank", errs.ErrInvalidInput))
-	}
 
 	limit := input.Limit
 	if limit <= 0 {

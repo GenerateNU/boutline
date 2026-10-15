@@ -58,18 +58,6 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			wantField:   "name",
 			wantContain: "Fall Open 2026",
 		},
-		{
-			name:       "blank query is rejected",
-			route:      "/api/v1/competitors/search",
-			query:      map[string]string{"q": "   "},
-			wantStatus: http.StatusBadRequest,
-		},
-		{
-			name:       "blank team query is rejected",
-			route:      "/api/v1/competitors/search/teams",
-			query:      map[string]string{"q": "   "},
-			wantStatus: http.StatusBadRequest,
-		},
 	}
 
 	for _, tt := range tests {

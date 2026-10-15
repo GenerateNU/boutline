@@ -16,14 +16,26 @@ import (
 // always bound as a parameter. expr is parenthesized because %> binds tighter
 // than ||, so an unparenthesized concatenation expr would only apply %> to
 // its last operand and fail the boolean WHERE clause.
+//
+// An empty term leaves query unfiltered, so a search with no term but a
+// filter (e.g. tournament_id) still returns every row the filter matches,
+// rather than nothing.
 func TrigramMatch(query *gorm.DB, expr, term string) *gorm.DB {
+	if term == "" {
+		return query
+	}
 	return query.Where("("+expr+") %> ?", term)
 }
 
 // TrigramOrder sorts by descending word similarity, with id as the
 // tiebreaker so a page is stable. Apply it after Count: a count query cannot
 // order by word_similarity().
+//
+// An empty term has no similarity to rank by, so it orders by id alone.
 func TrigramOrder(query *gorm.DB, expr, term string) *gorm.DB {
+	if term == "" {
+		return query.Order("id")
+	}
 	return query.Clauses(clause.OrderBy{Expression: clause.Expr{
 		SQL:  "word_similarity(?, " + expr + ") DESC, id",
 		Vars: []any{term},

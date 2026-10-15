@@ -210,13 +210,18 @@ func (r *competitorRepository) SearchCompetitorTeams(
 	if filter.TournamentID != nil {
 		findQuery = findQuery.Where("tournament_id = ?", *filter.TournamentID)
 	}
-	err := findQuery.
+	findQuery = findQuery.
 		Select(expr + " AS team, COUNT(*) AS count").
-		Group(expr).
-		Clauses(clause.OrderBy{Expression: clause.Expr{
+		Group(expr)
+	if filter.Term == "" {
+		findQuery = findQuery.Order(expr)
+	} else {
+		findQuery = findQuery.Clauses(clause.OrderBy{Expression: clause.Expr{
 			SQL:  "word_similarity(?, " + expr + ") DESC, " + expr,
 			Vars: []any{filter.Term},
-		}}).
+		}})
+	}
+	err := findQuery.
 		Limit(filter.Limit).
 		Offset(filter.Offset).
 		Find(&teams).Error

@@ -344,10 +344,11 @@ func TestSearchUsers(t *testing.T) {
 			wantLimit:  user.UserDefaultPageSize,
 		},
 		{
-			name:       "rejects a blank term",
+			name:       "a blank term matches every user",
 			input:      &user.UserSearchInput{Query: "   "},
-			wantCode:   http.StatusBadRequest,
-			wantDetail: "search term must not be blank",
+			wantEmails: []string{"ada@example.com", "grace@example.com"},
+			wantTotal:  2,
+			wantLimit:  user.UserDefaultPageSize,
 		},
 		{
 			name:       "applies limit and offset",

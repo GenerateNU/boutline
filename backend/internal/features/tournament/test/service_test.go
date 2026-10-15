@@ -402,10 +402,11 @@ func TestSearchTournaments(t *testing.T) {
 			wantLimit: tournament.TournamentDefaultPageSize,
 		},
 		{
-			name:       "rejects a blank term",
-			input:      &tournament.TournamentSearchInput{Query: "   "},
-			wantCode:   http.StatusBadRequest,
-			wantDetail: "search term must not be blank",
+			name:      "a blank term matches every tournament",
+			input:     &tournament.TournamentSearchInput{Query: "   "},
+			wantNames: []string{"Big Ten Championship", "Northwestern Open"},
+			wantTotal: 2,
+			wantLimit: tournament.TournamentDefaultPageSize,
 		},
 		{
 			name:       "applies limit and offset",

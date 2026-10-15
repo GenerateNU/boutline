@@ -200,9 +200,6 @@ func (s *tournamentService) SearchTournaments(
 	input *TournamentSearchInput,
 ) (*TournamentSearchOutput, error) {
 	term := strings.TrimSpace(input.Query)
-	if term == "" {
-		return nil, errs.HumaError(errs.Public("search term must not be blank", errs.ErrInvalidInput))
-	}
 	limit, offset := page(input.Limit, input.Offset)
 
 	tournaments, total, err := s.repo.SearchTournaments(ctx, TournamentSearchFilter{

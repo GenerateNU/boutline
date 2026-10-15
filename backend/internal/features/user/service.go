@@ -183,9 +183,6 @@ func (s *userService) ListUsers(ctx context.Context, input *UserListInput) (*Use
 
 func (s *userService) SearchUsers(ctx context.Context, input *UserSearchInput) (*UserSearchOutput, error) {
 	term := strings.TrimSpace(input.Query)
-	if term == "" {
-		return nil, errs.HumaError(errs.Public("search term must not be blank", errs.ErrInvalidInput))
-	}
 
 	limit := input.Limit
 	if limit <= 0 {

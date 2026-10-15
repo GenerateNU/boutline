@@ -352,10 +352,11 @@ func TestSearchCompetitors(t *testing.T) {
 			wantLimit: competitor.CompetitorDefaultPageSize,
 		},
 		{
-			name:       "rejects a blank term",
-			input:      &competitor.CompetitorSearchInput{Query: "   "},
-			wantCode:   http.StatusBadRequest,
-			wantDetail: "search term must not be blank",
+			name:      "a blank term matches everyone",
+			input:     &competitor.CompetitorSearchInput{Query: "   "},
+			wantLast:  []string{"Imboden", "Kiefer"},
+			wantTotal: 2,
+			wantLimit: competitor.CompetitorDefaultPageSize,
 		},
 		{
 			name:       "applies limit and offset",
@@ -438,10 +439,12 @@ func TestSearchCompetitorTeams(t *testing.T) {
 			wantLimit:  competitor.CompetitorDefaultPageSize,
 		},
 		{
-			name:       "rejects a blank term",
+			name:       "a blank term lists every team",
 			input:      &competitor.CompetitorTeamSearchInput{Query: "   "},
-			wantCode:   http.StatusBadRequest,
-			wantDetail: "search term must not be blank",
+			wantTeams:  []string{"NU Fencing", "St. John's Fencing"},
+			wantCounts: []int64{2, 1},
+			wantTotal:  2,
+			wantLimit:  competitor.CompetitorDefaultPageSize,
 		},
 		{
 			name:       "applies limit and offset",

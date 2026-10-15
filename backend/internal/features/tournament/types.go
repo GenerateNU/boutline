@@ -73,7 +73,7 @@ type TournamentListInput struct {
 }
 
 type TournamentSearchInput struct {
-	Query  string `query:"q" minLength:"1" maxLength:"120" doc:"Fuzzy match against the tournament name"`
+	Query  string `query:"q" maxLength:"120" doc:"Fuzzy match against the tournament name; omit to return every tournament"`
 	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset int    `query:"offset" default:"0" minimum:"0"`
 }
