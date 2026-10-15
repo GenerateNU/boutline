@@ -57,22 +57,24 @@ function Pagination({
     return params.size ? `${basePath}?${params}` : basePath;
   }
 
-  // offset comes from the URL and need not be a multiple of limit, so a
-  // partial step back still lands on the first page rather than disappearing.
-  const previous = Math.max(offset - limit, 0);
-  const next = offset + limit;
+  // offset comes from the URL, so it need not be a multiple of limit and may
+  // sit past the end entirely. Snapping to the last page keeps the range and
+  // both links inside the result set.
+  const start = Math.min(offset, Math.floor((total - 1) / limit) * limit);
+  const previous = Math.max(start - limit, 0);
+  const next = start + limit;
 
   return (
     <nav
       aria-label="Pagination"
       className="flex items-center justify-between gap-4"
     >
-      <Step href={offset > 0 ? href(previous) : null} rel="prev">
+      <Step href={start > 0 ? href(previous) : null} rel="prev">
         Previous
       </Step>
 
       <span className="text-xs text-muted-foreground">
-        {offset + 1}–{Math.min(next, total)} of {total}
+        {start + 1}–{Math.min(next, total)} of {total}
       </span>
 
       <Step href={next < total ? href(next) : null} rel="next">
