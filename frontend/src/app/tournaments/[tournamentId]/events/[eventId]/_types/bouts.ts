@@ -6,21 +6,20 @@ export interface BoutFencer {
   score: number;
 }
 
-export interface Touch {
+// One row of a placeholder bout's score audit, with the score it produced.
+export interface AuditEntry {
   time: string;
   scorer: Side;
   leftScore: number;
   rightScore: number;
 }
 
-export interface Bout {
+// A bout as the event's bout lists show it (placeholder until the list comes from the API).
+export interface BoutSummary {
   id: string;
   stage: "pool" | "tableau";
   round: string;
   left: BoutFencer;
   right: BoutFencer;
-  audit: Touch[];
+  audit: AuditEntry[];
 }
-
-// A fencer as the seed defines them; the score comes from replaying their touches.
-export type SeededFencer = Pick<BoutFencer, "name" | "club">;

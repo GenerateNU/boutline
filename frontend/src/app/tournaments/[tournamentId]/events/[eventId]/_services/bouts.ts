@@ -1,4 +1,4 @@
-import { Bout, SeededFencer, Side, Touch } from "../_types/bouts";
+import { AuditEntry, BoutFencer, BoutSummary, Side } from "../_types/bouts";
 
 // Placeholder copies of the bouts in backend/seeds/seed.sql, with the seeded ids so
 // the referee view loads the same bout from a seeded backend. Each audit replays
@@ -16,7 +16,7 @@ const KENJI = { name: "Kenji Tanaka", club: "Northeastern Fencing" };
 const LEILA = { name: "Leila Haddad", club: "Cambridge FC" };
 const MARCUS = { name: "Marcus Johnson", club: "" };
 
-function buildAudit(scorers: Side[]): Touch[] {
+function buildAudit(scorers: Side[]): AuditEntry[] {
   let leftScore = 0;
   let rightScore = 0;
   return scorers.map((scorer, index) => {
@@ -38,12 +38,13 @@ function buildAudit(scorers: Side[]): Touch[] {
 
 function bout(
   id: string,
-  stage: Bout["stage"],
+  stage: BoutSummary["stage"],
   round: string,
-  left: SeededFencer,
-  right: SeededFencer,
+  // A fencer as the seed defines them; the score comes from replaying their touches.
+  left: Omit<BoutFencer, "score">,
+  right: Omit<BoutFencer, "score">,
   scorers: Side[] = [],
-): Bout {
+): BoutSummary {
   const audit = buildAudit(scorers);
   const final = audit.at(-1);
   return {
@@ -56,7 +57,7 @@ function bout(
   };
 }
 
-export const bouts: Bout[] = [
+export const bouts: BoutSummary[] = [
   bout(
     "e0000000-0000-4000-8000-000000000001",
     "pool",

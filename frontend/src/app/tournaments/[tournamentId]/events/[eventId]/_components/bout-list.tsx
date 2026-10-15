@@ -1,9 +1,9 @@
 import Link from "next/link";
 
-import { Bout } from "../_types/bouts";
+import { BoutSummary } from "../_types/bouts";
 
 interface BoutListProps {
-  bouts: Bout[];
+  bouts: BoutSummary[];
   eventPath: string;
 }
 
