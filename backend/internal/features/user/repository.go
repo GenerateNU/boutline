@@ -117,11 +117,7 @@ func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) (
 		return nil, 0, fmt.Errorf("count users: %w", err)
 	}
 
-	if filter.Term == "" {
-		query = query.Order("created_at DESC")
-	} else {
-		query = utils.TrigramOrder(query, userNameTrigramExpr, filter.Term)
-	}
+	query = utils.TrigramOrder(query, userNameTrigramExpr, filter.Term, "created_at DESC", "id")
 
 	users := make([]User, 0, filter.Limit)
 	// Avoid pulling password ever, makes it harder to leak

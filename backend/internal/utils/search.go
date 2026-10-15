@@ -27,17 +27,19 @@ func TrigramMatch(query *gorm.DB, expr, term string) *gorm.DB {
 	return query.Where("("+expr+") %> ?", term)
 }
 
-// TrigramOrder sorts by descending word similarity, with id as the
+// TrigramOrder sorts by descending word similarity, breaking ties with
 // tiebreaker so a page is stable. Apply it after Count: a count query cannot
 // order by word_similarity().
 //
-// An empty term has no similarity to rank by, so it orders by id alone.
-func TrigramOrder(query *gorm.DB, expr, term string) *gorm.DB {
+// An empty term has no similarity to rank by, so it orders by emptyOrder
+// instead (e.g. "created_at DESC"). tiebreaker and emptyOrder are trusted SQL
+// from the caller, not bound as parameters.
+func TrigramOrder(query *gorm.DB, expr, term, emptyOrder, tiebreaker string) *gorm.DB {
 	if term == "" {
-		return query.Order("id")
+		return query.Order(emptyOrder)
 	}
 	return query.Clauses(clause.OrderBy{Expression: clause.Expr{
-		SQL:  "word_similarity(?, " + expr + ") DESC, id",
+		SQL:  "word_similarity(?, " + expr + ") DESC, " + tiebreaker,
 		Vars: []any{term},
 	}})
 }

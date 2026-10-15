@@ -180,11 +180,7 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 		return nil, 0, fmt.Errorf("count tournaments: %w", err)
 	}
 
-	if filter.Term == "" {
-		query = query.Order("created_at DESC")
-	} else {
-		query = utils.TrigramOrder(query, tournamentNameTrigramExpr, filter.Term)
-	}
+	query = utils.TrigramOrder(query, tournamentNameTrigramExpr, filter.Term, "created_at DESC", "id")
 
 	tournaments := make([]Tournament, 0, filter.Limit)
 	err := query.

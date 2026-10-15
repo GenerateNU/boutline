@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 const (
@@ -136,11 +135,7 @@ func (r *competitorRepository) ListCompetitors(
 		return nil, 0, fmt.Errorf("count competitors: %w", err)
 	}
 
-	if filter.Term == "" {
-		query = query.Order("created_at DESC").Order("id")
-	} else {
-		query = utils.TrigramOrder(query, competitorNameTrigramExpr, filter.Term)
-	}
+	query = utils.TrigramOrder(query, competitorNameTrigramExpr, filter.Term, "created_at DESC, id", "id")
 
 	competitors := make([]Competitor, 0, filter.Limit)
 
@@ -177,9 +172,6 @@ func (r *competitorRepository) ListCompetitorTeams(
 		return nil, 0, fmt.Errorf("count competitor team list: %w", err)
 	}
 
-	// team is the GROUP BY key, so ordering by word_similarity(term, team) is
-	// a function of the grouped column rather than an ungrouped reference; the
-	// tiebreaker is team itself, not id, since id no longer identifies a row.
 	var teams []CompetitorTeamCount
 	findQuery := utils.TrigramMatch(r.db.WithContext(ctx).Model(&Competitor{}), expr, filter.Term)
 	if filter.TournamentID != nil {
@@ -188,14 +180,9 @@ func (r *competitorRepository) ListCompetitorTeams(
 	findQuery = findQuery.
 		Select(expr + " AS team, COUNT(*) AS count").
 		Group(expr)
-	if filter.Term == "" {
-		findQuery = findQuery.Order(expr)
-	} else {
-		findQuery = findQuery.Clauses(clause.OrderBy{Expression: clause.Expr{
-			SQL:  "word_similarity(?, " + expr + ") DESC, " + expr,
-			Vars: []any{filter.Term},
-		}})
-	}
+	// team is the GROUP BY key, so it's also the tiebreaker: id no longer
+	// identifies a row once rows are grouped.
+	findQuery = utils.TrigramOrder(findQuery, expr, filter.Term, expr, expr)
 	err := findQuery.
 		Limit(filter.Limit).
 		Offset(filter.Offset).
