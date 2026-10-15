@@ -135,7 +135,9 @@ function Toaster({ children }: { children: React.ReactNode }) {
             stacked={stacked}
             duration={duration}
             onOpenChange={(open) => {
-              if (!open) dismiss(id);
+              if (!open) {
+                dismiss(id);
+              }
             }}
           >
             <ToastDescription>{description}</ToastDescription>
@@ -157,7 +159,9 @@ function Toaster({ children }: { children: React.ReactNode }) {
 
 function useToast() {
   const toast = useContext(ToastContext);
-  if (!toast) throw new Error("useToast must be used inside <Toaster>");
+  if (!toast) {
+    throw new Error("useToast must be used inside <Toaster>");
+  }
   return { toast };
 }
 
