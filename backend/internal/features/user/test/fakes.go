@@ -74,9 +74,13 @@ func (f *FakeUserRepository) ListUsers(
 		return nil, 0, f.Err
 	}
 
+	term := strings.ToLower(filter.Term)
 	matched := make([]user.User, 0, len(f.Users))
 	for _, candidate := range f.Users {
-		matched = append(matched, candidate)
+		name := strings.ToLower(candidate.FirstName + " " + candidate.LastName)
+		if strings.Contains(name, term) {
+			matched = append(matched, candidate)
+		}
 	}
 
 	// Ordered by email, not the repository's created_at, so that iterating a

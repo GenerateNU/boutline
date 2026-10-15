@@ -75,8 +75,10 @@ func (s *competitorService) CreateCompetitor(
 		rating = parsed
 	}
 
+	// tournamentId is required on create and already validated above, so a
+	// created competitor is always tagged even though the column is nullable.
 	competitor := &Competitor{
-		TournamentID: tournamentID,
+		TournamentID: &tournamentID,
 		FirstName:    firstName,
 		LastName:     lastName,
 		Rating:       rating,
@@ -169,18 +171,17 @@ func (s *competitorService) ListCompetitors(
 	limit, offset := page(input.Limit, input.Offset)
 
 	filter := CompetitorListFilter{
+		Term:   strings.TrimSpace(input.Query),
 		Limit:  limit,
 		Offset: offset,
 	}
+
 	if input.TournamentID != "" {
 		tournamentID, err := utils.ParseUUID(input.TournamentID, "tournament_id")
 		if err != nil {
 			return nil, errs.HumaError(err)
 		}
 		filter.TournamentID = &tournamentID
-	}
-	if search := strings.TrimSpace(input.Search); search != "" {
-		filter.Search = &search
 	}
 	if input.Rating != "" {
 		rating, err := parseRating(input.Rating)
@@ -239,23 +240,19 @@ func (s *competitorService) ListTeamsByTournament(
 
 	limit, offset := page(input.Limit, input.Offset)
 
-	filter := TeamListFilter{
-		TournamentID: tournamentID,
+	teams, total, err := s.repo.ListCompetitorTeams(ctx, CompetitorTeamListFilter{
+		Term:         strings.TrimSpace(input.Query),
+		TournamentID: &tournamentID,
 		Limit:        limit,
 		Offset:       offset,
-	}
-	if search := strings.TrimSpace(input.Search); search != "" {
-		filter.Search = &search
-	}
-
-	teams, total, err := s.repo.ListTeamsByTournament(ctx, filter)
+	})
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list teams: %w", err))
 	}
 
 	data := make([]TeamResponse, 0, len(teams))
 	for _, team := range teams {
-		data = append(data, TeamResponse{Name: team.Team, CompetitorCount: team.CompetitorCount})
+		data = append(data, TeamResponse{Name: team.Team, CompetitorCount: team.Count})
 	}
 	return &TeamListOutput{Body: TeamListBody{
 		Data:   data,

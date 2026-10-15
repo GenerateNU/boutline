@@ -84,9 +84,13 @@ func (f *FakeTournamentRepository) ListTournaments(
 		return nil, 0, f.Err
 	}
 
+	term := strings.ToLower(filter.Term)
 	matched := make([]tournament.Tournament, 0, len(f.Tournaments))
 	for _, candidate := range f.Tournaments {
 		if filter.Status != "" && candidate.Status != filter.Status {
+			continue
+		}
+		if !strings.Contains(strings.ToLower(candidate.Name), term) {
 			continue
 		}
 		matched = append(matched, candidate)

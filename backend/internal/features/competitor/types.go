@@ -4,7 +4,7 @@ import "time"
 
 type CompetitorResponse struct {
 	ID           string    `json:"id" format:"uuid"`
-	TournamentID string    `json:"tournamentId" format:"uuid"`
+	TournamentID string    `json:"tournamentId,omitempty" format:"uuid"`
 	FirstName    string    `json:"firstName"`
 	LastName     string    `json:"lastName"`
 	Rating       string    `json:"rating" enum:"A,B,C,D,E,U"`
@@ -14,9 +14,15 @@ type CompetitorResponse struct {
 }
 
 func newCompetitorResponse(competitor Competitor) CompetitorResponse {
+	// Not every competitor is entered in a tournament yet, so the column is
+	// nullable and an untagged competitor reports an empty id.
+	tournamentID := ""
+	if competitor.TournamentID != nil {
+		tournamentID = competitor.TournamentID.String()
+	}
 	return CompetitorResponse{
 		ID:           competitor.ID.String(),
-		TournamentID: competitor.TournamentID.String(),
+		TournamentID: tournamentID,
 		FirstName:    competitor.FirstName,
 		LastName:     competitor.LastName,
 		Rating:       string(competitor.Rating),
@@ -59,12 +65,12 @@ type CompetitorUpdateInput struct {
 }
 
 type CompetitorListInput struct {
+	Query        string `query:"q" maxLength:"120" doc:"Fuzzy match term; omit to return every competitor"`
 	Limit        int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset       int    `query:"offset" default:"0" minimum:"0"`
 	TournamentID string `query:"tournament_id" doc:"Only competitors entered in this tournament"`
 	Rating       string `query:"rating" enum:"A,B,C,D,E,U" doc:"Only competitors with this rating"`
 	Team         string `query:"team" maxLength:"120" doc:"Only competitors on this team (exact match)"`
-	Search       string `query:"search" maxLength:"120" doc:"Case-insensitive match anywhere in the full name"`
 }
 
 type CompetitorListBody struct {
@@ -85,9 +91,9 @@ type TeamResponse struct {
 
 type TeamListInput struct {
 	TournamentID string `path:"id" format:"uuid" doc:"Tournament ID"`
+	Query        string `query:"q" maxLength:"120" doc:"Fuzzy match term; omit to return every club"`
 	Limit        int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset       int    `query:"offset" default:"0" minimum:"0"`
-	Search       string `query:"search" maxLength:"120" doc:"Case-insensitive match anywhere in the club name"`
 }
 
 type TeamListBody struct {

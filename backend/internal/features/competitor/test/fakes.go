@@ -69,9 +69,11 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 	if f.Err != nil {
 		return nil, 0, f.Err
 	}
+	term := strings.ToLower(filter.Term)
 	matched := make([]competitor.Competitor, 0, len(f.Competitors))
 	for _, candidate := range f.Competitors {
-		if filter.TournamentID != nil && candidate.TournamentID != *filter.TournamentID {
+		if filter.TournamentID != nil &&
+			(candidate.TournamentID == nil || *candidate.TournamentID != *filter.TournamentID) {
 			continue
 		}
 		if filter.Rating != nil && candidate.Rating != *filter.Rating {
@@ -80,7 +82,8 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 		if filter.Team != nil && candidate.Team != *filter.Team {
 			continue
 		}
-		if filter.Search != nil && !containsFold(candidate.FirstName+" "+candidate.LastName, *filter.Search) {
+		haystack := candidate.FirstName + " " + candidate.LastName
+		if !strings.Contains(strings.ToLower(haystack), term) {
 			continue
 		}
 		matched = append(matched, candidate)
@@ -103,45 +106,48 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 	return matched, total, nil
 }
 
-func (f *FakeCompetitorRepository) ListTeamsByTournament(
+func (f *FakeCompetitorRepository) ListCompetitorTeams(
 	_ context.Context,
-	filter competitor.TeamListFilter,
-) ([]competitor.TeamCount, int64, error) {
+	filter competitor.CompetitorTeamListFilter,
+) ([]competitor.CompetitorTeamCount, int64, error) {
 	if f.Err != nil {
 		return nil, 0, f.Err
 	}
+	term := strings.ToLower(filter.Term)
 	counts := make(map[string]int64)
 	for _, candidate := range f.Competitors {
-		if candidate.TournamentID != filter.TournamentID || candidate.Team == "" {
+		if filter.TournamentID != nil &&
+			(candidate.TournamentID == nil || *candidate.TournamentID != *filter.TournamentID) {
 			continue
 		}
-		if filter.Search != nil && !containsFold(candidate.Team, *filter.Search) {
+		if candidate.Team == "" {
 			continue
 		}
-		counts[candidate.Team]++
+		if strings.Contains(strings.ToLower(candidate.Team), term) {
+			counts[candidate.Team]++
+		}
 	}
 
-	matched := make([]competitor.TeamCount, 0, len(counts))
+	matched := make([]competitor.CompetitorTeamCount, 0, len(counts))
 	for team, count := range counts {
-		matched = append(matched, competitor.TeamCount{Team: team, CompetitorCount: count})
+		matched = append(matched, competitor.CompetitorTeamCount{Team: team, Count: count})
 	}
-	slices.SortFunc(matched, func(a, b competitor.TeamCount) int {
+	// Ordered by team name rather than a real word-similarity score, since
+	// the fake only does substring matching -- real ranking is covered by
+	// the database-backed tests in internal/tests.
+	slices.SortFunc(matched, func(a, b competitor.CompetitorTeamCount) int {
 		return strings.Compare(a.Team, b.Team)
 	})
 
 	total := int64(len(matched))
 	if filter.Offset >= len(matched) {
-		return []competitor.TeamCount{}, total, nil
+		return []competitor.CompetitorTeamCount{}, total, nil
 	}
 	matched = matched[filter.Offset:]
 	if filter.Limit < len(matched) {
 		matched = matched[:filter.Limit]
 	}
 	return matched, total, nil
-}
-
-func containsFold(haystack, needle string) bool {
-	return strings.Contains(strings.ToLower(haystack), strings.ToLower(needle))
 }
 
 func (f *FakeCompetitorRepository) UpdateCompetitorByID(

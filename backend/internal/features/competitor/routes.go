@@ -35,7 +35,7 @@ func RegisterCompetitorService(api huma.API, service CompetitorService) {
 		OperationID: "listCompetitors",
 		Method:      http.MethodGet,
 		Path:        competitorBasePath,
-		Summary:     "List competitors",
+		Summary:     "List competitors, optionally fuzzy-matched by name",
 		Tags:        []string{"Competitors"},
 	}, service.ListCompetitors)
 
@@ -43,9 +43,10 @@ func RegisterCompetitorService(api huma.API, service CompetitorService) {
 		OperationID: "listTournamentTeams",
 		Method:      http.MethodGet,
 		Path:        tournamentTeamsPath,
-		Summary:     "List the clubs competing in a tournament",
-		Description: "Clubs are the distinct teams of the tournament's competitors; unaffiliated competitors are left out.",
-		Tags:        []string{"Tournaments"},
+		Summary:     "List the clubs competing in a tournament, optionally fuzzy-matched by name",
+		Description: "Clubs are the distinct teams of the tournament's competitors, each with its competitor count; " +
+			"unaffiliated competitors are left out.",
+		Tags: []string{"Tournaments"},
 	}, service.ListTeamsByTournament)
 
 	huma.Register(api, huma.Operation{

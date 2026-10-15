@@ -24,10 +24,10 @@ describe("listCompetitors", () => {
     {
       name: "defaults",
       args: {},
-      want: { limit: String(PAGE_SIZE), offset: null, search: null },
+      want: { limit: String(PAGE_SIZE), offset: null, q: null },
     },
-    { name: "an empty search", args: { search: "" }, want: { search: null } },
-    { name: "a search", args: { search: "chen" }, want: { search: "chen" } },
+    { name: "an empty search", args: { search: "" }, want: { q: null } },
+    { name: "a search", args: { search: "chen" }, want: { q: "chen" } },
     { name: "an offset", args: { offset: 40 }, want: { offset: "40" } },
   ])("sends $name scoped to the tournament", async ({ args, want }) => {
     const fetchMock = mockFetch();
@@ -57,6 +57,6 @@ describe("listTeams", () => {
     const url = requestedUrl(fetchMock);
     expect(url.pathname).toBe("/api/v1/tournaments/t-1/teams");
     expect(url.searchParams.has("tournament_id")).toBe(false);
-    expect(url.searchParams.get("search")).toBe("allez");
+    expect(url.searchParams.get("q")).toBe("allez");
   });
 });

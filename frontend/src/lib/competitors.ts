@@ -2,7 +2,8 @@ import { apiGet, PAGE_SIZE, type Paginated } from "@/lib/api";
 
 export type Competitor = {
   id: string;
-  tournamentId: string;
+  // Absent for a competitor not entered in a tournament yet.
+  tournamentId?: string;
   firstName: string;
   lastName: string;
   rating: string;
@@ -23,7 +24,7 @@ type ListArgs = {
 export function listCompetitors({ tournamentId, search, offset }: ListArgs) {
   return apiGet<Paginated<Competitor>>("/api/v1/competitors", {
     tournament_id: tournamentId,
-    search,
+    q: search,
     limit: PAGE_SIZE,
     offset,
   });
@@ -31,7 +32,7 @@ export function listCompetitors({ tournamentId, search, offset }: ListArgs) {
 
 export function listTeams({ tournamentId, search, offset }: ListArgs) {
   return apiGet<Paginated<Team>>(`/api/v1/tournaments/${tournamentId}/teams`, {
-    search,
+    q: search,
     limit: PAGE_SIZE,
     offset,
   });

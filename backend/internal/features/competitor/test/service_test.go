@@ -15,7 +15,7 @@ import (
 
 func seeded(firstName, lastName string, rating competitor.Rating, team string) competitor.Competitor {
 	return competitor.Competitor{
-		ID: uuid.New(), TournamentID: TestTournamentID,
+		ID: uuid.New(), TournamentID: ptr(TestTournamentID),
 		FirstName: firstName, LastName: lastName, Rating: rating, Team: team,
 	}
 }
@@ -243,19 +243,14 @@ func TestListCompetitorsFilters(t *testing.T) {
 			wantLast: []string{},
 		},
 		{
-			name:     "searches the name case-insensitively",
-			input:    &competitor.CompetitorListInput{Search: "adam"},
+			name:     "matches the name case-insensitively",
+			input:    &competitor.CompetitorListInput{Query: "adam"},
 			wantLast: []string{"Adams"},
 		},
 		{
-			name:     "searches across the first and last name boundary",
-			input:    &competitor.CompetitorListInput{Search: "a Ada"},
+			name:     "matches across the first and last name boundary",
+			input:    &competitor.CompetitorListInput{Query: "a Ada"},
 			wantLast: []string{"Adams"},
-		},
-		{
-			name:     "ignores a search that is only whitespace",
-			input:    &competitor.CompetitorListInput{Search: "   "},
-			wantLast: []string{"Adams", "Baker", "Clark"},
 		},
 	}
 
@@ -363,6 +358,71 @@ func TestUpdateCompetitorByID(t *testing.T) {
 	}
 }
 
+func TestListCompetitorsWithQuery(t *testing.T) {
+	t.Parallel()
+	seed := []competitor.Competitor{
+		seeded("Lee", "Kiefer", competitor.RatingA, "NU Fencing"),
+		seeded("Race", "Imboden", competitor.RatingA, "St. John's Fencing"),
+	}
+
+	tests := []struct {
+		name       string
+		input      *competitor.CompetitorListInput
+		wantLast   []string
+		wantTotal  int64
+		wantLimit  int
+		wantOffset int
+	}{
+		{
+			name:      "matches by name",
+			input:     &competitor.CompetitorListInput{Query: "kiefer"},
+			wantLast:  []string{"Kiefer"},
+			wantTotal: 1,
+			wantLimit: competitor.CompetitorDefaultPageSize,
+		},
+		{
+			name:      "a blank term matches everyone",
+			input:     &competitor.CompetitorListInput{Query: "   "},
+			wantLast:  []string{"Imboden", "Kiefer"},
+			wantTotal: 2,
+			wantLimit: competitor.CompetitorDefaultPageSize,
+		},
+		{
+			name:       "applies limit and offset",
+			input:      &competitor.CompetitorListInput{Query: "e", Limit: 1, Offset: 1},
+			wantLast:   []string{"Kiefer"},
+			wantTotal:  2,
+			wantLimit:  1,
+			wantOffset: 1,
+		},
+		{
+			name:      "clamps a limit above the maximum",
+			input:     &competitor.CompetitorListInput{Query: "e", Limit: competitor.CompetitorMaxPageSize + 50},
+			wantLast:  []string{"Imboden", "Kiefer"},
+			wantTotal: 2,
+			wantLimit: competitor.CompetitorMaxPageSize,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			out, err := NewTestService(NewFakeCompetitorRepository(seed...)).
+				ListCompetitors(t.Context(), tt.input)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantTotal, out.Body.Total)
+			assert.Equal(t, tt.wantLimit, out.Body.Limit)
+			assert.Equal(t, tt.wantOffset, out.Body.Offset)
+
+			lastNames := make([]string, 0, len(out.Body.Data))
+			for _, listed := range out.Body.Data {
+				lastNames = append(lastNames, listed.LastName)
+			}
+			assert.Equal(t, tt.wantLast, lastNames)
+		})
+	}
+}
+
 func TestDeleteCompetitor(t *testing.T) {
 	t.Parallel()
 
@@ -401,7 +461,7 @@ func TestListCompetitorsByTournament(t *testing.T) {
 	other := uuid.New()
 	entered := seeded("A", "Adams", competitor.RatingU, "NU Fencing")
 	elsewhere := seeded("B", "Baker", competitor.RatingU, "BU Fencing")
-	elsewhere.TournamentID = other
+	elsewhere.TournamentID = &other
 	service := NewTestService(NewFakeCompetitorRepository(entered, elsewhere))
 
 	t.Run("returns only the tournament's competitors", func(t *testing.T) {
@@ -431,7 +491,7 @@ func TestListTeamsByTournament(t *testing.T) {
 	t.Parallel()
 	other := uuid.New()
 	elsewhere := seeded("E", "Evans", competitor.RatingU, "Elsewhere FC")
-	elsewhere.TournamentID = other
+	elsewhere.TournamentID = &other
 	seed := []competitor.Competitor{
 		seeded("A", "Adams", competitor.RatingU, "NU Fencing"),
 		seeded("B", "Baker", competitor.RatingU, "BU Fencing"),
@@ -458,7 +518,7 @@ func TestListTeamsByTournament(t *testing.T) {
 		},
 		{
 			name:      "filters by club name",
-			input:     competitor.TeamListInput{Search: "nu "},
+			input:     competitor.TeamListInput{Query: "nu "},
 			want:      []competitor.TeamResponse{{Name: "NU Fencing", CompetitorCount: 2}},
 			wantTotal: 1,
 		},

@@ -147,6 +147,7 @@ func userUpdateFrom(body UserUpdateBody) (*UserUpdate, error) {
 
 func (s *userService) ListUsers(ctx context.Context, input *UserListInput) (*UserListOutput, error) {
 	// TODO: validate fields, perhaps unified but we have to allow some fuzzy searching
+	term := strings.TrimSpace(input.Query)
 
 	limit := input.Limit
 	if limit <= 0 {
@@ -158,6 +159,7 @@ func (s *userService) ListUsers(ctx context.Context, input *UserListInput) (*Use
 
 	users, total, err := s.repo.ListUsers(ctx, UserListFilter{
 		// TODO: decide what filters we want and include them in repository
+		Term:   term,
 		Limit:  limit,
 		Offset: offset,
 	})

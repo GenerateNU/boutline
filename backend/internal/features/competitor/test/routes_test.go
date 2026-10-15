@@ -155,18 +155,65 @@ func TestListEndpoint(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.Code, "body: %s", resp.Body)
 	})
 
-	t.Run("searches by name", func(t *testing.T) {
-		t.Parallel()
-		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?search=baker")
-		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
-		body := decodeBody(t, resp.Body.Bytes())
-		assert.Len(t, body["data"], 1)
-	})
-
 	t.Run("rejects a rating outside the enum", func(t *testing.T) {
 		t.Parallel()
 		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?rating=Z")
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+
+	t.Run("matches by name when a query is given", func(t *testing.T) {
+		t.Parallel()
+		named := []competitor.Competitor{
+			seeded("Lee", "Kiefer", competitor.RatingA, "NU Fencing"),
+			seeded("Race", "Imboden", competitor.RatingA, "St. John's Fencing"),
+		}
+		resp := newTestAPI(t, named...).Get("/api/v1/competitors?q=kiefer")
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 1)
+		assert.InDelta(t, 1, body["total"], 0)
+	})
+}
+
+func TestListTeamsEndpoint(t *testing.T) {
+	t.Parallel()
+	seed := []competitor.Competitor{
+		seeded("Lee", "Kiefer", competitor.RatingA, "NU Fencing"),
+		seeded("Jon", "Doe", competitor.RatingA, "NU Fencing"),
+		seeded("Race", "Imboden", competitor.RatingA, "St. John's Fencing"),
+	}
+
+	t.Run("returns one row per matching team with its competitor count", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).
+			Get("/api/v1/tournaments/" + TestTournamentID.String() + "/teams?q=fencing")
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 2)
+		assert.InDelta(t, 2, body["total"], 0)
+	})
+
+	t.Run("a missing query lists every team", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).
+			Get("/api/v1/tournaments/" + TestTournamentID.String() + "/teams")
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 2)
+	})
+
+	// The tournament is a path parameter tagged format:"uuid", so Huma
+	// rejects a malformed one before the service runs.
+	t.Run("rejects a tournament id that is not a uuid", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/tournaments/not-a-uuid/teams")
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+
+	t.Run("404s for a tournament that does not exist", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/tournaments/" + uuid.New().String() + "/teams")
+		assert.Equal(t, http.StatusNotFound, resp.Code, "body: %s", resp.Body)
 	})
 }
 

@@ -29,8 +29,9 @@ func (r Rating) IsValid() bool {
 }
 
 type Competitor struct {
-	ID           uuid.UUID              `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	TournamentID uuid.UUID              `gorm:"type:uuid;not null;index"`
+	ID uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	// Nullable for now: not every competitor is tied to a tournament yet.
+	TournamentID *uuid.UUID             `gorm:"type:uuid;index"`
 	Tournament   *tournament.Tournament `gorm:"foreignKey:TournamentID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 	FirstName    string                 `gorm:"type:text;not null"`
 	LastName     string                 `gorm:"type:text;not null"`
