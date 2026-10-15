@@ -27,6 +27,24 @@ func decodeBody(t *testing.T, raw []byte) map[string]any {
 	return body
 }
 
+func createRequest(changes map[string]any, without ...string) map[string]any {
+	body := map[string]any{
+		"eventId":   testEventID.String(),
+		"firstName": "Lee",
+		"lastName":  "Kiefer",
+		"gender":    "F",
+		"birthdate": "1994-06-15",
+		"division":  "New Jersey",
+	}
+	for field, value := range changes {
+		body[field] = value
+	}
+	for _, field := range without {
+		delete(body, field)
+	}
+	return body
+}
+
 func TestCreateEndpoint(t *testing.T) {
 	t.Parallel()
 
@@ -38,18 +56,48 @@ func TestCreateEndpoint(t *testing.T) {
 	}{
 		{
 			name:       "creates a competitor with only the required fields",
-			body:       map[string]any{"firstName": "Lee", "lastName": "Kiefer"},
+			body:       createRequest(nil),
 			wantStatus: http.StatusCreated,
-			wantFields: map[string]any{"firstName": "Lee", "rating": "U", "team": ""},
+			wantFields: map[string]any{
+				"eventId":     testEventID.String(),
+				"firstName":   "Lee",
+				"gender":      "F",
+				"birthdate":   "1994-06-15",
+				"division":    "New Jersey",
+				"rating":      "U",
+				"ratingYear":  nil,
+				"primaryClub": nil,
+				"team":        "",
+			},
 		},
 		{
 			name:       "rejects a rating outside the enum before the handler runs",
-			body:       map[string]any{"firstName": "Lee", "lastName": "Kiefer", "rating": "Z"},
+			body:       createRequest(map[string]any{"rating": "Z"}),
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name:       "rejects a missing last name",
-			body:       map[string]any{"firstName": "Lee"},
+			body:       createRequest(nil, "lastName"),
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "rejects a missing event id",
+			body:       createRequest(nil, "eventId"),
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "rejects a gender outside the enum",
+			body:       createRequest(map[string]any{"gender": "X"}),
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "rejects a birthdate that is not a date",
+			body:       createRequest(map[string]any{"birthdate": "06/15/1994"}),
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "rejects a rating year above 99",
+			body:       createRequest(map[string]any{"ratingYear": 100}),
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 	}
@@ -61,7 +109,7 @@ func TestCreateEndpoint(t *testing.T) {
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 			body := decodeBody(t, resp.Body.Bytes())
 			for field, want := range tt.wantFields {
-				assert.Equal(t, want, body[field])
+				assert.Equal(t, want, body[field], "field %s", field)
 			}
 		})
 	}
@@ -112,6 +160,23 @@ func TestListEndpoint(t *testing.T) {
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
 
+	t.Run("filters by event from the query string", func(t *testing.T) {
+		t.Parallel()
+		otherEvent := seeded("C", "Clark", competitor.RatingU, "")
+		otherEvent.EventID = uuid.New()
+		resp := newTestAPI(t, seed[0], otherEvent).Get("/api/v1/competitors?eventId=" + testEventID.String())
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 1)
+		assert.InDelta(t, 1, body["total"], 0)
+	})
+
+	t.Run("rejects an event id that is not a uuid", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?eventId=not-a-uuid")
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+
 	t.Run("filters by rating from the query string", func(t *testing.T) {
 		t.Parallel()
 		mixed := []competitor.Competitor{
@@ -148,6 +213,7 @@ func TestListEndpoint(t *testing.T) {
 func TestUpdateEndpoint(t *testing.T) {
 	t.Parallel()
 	stored := seeded("Lee", "Kiefer", competitor.RatingB, "NU Fencing")
+	stored.PrimaryClub = ptr("NU Fencing")
 
 	t.Run("patches only the fields present in the body", func(t *testing.T) {
 		t.Parallel()
@@ -156,13 +222,29 @@ func TestUpdateEndpoint(t *testing.T) {
 		body := decodeBody(t, resp.Body.Bytes())
 		assert.Equal(t, "A", body["rating"])
 		assert.Equal(t, "NU Fencing", body["team"])
+		assert.Equal(t, "New Jersey", body["division"])
 	})
+
 	t.Run("clears the team when an empty string is provided", func(t *testing.T) {
 		t.Parallel()
 		resp := newTestAPI(t, stored).Patch("/api/v1/competitors/"+stored.ID.String(), map[string]any{"team": ""})
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 		body := decodeBody(t, resp.Body.Bytes())
 		assert.Equal(t, "", body["team"])
+	})
+
+	t.Run("clears the primary club when an empty string is provided", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, stored).Patch("/api/v1/competitors/"+stored.ID.String(), map[string]any{"primaryClub": ""})
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Nil(t, body["primaryClub"])
+	})
+
+	t.Run("rejects a gender outside the enum", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, stored).Patch("/api/v1/competitors/"+stored.ID.String(), map[string]any{"gender": "X"})
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
 
 	t.Run("rejects an empty patch", func(t *testing.T) {
