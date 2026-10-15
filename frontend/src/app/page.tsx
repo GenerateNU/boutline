@@ -1,4 +1,4 @@
-import { Ellipsis, Grip } from "lucide-react";
+import { Ellipsis } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
@@ -6,15 +6,6 @@ import { Checkbox } from "@/components/primitives/checkbox";
 import { Chip } from "@/components/primitives/chip";
 import { List, ListItem } from "@/components/primitives/list";
 import { Menu, MenuItem } from "@/components/primitives/menu";
-import {
-  Modal,
-  ModalClose,
-  ModalContent,
-  ModalDescription,
-  ModalFooter,
-  ModalTitle,
-  ModalTrigger,
-} from "@/components/primitives/modal";
 import { Radio, RadioItem } from "@/components/primitives/radio";
 import { SearchBar } from "@/components/primitives/search-bar";
 import { SegmentItem } from "@/components/primitives/segment-item";
@@ -214,33 +205,6 @@ export default function Home() {
             </TooltipContent>
           </Tooltip>
         </div>
-      </Section>
-
-      <Section title="Modal">
-        <Modal>
-          <ModalTrigger asChild>
-            <Button variant="outline">Open modal</Button>
-          </ModalTrigger>
-          <ModalContent>
-            <ModalTitle>
-              <Grip aria-hidden />
-              Modal title
-            </ModalTitle>
-            <ModalDescription>
-              A type of modal window that appears in front of app content to
-              provide critical information, or prompt for a decision to be made
-            </ModalDescription>
-            <DialogList />
-            <ModalFooter>
-              <ModalClose asChild>
-                <Button variant="text">Cancel</Button>
-              </ModalClose>
-              <ModalClose asChild>
-                <Button variant="text">Label</Button>
-              </ModalClose>
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
       </Section>
 
       <Section title="List">
