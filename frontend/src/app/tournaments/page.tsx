@@ -66,20 +66,26 @@ export default async function TournamentsPage({
         </ul>
 
         <div className="flex justify-between">
-          <Link
-            href={`/tournaments?offset=${Math.max(offset - PAGE_SIZE, 0)}${pageQuery}`}
-            aria-disabled={!hasPrev}
-            className={hasPrev ? "underline" : "pointer-events-none opacity-40"}
-          >
-            Previous
-          </Link>
-          <Link
-            href={`/tournaments?offset=${offset + PAGE_SIZE}${pageQuery}`}
-            aria-disabled={!hasNext}
-            className={hasNext ? "underline" : "pointer-events-none opacity-40"}
-          >
-            Next
-          </Link>
+          {hasPrev ? (
+            <Link
+              href={`/tournaments?offset=${Math.max(offset - PAGE_SIZE, 0)}${pageQuery}`}
+              className="underline"
+            >
+              Previous
+            </Link>
+          ) : (
+            <span className="opacity-40">Previous</span>
+          )}
+          {hasNext ? (
+            <Link
+              href={`/tournaments?offset=${offset + PAGE_SIZE}${pageQuery}`}
+              className="underline"
+            >
+              Next
+            </Link>
+          ) : (
+            <span className="opacity-40">Next</span>
+          )}
         </div>
       </Section>
     </div>

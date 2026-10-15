@@ -2,6 +2,7 @@ package utils
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -32,7 +33,7 @@ func TrigramMatch(query *gorm.DB, expr, term string) *gorm.DB {
 	if term == "" {
 		return query
 	}
-	if len(term) < trigramMinLength {
+	if utf8.RuneCountInString(term) < trigramMinLength {
 		return query.Where("("+expr+") ILIKE ?", likePrefixPattern(term))
 	}
 	return query.Where("("+expr+") %> ?", term)
@@ -46,8 +47,8 @@ func TrigramMatch(query *gorm.DB, expr, term string) *gorm.DB {
 // orders by emptyOrder instead (e.g. "created_at DESC"). tiebreaker and
 // emptyOrder are trusted SQL from the caller, not bound as parameters.
 func TrigramOrder(query *gorm.DB, expr, term, emptyOrder, tiebreaker string) *gorm.DB {
-	if len(term) < trigramMinLength {
-		return query.Order(emptyOrder)
+	if utf8.RuneCountInString(term) < trigramMinLength {
+		return query.Order(emptyOrder + ", " + tiebreaker)
 	}
 	return query.Clauses(clause.OrderBy{Expression: clause.Expr{
 		SQL:  "word_similarity(?, " + expr + ") DESC, " + tiebreaker,

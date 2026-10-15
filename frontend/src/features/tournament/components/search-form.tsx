@@ -2,10 +2,11 @@
 
 import { Search, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { Input } from "@/components/primitives/input";
+import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
 
 const debounceMs = 300;
 
@@ -23,11 +24,19 @@ function SearchForm({
   defaultValue = "",
 }: SearchFormProps) {
   const router = useRouter();
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [isPending, startTransition] = useTransition();
+  const [value, setValue] = useState(defaultValue);
+  const [syncedDefaultValue, setSyncedDefaultValue] = useState(defaultValue);
+
+  // Keeps the field in sync when the URL's query changes from elsewhere
+  // (e.g. navigating back), without resetting it on every keystroke. Adjusted
+  // during render, not an effect, so it lands before the stale value paints.
+  if (defaultValue !== syncedDefaultValue) {
+    setSyncedDefaultValue(defaultValue);
+    setValue(defaultValue);
+  }
 
   function navigate(search: string) {
-    clearTimeout(timer.current);
     const query = search ? `?q=${encodeURIComponent(search)}` : "";
     // replace, not push: typing should not fill the history stack. Leaving
     // offset off puts a new search back on the first page.
@@ -35,6 +44,11 @@ function SearchForm({
       router.replace(`${action}${query}`, { scroll: false });
     });
   }
+
+  const [debouncedNavigate, cancelDebouncedNavigate] = useDebouncedCallback(
+    navigate,
+    debounceMs,
+  );
 
   return (
     <div className="flex items-center gap-2">
@@ -45,9 +59,8 @@ function SearchForm({
         aria-busy={isPending}
         onSubmit={(event) => {
           event.preventDefault();
-          navigate(
-            new FormData(event.currentTarget).get("q")?.toString().trim() ?? "",
-          );
+          cancelDebouncedNavigate();
+          navigate(value.trim());
         }}
       >
         <Search
@@ -60,11 +73,10 @@ function SearchForm({
           name="q"
           type="search"
           placeholder={placeholder}
-          defaultValue={defaultValue}
+          value={value}
           onChange={(event) => {
-            const search = event.target.value.trim();
-            clearTimeout(timer.current);
-            timer.current = setTimeout(() => navigate(search), debounceMs);
+            setValue(event.target.value);
+            debouncedNavigate(event.target.value.trim());
           }}
           className="pl-9"
         />
