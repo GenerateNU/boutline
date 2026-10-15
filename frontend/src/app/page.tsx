@@ -15,11 +15,14 @@ import {
 } from "@/components/primitives/card";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Chip } from "@/components/primitives/chip";
+import { List, ListItem } from "@/components/primitives/list";
+import { Menu, MenuItem } from "@/components/primitives/menu";
 import { CircularProgress } from "@/components/primitives/circular-progress";
 import { DatePicker } from "@/components/primitives/date-picker";
 import { LinearProgress } from "@/components/primitives/linear-progress";
 import { Radio, RadioItem } from "@/components/primitives/radio";
 import { Section } from "@/components/primitives/section";
+import { SearchBar } from "@/components/primitives/search-bar";
 import { SegmentItem } from "@/components/primitives/segment-item";
 import {
   SegmentedButton,
@@ -57,6 +60,36 @@ const drawerItems = Array.from({ length: 7 }, (_, index) => ({
 }));
 
 const drawerFooter = [{ id: "settings", label: "Settings", icon: <Settings /> }];
+function DialogAvatar() {
+  return (
+    <Avatar className="size-8">
+      <AvatarFallback className="text-xs">LA</AvatarFallback>
+    </Avatar>
+  );
+}
+
+function DialogList() {
+  const dialogItems = Array.from({ length: 10 }, (_, index) => String(index));
+
+  return (
+    <List aria-label="Dialog options" className="min-h-0 overflow-y-auto">
+      {dialogItems.map((value) => (
+        <ListItem
+          key={value}
+          leading={<DialogAvatar />}
+          trailing={
+            <Checkbox
+              defaultChecked={Number(value) < 2}
+              aria-label={`Option ${value}`}
+            />
+          }
+        >
+          Dialog title
+        </ListItem>
+      ))}
+    </List>
+  );
+}
 
 export default function Home() {
   const { toast } = useToast();
@@ -271,6 +304,46 @@ export default function Home() {
             </>
           }
         />
+      <Section title="List">
+        <DialogList />
+      </Section>
+
+      <Section title="Menu">
+        <Menu>
+          {Array.from({ length: 10 }, (_, index) => (
+            <MenuItem key={index} icon={<Ellipsis aria-hidden />}>
+              Dialog title
+            </MenuItem>
+          ))}
+        </Menu>
+      </Section>
+
+      <Section title="Search bar">
+        <div className="flex flex-col gap-6">
+          <SearchBar
+            placeholder="Enter search text"
+            aria-label="Search"
+            trailing={
+              <Avatar className="size-8">
+                <AvatarFallback />
+              </Avatar>
+            }
+          />
+
+          <SearchBar expanded defaultValue="Input" aria-label="Search">
+            <div className="h-24" />
+          </SearchBar>
+
+          <SearchBar expanded defaultValue="Input" aria-label="Search">
+            <List className="border-0">
+              {Array.from({ length: 4 }, (_, index) => (
+                <ListItem key={index} leading={<DialogAvatar />}>
+                  Dialog title
+                </ListItem>
+              ))}
+            </List>
+          </SearchBar>
+        </div>
       </Section>
 
       <Section title="Linear progress">

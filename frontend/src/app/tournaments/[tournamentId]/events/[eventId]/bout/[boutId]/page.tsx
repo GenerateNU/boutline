@@ -4,14 +4,17 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/primitives/button";
 import { Section } from "@/components/primitives/section";
 
-import { findBout } from "../../_data/bouts";
+import { findBout } from "../../_services/bouts";
 
-export default async function BoutPage({
-  params,
-}: PageProps<"/tournaments/[tournamentId]/events/[eventId]/bout/[boutId]">) {
+interface BoutPageProps
+  extends PageProps<"/tournaments/[tournamentId]/events/[eventId]/bout/[boutId]"> {}
+
+export default async function BoutPage({ params }: BoutPageProps) {
   const { tournamentId, eventId, boutId } = await params;
   const bout = findBout(boutId);
-  if (!bout) notFound();
+  if (!bout) {
+    notFound();
+  }
 
   const { round, left, right, audit } = bout;
 
@@ -51,7 +54,7 @@ export default async function BoutPage({
                 Touch {scorer === "left" ? left.name : right.name}
               </span>
               <span className="font-medium tabular-nums">
-                {leftScore} – {rightScore}
+                {leftScore} - {rightScore}
               </span>
             </li>
           ))}
