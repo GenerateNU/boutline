@@ -392,7 +392,7 @@ func TestListCompetitorsWithQuery(t *testing.T) {
 	}
 }
 
-func TestSearchCompetitorTeams(t *testing.T) {
+func TestListCompetitorTeams(t *testing.T) {
 	t.Parallel()
 	seed := []competitor.Competitor{
 		seeded("Lee", "Kiefer", competitor.RatingA, "NU Fencing"),
@@ -402,7 +402,7 @@ func TestSearchCompetitorTeams(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		input      *competitor.CompetitorTeamSearchInput
+		input      *competitor.CompetitorTeamListInput
 		wantTeams  []string
 		wantCounts []int64
 		wantTotal  int64
@@ -413,7 +413,7 @@ func TestSearchCompetitorTeams(t *testing.T) {
 	}{
 		{
 			name:       "matches a team and counts its competitors",
-			input:      &competitor.CompetitorTeamSearchInput{Query: "john"},
+			input:      &competitor.CompetitorTeamListInput{Query: "john"},
 			wantTeams:  []string{"St. John's Fencing"},
 			wantCounts: []int64{1},
 			wantTotal:  1,
@@ -421,7 +421,7 @@ func TestSearchCompetitorTeams(t *testing.T) {
 		},
 		{
 			name:       "collapses to one row per team regardless of roster size",
-			input:      &competitor.CompetitorTeamSearchInput{Query: "fencing"},
+			input:      &competitor.CompetitorTeamListInput{Query: "fencing"},
 			wantTeams:  []string{"NU Fencing", "St. John's Fencing"},
 			wantCounts: []int64{2, 1},
 			wantTotal:  2,
@@ -429,7 +429,7 @@ func TestSearchCompetitorTeams(t *testing.T) {
 		},
 		{
 			name:       "a blank term lists every team",
-			input:      &competitor.CompetitorTeamSearchInput{Query: "   "},
+			input:      &competitor.CompetitorTeamListInput{Query: "   "},
 			wantTeams:  []string{"NU Fencing", "St. John's Fencing"},
 			wantCounts: []int64{2, 1},
 			wantTotal:  2,
@@ -437,7 +437,7 @@ func TestSearchCompetitorTeams(t *testing.T) {
 		},
 		{
 			name:       "applies limit and offset",
-			input:      &competitor.CompetitorTeamSearchInput{Query: "fencing", Limit: 1, Offset: 1},
+			input:      &competitor.CompetitorTeamListInput{Query: "fencing", Limit: 1, Offset: 1},
 			wantTeams:  []string{"St. John's Fencing"},
 			wantCounts: []int64{1},
 			wantTotal:  2,
@@ -450,7 +450,7 @@ func TestSearchCompetitorTeams(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			out, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
-				SearchCompetitorTeams(t.Context(), tt.input)
+				ListCompetitorTeams(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -477,7 +477,7 @@ func TestSearchCompetitorTeams(t *testing.T) {
 	}
 }
 
-func TestSearchCompetitorTeamsByTournament(t *testing.T) {
+func TestListCompetitorTeamsByTournament(t *testing.T) {
 	t.Parallel()
 	tournamentA := uuid.New()
 	tournamentB := uuid.New()
@@ -497,8 +497,8 @@ func TestSearchCompetitorTeamsByTournament(t *testing.T) {
 
 	t.Run("scopes the roster count to the given tournament", func(t *testing.T) {
 		t.Parallel()
-		out, err := competitor.NewCompetitorService(repo).SearchCompetitorTeams(t.Context(),
-			&competitor.CompetitorTeamSearchInput{Query: "fencing", TournamentID: tournamentA.String()})
+		out, err := competitor.NewCompetitorService(repo).ListCompetitorTeams(t.Context(),
+			&competitor.CompetitorTeamListInput{Query: "fencing", TournamentID: tournamentA.String()})
 		require.NoError(t, err)
 		require.Len(t, out.Body.Data, 1)
 		assert.Equal(t, "NU Fencing", out.Body.Data[0].Team)
@@ -507,8 +507,8 @@ func TestSearchCompetitorTeamsByTournament(t *testing.T) {
 
 	t.Run("rejects a tournament id that is not a uuid", func(t *testing.T) {
 		t.Parallel()
-		_, err := competitor.NewCompetitorService(repo).SearchCompetitorTeams(t.Context(),
-			&competitor.CompetitorTeamSearchInput{Query: "fencing", TournamentID: "not-a-uuid"})
+		_, err := competitor.NewCompetitorService(repo).ListCompetitorTeams(t.Context(),
+			&competitor.CompetitorTeamListInput{Query: "fencing", TournamentID: "not-a-uuid"})
 		code, _ := apiError(t, err)
 		assert.Equal(t, http.StatusBadRequest, code)
 	})

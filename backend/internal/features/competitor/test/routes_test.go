@@ -158,7 +158,7 @@ func TestListEndpoint(t *testing.T) {
 	})
 }
 
-func TestSearchTeamsEndpoint(t *testing.T) {
+func TestListTeamsEndpoint(t *testing.T) {
 	t.Parallel()
 	seed := []competitor.Competitor{
 		seeded("Lee", "Kiefer", competitor.RatingA, "NU Fencing"),

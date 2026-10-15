@@ -21,7 +21,7 @@ type CompetitorService interface {
 	ListCompetitors(ctx context.Context, input *CompetitorListInput) (*CompetitorListOutput, error)
 	UpdateCompetitorByID(ctx context.Context, input *CompetitorUpdateInput) (*CompetitorOutput, error)
 	DeleteCompetitor(ctx context.Context, input *CompetitorIDInput) (*struct{}, error)
-	SearchCompetitorTeams(ctx context.Context, input *CompetitorTeamSearchInput) (*CompetitorTeamSearchOutput, error)
+	ListCompetitorTeams(ctx context.Context, input *CompetitorTeamListInput) (*CompetitorTeamListOutput, error)
 }
 
 type competitorService struct {
@@ -199,10 +199,10 @@ func (s *competitorService) DeleteCompetitor(
 	return nil, nil
 }
 
-func (s *competitorService) SearchCompetitorTeams(
+func (s *competitorService) ListCompetitorTeams(
 	ctx context.Context,
-	input *CompetitorTeamSearchInput,
-) (*CompetitorTeamSearchOutput, error) {
+	input *CompetitorTeamListInput,
+) (*CompetitorTeamListOutput, error) {
 	term := strings.TrimSpace(input.Query)
 
 	limit := input.Limit
@@ -212,7 +212,7 @@ func (s *competitorService) SearchCompetitorTeams(
 	limit = utils.Clamp(limit, CompetitorMinPageSize, CompetitorMaxPageSize)
 	offset := max(input.Offset, 0)
 
-	filter := CompetitorTeamSearchFilter{
+	filter := CompetitorTeamListFilter{
 		Term:   term,
 		Limit:  limit,
 		Offset: offset,
@@ -225,16 +225,16 @@ func (s *competitorService) SearchCompetitorTeams(
 		filter.TournamentID = &tournamentID
 	}
 
-	teams, total, err := s.repo.SearchCompetitorTeams(ctx, filter)
+	teams, total, err := s.repo.ListCompetitorTeams(ctx, filter)
 	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("search competitor teams: %w", err))
+		return nil, errs.HumaError(fmt.Errorf("list competitor teams: %w", err))
 	}
 
-	data := make([]TeamSearchResult, 0, len(teams))
+	data := make([]TeamListResult, 0, len(teams))
 	for _, team := range teams {
-		data = append(data, TeamSearchResult{Team: team.Team, CompetitorCount: team.Count})
+		data = append(data, TeamListResult{Team: team.Team, CompetitorCount: team.Count})
 	}
-	return &CompetitorTeamSearchOutput{Body: CompetitorTeamSearchBody{
+	return &CompetitorTeamListOutput{Body: CompetitorTeamListBody{
 		Data:   data,
 		Total:  total,
 		Limit:  limit,

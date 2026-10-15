@@ -24,10 +24,10 @@ type CompetitorRepository interface {
 	ListCompetitors(ctx context.Context, filter CompetitorListFilter) ([]Competitor, int64, error)
 	UpdateCompetitorByID(ctx context.Context, id uuid.UUID, update CompetitorUpdate) error
 	DeleteCompetitor(ctx context.Context, id uuid.UUID) error
-	SearchCompetitorTeams(ctx context.Context, filter CompetitorTeamSearchFilter) ([]CompetitorTeamCount, int64, error)
+	ListCompetitorTeams(ctx context.Context, filter CompetitorTeamListFilter) ([]CompetitorTeamCount, int64, error)
 }
 
-type CompetitorTeamSearchFilter struct {
+type CompetitorTeamListFilter struct {
 	Term         string
 	TournamentID *uuid.UUID
 	Limit        int
@@ -154,13 +154,13 @@ func (r *competitorRepository) ListCompetitors(
 	return competitors, total, nil
 }
 
-// SearchCompetitorTeams matches distinct team names rather than competitor
+// ListCompetitorTeams matches distinct team names rather than competitor
 // rows, so a team with many rostered competitors doesn't crowd out other
 // matching teams in the results. There is no teams table yet: team is just a
 // free-text column on competitors.
-func (r *competitorRepository) SearchCompetitorTeams(
+func (r *competitorRepository) ListCompetitorTeams(
 	ctx context.Context,
-	filter CompetitorTeamSearchFilter,
+	filter CompetitorTeamListFilter,
 ) ([]CompetitorTeamCount, int64, error) {
 	expr := competitorTeamTrigramExpr
 
@@ -174,7 +174,7 @@ func (r *competitorRepository) SearchCompetitorTeams(
 		countQuery = countQuery.Where("tournament_id = ?", *filter.TournamentID)
 	}
 	if err := countQuery.Distinct(expr).Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("count competitor team search: %w", err)
+		return nil, 0, fmt.Errorf("count competitor team list: %w", err)
 	}
 
 	// team is the GROUP BY key, so ordering by word_similarity(term, team) is
@@ -201,7 +201,7 @@ func (r *competitorRepository) SearchCompetitorTeams(
 		Offset(filter.Offset).
 		Find(&teams).Error
 	if err != nil {
-		return nil, 0, fmt.Errorf("search competitor teams: %w", err)
+		return nil, 0, fmt.Errorf("list competitor teams: %w", err)
 	}
 	return teams, total, nil
 }

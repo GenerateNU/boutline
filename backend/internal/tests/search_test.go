@@ -96,7 +96,7 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 // Boston Fencing Club has competitors in both Fall Open 2026 and Summer
 // Invitational 2026 (see seeds/seed.sql), so scoping to one tournament must
 // shrink the roster count rather than just filtering out other teams.
-func TestSearchCompetitorTeamsByTournament(t *testing.T) {
+func TestListCompetitorTeamsByTournament(t *testing.T) {
 	app := testkit.GetDBTestApp(t)
 	const fallOpen2026 = "b0000000-0000-4000-8000-000000000001"
 

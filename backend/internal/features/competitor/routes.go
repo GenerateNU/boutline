@@ -33,14 +33,14 @@ func RegisterCompetitorService(api huma.API, service CompetitorService) {
 	}, service.ListCompetitors)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "searchCompetitorTeams",
+		OperationID: "listCompetitorTeams",
 		Method:      http.MethodGet,
 		Path:        competitorBasePath + "/search/teams",
-		Summary:     "Search distinct teams by name",
+		Summary:     "List distinct teams, optionally fuzzy-matched by name",
 		Description: "Returns one row per matching team with its competitor count, " +
 			"rather than one row per competitor.",
 		Tags: []string{"Competitors"},
-	}, service.SearchCompetitorTeams)
+	}, service.ListCompetitorTeams)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getCompetitorByID",

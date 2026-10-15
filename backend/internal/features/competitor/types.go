@@ -74,25 +74,25 @@ type CompetitorListOutput struct {
 	Body CompetitorListBody
 }
 
-type TeamSearchResult struct {
+type TeamListResult struct {
 	Team            string `json:"team"`
 	CompetitorCount int64  `json:"competitorCount" doc:"Competitors on this team"`
 }
 
-type CompetitorTeamSearchInput struct {
+type CompetitorTeamListInput struct {
 	Query        string `query:"q" maxLength:"120" doc:"Fuzzy match term; omit to return every team"`
 	TournamentID string `query:"tournament_id" format:"uuid" doc:"Only teams with a competitor in this tournament"`
 	Limit        int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset       int    `query:"offset" default:"0" minimum:"0"`
 }
 
-type CompetitorTeamSearchBody struct {
-	Data   []TeamSearchResult `json:"data"`
+type CompetitorTeamListBody struct {
+	Data   []TeamListResult `json:"data"`
 	Total  int64              `json:"total" doc:"Distinct teams matching the term, ignoring the page"`
 	Limit  int                `json:"limit"`
 	Offset int                `json:"offset"`
 }
 
-type CompetitorTeamSearchOutput struct {
-	Body CompetitorTeamSearchBody
+type CompetitorTeamListOutput struct {
+	Body CompetitorTeamListBody
 }

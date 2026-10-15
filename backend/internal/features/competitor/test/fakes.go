@@ -93,9 +93,9 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 	return matched, total, nil
 }
 
-func (f *FakeCompetitorRepository) SearchCompetitorTeams(
+func (f *FakeCompetitorRepository) ListCompetitorTeams(
 	_ context.Context,
-	filter competitor.CompetitorTeamSearchFilter,
+	filter competitor.CompetitorTeamListFilter,
 ) ([]competitor.CompetitorTeamCount, int64, error) {
 	if f.Err != nil {
 		return nil, 0, f.Err
