@@ -1,4 +1,4 @@
-import type { Bout, SeededFencer, Side, Touch } from "../_types/bouts";
+import { AuditEntry, BoutFencer, BoutSummary, Side } from "../_types/bouts";
 
 // Placeholder copies of the bouts in backend/seeds/seed.sql, with the seeded ids so
 // the referee view loads the same bout from a seeded backend. Each audit replays
@@ -16,7 +16,7 @@ const KENJI = { name: "Kenji Tanaka", club: "Northeastern Fencing" };
 const LEILA = { name: "Leila Haddad", club: "Cambridge FC" };
 const MARCUS = { name: "Marcus Johnson", club: "" };
 
-function buildAudit(scorers: Side[]): Touch[] {
+function buildAudit(scorers: Side[]): AuditEntry[] {
   let leftScore = 0;
   let rightScore = 0;
   return scorers.map((scorer, index) => {
@@ -38,12 +38,13 @@ function buildAudit(scorers: Side[]): Touch[] {
 
 function bout(
   id: string,
-  stage: Bout["stage"],
+  stage: BoutSummary["stage"],
   round: string,
-  left: SeededFencer,
-  right: SeededFencer,
+  // A fencer as the seed defines them; the score comes from replaying their touches.
+  left: Omit<BoutFencer, "score">,
+  right: Omit<BoutFencer, "score">,
   scorers: Side[] = [],
-): Bout {
+): BoutSummary {
   const audit = buildAudit(scorers);
   const final = audit.at(-1);
   return {
@@ -56,7 +57,7 @@ function bout(
   };
 }
 
-export const bouts: Bout[] = [
+export const bouts: BoutSummary[] = [
   bout(
     "e0000000-0000-4000-8000-000000000001",
     "pool",
@@ -65,9 +66,30 @@ export const bouts: Bout[] = [
     LIAM,
     ["left", "right", "left", "left", "right", "left", "left"],
   ),
-  bout("e0000000-0000-4000-8000-000000000002", "pool", "Pool 1", PRIYA, DIEGO),
-  bout("e0000000-0000-4000-8000-000000000003", "pool", "Pool 1", MAYA, PRIYA),
-  bout("e0000000-0000-4000-8000-000000000004", "pool", "Pool 1", LIAM, DIEGO),
+  bout(
+    "e0000000-0000-4000-8000-000000000002",
+    "pool",
+    "Pool 1",
+    PRIYA,
+    DIEGO,
+    ["right", "left", "right", "left", "right", "left", "left", "left"],
+  ),
+  bout(
+    "e0000000-0000-4000-8000-000000000003",
+    "pool",
+    "Pool 1",
+    MAYA,
+    PRIYA,
+    ["right", "left", "right", "left", "right", "left", "right", "left", "left"],
+  ),
+  bout(
+    "e0000000-0000-4000-8000-000000000004",
+    "pool",
+    "Pool 1",
+    LIAM,
+    DIEGO,
+    ["left", "right", "right", "left", "right", "right", "right"],
+  ),
   // Live: the seed also has one revoked touch for Maya, left out here.
   bout(
     "e0000000-0000-4000-8000-000000000005",
@@ -78,17 +100,52 @@ export const bouts: Bout[] = [
     ["right", "left", "right", "left"],
   ),
   bout("e0000000-0000-4000-8000-000000000006", "pool", "Pool 1", LIAM, PRIYA),
-  bout("e0000000-0000-4000-8000-000000000007", "pool", "Pool 2", HANA, NOAH),
-  bout("e0000000-0000-4000-8000-000000000008", "pool", "Pool 2", AMARA, ETHAN),
+  bout(
+    "e0000000-0000-4000-8000-000000000007",
+    "pool",
+    "Pool 2",
+    HANA,
+    NOAH,
+    ["right", "left", "left", "left", "left", "left"],
+  ),
+  bout(
+    "e0000000-0000-4000-8000-000000000008",
+    "pool",
+    "Pool 2",
+    AMARA,
+    ETHAN,
+    ["left", "right", "left", "right", "left", "right", "left", "right", "right"],
+  ),
   bout("e0000000-0000-4000-8000-000000000009", "pool", "Pool 2", HANA, AMARA),
   bout("e0000000-0000-4000-8000-000000000010", "pool", "Pool 2", NOAH, ETHAN),
   bout("e0000000-0000-4000-8000-000000000011", "pool", "Pool 2", HANA, ETHAN),
   bout("e0000000-0000-4000-8000-000000000012", "pool", "Pool 2", NOAH, AMARA),
   bout("e0000000-0000-4000-8000-000000000013", "pool", "Winter Classic · Pool 1", SOFIA, KENJI),
   bout("e0000000-0000-4000-8000-000000000014", "pool", "Winter Classic · Pool 1", LEILA, MARCUS),
-  bout("e0000000-0000-4000-8000-000000000015", "tableau", "Semifinal", MAYA, KENJI),
-  bout("e0000000-0000-4000-8000-000000000016", "tableau", "Semifinal", HANA, SOFIA),
-  bout("e0000000-0000-4000-8000-000000000017", "tableau", "Final", MAYA, HANA),
+  bout(
+    "e0000000-0000-4000-8000-000000000015",
+    "tableau",
+    "Semifinal",
+    MAYA,
+    KENJI,
+    ["right", "left", "right", "left", "right", "left", "right", "left", "left", "right", "left", "right", "left", "right", "left", "right", "left", "left", "right", "left", "right", "left", "right", "left", "left", "left"],
+  ),
+  bout(
+    "e0000000-0000-4000-8000-000000000016",
+    "tableau",
+    "Semifinal",
+    HANA,
+    SOFIA,
+    ["left", "right", "left", "right", "left", "right", "left", "right", "left", "right", "left", "right", "left", "right", "left", "right", "left", "right", "left", "right", "left", "right", "left", "right", "left", "right", "right", "right"],
+  ),
+  bout(
+    "e0000000-0000-4000-8000-000000000017",
+    "tableau",
+    "Final",
+    MAYA,
+    HANA,
+    ["right", "left", "right", "left", "right", "left", "right", "left", "right", "left", "right", "left", "left", "right", "left", "right", "left", "right", "left", "right", "left", "right", "left", "right", "left", "left", "left"],
+  ),
 ];
 
 export function findBout(id: string) {
