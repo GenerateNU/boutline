@@ -24,7 +24,6 @@ type UserService interface {
 	CreateUser(ctx context.Context, input *UserCreateInput) (*UserOutput, error)
 	GetUserByID(ctx context.Context, input *UserIDInput) (*UserOutput, error)
 	ListUsers(ctx context.Context, input *UserListInput) (*UserListOutput, error)
-	SearchUsers(ctx context.Context, input *UserSearchInput) (*UserSearchOutput, error)
 	UpdateUserByID(ctx context.Context, input *UserUpdateInput) (*UserOutput, error)
 	DeleteUser(ctx context.Context, input *UserIDInput) (*struct{}, error)
 	ListTournamentsByUser(ctx context.Context, input *UserTournamentsInput) (*UserTournamentsOutput, error)
@@ -148,6 +147,7 @@ func userUpdateFrom(body UserUpdateBody) (*UserUpdate, error) {
 
 func (s *userService) ListUsers(ctx context.Context, input *UserListInput) (*UserListOutput, error) {
 	// TODO: validate fields, perhaps unified but we have to allow some fuzzy searching
+	term := strings.TrimSpace(input.Query)
 
 	limit := input.Limit
 	if limit <= 0 {
@@ -159,6 +159,7 @@ func (s *userService) ListUsers(ctx context.Context, input *UserListInput) (*Use
 
 	users, total, err := s.repo.ListUsers(ctx, UserListFilter{
 		// TODO: decide what filters we want and include them in repository
+		Term:   term,
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -179,39 +180,6 @@ func (s *userService) ListUsers(ctx context.Context, input *UserListInput) (*Use
 				Offset: offset,
 			}},
 		nil
-}
-
-func (s *userService) SearchUsers(ctx context.Context, input *UserSearchInput) (*UserSearchOutput, error) {
-	term := strings.TrimSpace(input.Query)
-
-	limit := input.Limit
-	if limit <= 0 {
-		limit = UserDefaultPageSize
-	}
-	limit = utils.Clamp(limit, UserMinPageSize, UserMaxPageSize)
-
-	offset := max(input.Offset, 0)
-
-	users, total, err := s.repo.SearchUsers(ctx, UserSearchFilter{
-		Term:   term,
-		Limit:  limit,
-		Offset: offset,
-	})
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("search users: %w", err))
-	}
-
-	data := make([]UserResponse, 0, len(users))
-	for _, user := range users {
-		data = append(data, newUserResponse(user))
-	}
-
-	return &UserSearchOutput{Body: UserListBody{
-		Data:   data,
-		Total:  total,
-		Limit:  limit,
-		Offset: offset,
-	}}, nil
 }
 
 func (s *userService) DeleteUser(ctx context.Context, input *UserIDInput) (*struct{}, error) {

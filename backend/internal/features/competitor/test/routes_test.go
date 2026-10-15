@@ -143,30 +143,18 @@ func TestListEndpoint(t *testing.T) {
 		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?rating=Z")
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
-}
 
-func TestSearchEndpoint(t *testing.T) {
-	t.Parallel()
-	seed := []competitor.Competitor{
-		seeded("Lee", "Kiefer", competitor.RatingA, "NU Fencing"),
-		seeded("Race", "Imboden", competitor.RatingA, "St. John's Fencing"),
-	}
-
-	t.Run("matches by name and reports the total", func(t *testing.T) {
+	t.Run("matches by name when a query is given", func(t *testing.T) {
 		t.Parallel()
-		resp := newTestAPI(t, seed...).Get("/api/v1/competitors/search?q=kiefer")
+		named := []competitor.Competitor{
+			seeded("Lee", "Kiefer", competitor.RatingA, "NU Fencing"),
+			seeded("Race", "Imboden", competitor.RatingA, "St. John's Fencing"),
+		}
+		resp := newTestAPI(t, named...).Get("/api/v1/competitors?q=kiefer")
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 		body := decodeBody(t, resp.Body.Bytes())
 		assert.Len(t, body["data"], 1)
 		assert.InDelta(t, 1, body["total"], 0)
-	})
-
-	t.Run("a missing query matches everyone", func(t *testing.T) {
-		t.Parallel()
-		resp := newTestAPI(t, seed...).Get("/api/v1/competitors/search")
-		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
-		body := decodeBody(t, resp.Body.Bytes())
-		assert.Len(t, body["data"], 2)
 	})
 }
 

@@ -21,7 +21,6 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, user *User) error
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
 	ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error)
-	SearchUsers(ctx context.Context, filter UserSearchFilter) ([]User, int64, error)
 	UpdateUserByID(ctx context.Context, id uuid.UUID, update UserUpdate) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	ListTournamentsByUser(
@@ -42,11 +41,6 @@ type UserUpdate struct {
 
 type UserListFilter struct {
 	// TODO: other filter criteria
-	Limit  int
-	Offset int
-}
-
-type UserSearchFilter struct {
 	Term   string
 	Limit  int
 	Offset int
@@ -115,45 +109,29 @@ func (r *userRepository) UpdateUserByID(ctx context.Context, id uuid.UUID, updat
 }
 
 func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error) {
-	query := r.db.WithContext(ctx).Model(&User{})
 	// TODO: apply other filters once decided
+	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&User{}), userNameTrigramExpr, filter.Term)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count users: %w", err)
 	}
 
+	if filter.Term == "" {
+		query = query.Order("created_at DESC")
+	} else {
+		query = utils.TrigramOrder(query, userNameTrigramExpr, filter.Term)
+	}
+
 	users := make([]User, 0, filter.Limit)
 	// Avoid pulling password ever, makes it harder to leak
 	err := query.
 		Omit("password").
-		Order("created_at DESC").
 		Limit(filter.Limit).
 		Offset(filter.Offset).
 		Find(&users).Error
 	if err != nil {
 		return nil, 0, fmt.Errorf("select users: %w", err)
-	}
-
-	return users, total, nil
-}
-
-func (r *userRepository) SearchUsers(ctx context.Context, filter UserSearchFilter) ([]User, int64, error) {
-	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&User{}), userNameTrigramExpr, filter.Term)
-
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("count user search: %w", err)
-	}
-
-	users := make([]User, 0, filter.Limit)
-	err := utils.TrigramOrder(query, userNameTrigramExpr, filter.Term).
-		Omit("password").
-		Limit(filter.Limit).
-		Offset(filter.Offset).
-		Find(&users).Error
-	if err != nil {
-		return nil, 0, fmt.Errorf("search users: %w", err)
 	}
 
 	return users, total, nil

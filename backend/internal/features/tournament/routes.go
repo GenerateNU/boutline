@@ -36,17 +36,9 @@ func RegisterTournamentService(api huma.API, service TournamentService) {
 		OperationID: "listTournaments",
 		Method:      http.MethodGet,
 		Path:        tournamentBasePath,
-		Summary:     "List tournaments",
+		Summary:     "List tournaments, optionally fuzzy-matched by name",
 		Tags:        []string{"Tournaments"},
 	}, service.ListTournaments)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "searchTournaments",
-		Method:      http.MethodGet,
-		Path:        tournamentBasePath + "/search",
-		Summary:     "Search tournaments by name",
-		Tags:        []string{"Tournaments"},
-	}, service.SearchTournaments)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getTournamentByID",

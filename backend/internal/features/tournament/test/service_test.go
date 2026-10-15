@@ -376,7 +376,7 @@ func TestListTournaments(t *testing.T) {
 	}
 }
 
-func TestSearchTournaments(t *testing.T) {
+func TestListTournamentsWithQuery(t *testing.T) {
 	t.Parallel()
 
 	seed := []tournament.Tournament{
@@ -386,31 +386,29 @@ func TestSearchTournaments(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		input      *tournament.TournamentSearchInput
+		input      *tournament.TournamentListInput
 		wantNames  []string
 		wantTotal  int64
 		wantLimit  int
 		wantOffset int
-		wantCode   int
-		wantDetail string
 	}{
 		{
 			name:      "matches on the tournament name",
-			input:     &tournament.TournamentSearchInput{Query: "northwestern"},
+			input:     &tournament.TournamentListInput{Query: "northwestern"},
 			wantNames: []string{"Northwestern Open"},
 			wantTotal: 1,
 			wantLimit: tournament.TournamentDefaultPageSize,
 		},
 		{
 			name:      "a blank term matches every tournament",
-			input:     &tournament.TournamentSearchInput{Query: "   "},
+			input:     &tournament.TournamentListInput{Query: "   "},
 			wantNames: []string{"Big Ten Championship", "Northwestern Open"},
 			wantTotal: 2,
 			wantLimit: tournament.TournamentDefaultPageSize,
 		},
 		{
 			name:       "applies limit and offset",
-			input:      &tournament.TournamentSearchInput{Query: "n", Limit: 1, Offset: 1},
+			input:      &tournament.TournamentListInput{Query: "n", Limit: 1, Offset: 1},
 			wantNames:  []string{"Northwestern Open"},
 			wantTotal:  2,
 			wantLimit:  1,
@@ -418,7 +416,7 @@ func TestSearchTournaments(t *testing.T) {
 		},
 		{
 			name:      "clamps a limit above the maximum",
-			input:     &tournament.TournamentSearchInput{Query: "n", Limit: tournament.TournamentMaxPageSize + 50},
+			input:     &tournament.TournamentListInput{Query: "n", Limit: tournament.TournamentMaxPageSize + 50},
 			wantNames: []string{"Big Ten Championship", "Northwestern Open"},
 			wantTotal: 2,
 			wantLimit: tournament.TournamentMaxPageSize,
@@ -431,15 +429,7 @@ func TestSearchTournaments(t *testing.T) {
 
 			repo := NewFakeTournamentRepository(seed...)
 			out, err := tournament.NewTournamentService(repo, NewFakeTournamentUserRepository()).
-				SearchTournaments(t.Context(), tt.input)
-
-			if tt.wantCode != 0 {
-				code, detail := apiError(t, err)
-				assert.Equal(t, tt.wantCode, code)
-				assert.Equal(t, tt.wantDetail, detail)
-				assert.Nil(t, out)
-				return
-			}
+				ListTournaments(t.Context(), tt.input)
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantTotal, out.Body.Total)

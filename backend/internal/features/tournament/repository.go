@@ -22,7 +22,6 @@ type TournamentRepository interface {
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*Tournament, error)
 	GetTournamentByCode(ctx context.Context, code string) (*Tournament, error)
 	ListTournaments(ctx context.Context, filter TournamentListFilter) ([]Tournament, int64, error)
-	SearchTournaments(ctx context.Context, filter TournamentSearchFilter) ([]Tournament, int64, error)
 	UpdateTournamentByID(ctx context.Context, id uuid.UUID, update TournamentUpdate) error
 	TransitionTournamentByID(ctx context.Context, id uuid.UUID, transition TournamentTransition) error
 }
@@ -71,11 +70,6 @@ func (t TournamentTransition) columns() map[string]any {
 // TODO: support timestamp filtering (started_at ranges)
 type TournamentListFilter struct {
 	Status TournamentStatus
-	Limit  int
-	Offset int
-}
-
-type TournamentSearchFilter struct {
 	Term   string
 	Limit  int
 	Offset int
@@ -179,43 +173,26 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)
 	}
+	query = utils.TrigramMatch(query, tournamentNameTrigramExpr, filter.Term)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count tournaments: %w", err)
 	}
 
+	if filter.Term == "" {
+		query = query.Order("created_at DESC")
+	} else {
+		query = utils.TrigramOrder(query, tournamentNameTrigramExpr, filter.Term)
+	}
+
 	tournaments := make([]Tournament, 0, filter.Limit)
 	err := query.
-		Order("created_at DESC").
 		Limit(filter.Limit).
 		Offset(filter.Offset).
 		Find(&tournaments).Error
 	if err != nil {
 		return nil, 0, fmt.Errorf("select tournaments: %w", err)
-	}
-
-	return tournaments, total, nil
-}
-
-func (r *tournamentRepository) SearchTournaments(
-	ctx context.Context,
-	filter TournamentSearchFilter,
-) ([]Tournament, int64, error) {
-	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&Tournament{}), tournamentNameTrigramExpr, filter.Term)
-
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("count tournament search: %w", err)
-	}
-
-	tournaments := make([]Tournament, 0, filter.Limit)
-	err := utils.TrigramOrder(query, tournamentNameTrigramExpr, filter.Term).
-		Limit(filter.Limit).
-		Offset(filter.Offset).
-		Find(&tournaments).Error
-	if err != nil {
-		return nil, 0, fmt.Errorf("search tournaments: %w", err)
 	}
 
 	return tournaments, total, nil

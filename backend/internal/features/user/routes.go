@@ -28,17 +28,9 @@ func RegisterUserService(api huma.API, service UserService) {
 		OperationID: "listUsers",
 		Method:      http.MethodGet,
 		Path:        userBasePath,
-		Summary:     "List users",
+		Summary:     "List users, optionally fuzzy-matched by name",
 		Tags:        []string{"Users"},
 	}, service.ListUsers)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "searchUsers",
-		Method:      http.MethodGet,
-		Path:        userBasePath + "/search",
-		Summary:     "Search users by name",
-		Tags:        []string{"Users"},
-	}, service.SearchUsers)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getUserByID",

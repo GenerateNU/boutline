@@ -27,16 +27,16 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 		wantContain string // its expected value, when wantStatus is 200
 	}{
 		{
-			name:        "users search tolerates a typo",
-			route:       "/api/v1/users/search",
+			name:        "users list tolerates a typo in q",
+			route:       "/api/v1/users",
 			query:       map[string]string{"q": "Jordam Lee"}, // seeded: Jordan Lee
 			wantStatus:  http.StatusOK,
 			wantField:   "lastName",
 			wantContain: "Lee",
 		},
 		{
-			name:        "competitors search by name tolerates a typo",
-			route:       "/api/v1/competitors/search",
+			name:        "competitors list tolerates a typo in q",
+			route:       "/api/v1/competitors",
 			query:       map[string]string{"q": "Hana Satoo"}, // seeded: Hana Sato
 			wantStatus:  http.StatusOK,
 			wantField:   "lastName",
@@ -51,8 +51,8 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			wantContain: "Boston Fencing Club",
 		},
 		{
-			name:        "tournaments search tolerates a typo",
-			route:       "/api/v1/tournaments/search",
+			name:        "tournaments list tolerates a typo in q",
+			route:       "/api/v1/tournaments",
 			query:       map[string]string{"q": "Fall Opn 2026"}, // seeded: Fall Open 2026
 			wantStatus:  http.StatusOK,
 			wantField:   "name",

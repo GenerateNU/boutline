@@ -318,7 +318,7 @@ func TestUpdateUserByID(t *testing.T) {
 	}
 }
 
-func TestSearchUsers(t *testing.T) {
+func TestListUsersWithQuery(t *testing.T) {
 	t.Parallel()
 
 	seed := []user.User{
@@ -328,31 +328,29 @@ func TestSearchUsers(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		input      *user.UserSearchInput
+		input      *user.UserListInput
 		wantEmails []string
 		wantTotal  int64
 		wantLimit  int
 		wantOffset int
-		wantCode   int
-		wantDetail string
 	}{
 		{
 			name:       "matches on first and last name",
-			input:      &user.UserSearchInput{Query: "lovelace"},
+			input:      &user.UserListInput{Query: "lovelace"},
 			wantEmails: []string{"ada@example.com"},
 			wantTotal:  1,
 			wantLimit:  user.UserDefaultPageSize,
 		},
 		{
 			name:       "a blank term matches every user",
-			input:      &user.UserSearchInput{Query: "   "},
+			input:      &user.UserListInput{Query: "   "},
 			wantEmails: []string{"ada@example.com", "grace@example.com"},
 			wantTotal:  2,
 			wantLimit:  user.UserDefaultPageSize,
 		},
 		{
 			name:       "applies limit and offset",
-			input:      &user.UserSearchInput{Query: "e", Limit: 1, Offset: 1},
+			input:      &user.UserListInput{Query: "e", Limit: 1, Offset: 1},
 			wantEmails: []string{"grace@example.com"},
 			wantTotal:  2,
 			wantLimit:  1,
@@ -360,7 +358,7 @@ func TestSearchUsers(t *testing.T) {
 		},
 		{
 			name:       "clamps a limit above the maximum",
-			input:      &user.UserSearchInput{Query: "e", Limit: user.UserMaxPageSize + 50},
+			input:      &user.UserListInput{Query: "e", Limit: user.UserMaxPageSize + 50},
 			wantEmails: []string{"ada@example.com", "grace@example.com"},
 			wantTotal:  2,
 			wantLimit:  user.UserMaxPageSize,
@@ -371,16 +369,7 @@ func TestSearchUsers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := user.NewUserService(NewFakeUserRepository(seed...)).SearchUsers(t.Context(), tt.input)
-
-			if tt.wantCode != 0 {
-				code, detail := apiError(t, err)
-				assert.Equal(t, tt.wantCode, code)
-				assert.Equal(t, tt.wantDetail, detail)
-				assert.Nil(t, out)
-				return
-			}
-
+			out, err := user.NewUserService(NewFakeUserRepository(seed...)).ListUsers(t.Context(), tt.input)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantTotal, out.Body.Total)
 			assert.Equal(t, tt.wantLimit, out.Body.Limit)

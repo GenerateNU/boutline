@@ -24,14 +24,7 @@ type CompetitorRepository interface {
 	ListCompetitors(ctx context.Context, filter CompetitorListFilter) ([]Competitor, int64, error)
 	UpdateCompetitorByID(ctx context.Context, id uuid.UUID, update CompetitorUpdate) error
 	DeleteCompetitor(ctx context.Context, id uuid.UUID) error
-	SearchCompetitors(ctx context.Context, filter CompetitorSearchFilter) ([]Competitor, int64, error)
 	SearchCompetitorTeams(ctx context.Context, filter CompetitorTeamSearchFilter) ([]CompetitorTeamCount, int64, error)
-}
-
-type CompetitorSearchFilter struct {
-	Term   string
-	Limit  int
-	Offset int
 }
 
 type CompetitorTeamSearchFilter struct {
@@ -58,6 +51,7 @@ type CompetitorUpdate struct {
 type CompetitorListFilter struct {
 	Rating *Rating // nil means don't filter by rating
 	Team   *string // nil means don't filter by team
+	Term   string  // fuzzy match against name; empty means don't filter
 	Limit  int
 	Offset int
 }
@@ -135,46 +129,27 @@ func (r *competitorRepository) ListCompetitors(
 	if filter.Team != nil {
 		query = query.Where("team = ?", *filter.Team)
 	}
+	query = utils.TrigramMatch(query, competitorNameTrigramExpr, filter.Term)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count competitors: %w", err)
 	}
 
+	if filter.Term == "" {
+		query = query.Order("created_at DESC").Order("id")
+	} else {
+		query = utils.TrigramOrder(query, competitorNameTrigramExpr, filter.Term)
+	}
+
 	competitors := make([]Competitor, 0, filter.Limit)
 
 	err := query.
-		Order("created_at DESC").
-		Order("id").
 		Limit(filter.Limit).
 		Offset(filter.Offset).
 		Find(&competitors).Error
 	if err != nil {
 		return nil, 0, fmt.Errorf("select competitors: %w", err)
-	}
-	return competitors, total, nil
-}
-
-func (r *competitorRepository) SearchCompetitors(
-	ctx context.Context,
-	filter CompetitorSearchFilter,
-) ([]Competitor, int64, error) {
-	expr := competitorNameTrigramExpr
-	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&Competitor{}), expr, filter.Term)
-
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("count competitor search: %w", err)
-	}
-
-	competitors := make([]Competitor, 0, filter.Limit)
-
-	err := utils.TrigramOrder(query, expr, filter.Term).
-		Limit(filter.Limit).
-		Offset(filter.Offset).
-		Find(&competitors).Error
-	if err != nil {
-		return nil, 0, fmt.Errorf("search competitors: %w", err)
 	}
 	return competitors, total, nil
 }

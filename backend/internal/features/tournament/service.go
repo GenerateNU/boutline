@@ -32,7 +32,6 @@ type TournamentService interface {
 	GetTournamentByID(ctx context.Context, input *TournamentIDInput) (*TournamentOutput, error)
 	GetTournamentByCode(ctx context.Context, input *TournamentCodeInput) (*TournamentOutput, error)
 	ListTournaments(ctx context.Context, input *TournamentListInput) (*TournamentListOutput, error)
-	SearchTournaments(ctx context.Context, input *TournamentSearchInput) (*TournamentSearchOutput, error)
 	UpdateTournamentByID(ctx context.Context, input *TournamentUpdateInput) (*TournamentOutput, error)
 	StartTournament(ctx context.Context, input *TournamentIDInput) (*TournamentOutput, error)
 	CompleteTournament(ctx context.Context, input *TournamentIDInput) (*TournamentOutput, error)
@@ -171,10 +170,12 @@ func (s *tournamentService) ListTournaments(
 		return nil, errs.HumaError(errs.Public(
 			fmt.Sprintf("unknown status %q", input.Status), errs.ErrInvalidInput))
 	}
+	term := strings.TrimSpace(input.Query)
 	limit, offset := page(input.Limit, input.Offset)
 
 	tournaments, total, err := s.repo.ListTournaments(ctx, TournamentListFilter{
 		Status: input.Status,
+		Term:   term,
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -188,35 +189,6 @@ func (s *tournamentService) ListTournaments(
 	}
 
 	return &TournamentListOutput{Body: TournamentListBody{
-		Data:   data,
-		Total:  total,
-		Limit:  limit,
-		Offset: offset,
-	}}, nil
-}
-
-func (s *tournamentService) SearchTournaments(
-	ctx context.Context,
-	input *TournamentSearchInput,
-) (*TournamentSearchOutput, error) {
-	term := strings.TrimSpace(input.Query)
-	limit, offset := page(input.Limit, input.Offset)
-
-	tournaments, total, err := s.repo.SearchTournaments(ctx, TournamentSearchFilter{
-		Term:   term,
-		Limit:  limit,
-		Offset: offset,
-	})
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("search tournaments: %w", err))
-	}
-
-	data := make([]TournamentResponse, 0, len(tournaments))
-	for _, found := range tournaments {
-		data = append(data, NewTournamentResponse(found))
-	}
-
-	return &TournamentSearchOutput{Body: TournamentListBody{
 		Data:   data,
 		Total:  total,
 		Limit:  limit,

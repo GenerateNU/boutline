@@ -60,6 +60,7 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 	if f.Err != nil {
 		return nil, 0, f.Err
 	}
+	term := strings.ToLower(filter.Term)
 	matched := make([]competitor.Competitor, 0, len(f.Competitors))
 	for _, candidate := range f.Competitors {
 		if filter.Rating != nil && candidate.Rating != *filter.Rating {
@@ -68,41 +69,15 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 		if filter.Team != nil && candidate.Team != *filter.Team {
 			continue
 		}
+		haystack := candidate.FirstName + " " + candidate.LastName
+		if !strings.Contains(strings.ToLower(haystack), term) {
+			continue
+		}
 		matched = append(matched, candidate)
 	}
 	// Ordered by last name rather than created_at, so iterating a map still
 	// yields the same page on every run. No tiebreaker is needed because the
 	// seeded data has unique last names.
-	slices.SortFunc(matched, func(a, b competitor.Competitor) int {
-		return strings.Compare(a.LastName, b.LastName)
-	})
-
-	total := int64(len(matched))
-	if filter.Offset >= len(matched) {
-		return []competitor.Competitor{}, total, nil
-	}
-	matched = matched[filter.Offset:]
-	if filter.Limit < len(matched) {
-		matched = matched[:filter.Limit]
-	}
-	return matched, total, nil
-}
-
-func (f *FakeCompetitorRepository) SearchCompetitors(
-	_ context.Context,
-	filter competitor.CompetitorSearchFilter,
-) ([]competitor.Competitor, int64, error) {
-	if f.Err != nil {
-		return nil, 0, f.Err
-	}
-	term := strings.ToLower(filter.Term)
-	matched := make([]competitor.Competitor, 0, len(f.Competitors))
-	for _, candidate := range f.Competitors {
-		haystack := candidate.FirstName + " " + candidate.LastName
-		if strings.Contains(strings.ToLower(haystack), term) {
-			matched = append(matched, candidate)
-		}
-	}
 	slices.SortFunc(matched, func(a, b competitor.Competitor) int {
 		return strings.Compare(a.LastName, b.LastName)
 	})

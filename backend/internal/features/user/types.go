@@ -58,8 +58,9 @@ type UserUpdateInput struct {
 }
 
 type UserListInput struct {
-	Limit  int `query:"limit" default:"20" minimum:"1" maximum:"100"`
-	Offset int `query:"offset" default:"0" minimum:"0"`
+	Query  string `query:"q" maxLength:"120" doc:"Fuzzy match against first and last name; omit to return every user"`
+	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset int    `query:"offset" default:"0" minimum:"0"`
 }
 
 type UserListBody struct {
@@ -70,16 +71,6 @@ type UserListBody struct {
 }
 
 type UserListOutput struct {
-	Body UserListBody
-}
-
-type UserSearchInput struct {
-	Query  string `query:"q" maxLength:"120" doc:"Fuzzy match against first and last name; omit to return every user"`
-	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
-	Offset int    `query:"offset" default:"0" minimum:"0"`
-}
-
-type UserSearchOutput struct {
 	Body UserListBody
 }
 

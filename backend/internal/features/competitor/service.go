@@ -21,7 +21,6 @@ type CompetitorService interface {
 	ListCompetitors(ctx context.Context, input *CompetitorListInput) (*CompetitorListOutput, error)
 	UpdateCompetitorByID(ctx context.Context, input *CompetitorUpdateInput) (*CompetitorOutput, error)
 	DeleteCompetitor(ctx context.Context, input *CompetitorIDInput) (*struct{}, error)
-	SearchCompetitors(ctx context.Context, input *CompetitorSearchInput) (*CompetitorSearchOutput, error)
 	SearchCompetitorTeams(ctx context.Context, input *CompetitorTeamSearchInput) (*CompetitorTeamSearchOutput, error)
 }
 
@@ -153,6 +152,7 @@ func (s *competitorService) ListCompetitors(
 	offset := max(input.Offset, 0)
 
 	filter := CompetitorListFilter{
+		Term:   strings.TrimSpace(input.Query),
 		Limit:  limit,
 		Offset: offset,
 	}
@@ -197,42 +197,6 @@ func (s *competitorService) DeleteCompetitor(
 		return nil, errs.HumaError(fmt.Errorf("delete competitor: %w", err))
 	}
 	return nil, nil
-}
-
-func (s *competitorService) SearchCompetitors(
-	ctx context.Context,
-	input *CompetitorSearchInput,
-) (*CompetitorSearchOutput, error) {
-	term := strings.TrimSpace(input.Query)
-
-	limit := input.Limit
-	if limit <= 0 {
-		limit = CompetitorDefaultPageSize
-	}
-	limit = utils.Clamp(limit, CompetitorMinPageSize, CompetitorMaxPageSize)
-	offset := max(input.Offset, 0)
-
-	filter := CompetitorSearchFilter{
-		Term:   term,
-		Limit:  limit,
-		Offset: offset,
-	}
-
-	competitors, total, err := s.repo.SearchCompetitors(ctx, filter)
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("search competitors: %w", err))
-	}
-
-	data := make([]CompetitorResponse, 0, len(competitors))
-	for _, competitor := range competitors {
-		data = append(data, newCompetitorResponse(competitor))
-	}
-	return &CompetitorSearchOutput{Body: CompetitorListBody{
-		Data:   data,
-		Total:  total,
-		Limit:  limit,
-		Offset: offset,
-	}}, nil
 }
 
 func (s *competitorService) SearchCompetitorTeams(

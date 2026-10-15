@@ -327,7 +327,7 @@ func TestUpdateCompetitorByID(t *testing.T) {
 	}
 }
 
-func TestSearchCompetitors(t *testing.T) {
+func TestListCompetitorsWithQuery(t *testing.T) {
 	t.Parallel()
 	seed := []competitor.Competitor{
 		seeded("Lee", "Kiefer", competitor.RatingA, "NU Fencing"),
@@ -336,31 +336,29 @@ func TestSearchCompetitors(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		input      *competitor.CompetitorSearchInput
+		input      *competitor.CompetitorListInput
 		wantLast   []string
 		wantTotal  int64
 		wantLimit  int
 		wantOffset int
-		wantCode   int
-		wantDetail string
 	}{
 		{
 			name:      "matches by name",
-			input:     &competitor.CompetitorSearchInput{Query: "kiefer"},
+			input:     &competitor.CompetitorListInput{Query: "kiefer"},
 			wantLast:  []string{"Kiefer"},
 			wantTotal: 1,
 			wantLimit: competitor.CompetitorDefaultPageSize,
 		},
 		{
 			name:      "a blank term matches everyone",
-			input:     &competitor.CompetitorSearchInput{Query: "   "},
+			input:     &competitor.CompetitorListInput{Query: "   "},
 			wantLast:  []string{"Imboden", "Kiefer"},
 			wantTotal: 2,
 			wantLimit: competitor.CompetitorDefaultPageSize,
 		},
 		{
 			name:       "applies limit and offset",
-			input:      &competitor.CompetitorSearchInput{Query: "e", Limit: 1, Offset: 1},
+			input:      &competitor.CompetitorListInput{Query: "e", Limit: 1, Offset: 1},
 			wantLast:   []string{"Kiefer"},
 			wantTotal:  2,
 			wantLimit:  1,
@@ -368,7 +366,7 @@ func TestSearchCompetitors(t *testing.T) {
 		},
 		{
 			name:      "clamps a limit above the maximum",
-			input:     &competitor.CompetitorSearchInput{Query: "e", Limit: competitor.CompetitorMaxPageSize + 50},
+			input:     &competitor.CompetitorListInput{Query: "e", Limit: competitor.CompetitorMaxPageSize + 50},
 			wantLast:  []string{"Imboden", "Kiefer"},
 			wantTotal: 2,
 			wantLimit: competitor.CompetitorMaxPageSize,
@@ -379,16 +377,7 @@ func TestSearchCompetitors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			out, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
-				SearchCompetitors(t.Context(), tt.input)
-
-			if tt.wantCode != 0 {
-				code, detail := apiError(t, err)
-				assert.Equal(t, tt.wantCode, code)
-				assert.Equal(t, tt.wantDetail, detail)
-				assert.Nil(t, out)
-				return
-			}
-
+				ListCompetitors(t.Context(), tt.input)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantTotal, out.Body.Total)
 			assert.Equal(t, tt.wantLimit, out.Body.Limit)
