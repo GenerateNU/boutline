@@ -1,3 +1,5 @@
+import { useWarnBeforeUnload } from "@/hooks/use-warn-before-unload";
+
 import { optimisticTouches, canUndo, competitorIdsOf, historyRows, scoringPhase, tally } from "../tally-helper";
 
 import { useMatchup } from "./use-matchup";
@@ -6,14 +8,19 @@ import { useScoreHistory } from "./use-score-history";
 import { useScoringActions } from "./use-scoring-actions";
 
 export function useBoutScoring(boutId: string) {
-  const { history, refreshHistory } = useScoreHistory(boutId);
+  const { history, historyFailed, refreshHistory } = useScoreHistory(boutId);
   const { matchup, scores, confirmed, setConfirmed, setBout, loadError } = useMatchup(boutId, refreshHistory);
   const {
     pending,
     error: queueError,
     scoreVersion,
+    outOfSync,
     submit,
+    retrySync,
   } = useScoringActions({ boutId, matchup, confirmed, setConfirmed, setBout, refreshHistory });
+
+  // Queued taps are lost if the page closes before they're sent.
+  useWarnBeforeUnload(pending.length > 0);
 
   const touches = optimisticTouches(scores, pending);
   const { confirmedBy, confirm } = useResultConfirmation(scoreVersion, touches.length, submit);
@@ -26,6 +33,8 @@ export function useBoutScoring(boutId: string) {
   return {
     matchup,
     error: matchup ? queueError : loadError,
+    outOfSync,
+    retrySync,
     phase,
     starting,
     // TODO: restore the referee gate once the fallback scorer is removed.
@@ -34,6 +43,7 @@ export function useBoutScoring(boutId: string) {
     canUndo: undoable,
     tally: result,
     history: historyRows(history, pending),
+    historyFailed,
     confirmedBy,
     start: () => {
       if (phase?.kind === "not-started" && !starting) {
@@ -51,8 +61,8 @@ export function useBoutScoring(boutId: string) {
       }
     },
     confirm: (competitorId: string) => {
-      // While a touch or undo is saving, the end a second confirmation submits would be ignored.
-      if (phase?.kind === "confirming" && pending.length === 0) {
+      // Out of sync, the end a second confirmation submits would be ignored.
+      if (phase?.kind === "confirming" && !outOfSync) {
         confirm(competitorId);
       }
     },
