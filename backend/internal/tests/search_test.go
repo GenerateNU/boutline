@@ -124,6 +124,57 @@ func TestSearchCompetitorTeamsByTournament(t *testing.T) {
 		"scoping to one tournament should shrink Boston Fencing Club's roster count")
 }
 
+// seeds/seed.sql holds exactly 3 real tournaments plus 22 bare "Pagination
+// Fixture" rows (25 total), so the default page size of 20 always leaves a
+// second page to exercise here.
+func TestTournamentListPagination(t *testing.T) {
+	app := testkit.GetDBTestApp(t)
+
+	firstPage := testkit.New(t).
+		Request(testkit.Request{
+			App:    app,
+			Route:  "/api/v1/tournaments",
+			Method: testkit.GET,
+			Query:  map[string]string{"limit": "20", "offset": "0"},
+		}).
+		AssertStatus(http.StatusOK).
+		GetBody()
+
+	total, ok := firstPage["total"].(float64)
+	require.True(t, ok, "total field is not a number")
+	require.GreaterOrEqual(t, total, float64(25), "expected at least the 25 seeded tournaments")
+
+	firstRows, ok := firstPage["data"].([]any)
+	require.True(t, ok, "data field is not an array")
+	require.Len(t, firstRows, 20, "first page should be full")
+
+	secondPage := testkit.New(t).
+		Request(testkit.Request{
+			App:    app,
+			Route:  "/api/v1/tournaments",
+			Method: testkit.GET,
+			Query:  map[string]string{"limit": "20", "offset": "20"},
+		}).
+		AssertStatus(http.StatusOK).
+		GetBody()
+
+	secondRows, ok := secondPage["data"].([]any)
+	require.True(t, ok, "data field is not an array")
+	require.NotEmpty(t, secondRows, "expected a second page of tournaments past offset 20")
+
+	seen := make(map[string]bool, len(firstRows))
+	for _, row := range firstRows {
+		fields, ok := row.(map[string]any)
+		require.True(t, ok)
+		seen[fields["id"].(string)] = true
+	}
+	for _, row := range secondRows {
+		fields, ok := row.(map[string]any)
+		require.True(t, ok)
+		assert.False(t, seen[fields["id"].(string)], "second page repeated a row from the first page: %v", fields)
+	}
+}
+
 func bostonCompetitorCount(t *testing.T, body map[string]any) int64 {
 	t.Helper()
 	rows, ok := body["data"].([]any)

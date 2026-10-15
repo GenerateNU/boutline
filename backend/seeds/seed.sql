@@ -22,6 +22,35 @@ INSERT INTO tournaments (id, name, visibility, code, status, created_by, start_t
   ('b0000000-0000-4000-8000-000000000003', 'Summer Invitational 2026', 'public',  'S4NPR8', 'end',     'a0000000-0000-4000-8000-000000000001', now() - interval '90 days',  now() - interval '90 days',  now() - interval '90 days' + interval '9 hours', now() - interval '120 days', now())
 ON CONFLICT DO NOTHING;
 
+-- Bare tournaments with no events or competitors, solely to push the unfiltered
+-- row count past the default page size (20) so list/search pagination has a
+-- second page to exercise. created_at is spaced one hour apart per row so
+-- created_at DESC ordering (the no-term sort) is deterministic across pages.
+INSERT INTO tournaments (id, name, visibility, code, status, created_by, start_time, started_at, completed_at, created_at, updated_at) VALUES
+  ('b0000000-0000-4000-8000-000000000004', 'Pagination Fixture 01', 'public', 'P0FX01', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '1 hour',  now()),
+  ('b0000000-0000-4000-8000-000000000005', 'Pagination Fixture 02', 'public', 'P0FX02', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '2 hours', now()),
+  ('b0000000-0000-4000-8000-000000000006', 'Pagination Fixture 03', 'public', 'P0FX03', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '3 hours', now()),
+  ('b0000000-0000-4000-8000-000000000007', 'Pagination Fixture 04', 'public', 'P0FX04', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '4 hours', now()),
+  ('b0000000-0000-4000-8000-000000000008', 'Pagination Fixture 05', 'public', 'P0FX05', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '5 hours', now()),
+  ('b0000000-0000-4000-8000-000000000009', 'Pagination Fixture 06', 'public', 'P0FX06', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '6 hours', now()),
+  ('b0000000-0000-4000-8000-00000000000a', 'Pagination Fixture 07', 'public', 'P0FX07', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '7 hours', now()),
+  ('b0000000-0000-4000-8000-00000000000b', 'Pagination Fixture 08', 'public', 'P0FX08', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '8 hours', now()),
+  ('b0000000-0000-4000-8000-00000000000c', 'Pagination Fixture 09', 'public', 'P0FX09', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '9 hours', now()),
+  ('b0000000-0000-4000-8000-00000000000d', 'Pagination Fixture 10', 'public', 'P0FX10', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '10 hours', now()),
+  ('b0000000-0000-4000-8000-00000000000e', 'Pagination Fixture 11', 'public', 'P0FX11', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '11 hours', now()),
+  ('b0000000-0000-4000-8000-00000000000f', 'Pagination Fixture 12', 'public', 'P0FX12', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '12 hours', now()),
+  ('b0000000-0000-4000-8000-000000000010', 'Pagination Fixture 13', 'public', 'P0FX13', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '13 hours', now()),
+  ('b0000000-0000-4000-8000-000000000011', 'Pagination Fixture 14', 'public', 'P0FX14', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '14 hours', now()),
+  ('b0000000-0000-4000-8000-000000000012', 'Pagination Fixture 15', 'public', 'P0FX15', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '15 hours', now()),
+  ('b0000000-0000-4000-8000-000000000013', 'Pagination Fixture 16', 'public', 'P0FX16', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '16 hours', now()),
+  ('b0000000-0000-4000-8000-000000000014', 'Pagination Fixture 17', 'public', 'P0FX17', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '17 hours', now()),
+  ('b0000000-0000-4000-8000-000000000015', 'Pagination Fixture 18', 'public', 'P0FX18', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '18 hours', now()),
+  ('b0000000-0000-4000-8000-000000000016', 'Pagination Fixture 19', 'public', 'P0FX19', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '19 hours', now()),
+  ('b0000000-0000-4000-8000-000000000017', 'Pagination Fixture 20', 'public', 'P0FX20', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '20 hours', now()),
+  ('b0000000-0000-4000-8000-000000000018', 'Pagination Fixture 21', 'public', 'P0FX21', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '21 hours', now()),
+  ('b0000000-0000-4000-8000-000000000019', 'Pagination Fixture 22', 'public', 'P0FX22', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '22 hours', now())
+ON CONFLICT DO NOTHING;
+
 -- Casey has no memberships, to exercise a signed-in user with nothing to run.
 INSERT INTO tournament_users (user_id, tournament_id, role, created_at, updated_at) VALUES
   ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'admin',   now(), now()),
