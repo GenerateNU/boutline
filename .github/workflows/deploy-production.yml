@@ -120,7 +120,9 @@ jobs:
           # `up -d` succeeds as soon as the container starts, and with
           # `restart: unless-stopped` a crash-looping backend still reads as
           # running, so check the restart count too and surface its own error
-          # instead of the 502 Caddy reports for it.
+          # instead of the 502 Caddy reports for it. A container failing this
+          # is under 30s old, so its logs are startup output plus at most a few
+          # request lines (method and path only): safe for this public log.
           ssh "$DROPLET" bash -s <<'EOF'
           for _ in $(seq 1 15); do
             sleep 2
@@ -154,7 +156,9 @@ jobs:
           exit 1
 
       # Asking the backend directly over `edge` separates a backend that never
-      # came up from Caddy failing to route or provision TLS for it.
+      # came up from Caddy failing to route or provision TLS for it. No
+      # container logs here: this repo's Actions logs are public, and once the
+      # backend has served traffic its logs and Postgres's can hold user data.
       - name: Show droplet diagnostics
         if: failure()
         env:
@@ -163,11 +167,6 @@ jobs:
           ssh "$DROPLET" bash -s <<'EOF'
           docker inspect -f '{{.Name}} {{.State.Status}} restarts={{.RestartCount}} exit={{.State.ExitCode}} {{.State.Error}}' \
             boutline-backend boutline-db boutline-redis
-          for container in boutline-backend boutline-db boutline-redis; do
-            echo "::group::${container} logs"
-            docker logs --tail 100 "$container" 2>&1
-            echo "::endgroup::"
-          done
           echo "::group::/healthcheck from inside the edge network, bypassing Caddy"
           docker run --rm --network edge curlimages/curl:8.11.1 -sS -m 5 http://boutline-backend:8000/healthcheck
           echo "::endgroup::"
