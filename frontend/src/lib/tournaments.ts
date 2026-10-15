@@ -7,8 +7,9 @@ export type Tournament = {
   start_time: string | null;
 };
 
-export function listTournaments() {
+export function listTournaments({ offset }: { offset?: number } = {}) {
   return apiGet<Paginated<Tournament>>("/api/v1/tournaments", {
     limit: PAGE_SIZE,
+    offset,
   });
 }
