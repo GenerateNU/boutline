@@ -43,9 +43,9 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			wantContain: "Sato",
 		},
 		{
-			name:        "competitors search by team tolerates a typo",
-			route:       "/api/v1/competitors/search",
-			query:       map[string]string{"q": "Boston Fencing Clb", "by": "team"}, // seeded: Boston Fencing Club
+			name:        "competitor teams search tolerates a typo",
+			route:       "/api/v1/competitors/search/teams",
+			query:       map[string]string{"q": "Boston Fencing Clb"}, // seeded: Boston Fencing Club
 			wantStatus:  http.StatusOK,
 			wantField:   "team",
 			wantContain: "Boston Fencing Club",
@@ -61,6 +61,12 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 		{
 			name:       "blank query is rejected",
 			route:      "/api/v1/competitors/search",
+			query:      map[string]string{"q": "   "},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "blank team query is rejected",
+			route:      "/api/v1/competitors/search/teams",
 			query:      map[string]string{"q": "   "},
 			wantStatus: http.StatusBadRequest,
 		},
@@ -97,4 +103,52 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			assert.True(t, found, "expected a row with %s = %q, got %v", tt.wantField, tt.wantContain, rows)
 		})
 	}
+}
+
+// Boston Fencing Club has competitors in both Fall Open 2026 and Summer
+// Invitational 2026 (see seeds/seed.sql), so scoping to one tournament must
+// shrink the roster count rather than just filtering out other teams.
+func TestSearchCompetitorTeamsByTournament(t *testing.T) {
+	app := testkit.GetDBTestApp(t)
+	const fallOpen2026 = "b0000000-0000-4000-8000-000000000001"
+
+	unscoped := testkit.New(t).
+		Request(testkit.Request{
+			App:    app,
+			Route:  "/api/v1/competitors/search/teams",
+			Method: testkit.GET,
+			Query:  map[string]string{"q": "Boston Fencing Club"},
+		}).
+		AssertStatus(http.StatusOK)
+	unscopedCount := bostonCompetitorCount(t, unscoped.GetBody())
+
+	scoped := testkit.New(t).
+		Request(testkit.Request{
+			App:    app,
+			Route:  "/api/v1/competitors/search/teams",
+			Method: testkit.GET,
+			Query:  map[string]string{"q": "Boston Fencing Club", "tournament_id": fallOpen2026},
+		}).
+		AssertStatus(http.StatusOK)
+	scopedCount := bostonCompetitorCount(t, scoped.GetBody())
+
+	assert.Less(t, scopedCount, unscopedCount,
+		"scoping to one tournament should shrink Boston Fencing Club's roster count")
+}
+
+func bostonCompetitorCount(t *testing.T, body map[string]any) int64 {
+	t.Helper()
+	rows, ok := body["data"].([]any)
+	require.True(t, ok, "data field is not an array")
+	for _, row := range rows {
+		fields, ok := row.(map[string]any)
+		require.True(t, ok)
+		if fields["team"] == "Boston Fencing Club" {
+			count, ok := fields["competitorCount"].(float64)
+			require.True(t, ok)
+			return int64(count)
+		}
+	}
+	t.Fatalf("Boston Fencing Club not found in %v", rows)
+	return 0
 }

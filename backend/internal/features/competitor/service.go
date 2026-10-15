@@ -22,6 +22,7 @@ type CompetitorService interface {
 	UpdateCompetitorByID(ctx context.Context, input *CompetitorUpdateInput) (*CompetitorOutput, error)
 	DeleteCompetitor(ctx context.Context, input *CompetitorIDInput) (*struct{}, error)
 	SearchCompetitors(ctx context.Context, input *CompetitorSearchInput) (*CompetitorSearchOutput, error)
+	SearchCompetitorTeams(ctx context.Context, input *CompetitorTeamSearchInput) (*CompetitorTeamSearchOutput, error)
 }
 
 type competitorService struct {
@@ -207,20 +208,6 @@ func (s *competitorService) SearchCompetitors(
 		return nil, errs.HumaError(errs.Public("search term must not be blank", errs.ErrInvalidInput))
 	}
 
-	by := input.By
-	if by == "" {
-		by = string(CompetitorSearchFieldName)
-	}
-	var field CompetitorSearchField
-	switch by {
-	case string(CompetitorSearchFieldName):
-		field = CompetitorSearchFieldName
-	case string(CompetitorSearchFieldTeam):
-		field = CompetitorSearchFieldTeam
-	default:
-		return nil, errs.HumaError(errs.Public("search field must be name or team", errs.ErrInvalidInput))
-	}
-
 	limit := input.Limit
 	if limit <= 0 {
 		limit = CompetitorDefaultPageSize
@@ -229,7 +216,6 @@ func (s *competitorService) SearchCompetitors(
 	offset := max(input.Offset, 0)
 
 	filter := CompetitorSearchFilter{
-		Field:  field,
 		Term:   term,
 		Limit:  limit,
 		Offset: offset,
@@ -245,6 +231,52 @@ func (s *competitorService) SearchCompetitors(
 		data = append(data, newCompetitorResponse(competitor))
 	}
 	return &CompetitorSearchOutput{Body: CompetitorListBody{
+		Data:   data,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}}, nil
+}
+
+func (s *competitorService) SearchCompetitorTeams(
+	ctx context.Context,
+	input *CompetitorTeamSearchInput,
+) (*CompetitorTeamSearchOutput, error) {
+	term := strings.TrimSpace(input.Query)
+	if term == "" {
+		return nil, errs.HumaError(errs.Public("search term must not be blank", errs.ErrInvalidInput))
+	}
+
+	limit := input.Limit
+	if limit <= 0 {
+		limit = CompetitorDefaultPageSize
+	}
+	limit = utils.Clamp(limit, CompetitorMinPageSize, CompetitorMaxPageSize)
+	offset := max(input.Offset, 0)
+
+	filter := CompetitorTeamSearchFilter{
+		Term:   term,
+		Limit:  limit,
+		Offset: offset,
+	}
+	if input.TournamentID != "" {
+		tournamentID, err := utils.ParseUUID(input.TournamentID, "tournament id")
+		if err != nil {
+			return nil, errs.HumaError(err)
+		}
+		filter.TournamentID = &tournamentID
+	}
+
+	teams, total, err := s.repo.SearchCompetitorTeams(ctx, filter)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("search competitor teams: %w", err))
+	}
+
+	data := make([]TeamSearchResult, 0, len(teams))
+	for _, team := range teams {
+		data = append(data, TeamSearchResult{Team: team.Team, CompetitorCount: team.Count})
+	}
+	return &CompetitorTeamSearchOutput{Body: CompetitorTeamSearchBody{
 		Data:   data,
 		Total:  total,
 		Limit:  limit,

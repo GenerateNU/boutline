@@ -345,16 +345,9 @@ func TestSearchCompetitors(t *testing.T) {
 		wantDetail string
 	}{
 		{
-			name:      "defaults to matching by name",
+			name:      "matches by name",
 			input:     &competitor.CompetitorSearchInput{Query: "kiefer"},
 			wantLast:  []string{"Kiefer"},
-			wantTotal: 1,
-			wantLimit: competitor.CompetitorDefaultPageSize,
-		},
-		{
-			name:      "matches by team when asked",
-			input:     &competitor.CompetitorSearchInput{Query: "john", By: "team"},
-			wantLast:  []string{"Imboden"},
 			wantTotal: 1,
 			wantLimit: competitor.CompetitorDefaultPageSize,
 		},
@@ -365,14 +358,8 @@ func TestSearchCompetitors(t *testing.T) {
 			wantDetail: "search term must not be blank",
 		},
 		{
-			name:       "rejects an unknown field",
-			input:      &competitor.CompetitorSearchInput{Query: "lee", By: "nickname"},
-			wantCode:   http.StatusBadRequest,
-			wantDetail: "search field must be name or team",
-		},
-		{
 			name:       "applies limit and offset",
-			input:      &competitor.CompetitorSearchInput{Query: "fencing", By: "team", Limit: 1, Offset: 1},
+			input:      &competitor.CompetitorSearchInput{Query: "e", Limit: 1, Offset: 1},
 			wantLast:   []string{"Kiefer"},
 			wantTotal:  2,
 			wantLimit:  1,
@@ -380,7 +367,7 @@ func TestSearchCompetitors(t *testing.T) {
 		},
 		{
 			name:      "clamps a limit above the maximum",
-			input:     &competitor.CompetitorSearchInput{Query: "fencing", By: "team", Limit: competitor.CompetitorMaxPageSize + 50},
+			input:     &competitor.CompetitorSearchInput{Query: "e", Limit: competitor.CompetitorMaxPageSize + 50},
 			wantLast:  []string{"Imboden", "Kiefer"},
 			wantTotal: 2,
 			wantLimit: competitor.CompetitorMaxPageSize,
@@ -413,6 +400,126 @@ func TestSearchCompetitors(t *testing.T) {
 			assert.Equal(t, tt.wantLast, lastNames)
 		})
 	}
+}
+
+func TestSearchCompetitorTeams(t *testing.T) {
+	t.Parallel()
+	seed := []competitor.Competitor{
+		seeded("Lee", "Kiefer", competitor.RatingA, "NU Fencing"),
+		seeded("Jon", "Doe", competitor.RatingA, "NU Fencing"),
+		seeded("Race", "Imboden", competitor.RatingA, "St. John's Fencing"),
+	}
+
+	tests := []struct {
+		name       string
+		input      *competitor.CompetitorTeamSearchInput
+		wantTeams  []string
+		wantCounts []int64
+		wantTotal  int64
+		wantLimit  int
+		wantOffset int
+		wantCode   int
+		wantDetail string
+	}{
+		{
+			name:       "matches a team and counts its competitors",
+			input:      &competitor.CompetitorTeamSearchInput{Query: "john"},
+			wantTeams:  []string{"St. John's Fencing"},
+			wantCounts: []int64{1},
+			wantTotal:  1,
+			wantLimit:  competitor.CompetitorDefaultPageSize,
+		},
+		{
+			name:       "collapses to one row per team regardless of roster size",
+			input:      &competitor.CompetitorTeamSearchInput{Query: "fencing"},
+			wantTeams:  []string{"NU Fencing", "St. John's Fencing"},
+			wantCounts: []int64{2, 1},
+			wantTotal:  2,
+			wantLimit:  competitor.CompetitorDefaultPageSize,
+		},
+		{
+			name:       "rejects a blank term",
+			input:      &competitor.CompetitorTeamSearchInput{Query: "   "},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "search term must not be blank",
+		},
+		{
+			name:       "applies limit and offset",
+			input:      &competitor.CompetitorTeamSearchInput{Query: "fencing", Limit: 1, Offset: 1},
+			wantTeams:  []string{"St. John's Fencing"},
+			wantCounts: []int64{1},
+			wantTotal:  2,
+			wantLimit:  1,
+			wantOffset: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			out, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
+				SearchCompetitorTeams(t.Context(), tt.input)
+
+			if tt.wantCode != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+				assert.Equal(t, tt.wantDetail, detail)
+				assert.Nil(t, out)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantTotal, out.Body.Total)
+			assert.Equal(t, tt.wantLimit, out.Body.Limit)
+			assert.Equal(t, tt.wantOffset, out.Body.Offset)
+
+			teams := make([]string, 0, len(out.Body.Data))
+			counts := make([]int64, 0, len(out.Body.Data))
+			for _, listed := range out.Body.Data {
+				teams = append(teams, listed.Team)
+				counts = append(counts, listed.CompetitorCount)
+			}
+			assert.Equal(t, tt.wantTeams, teams)
+			assert.Equal(t, tt.wantCounts, counts)
+		})
+	}
+}
+
+func TestSearchCompetitorTeamsByTournament(t *testing.T) {
+	t.Parallel()
+	tournamentA := uuid.New()
+	tournamentB := uuid.New()
+	inTournament := func(id uuid.UUID, firstName, lastName, team string) competitor.Competitor {
+		c := seeded(firstName, lastName, competitor.RatingA, team)
+		c.TournamentID = &id
+		return c
+	}
+	seed := []competitor.Competitor{
+		inTournament(tournamentA, "Lee", "Kiefer", "NU Fencing"),
+		inTournament(tournamentA, "Jon", "Doe", "NU Fencing"),
+		inTournament(tournamentB, "Race", "Imboden", "NU Fencing"),
+		seeded("No", "Tournament", competitor.RatingA, "NU Fencing"),
+	}
+
+	repo := NewFakeCompetitorRepository(seed...)
+
+	t.Run("scopes the roster count to the given tournament", func(t *testing.T) {
+		t.Parallel()
+		out, err := competitor.NewCompetitorService(repo).SearchCompetitorTeams(t.Context(),
+			&competitor.CompetitorTeamSearchInput{Query: "fencing", TournamentID: tournamentA.String()})
+		require.NoError(t, err)
+		require.Len(t, out.Body.Data, 1)
+		assert.Equal(t, "NU Fencing", out.Body.Data[0].Team)
+		assert.Equal(t, int64(2), out.Body.Data[0].CompetitorCount)
+	})
+
+	t.Run("rejects a tournament id that is not a uuid", func(t *testing.T) {
+		t.Parallel()
+		_, err := competitor.NewCompetitorService(repo).SearchCompetitorTeams(t.Context(),
+			&competitor.CompetitorTeamSearchInput{Query: "fencing", TournamentID: "not-a-uuid"})
+		code, _ := apiError(t, err)
+		assert.Equal(t, http.StatusBadRequest, code)
+	})
 }
 
 func TestDeleteCompetitor(t *testing.T) {

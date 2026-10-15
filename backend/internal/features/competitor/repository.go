@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -24,20 +25,27 @@ type CompetitorRepository interface {
 	UpdateCompetitorByID(ctx context.Context, id uuid.UUID, update CompetitorUpdate) error
 	DeleteCompetitor(ctx context.Context, id uuid.UUID) error
 	SearchCompetitors(ctx context.Context, filter CompetitorSearchFilter) ([]Competitor, int64, error)
+	SearchCompetitorTeams(ctx context.Context, filter CompetitorTeamSearchFilter) ([]CompetitorTeamCount, int64, error)
 }
 
-type CompetitorSearchField string
-
-const (
-	CompetitorSearchFieldName CompetitorSearchField = "name"
-	CompetitorSearchFieldTeam CompetitorSearchField = "team"
-)
-
 type CompetitorSearchFilter struct {
-	Field  CompetitorSearchField
 	Term   string
 	Limit  int
 	Offset int
+}
+
+type CompetitorTeamSearchFilter struct {
+	Term         string
+	TournamentID *uuid.UUID
+	Limit        int
+	Offset       int
+}
+
+// CompetitorTeamCount is one distinct team matching a team search, with how
+// many competitors are on it.
+type CompetitorTeamCount struct {
+	Team  string
+	Count int64
 }
 
 type CompetitorUpdate struct {
@@ -152,10 +160,6 @@ func (r *competitorRepository) SearchCompetitors(
 	filter CompetitorSearchFilter,
 ) ([]Competitor, int64, error) {
 	expr := competitorNameTrigramExpr
-	if filter.Field == CompetitorSearchFieldTeam {
-		expr = competitorTeamTrigramExpr
-	}
-
 	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&Competitor{}), expr, filter.Term)
 
 	var total int64
@@ -173,6 +177,53 @@ func (r *competitorRepository) SearchCompetitors(
 		return nil, 0, fmt.Errorf("search competitors: %w", err)
 	}
 	return competitors, total, nil
+}
+
+// SearchCompetitorTeams matches distinct team names rather than competitor
+// rows, so a team with many rostered competitors doesn't crowd out other
+// matching teams in the results. There is no teams table yet: team is just a
+// free-text column on competitors.
+func (r *competitorRepository) SearchCompetitorTeams(
+	ctx context.Context,
+	filter CompetitorTeamSearchFilter,
+) ([]CompetitorTeamCount, int64, error) {
+	expr := competitorTeamTrigramExpr
+
+	// Built fresh rather than reused: chaining Find's Select/Group onto the
+	// same *gorm.DB used for the Distinct Count carries the Distinct clause
+	// over, and SELECT DISTINCT ... ORDER BY word_similarity(...) is
+	// rejected because that expression isn't in the select list.
+	var total int64
+	countQuery := utils.TrigramMatch(r.db.WithContext(ctx).Model(&Competitor{}), expr, filter.Term)
+	if filter.TournamentID != nil {
+		countQuery = countQuery.Where("tournament_id = ?", *filter.TournamentID)
+	}
+	if err := countQuery.Distinct(expr).Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count competitor team search: %w", err)
+	}
+
+	// team is the GROUP BY key, so ordering by word_similarity(term, team) is
+	// a function of the grouped column rather than an ungrouped reference; the
+	// tiebreaker is team itself, not id, since id no longer identifies a row.
+	var teams []CompetitorTeamCount
+	findQuery := utils.TrigramMatch(r.db.WithContext(ctx).Model(&Competitor{}), expr, filter.Term)
+	if filter.TournamentID != nil {
+		findQuery = findQuery.Where("tournament_id = ?", *filter.TournamentID)
+	}
+	err := findQuery.
+		Select(expr + " AS team, COUNT(*) AS count").
+		Group(expr).
+		Clauses(clause.OrderBy{Expression: clause.Expr{
+			SQL:  "word_similarity(?, " + expr + ") DESC, " + expr,
+			Vars: []any{filter.Term},
+		}}).
+		Limit(filter.Limit).
+		Offset(filter.Offset).
+		Find(&teams).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("search competitor teams: %w", err)
+	}
+	return teams, total, nil
 }
 
 func (r *competitorRepository) DeleteCompetitor(ctx context.Context, id uuid.UUID) error {

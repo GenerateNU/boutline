@@ -41,19 +41,22 @@ INSERT INTO events (id, tournament_id, name, status, start_time, started_at, com
   ('c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Open Épée',     'ended',    now() - interval '90 days',  now() - interval '90 days',  now() - interval '90 days' + interval '9 hours', now() - interval '120 days', now())
 ON CONFLICT DO NOTHING;
 
-INSERT INTO competitors (id, first_name, last_name, rating, team, created_at, updated_at) VALUES
-  ('d0000000-0000-4000-8000-000000000001', 'Maya',    'Chen',      'A', 'Boston Fencing Club',  now(), now()),
-  ('d0000000-0000-4000-8000-000000000002', 'Liam',    'O''Brien',  'B', 'Northeastern Fencing', now(), now()),
-  ('d0000000-0000-4000-8000-000000000003', 'Priya',   'Patel',     'C', 'Cambridge FC',         now(), now()),
-  ('d0000000-0000-4000-8000-000000000004', 'Diego',   'Martinez',  'U', '',                     now(), now()),
-  ('d0000000-0000-4000-8000-000000000005', 'Hana',    'Sato',      'A', 'Northeastern Fencing', now(), now()),
-  ('d0000000-0000-4000-8000-000000000006', 'Noah',    'Williams',  'D', 'Boston Fencing Club',  now(), now()),
-  ('d0000000-0000-4000-8000-000000000007', 'Amara',   'Okafor',    'B', 'Cambridge FC',         now(), now()),
-  ('d0000000-0000-4000-8000-000000000008', 'Ethan',   'Kowalski',  'E', '',                     now(), now()),
-  ('d0000000-0000-4000-8000-000000000009', 'Sofia',   'Rossi',     'C', 'Boston Fencing Club',  now(), now()),
-  ('d0000000-0000-4000-8000-000000000010', 'Kenji',   'Tanaka',    'U', 'Northeastern Fencing', now(), now()),
-  ('d0000000-0000-4000-8000-000000000011', 'Leila',   'Haddad',    'D', 'Cambridge FC',         now(), now()),
-  ('d0000000-0000-4000-8000-000000000012', 'Marcus',  'Johnson',   'B', '',                     now(), now())
+-- Competitors are tagged with the tournament they're entered in, except
+-- Priya, Diego, and Marcus, left untagged to exercise competitors with no
+-- tournament yet.
+INSERT INTO competitors (id, tournament_id, first_name, last_name, rating, team, created_at, updated_at) VALUES
+  ('d0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Maya',    'Chen',      'A', 'Boston Fencing Club',  now(), now()),
+  ('d0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Liam',    'O''Brien',  'B', 'Northeastern Fencing', now(), now()),
+  ('d0000000-0000-4000-8000-000000000003', NULL,                                   'Priya',   'Patel',     'C', 'Cambridge FC',         now(), now()),
+  ('d0000000-0000-4000-8000-000000000004', NULL,                                   'Diego',   'Martinez',  'U', '',                     now(), now()),
+  ('d0000000-0000-4000-8000-000000000005', 'b0000000-0000-4000-8000-000000000001', 'Hana',    'Sato',      'A', 'Northeastern Fencing', now(), now()),
+  ('d0000000-0000-4000-8000-000000000006', 'b0000000-0000-4000-8000-000000000001', 'Noah',    'Williams',  'D', 'Boston Fencing Club',  now(), now()),
+  ('d0000000-0000-4000-8000-000000000007', 'b0000000-0000-4000-8000-000000000002', 'Amara',   'Okafor',    'B', 'Cambridge FC',         now(), now()),
+  ('d0000000-0000-4000-8000-000000000008', 'b0000000-0000-4000-8000-000000000002', 'Ethan',   'Kowalski',  'E', '',                     now(), now()),
+  ('d0000000-0000-4000-8000-000000000009', 'b0000000-0000-4000-8000-000000000003', 'Sofia',   'Rossi',     'C', 'Boston Fencing Club',  now(), now()),
+  ('d0000000-0000-4000-8000-000000000010', 'b0000000-0000-4000-8000-000000000003', 'Kenji',   'Tanaka',    'U', 'Northeastern Fencing', now(), now()),
+  ('d0000000-0000-4000-8000-000000000011', 'b0000000-0000-4000-8000-000000000003', 'Leila',   'Haddad',    'D', 'Cambridge FC',         now(), now()),
+  ('d0000000-0000-4000-8000-000000000012', NULL,                                   'Marcus',  'Johnson',   'B', '',                     now(), now())
 ON CONFLICT DO NOTHING;
 
 -- Mixed Épée is mid-way through its pool stage; Women's Foil has one planned

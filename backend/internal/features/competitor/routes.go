@@ -36,9 +36,19 @@ func RegisterCompetitorService(api huma.API, service CompetitorService) {
 		OperationID: "searchCompetitors",
 		Method:      http.MethodGet,
 		Path:        competitorBasePath + "/search",
-		Summary:     "Search competitors by name or team",
+		Summary:     "Search competitors by name",
 		Tags:        []string{"Competitors"},
 	}, service.SearchCompetitors)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "searchCompetitorTeams",
+		Method:      http.MethodGet,
+		Path:        competitorBasePath + "/search/teams",
+		Summary:     "Search distinct teams by name",
+		Description: "Returns one row per matching team with its competitor count, " +
+			"rather than one row per competitor.",
+		Tags: []string{"Competitors"},
+	}, service.SearchCompetitorTeams)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getCompetitorByID",
