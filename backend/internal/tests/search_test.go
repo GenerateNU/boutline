@@ -58,6 +58,14 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			wantField:   "name",
 			wantContain: "Fall Open 2026",
 		},
+		{
+			name:        "tournaments list matches a single-character q by prefix",
+			route:       "/api/v1/tournaments",
+			query:       map[string]string{"q": "F"}, // seeded: Fall Open 2026; too short for trigram similarity
+			wantStatus:  http.StatusOK,
+			wantField:   "name",
+			wantContain: "Fall Open 2026",
+		},
 	}
 
 	for _, tt := range tests {
