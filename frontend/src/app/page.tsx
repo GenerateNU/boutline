@@ -304,6 +304,7 @@ export default function Home() {
             </>
           }
         />
+      </Section>
       <Section title="List">
         <DialogList />
       </Section>

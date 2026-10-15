@@ -30,9 +30,13 @@ function NavigationDrawer({
 
   // Close the expanded drawer with Esc
   React.useEffect(() => {
-    if (!expanded) return;
+    if (!expanded) {
+return;
+}
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setExpanded(false);
+      if (event.key === "Escape") {
+setExpanded(false);
+}
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
