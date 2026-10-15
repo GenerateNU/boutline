@@ -20,7 +20,7 @@ func newTestAPI(t *testing.T, seed ...scoring.Scoring) humatest.TestAPI {
 
 	_, api := humatest.New(t)
 	scoring.RegisterScoringService(api,
-		scoring.NewScoringService(NewFakeScoringRepository(seed...)))
+		scoring.NewScoringService(NewFakeScoringRepository(seed...), NewFakeBoutLookup()))
 
 	return api
 }
@@ -384,4 +384,57 @@ func TestRevokeLifecycle(t *testing.T) {
 	replay := decodeBody(t,
 		api.Get("/api/v1/scoring/match/"+match.String()+"?include_revoked=true").Body.Bytes())
 	assert.Len(t, replay["data"], 1)
+}
+
+func TestHistoryEndpoint(t *testing.T) {
+	t.Parallel()
+
+	match, seed := historyFixture()
+
+	_, api := humatest.New(t)
+	scoring.RegisterScoringService(api,
+		scoring.NewScoringService(NewFakeScoringRepository(seed...), NewFakeBoutLookup(match)))
+
+	base := "/api/v1/scoring/match/"
+
+	tests := []struct {
+		name     string
+		path     string
+		wantCode int
+	}{
+		{name: "returns the history with running totals", path: match.ID.String() + "/history", wantCode: http.StatusOK},
+		{name: "reports an unknown bout as not found", path: uuid.NewString() + "/history", wantCode: http.StatusNotFound},
+		{name: "rejects a bout id that is not a uuid", path: "not-a-uuid/history", wantCode: http.StatusUnprocessableEntity},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := api.Get(base + tt.path)
+
+			require.Equal(t, tt.wantCode, resp.Code, "body: %s", resp.Body)
+			if tt.wantCode != http.StatusOK {
+				return
+			}
+
+			body := decodeBody(t, resp.Body.Bytes())
+			data, ok := body["data"].([]any)
+			require.True(t, ok)
+			require.NotEmpty(t, data)
+			first := data[0].(map[string]any)
+			assert.InDelta(t, 3, first["competitor_1_score"], 0)
+			assert.InDelta(t, 1, first["competitor_2_score"], 0)
+			assert.Len(t, data, 5)
+
+			revokedAt, present := first["revoked_at"]
+			assert.True(t, present, "a live score still sends revoked_at, as null")
+			assert.Nil(t, revokedAt)
+			revoked := data[2].(map[string]any)
+			assert.InDelta(t, 3, revoked["id"], 0)
+			assert.InDelta(t, 2, revoked["competitor_1_score"], 0)
+			assert.InDelta(t, 1, revoked["competitor_2_score"], 0)
+			assert.IsType(t, "", revoked["revoked_at"])
+		})
+	}
 }

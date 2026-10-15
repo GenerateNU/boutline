@@ -1,13 +1,13 @@
 import Link from "next/link";
 
-import type { Bout } from "../_data/bouts";
+import type { Bout } from "../_types/bouts";
 
-type BoutListProps = {
+interface BoutListProps {
   bouts: Bout[];
   eventPath: string;
-};
+}
 
-function BoutList({ bouts, eventPath }: BoutListProps) {
+export function BoutList({ bouts, eventPath }: BoutListProps) {
   return (
     <ul className="flex flex-col gap-3">
       {bouts.map(({ id, round, left, right }) => (
@@ -16,19 +16,17 @@ function BoutList({ bouts, eventPath }: BoutListProps) {
             href={`${eventPath}/bout/${id}`}
             className="flex flex-col gap-1 rounded-md border border-foreground px-4 py-3 transition-colors hover:bg-muted"
           >
-            <span className="text-xs text-muted-foreground">{round}</span>
-            <span className="text-sm">
+            <p className="text-xs text-muted-foreground">{round}</p>
+            <p className="text-sm">
               {left.name}{" "}
               <span className="font-medium">
-                {left.score} – {right.score}
+                {left.score} - {right.score}
               </span>{" "}
               {right.name}
-            </span>
+            </p>
           </Link>
         </li>
       ))}
     </ul>
   );
 }
-
-export { BoutList };

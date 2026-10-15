@@ -1,11 +1,12 @@
 import { Section } from "@/components/primitives/section";
 
 import { BoutList } from "../_components/bout-list";
-import { bouts } from "../_data/bouts";
+import { bouts } from "../_services/bouts";
 
-export default async function PoolingTab({
-  params,
-}: PageProps<"/tournaments/[tournamentId]/events/[eventId]/pooling">) {
+interface PoolingTabProps
+  extends PageProps<"/tournaments/[tournamentId]/events/[eventId]/pooling"> {}
+
+export default async function PoolingTab({ params }: PoolingTabProps) {
   const { tournamentId, eventId } = await params;
 
   return (
