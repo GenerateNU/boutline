@@ -116,7 +116,7 @@ func TestCreateCompetitor(t *testing.T) {
 			name:       "rejects a gender outside F, M, and O",
 			body:       withCreate(func(b *competitor.CompetitorCreateBody) { b.Gender = "X" }),
 			wantCode:   http.StatusBadRequest,
-			wantDetail: "gender must be one of F, M, or O",
+			wantDetail: "gender must be either F, M, or O",
 		},
 		{
 			name:       "rejects a birthdate that is not YYYY-MM-DD",
@@ -527,7 +527,7 @@ func TestUpdateCompetitorNewFields(t *testing.T) {
 		_, err := update(t, []competitor.Competitor{stored}, competitor.CompetitorUpdateBody{Gender: ptr("X")})
 		code, detail := apiError(t, err)
 		assert.Equal(t, http.StatusBadRequest, code)
-		assert.Equal(t, "gender must be one of F, M, or O", detail)
+		assert.Equal(t, "gender must be either F, M, or O", detail)
 	})
 
 	t.Run("rejects a blank division", func(t *testing.T) {
