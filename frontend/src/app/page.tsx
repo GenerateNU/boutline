@@ -1,6 +1,7 @@
 "use client";
 
-import { Ellipsis } from "lucide-react";
+import Link from "next/link";
+import { Ellipsis, EllipsisVertical, Settings, Shapes } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
@@ -17,7 +18,10 @@ import { Chip } from "@/components/primitives/chip";
 import { List, ListItem } from "@/components/primitives/list";
 import { Menu, MenuItem } from "@/components/primitives/menu";
 import { CircularProgress } from "@/components/primitives/circular-progress";
+import { DatePicker } from "@/components/primitives/date-picker";
+import { LinearProgress } from "@/components/primitives/linear-progress";
 import { Radio, RadioItem } from "@/components/primitives/radio";
+import { Section } from "@/components/primitives/section";
 import { SearchBar } from "@/components/primitives/search-bar";
 import { SegmentItem } from "@/components/primitives/segment-item";
 import {
@@ -34,10 +38,28 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
-import { LinearProgress } from "@/components/primitives/linear-progress";
-import { Section } from "@/components/primitives/section";
-import Link from "next/link";
+import { ProfileTopAppBar } from "@/components/primitives/profile-top-app-bar";
+import { SubTopAppBar } from "@/components/primitives/sub-top-app-bar";
 
+import { NavigationBar } from "@/components/primitives/navigation/navigation-bar";
+import { NavigationDrawer } from "@/components/primitives/navigation/navigation-drawer";
+import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
+import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+
+const barItems = Array.from({ length: 5 }, (_, index) => ({
+  id: `bar-${index}`,
+  label: "Label",
+  icon: <Shapes />,
+}));
+
+const drawerItems = Array.from({ length: 7 }, (_, index) => ({
+  id: `drawer-${index}`,
+  label: "Label",
+  icon: <Shapes />,
+  badge: "100+",
+}));
+
+const drawerFooter = [{ id: "settings", label: "Settings", icon: <Settings /> }];
 function DialogAvatar() {
   return (
     <Avatar className="size-8">
@@ -224,6 +246,65 @@ export default function Home() {
         </div>
       </Section>
 
+      <Section title="Date picker">
+        <DatePicker />
+      </Section>
+
+      <Section title="Navigation item">
+        <div className="flex items-center gap-4">
+          <NavigationItem icon={<Shapes />} label="Label" />
+          <NavigationItem icon={<Shapes />} aria-label="Label" />
+          <NavigationItem icon={<Shapes />} label="Label" selected />
+          <NavigationItem icon={<Shapes />} aria-label="Label" selected />
+        </div>
+      </Section>
+
+      <Section title="Navigation drawer item">
+        <div className="flex flex-col gap-2">
+          <NavigationDrawerItem icon={<Shapes />} label="Label" badge="100+" />
+          <NavigationDrawerItem
+            icon={<Shapes />}
+            label="Label"
+            badge="100+"
+            selected
+          />
+        </div>
+      </Section>
+
+      <Section title="Navigation bar">
+        <NavigationBar items={barItems} />
+      </Section>
+
+      <Section title="Navigation drawer">
+        <NavigationDrawer
+          title="Title"
+          items={drawerItems}
+          footerItems={drawerFooter}
+          userName="User name"
+          className="h-[950px]"
+        />
+      </Section>
+
+      <Section title="Profile top app bar">
+        <ProfileTopAppBar title="Profile" />
+      </Section>
+
+      <Section title="Sub top app bar">
+        <SubTopAppBar
+          title="Title"
+          backHref="/"
+          actions={
+            <>
+              <Button variant="text" size="icon" aria-label="Action">
+                <Shapes />
+              </Button>
+              <Button variant="text" size="icon" aria-label="More options">
+                <EllipsisVertical />
+              </Button>
+            </>
+          }
+        />
+      </Section>
       <Section title="List">
         <DialogList />
       </Section>
