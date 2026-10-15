@@ -68,6 +68,7 @@ type TournamentUpdateInput struct {
 
 type TournamentListInput struct {
 	Status TournamentStatus `query:"status" enum:"pending,active,end" doc:"Filter by status"`
+	Query  string           `query:"q" maxLength:"120" doc:"Fuzzy match against the tournament name; omit to return every tournament"`
 	Limit  int              `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset int              `query:"offset" default:"0" minimum:"0"`
 }

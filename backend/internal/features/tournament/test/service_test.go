@@ -376,6 +376,75 @@ func TestListTournaments(t *testing.T) {
 	}
 }
 
+func TestListTournamentsWithQuery(t *testing.T) {
+	t.Parallel()
+
+	seed := []tournament.Tournament{
+		seeded("Northwestern Open", tournament.TournamentStatusPending),
+		seeded("Big Ten Championship", tournament.TournamentStatusActive),
+	}
+
+	tests := []struct {
+		name       string
+		input      *tournament.TournamentListInput
+		wantNames  []string
+		wantTotal  int64
+		wantLimit  int
+		wantOffset int
+	}{
+		{
+			name:      "matches on the tournament name",
+			input:     &tournament.TournamentListInput{Query: "northwestern"},
+			wantNames: []string{"Northwestern Open"},
+			wantTotal: 1,
+			wantLimit: tournament.TournamentDefaultPageSize,
+		},
+		{
+			name:      "a blank term matches every tournament",
+			input:     &tournament.TournamentListInput{Query: "   "},
+			wantNames: []string{"Big Ten Championship", "Northwestern Open"},
+			wantTotal: 2,
+			wantLimit: tournament.TournamentDefaultPageSize,
+		},
+		{
+			name:       "applies limit and offset",
+			input:      &tournament.TournamentListInput{Query: "n", Limit: 1, Offset: 1},
+			wantNames:  []string{"Northwestern Open"},
+			wantTotal:  2,
+			wantLimit:  1,
+			wantOffset: 1,
+		},
+		{
+			name:      "clamps a limit above the maximum",
+			input:     &tournament.TournamentListInput{Query: "n", Limit: tournament.TournamentMaxPageSize + 50},
+			wantNames: []string{"Big Ten Championship", "Northwestern Open"},
+			wantTotal: 2,
+			wantLimit: tournament.TournamentMaxPageSize,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakeTournamentRepository(seed...)
+			out, err := tournament.NewTournamentService(repo, NewFakeTournamentUserRepository()).
+				ListTournaments(t.Context(), tt.input)
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantTotal, out.Body.Total)
+			assert.Equal(t, tt.wantLimit, out.Body.Limit)
+			assert.Equal(t, tt.wantOffset, out.Body.Offset)
+
+			names := make([]string, 0, len(out.Body.Data))
+			for _, listed := range out.Body.Data {
+				names = append(names, listed.Name)
+			}
+			assert.Equal(t, tt.wantNames, names)
+		})
+	}
+}
+
 func TestUpdateTournamentByID(t *testing.T) {
 	t.Parallel()
 

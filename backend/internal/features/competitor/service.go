@@ -21,6 +21,7 @@ type CompetitorService interface {
 	ListCompetitors(ctx context.Context, input *CompetitorListInput) (*CompetitorListOutput, error)
 	UpdateCompetitorByID(ctx context.Context, input *CompetitorUpdateInput) (*CompetitorOutput, error)
 	DeleteCompetitor(ctx context.Context, input *CompetitorIDInput) (*struct{}, error)
+	ListCompetitorTeams(ctx context.Context, input *CompetitorTeamListInput) (*CompetitorTeamListOutput, error)
 }
 
 type competitorService struct {
@@ -151,6 +152,7 @@ func (s *competitorService) ListCompetitors(
 	offset := max(input.Offset, 0)
 
 	filter := CompetitorListFilter{
+		Term:   strings.TrimSpace(input.Query),
 		Limit:  limit,
 		Offset: offset,
 	}
@@ -195,6 +197,49 @@ func (s *competitorService) DeleteCompetitor(
 		return nil, errs.HumaError(fmt.Errorf("delete competitor: %w", err))
 	}
 	return nil, nil
+}
+
+func (s *competitorService) ListCompetitorTeams(
+	ctx context.Context,
+	input *CompetitorTeamListInput,
+) (*CompetitorTeamListOutput, error) {
+	term := strings.TrimSpace(input.Query)
+
+	limit := input.Limit
+	if limit <= 0 {
+		limit = CompetitorDefaultPageSize
+	}
+	limit = utils.Clamp(limit, CompetitorMinPageSize, CompetitorMaxPageSize)
+	offset := max(input.Offset, 0)
+
+	filter := CompetitorTeamListFilter{
+		Term:   term,
+		Limit:  limit,
+		Offset: offset,
+	}
+	if input.TournamentID != "" {
+		tournamentID, err := utils.ParseUUID(input.TournamentID, "tournament id")
+		if err != nil {
+			return nil, errs.HumaError(err)
+		}
+		filter.TournamentID = &tournamentID
+	}
+
+	teams, total, err := s.repo.ListCompetitorTeams(ctx, filter)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("list competitor teams: %w", err))
+	}
+
+	data := make([]TeamListResult, 0, len(teams))
+	for _, team := range teams {
+		data = append(data, TeamListResult{Team: team.Team, CompetitorCount: team.Count})
+	}
+	return &CompetitorTeamListOutput{Body: CompetitorTeamListBody{
+		Data:   data,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}}, nil
 }
 
 func parseRating(raw string) (Rating, error) {

@@ -78,6 +78,12 @@ jobs:
         with:
           version: v1.3.3
 
+      # atlas.hcl's dev container needs pg_trgm already in template1 (see
+      # atlas/dev-db) so it can validate the trigram indexes without
+      # declaring the extension itself, which Atlas Community blocks. Tagged
+      # to match what atlas's docker://postgres/17-trgm/dev url pulls.
+      - run: docker build --tag postgres:17-trgm atlas/dev-db
+
       # Checksum integrity: catches a hand-edited migration that was never
       # re-signed with `atlas migrate hash`.
       - run: atlas migrate validate --env local
@@ -148,6 +154,18 @@ jobs:
             echo "::error::a second seed run inserted rows — give every seeded row a fixed id"
             exit 1
           fi
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      # DB_* defaults in internal/config already match this job's postgres
+      # service (localhost:5432, db boutline, user/password postgres,
+      # sslmode disable), so no env is needed beyond what Go test picks up.
+      - env:
+          REQUIRE_DB: "1"
+        run: go test ./internal/tests/... -race
 
   image:
     name: Docker image
