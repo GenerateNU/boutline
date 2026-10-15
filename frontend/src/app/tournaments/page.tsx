@@ -1,7 +1,14 @@
 import Link from "next/link";
 
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/primitives/card";
 import { Section } from "@/components/primitives/section";
 import { SearchForm } from "@/features/tournament/components/search-form";
+import { TournamentStatusBadge } from "@/features/tournament/components/tournament-status-badge";
 import { getTournaments } from "@/features/tournament/services/getTournaments";
 
 const PAGE_SIZE = 20;
@@ -39,14 +46,20 @@ export default async function TournamentsPage({
         <ul className="flex flex-col gap-3">
           {data.map((tournament) => (
             <li key={tournament.id}>
-              <Link
-                href={`/tournaments/${tournament.id}`}
-                className="flex flex-col gap-1 rounded-md border border-foreground px-4 py-3 transition-colors hover:bg-muted"
-              >
-                <span className="text-sm font-medium">{tournament.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {tournament.status}
-                </span>
+              <Link href={`/tournaments/${tournament.id}`}>
+                <Card className="rounded-md p-4 transition-colors hover:bg-muted">
+                  <CardHeader>
+                    <CardTitle className="text-sm">
+                      {tournament.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <div className="flex items-end justify-between">
+                    <CardDescription className="text-xs text-muted-foreground">
+                      City, Country
+                    </CardDescription>
+                    <TournamentStatusBadge status={tournament.status} />
+                  </div>
+                </Card>
               </Link>
             </li>
           ))}
