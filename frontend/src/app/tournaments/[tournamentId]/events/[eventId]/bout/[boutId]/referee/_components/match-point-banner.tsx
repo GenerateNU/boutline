@@ -10,7 +10,7 @@ export function MatchPointBanner({ names }: MatchPointBannerProps) {
       className="flex flex-col items-center gap-1 rounded-xl bg-primary px-4 py-3 text-center text-primary-foreground motion-safe:animate-pulse"
     >
       <p className="text-2xl font-medium tracking-wide uppercase">Match point</p>
-      <p className="text-sm">{names.join(" and ")}</p>
+      <p className="w-full text-sm break-words">{names.join(" and ")}</p>
     </div>
   );
 }

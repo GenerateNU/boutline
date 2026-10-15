@@ -17,12 +17,13 @@ export function ScorePanel({ name, team, score, scoringClosed, /* disabled, */ o
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-4 rounded-lg border border-foreground px-3",
+        // min-w-0 lets the grid column shrink below a long name instead of overflowing.
+        "flex min-w-0 flex-col items-center gap-4 rounded-lg border border-foreground px-3",
         scoringClosed ? "py-10" : "py-6",
       )}
     >
       <div className="flex w-full flex-col items-center gap-1 text-center">
-        <p className="w-full truncate text-sm font-medium">{name}</p>
+        <p className="w-full text-sm font-medium break-words">{name}</p>
         <p className="w-full truncate text-xs text-muted-foreground">{team || "No club"}</p>
       </div>
       <output

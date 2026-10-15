@@ -13,7 +13,7 @@ export function ConfirmButton({ name, confirmed, onConfirm }: ConfirmButtonProps
     <Button
       disabled={confirmed}
       onClick={onConfirm}
-      className="h-14 w-full touch-manipulation rounded-xl text-base"
+      className="h-auto min-h-14 w-full min-w-0 touch-manipulation rounded-xl py-3 text-base break-words whitespace-normal"
     >
       {confirmed && <Check />}
       {confirmed ? `${name} confirmed` : `Confirm ${name}`}

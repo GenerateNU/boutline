@@ -11,7 +11,7 @@ export function ConfirmResultBanner({ winnerName, score }: ConfirmResultBannerPr
       className="flex flex-col items-center gap-2 rounded-xl bg-primary px-4 py-8 text-center text-primary-foreground"
     >
       <p className="text-4xl font-semibold tracking-wide uppercase">Confirm result</p>
-      <p className="text-xl font-medium">
+      <p className="w-full text-xl font-medium break-words">
         {winnerName} wins {score[0]} - {score[1]}
       </p>
     </div>
