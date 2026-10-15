@@ -263,6 +263,9 @@ export default function Home() {
               ))}
             </List>
           </SearchBar>
+        </div>
+      </Section>
+
       <Section title="Linear progress">
         <div className="flex flex-col gap-6">
           {[25, 50, 75, 100].map((value) => (
@@ -331,6 +334,7 @@ export default function Home() {
           Show toast
         </Button>
       </Section>
+
       <Section title="Tabs">
         <div className="flex flex-col gap-8">
           {(["stacked", "line"] as const).map((variant) => (
