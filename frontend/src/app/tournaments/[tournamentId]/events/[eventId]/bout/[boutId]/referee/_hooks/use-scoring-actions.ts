@@ -5,6 +5,7 @@ import { Scoring } from "@/types/scoring";
 import { errorMessage } from "@/utils/error-message";
 
 import {
+  assignReferee,
   createScoring,
   endBout,
   getBout,
@@ -101,6 +102,12 @@ export function useScoringActions({
   }
 
   async function startMatch() {
+    // TODO: restore the referee gate once the fallback scorer is removed. The backend
+    // won't start a bout without a referee and there's no referee login yet, so the
+    // fallback scorer is assigned first.
+    if (!matchup?.bout.referee_id) {
+      await assignReferee(boutId, FALLBACK_SCORER_ID);
+    }
     setBout(await startBout(boutId));
   }
 

@@ -20,6 +20,7 @@ export interface StoredScore {
 export interface FakeBackend {
   scores: StoredScore[];
   status: BoutStatus;
+  refereeId: string | null;
   failNextCreate: boolean;
   failNextEnd: boolean;
   // While set, history responses wait for it, to mimic a slow history fetch.
@@ -44,13 +45,14 @@ export function installBackend(
   const backend: FakeBackend = {
     scores: initial.map((score) => ({ ...score, revoked: false, created_at: RECORDED_AT })),
     status,
+    refereeId,
     failNextCreate: false,
     failNextEnd: false,
     historyGate: null,
   };
   const boutBody = () => ({
     id: BOUT_ID,
-    referee_id: refereeId,
+    referee_id: backend.refereeId,
     competitor_1_id: ALICE.id,
     competitor_2_id: BEN.id,
     points_to_win: 5,
@@ -62,6 +64,10 @@ export function installBackend(
     const url = String(input);
     const body = init?.body ? JSON.parse(String(init.body)) : null;
 
+    if (url === `/api/v1/bouts/${BOUT_ID}` && init?.method === "PATCH") {
+      backend.refereeId = body.referee_id ?? backend.refereeId;
+      return reply(200, boutBody());
+    }
     if (url === `/api/v1/bouts/${BOUT_ID}`) {
       return reply(200, boutBody());
     }
@@ -69,7 +75,7 @@ export function installBackend(
       if (backend.status !== "upcoming") {
         return reply(409, { detail: "only an upcoming bout can be started" });
       }
-      if (!refereeId) {
+      if (!backend.refereeId) {
         return reply(409, { detail: "a bout needs a referee to start" });
       }
       backend.status = "active";

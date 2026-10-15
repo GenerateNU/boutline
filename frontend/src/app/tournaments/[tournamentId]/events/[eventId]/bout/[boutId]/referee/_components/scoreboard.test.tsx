@@ -312,18 +312,34 @@ describe("Scoreboard", () => {
     expect(scoreOf("Alice Chen")).toBe("1");
   });
 
-  it("keeps Start match and shows the reason when the backend refuses to start", async () => {
-    const { backend } = installBackend([], { status: "upcoming", refereeId: null });
+  it.each([
+    { name: "the assigned referee", refereeId: REFEREE_ID, expected: REFEREE_ID },
+    { name: "the seeded fallback user when no referee is assigned", refereeId: null, expected: "a0000000-0000-4000-8000-000000000001" },
+  ])("starts an upcoming bout refereed by $name", async ({ refereeId, expected }) => {
+    const { backend } = installBackend([], { status: "upcoming", refereeId });
     render(<Scoreboard boutId={BOUT_ID} />);
     await screen.findByLabelText("Alice Chen score");
 
     fireEvent.click(screen.getByRole("button", { name: "Start match" }));
     await settle();
 
-    expect(screen.getByRole("alert")).toHaveTextContent("a bout needs a referee to start");
-    expect(screen.getByRole("button", { name: "Start match" })).toBeEnabled();
-    expect(screen.queryByRole("button", { name: "Touch Alice Chen" })).not.toBeInTheDocument();
-    expect(backend.status).toBe("upcoming");
+    expect(backend.status).toBe("active");
+    expect(backend.refereeId).toBe(expected);
+    expect(screen.getByRole("button", { name: "Touch Alice Chen" })).toBeInTheDocument();
+  });
+
+  it("keeps Start match and shows the reason when the backend refuses to start", async () => {
+    const { backend } = installBackend([], { status: "upcoming" });
+    render(<Scoreboard boutId={BOUT_ID} />);
+    await screen.findByLabelText("Alice Chen score");
+
+    // Another device started it after this screen loaded.
+    backend.status = "active";
+    fireEvent.click(screen.getByRole("button", { name: "Start match" }));
+    await settle();
+
+    expect(screen.getByRole("alert")).toHaveTextContent("only an upcoming bout can be started");
+    expect(backend.refereeId).toBe(REFEREE_ID);
   });
 
   it("shows only the final score for a bout that has already ended, without naming a winner short of the target", async () => {
