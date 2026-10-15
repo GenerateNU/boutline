@@ -1,5 +1,6 @@
 import { useRef, useState, RefObject } from "react";
 
+import { useSerialQueue } from "@/hooks/use-serial-queue";
 import { Bout } from "@/types/bout";
 import { Scoring } from "@/types/scoring";
 import { errorMessage } from "@/utils/error-message";
@@ -24,16 +25,16 @@ const FALLBACK_SCORER_ID = "a0000000-0000-4000-8000-000000000001";
 interface ScoringActionsOptions {
   boutId: string;
   matchup: Matchup | null;
-  // The saved scores, held in a ref so an action reads the latest list rather than the
-  // one from the render that started it.
+  // The saved scores, held in a ref so queued actions read the latest list rather
+  // than the one from the render that queued them.
   confirmed: RefObject<Scoring[]>;
   setConfirmed: (next: Scoring[]) => void;
   setBout: (bout: Bout) => void;
   refreshHistory: () => Promise<void>;
 }
 
-// Sends the referee's actions (start, touch, undo, end) to the server one at a time,
-// and recovers when one fails. A tap while an action is saving is ignored.
+// Sends the referee's actions (start, touch, undo, end) to the server in the order
+// they were tapped, and recovers when one fails.
 export function useScoringActions({
   boutId,
   matchup,
@@ -42,52 +43,43 @@ export function useScoringActions({
   setBout,
   refreshHistory,
 }: ScoringActionsOptions) {
-  // The action being saved, if any. Kept as a list so the optimistic score and the
-  // history's "Saving…" row read it the same way whatever the length.
-  const [pending, setPending] = useState<ScoringAction[]>([]);
   const [error, setError] = useState<string | null>(null);
   // Bumped whenever the score may have changed, which voids result confirmations
   // given against the old score (see useResultConfirmation).
   const [scoreVersion, setScoreVersion] = useState(0);
-  // State only updates on the next render, too late to stop a second tap in the same
-  // tick, so a ref decides whether an action is already running.
-  const busy = useRef(false);
+  // Set when a failure's reload also failed, so the screen may not match the server
+  // (e.g. a touch was saved but its response was lost). Scoring stays paused until a
+  // retry reloads successfully, rather than building more taps on a wrong score.
+  const [outOfSync, setOutOfSync] = useState(false);
+  // Blocks new taps from the moment a failure starts recovering. State would only
+  // catch up on the next render, too late for a tap in the same tick.
+  const paused = useRef(false);
+  const retrying = useRef(false);
 
   // TODO: restore the referee gate once the fallback scorer is removed.
   // const refereeId = matchup?.bout.referee_id ?? null;
   const scorerId = matchup?.bout.referee_id ?? FALLBACK_SCORER_ID;
 
-  // Entry point for the screen. The optimistic score shows the action from `pending`
-  // until the server answers.
+  // Queued so an undo tapped before the previous touch is saved still revokes that touch.
+  const { pending, enqueue } = useSerialQueue({ send, onFailure: recoverFrom });
+
+  // Entry point for the screen: queues an action, and the optimistic score updates
+  // from `pending` before the server answers.
   function submit(action: ScoringAction) {
     // TODO: restore the referee gate once the fallback scorer is removed.
     // if (!refereeId) return;
-    if (busy.current) {
+    if (paused.current) {
       return;
     }
-    busy.current = true;
     const changesScore = action.kind === "touch" || action.kind === "undo";
     setError(null);
     if (changesScore) {
       setScoreVersion((current) => current + 1);
     }
-    setPending([action]);
-    sendAndRecover(action);
+    enqueue(action);
   }
 
-  async function sendAndRecover(action: ScoringAction) {
-    try {
-      await send(action);
-    } catch (caught) {
-      setPending([]);
-      await recoverFrom(caught);
-    } finally {
-      busy.current = false;
-      setPending([]);
-    }
-  }
-
-  // Runs the action against the server. A thrown error fails it into recovery.
+  // Runs one queued action against the server. A thrown error drops the rest of the queue.
   async function send(action: ScoringAction) {
     switch (action.kind) {
       case "start":
@@ -129,9 +121,9 @@ export function useScoringActions({
     setConfirmed(byRecordedOrder([...confirmed.current, created]));
   }
 
-  // Revokes the latest saved touch. Only one action runs at a time, so that is the
-  // touch the referee saw last when they tapped undo. Like recordTouch, it updates the
-  // saved scores last, so the pending undo isn't applied twice.
+  // Revokes the latest saved touch. Because actions run in order, that is the touch
+  // the referee saw last when they tapped undo. Like recordTouch, it updates the saved
+  // scores last, so the pending undo isn't applied twice.
   async function undoLastTouch() {
     const latest = confirmed.current.at(-1);
     if (!latest) {
@@ -150,18 +142,44 @@ export function useScoringActions({
     }
   }
 
+  // Called by the queue after a failed action, once the actions behind it are dropped.
   // Shows the error and replaces the optimistic score with what the server has. Taps
-  // stay ignored until the reload finishes.
+  // are paused meanwhile: they'd be made against a score that's about to change.
   async function recoverFrom(caught: unknown) {
+    paused.current = true;
     setScoreVersion((current) => current + 1);
     setError(errorMessage(caught));
-    await reloadFromServer();
+    await resync();
+  }
+
+  // The out-of-sync banner's Retry. On success the stale error goes too. Overlapping
+  // retries are ignored, or a slow failed one could finish last and undo a success.
+  async function retrySync() {
+    if (retrying.current) {
+      return;
+    }
+    retrying.current = true;
+    try {
+      if (await resync()) {
+        setError(null);
+      }
+    } finally {
+      retrying.current = false;
+    }
+  }
+
+  async function resync() {
+    const synced = await reloadFromServer();
+    paused.current = !synced;
+    setOutOfSync(!synced);
     // The reload may have replaced the score, so confirmations given while it ran are void.
     setScoreVersion((current) => current + 1);
+    return synced;
   }
 
   // Each part reloads independently, so one failing doesn't leave the others stale.
   // Reloading the bout also covers a start or end that succeeded but whose response was lost.
+  // Only the bout and scores decide whether the screen is in sync; the history is best-effort.
   async function reloadFromServer() {
     async function reloadBout() {
       setBout(await getBout(boutId));
@@ -169,8 +187,9 @@ export function useScoringActions({
     async function reloadScores() {
       setConfirmed(byRecordedOrder(await listScoring(boutId)));
     }
-    await Promise.allSettled([reloadBout(), reloadScores(), refreshHistory()]);
+    const [bout, scores] = await Promise.allSettled([reloadBout(), reloadScores(), refreshHistory()]);
+    return bout.status === "fulfilled" && scores.status === "fulfilled";
   }
 
-  return { pending, error, scoreVersion, submit };
+  return { pending, error, scoreVersion, outOfSync, submit, retrySync };
 }
