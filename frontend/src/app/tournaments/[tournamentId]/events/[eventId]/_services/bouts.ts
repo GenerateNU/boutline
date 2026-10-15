@@ -1,4 +1,4 @@
-import type { Bout, SeededFencer, Side, Touch } from "../_types/bouts";
+import { Bout, SeededFencer, Side, Touch } from "../_types/bouts";
 
 // Placeholder copies of the bouts in backend/seeds/seed.sql, with the seeded ids so
 // the referee view loads the same bout from a seeded backend. Each audit replays

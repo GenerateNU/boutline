@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import type { Bout } from "../_types/bouts";
+import { Bout } from "../_types/bouts";
 
 interface BoutListProps {
   bouts: Bout[];
