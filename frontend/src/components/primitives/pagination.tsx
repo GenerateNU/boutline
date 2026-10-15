@@ -42,12 +42,18 @@ function Pagination({
   basePath,
   search,
 }: PaginationProps) {
-  if (total === 0) return null;
+  if (total === 0) {
+    return null;
+  }
 
   function href(to: number) {
     const params = new URLSearchParams();
-    if (search) params.set("q", search);
-    if (to > 0) params.set("offset", String(to));
+    if (search) {
+      params.set("q", search);
+    }
+    if (to > 0) {
+      params.set("offset", String(to));
+    }
     return params.size ? `${basePath}?${params}` : basePath;
   }
 

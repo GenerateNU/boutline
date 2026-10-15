@@ -89,3 +89,25 @@ type ScoringListBody struct {
 type ScoringListOutput struct {
 	Body ScoringListBody
 }
+
+type ScoringHistoryInput struct {
+	BoutID string `path:"bout_id" format:"uuid" doc:"Match ID"`
+}
+
+type ScoringHistoryEntry struct {
+	ID               int64      `json:"id"`
+	CompetitorID     string     `json:"competitor_id" format:"uuid"`
+	Points           int        `json:"points"`
+	CreatedAt        time.Time  `json:"created_at"`
+	RevokedAt        *time.Time `json:"revoked_at" doc:"Set when the score was undone; later scores no longer count it"`
+	Competitor1Score int        `json:"competitor_1_score" doc:"Competitor 1's total once this score is added to the live scores before it"`
+	Competitor2Score int        `json:"competitor_2_score" doc:"Competitor 2's total once this score is added to the live scores before it"`
+}
+
+type ScoringHistoryBody struct {
+	Data []ScoringHistoryEntry `json:"data"`
+}
+
+type ScoringHistoryOutput struct {
+	Body ScoringHistoryBody
+}

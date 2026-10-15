@@ -10,9 +10,9 @@ const events = [
   { id: "4", name: "Senior Men's Épée Team", time: "Sun 9:00 AM", status: "Upcoming" },
 ];
 
-export default async function EventsTab({
-  params,
-}: PageProps<"/tournaments/[tournamentId]/events">) {
+interface EventsTabProps extends PageProps<"/tournaments/[tournamentId]/events"> {}
+
+export default async function EventsTab({ params }: EventsTabProps) {
   const { tournamentId } = await params;
 
   return (
@@ -31,10 +31,10 @@ export default async function EventsTab({
               href={`/tournaments/${tournamentId}/events/${id}`}
               className="flex items-center justify-between gap-4 rounded-md border border-foreground px-4 py-3 transition-colors hover:bg-muted"
             >
-              <span className="flex flex-col gap-1">
+              <p className="flex flex-col gap-1">
                 <span className="text-sm font-medium">{name}</span>
                 <span className="text-xs text-muted-foreground">{time}</span>
-              </span>
+              </p>
               <Chip className="rounded-full text-xs">{status}</Chip>
             </Link>
           </li>

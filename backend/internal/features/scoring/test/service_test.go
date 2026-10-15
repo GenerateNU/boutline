@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/bout"
 	"boutline/internal/features/scoring"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -82,7 +84,7 @@ func TestCreateScoring(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakeScoringRepository()
-			out, err := scoring.NewScoringService(repo).CreateScoring(t.Context(), tt.input)
+			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).CreateScoring(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
 				code, _ := apiError(t, err)
@@ -111,7 +113,7 @@ func TestCreateScoringAssignsDistinctIDs(t *testing.T) {
 	creator := uuid.New().String()
 	competitor := uuid.New().String()
 	match := uuid.New().String()
-	service := scoring.NewScoringService(NewFakeScoringRepository())
+	service := scoring.NewScoringService(NewFakeScoringRepository(), NewFakeBoutLookup())
 
 	first, err := service.CreateScoring(t.Context(), createInput(creator, competitor, match, 1))
 	require.NoError(t, err)
@@ -128,7 +130,7 @@ func TestCreateScoringRejectsAnUnknownReference(t *testing.T) {
 	repo.Err = fmt.Errorf("create scoring: %w",
 		errs.Public("bout_id must reference an existing match", errs.ErrInvalidInput))
 
-	_, err := scoring.NewScoringService(repo).CreateScoring(t.Context(),
+	_, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).CreateScoring(t.Context(),
 		createInput(uuid.New().String(), uuid.New().String(), uuid.New().String(), 1))
 
 	code, detail := apiError(t, err)
@@ -140,7 +142,7 @@ func TestGetScoringByID(t *testing.T) {
 	t.Parallel()
 
 	stored := seeded(1, uuid.New())
-	service := scoring.NewScoringService(NewFakeScoringRepository(stored))
+	service := scoring.NewScoringService(NewFakeScoringRepository(stored), NewFakeBoutLookup())
 
 	t.Run("returns the stored score", func(t *testing.T) {
 		t.Parallel()
@@ -238,7 +240,7 @@ func TestListScoring(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := scoring.NewScoringService(NewFakeScoringRepository(seed...)).
+			out, err := scoring.NewScoringService(NewFakeScoringRepository(seed...), NewFakeBoutLookup()).
 				ListScoring(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
@@ -349,7 +351,7 @@ func TestUpdateScoringByID(t *testing.T) {
 				id = 999
 			}
 
-			out, err := scoring.NewScoringService(repo).UpdateScoringByID(t.Context(),
+			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).UpdateScoringByID(t.Context(),
 				&scoring.ScoringUpdateInput{ID: id, Body: tt.body})
 
 			if tt.wantCode != 0 {
@@ -429,7 +431,7 @@ func TestRevokeScoring(t *testing.T) {
 				id = 999
 			}
 
-			out, err := scoring.NewScoringService(repo).RevokeScoring(t.Context(),
+			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).RevokeScoring(t.Context(),
 				&scoring.ScoringRevokeInput{
 					ID:   id,
 					Body: scoring.ScoringRevokeBody{RevokedBy: tt.revokedBy},
@@ -464,7 +466,7 @@ func TestRevokedScoreDropsOutOfTheLiveList(t *testing.T) {
 	t.Parallel()
 
 	match := uuid.New()
-	service := scoring.NewScoringService(NewFakeScoringRepository(seeded(1, match)))
+	service := scoring.NewScoringService(NewFakeScoringRepository(seeded(1, match)), NewFakeBoutLookup())
 
 	_, err := service.RevokeScoring(t.Context(), &scoring.ScoringRevokeInput{
 		ID:   1,
@@ -489,10 +491,151 @@ func TestRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo := NewFakeScoringRepository()
 	repo.Err = errors.New("connection refused")
 
-	_, err := scoring.NewScoringService(repo).
+	_, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).
 		ListScoring(t.Context(), &scoring.ScoringListInput{BoutID: uuid.New().String()})
 
 	code, detail := apiError(t, err)
 	assert.Equal(t, http.StatusInternalServerError, code)
 	assert.Equal(t, "internal server error", detail)
+}
+
+func touch(id int64, boutID, competitorID uuid.UUID, points int) scoring.Scoring {
+	s := seeded(id, boutID)
+	s.CompetitorID = competitorID
+	s.Points = points
+
+	return s
+}
+
+// lateSavedFixture is a bout whose second touch was saved first, so its ids disagree with its timestamps,
+// and whose last two touches share a timestamp.
+func lateSavedFixture() (bout.Bout, []scoring.Scoring) {
+	c1, c2 := uuid.New(), uuid.New()
+	match := bout.Bout{ID: uuid.New(), Competitor1ID: c1, Competitor2ID: c2}
+	at := time.Now()
+	scores := []scoring.Scoring{touch(10, match.ID, c1, 1), touch(11, match.ID, c2, 1), touch(12, match.ID, c1, 1)}
+	scores[0].CreatedAt = at.Add(2 * time.Second)
+	scores[1].CreatedAt = at.Add(time.Second)
+	scores[2].CreatedAt = at.Add(2 * time.Second)
+
+	return match, scores
+}
+
+// historyFixture is one bout with a revoked touch, a touch on another bout and a touch by a stranger.
+func historyFixture() (bout.Bout, []scoring.Scoring) {
+	c1, c2 := uuid.New(), uuid.New()
+	match := bout.Bout{ID: uuid.New(), Competitor1ID: c1, Competitor2ID: c2}
+	revoked := touch(3, match.ID, c1, 1)
+	revokedAt := time.Now()
+	revoked.RevokedAt = &revokedAt
+
+	return match, []scoring.Scoring{
+		touch(1, match.ID, c1, 1),
+		touch(2, match.ID, c2, 1),
+		revoked,
+		touch(4, match.ID, c1, 2),
+		touch(5, uuid.New(), c1, 1),
+		touch(6, match.ID, uuid.New(), 1),
+	}
+}
+
+type historyEntryWant struct {
+	id      int64
+	c1, c2  int
+	revoked bool
+}
+
+func TestGetScoringHistory(t *testing.T) {
+	t.Parallel()
+
+	match, seed := historyFixture()
+	lateSaved, lateSeed := lateSavedFixture()
+	seed = append(seed, lateSeed...)
+	emptyMatch := bout.Bout{ID: uuid.New(), Competitor1ID: uuid.New(), Competitor2ID: uuid.New()}
+
+	tests := []struct {
+		name       string
+		boutID     string
+		repoErr    error
+		lookupErr  error
+		want       []historyEntryWant
+		wantCode   int
+		wantDetail string
+	}{
+		{
+			name:   "lists every score newest first; a revoked one shows the score it produced but later scores skip it",
+			boutID: match.ID.String(),
+			want: []historyEntryWant{
+				{6, 3, 1, false}, {4, 3, 1, false}, {3, 2, 1, true}, {2, 1, 1, false}, {1, 1, 0, false},
+			},
+		},
+		{
+			name:   "orders by when each score was recorded, then by id, even when ids were assigned out of order",
+			boutID: lateSaved.ID.String(),
+			want:   []historyEntryWant{{12, 2, 1, false}, {10, 1, 1, false}, {11, 0, 1, false}},
+		},
+		{
+			name:   "returns an empty list for a bout with no scores",
+			boutID: emptyMatch.ID.String(),
+			want:   []historyEntryWant{},
+		},
+		{
+			name:       "reports an unknown bout as not found",
+			boutID:     uuid.New().String(),
+			wantCode:   http.StatusNotFound,
+			wantDetail: "not found",
+		},
+		{
+			name:     "rejects a bout id that is not a uuid",
+			boutID:   "not-a-uuid",
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:       "reports a repository failure as a server error",
+			boutID:     match.ID.String(),
+			repoErr:    errors.New("connection refused"),
+			wantCode:   http.StatusInternalServerError,
+			wantDetail: "internal server error",
+		},
+		{
+			name:       "reports a bout lookup failure as a server error",
+			boutID:     match.ID.String(),
+			lookupErr:  errors.New("connection refused"),
+			wantCode:   http.StatusInternalServerError,
+			wantDetail: "internal server error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakeScoringRepository(seed...)
+			repo.Err = tt.repoErr
+			bouts := NewFakeBoutLookup(match, lateSaved, emptyMatch)
+			bouts.Err = tt.lookupErr
+
+			out, err := scoring.NewScoringService(repo, bouts).
+				GetScoringHistory(t.Context(), &scoring.ScoringHistoryInput{BoutID: tt.boutID})
+
+			if tt.wantCode != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+				if tt.wantDetail != "" {
+					assert.Equal(t, tt.wantDetail, detail)
+				}
+				assert.Nil(t, out)
+
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, out.Body.Data, "an empty history should serialise as [] rather than null")
+			got := make([]historyEntryWant, 0, len(out.Body.Data))
+			for _, entry := range out.Body.Data {
+				got = append(got, historyEntryWant{entry.ID, entry.Competitor1Score, entry.Competitor2Score, entry.RevokedAt != nil})
+			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }

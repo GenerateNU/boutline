@@ -93,7 +93,8 @@ make dev-seed    # or `make db-seed` from the repo root
 
 loads `seeds/seed.sql` into the dev database: five users, three tournaments
 (one each pending, active, and ended) with their memberships and events,
-twelve competitors, and bouts in every status. Every seeded account's password
+twelve competitors, two pool stages (one active with two pools, one upcoming),
+and bouts in every status. Every seeded account's password
 is `password123`. Every row has a fixed id and conflicts are skipped, so
 rerunning it changes nothing; `make dev-reset` first for a clean set. Run it
 after `make dev-up`, since it needs the current schema. A new table or a new
