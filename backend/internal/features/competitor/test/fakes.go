@@ -60,12 +60,17 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 	if f.Err != nil {
 		return nil, 0, f.Err
 	}
+	term := strings.ToLower(filter.Term)
 	matched := make([]competitor.Competitor, 0, len(f.Competitors))
 	for _, candidate := range f.Competitors {
 		if filter.Rating != nil && candidate.Rating != *filter.Rating {
 			continue
 		}
 		if filter.Team != nil && candidate.Team != *filter.Team {
+			continue
+		}
+		haystack := candidate.FirstName + " " + candidate.LastName
+		if !strings.Contains(strings.ToLower(haystack), term) {
 			continue
 		}
 		matched = append(matched, candidate)
@@ -80,6 +85,47 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 	total := int64(len(matched))
 	if filter.Offset >= len(matched) {
 		return []competitor.Competitor{}, total, nil
+	}
+	matched = matched[filter.Offset:]
+	if filter.Limit < len(matched) {
+		matched = matched[:filter.Limit]
+	}
+	return matched, total, nil
+}
+
+func (f *FakeCompetitorRepository) ListCompetitorTeams(
+	_ context.Context,
+	filter competitor.CompetitorTeamListFilter,
+) ([]competitor.CompetitorTeamCount, int64, error) {
+	if f.Err != nil {
+		return nil, 0, f.Err
+	}
+	term := strings.ToLower(filter.Term)
+	counts := make(map[string]int64)
+	for _, candidate := range f.Competitors {
+		if filter.TournamentID != nil &&
+			(candidate.TournamentID == nil || *candidate.TournamentID != *filter.TournamentID) {
+			continue
+		}
+		if strings.Contains(strings.ToLower(candidate.Team), term) {
+			counts[candidate.Team]++
+		}
+	}
+
+	matched := make([]competitor.CompetitorTeamCount, 0, len(counts))
+	for team, count := range counts {
+		matched = append(matched, competitor.CompetitorTeamCount{Team: team, Count: count})
+	}
+	// Ordered by team name rather than a real word-similarity score, since
+	// the fake only does substring matching -- real ranking is covered by
+	// the database-backed tests in internal/tests.
+	slices.SortFunc(matched, func(a, b competitor.CompetitorTeamCount) int {
+		return strings.Compare(a.Team, b.Team)
+	})
+
+	total := int64(len(matched))
+	if filter.Offset >= len(matched) {
+		return []competitor.CompetitorTeamCount{}, total, nil
 	}
 	matched = matched[filter.Offset:]
 	if filter.Limit < len(matched) {

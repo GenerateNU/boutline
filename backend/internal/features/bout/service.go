@@ -306,12 +306,12 @@ func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body Bou
 	return update, nil
 }
 
-func (s *boutService) validateUpdatedPool(ctx context.Context, id uuid.UUID, poolID *uuid.UUID) error {
+func (s *boutService) validateUpdatedPool(ctx context.Context, boutID uuid.UUID, poolID *uuid.UUID) error {
 	if poolID == nil {
 		return nil
 	}
 
-	stored, err := s.repo.GetBoutByID(ctx, id)
+	stored, err := s.repo.GetBoutByID(ctx, boutID)
 	if err != nil {
 		return err
 	}

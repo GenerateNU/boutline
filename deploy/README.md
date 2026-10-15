@@ -13,6 +13,7 @@ droplet
 ├── preview-db               shared: disposable preview databases
 ├── boutline-backend         →  api.<boutline-domain>      (deploy/app/)
 ├── boutline-db              production Postgres, boutline's network only
+├── boutline-redis           production Redis, boutline's network only
 └── boutline-pr-<n>          →  boutline-pr-<n>.<preview-domain>
                                 database boutline_pr_<n>
 ```
