@@ -1,26 +1,41 @@
 import Link from "next/link";
 
 import { Section } from "@/components/primitives/section";
+import { SearchForm } from "@/features/tournament/components/search-form";
 import { getTournaments } from "@/features/tournament/services/getTournaments";
 
 const PAGE_SIZE = 20;
 
-type TournamentsPageProps = {
-  searchParams: Promise<{ offset?: string }>;
-};
-
 export default async function TournamentsPage({
   searchParams,
-}: TournamentsPageProps) {
-  const offset = Number((await searchParams).offset) || 0;
-  const { data, total } = await getTournaments(PAGE_SIZE, offset);
+}: PageProps<"/tournaments">) {
+  const query = await searchParams;
+  const search = typeof query.q === "string" ? query.q.trim() : "";
+  const offset = Math.max(0, Number(query.offset) || 0);
+
+  const { data, total } = await getTournaments(PAGE_SIZE, offset, search);
 
   const hasPrev = offset > 0;
   const hasNext = offset + PAGE_SIZE < total;
+  const pageQuery = search ? `&q=${encodeURIComponent(search)}` : "";
 
   return (
     <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 py-10">
       <Section title="Tournaments" className="flex flex-col gap-4">
+        <SearchForm
+          action="/tournaments"
+          placeholder="Search tournaments"
+          defaultValue={search}
+        />
+
+        {data.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            {search
+              ? `No tournaments match "${search}".`
+              : "No tournaments yet."}
+          </p>
+        )}
+
         <ul className="flex flex-col gap-3">
           {data.map((tournament) => (
             <li key={tournament.id}>
@@ -39,14 +54,14 @@ export default async function TournamentsPage({
 
         <div className="flex justify-between">
           <Link
-            href={`/tournaments?offset=${Math.max(offset - PAGE_SIZE, 0)}`}
+            href={`/tournaments?offset=${Math.max(offset - PAGE_SIZE, 0)}${pageQuery}`}
             aria-disabled={!hasPrev}
             className={hasPrev ? "underline" : "pointer-events-none opacity-40"}
           >
             Previous
           </Link>
           <Link
-            href={`/tournaments?offset=${offset + PAGE_SIZE}`}
+            href={`/tournaments?offset=${offset + PAGE_SIZE}${pageQuery}`}
             aria-disabled={!hasNext}
             className={hasNext ? "underline" : "pointer-events-none opacity-40"}
           >
