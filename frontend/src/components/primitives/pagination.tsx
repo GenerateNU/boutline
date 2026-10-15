@@ -57,7 +57,9 @@ function Pagination({
     return params.size ? `${basePath}?${params}` : basePath;
   }
 
-  const previous = offset - limit;
+  // offset comes from the URL and need not be a multiple of limit, so a
+  // partial step back still lands on the first page rather than disappearing.
+  const previous = Math.max(offset - limit, 0);
   const next = offset + limit;
 
   return (
@@ -65,7 +67,7 @@ function Pagination({
       aria-label="Pagination"
       className="flex items-center justify-between gap-4"
     >
-      <Step href={previous >= 0 ? href(previous) : null} rel="prev">
+      <Step href={offset > 0 ? href(previous) : null} rel="prev">
         Previous
       </Step>
 
