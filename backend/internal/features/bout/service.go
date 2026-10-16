@@ -344,11 +344,6 @@ func (s *boutService) DeleteBoutByID(ctx context.Context, input *BoutIDInput) (*
 	}
 
 	if err := s.repo.DeleteBoutByID(ctx, id); err != nil {
-		if errors.Is(err, errs.ErrConflict) {
-			return nil, errs.HumaError(fmt.Errorf("delete bout: %w",
-				errs.Public("an active bout cannot be deleted", err)))
-		}
-
 		return nil, errs.HumaError(fmt.Errorf("delete bout: %w", err))
 	}
 
