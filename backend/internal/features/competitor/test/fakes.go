@@ -9,9 +9,18 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/competitor"
+	"boutline/internal/features/tournament"
 
 	"github.com/google/uuid"
 )
+
+var TestTournamentID = uuid.MustParse("b0000000-0000-4000-8000-000000000001")
+
+func NewTestService(repo competitor.CompetitorRepository) competitor.CompetitorService {
+	return competitor.NewCompetitorService(repo, FakeTournamentLookup{
+		TestTournamentID: {ID: TestTournamentID},
+	})
+}
 
 var _ competitor.CompetitorRepository = (*FakeCompetitorRepository)(nil)
 
@@ -63,6 +72,10 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 	term := strings.ToLower(filter.Term)
 	matched := make([]competitor.Competitor, 0, len(f.Competitors))
 	for _, candidate := range f.Competitors {
+		if filter.TournamentID != nil &&
+			(candidate.TournamentID == nil || *candidate.TournamentID != *filter.TournamentID) {
+			continue
+		}
 		if filter.Rating != nil && candidate.Rating != *filter.Rating {
 			continue
 		}
@@ -105,6 +118,9 @@ func (f *FakeCompetitorRepository) ListCompetitorTeams(
 	for _, candidate := range f.Competitors {
 		if filter.TournamentID != nil &&
 			(candidate.TournamentID == nil || *candidate.TournamentID != *filter.TournamentID) {
+			continue
+		}
+		if candidate.Team == "" {
 			continue
 		}
 		if strings.Contains(strings.ToLower(candidate.Team), term) {
@@ -172,4 +188,19 @@ func (f *FakeCompetitorRepository) DeleteCompetitor(_ context.Context, id uuid.U
 	}
 	delete(f.Competitors, id)
 	return nil
+}
+
+var _ competitor.TournamentLookup = FakeTournamentLookup(nil)
+
+type FakeTournamentLookup map[uuid.UUID]tournament.Tournament
+
+func (f FakeTournamentLookup) GetTournamentByID(
+	_ context.Context,
+	id uuid.UUID,
+) (*tournament.Tournament, error) {
+	found, ok := f[id]
+	if !ok {
+		return nil, fmt.Errorf("select tournament %s: %w", id, errs.ErrNotFound)
+	}
+	return &found, nil
 }

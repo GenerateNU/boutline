@@ -1,17 +1,9 @@
-import Link from "next/link";
-
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/primitives/card";
+import { Pagination } from "@/components/primitives/pagination";
 import { Section } from "@/components/primitives/section";
-import { SearchForm } from "@/features/tournament/components/search-form";
-import { TournamentStatusBadge } from "@/features/tournament/components/tournament-status-badge";
-import { getTournaments } from "@/features/tournament/services/getTournaments";
+import { TournamentList } from "@/components/tournament-list";
+import { listTournaments } from "@/lib/tournaments";
 
-const PAGE_SIZE = 20;
+import { SearchForm } from "./_components/search-form";
 
 export default async function TournamentsPage({
   searchParams,
@@ -20,11 +12,7 @@ export default async function TournamentsPage({
   const search = typeof query.q === "string" ? query.q.trim() : "";
   const offset = Math.max(0, Number(query.offset) || 0);
 
-  const { data, total } = await getTournaments(PAGE_SIZE, offset, search);
-
-  const hasPrev = offset > 0;
-  const hasNext = offset + PAGE_SIZE < total;
-  const pageQuery = search ? `&q=${encodeURIComponent(search)}` : "";
+  const { data, total, limit } = await listTournaments({ search, offset });
 
   return (
     <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 py-10">
@@ -34,59 +22,19 @@ export default async function TournamentsPage({
           placeholder="Search tournaments"
           defaultValue={search}
         />
-
-        {data.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            {search
-              ? `No tournaments match "${search}".`
-              : "No tournaments yet."}
-          </p>
-        )}
-
-        <ul className="flex flex-col gap-3">
-          {data.map((tournament) => (
-            <li key={tournament.id}>
-              <Link href={`/tournaments/${tournament.id}`}>
-                <Card className="rounded-md p-4 transition-colors hover:bg-muted">
-                  <CardHeader>
-                    <CardTitle className="text-sm">
-                      {tournament.name}
-                    </CardTitle>
-                  </CardHeader>
-                  <div className="flex items-end justify-between">
-                    <CardDescription className="text-xs text-muted-foreground">
-                      City, Country
-                    </CardDescription>
-                    <TournamentStatusBadge status={tournament.status} />
-                  </div>
-                </Card>
-              </Link>
-            </li>
-          ))}
-        </ul>
-
-        <div className="flex justify-between">
-          {hasPrev ? (
-            <Link
-              href={`/tournaments?offset=${Math.max(offset - PAGE_SIZE, 0)}${pageQuery}`}
-              className="underline"
-            >
-              Previous
-            </Link>
-          ) : (
-            <span className="opacity-40">Previous</span>
-          )}
-          {hasNext ? (
-            <Link
-              href={`/tournaments?offset=${offset + PAGE_SIZE}${pageQuery}`}
-              className="underline"
-            >
-              Next
-            </Link>
-          ) : (
-            <span className="opacity-40">Next</span>
-          )}
-        </div>
+        <TournamentList
+          tournaments={data}
+          emptyMessage={
+            search ? `No tournaments match “${search}”.` : undefined
+          }
+        />
+        <Pagination
+          total={total}
+          limit={limit}
+          offset={offset}
+          basePath="/tournaments"
+          search={search}
+        />
       </Section>
     </div>
   );
