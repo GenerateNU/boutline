@@ -15,10 +15,22 @@ function mockFetch() {
 
 describe("listTournaments", () => {
   it.each([
-    { name: "no arguments", args: undefined, want: null },
-    { name: "the first page", args: { offset: 0 }, want: "0" },
-    { name: "a later page", args: { offset: 40 }, want: "40" },
-  ])("requests $name", async ({ args, want }) => {
+    { name: "no arguments", args: undefined, want: null, wantQuery: null },
+    { name: "the first page", args: { offset: 0 }, want: "0", wantQuery: null },
+    { name: "a later page", args: { offset: 40 }, want: "40", wantQuery: null },
+    {
+      name: "a search",
+      args: { search: "winter open" },
+      want: null,
+      wantQuery: "winter open",
+    },
+    {
+      name: "an empty search",
+      args: { search: "" },
+      want: null,
+      wantQuery: null,
+    },
+  ])("requests $name", async ({ args, want, wantQuery }) => {
     const fetchMock = mockFetch();
     await listTournaments(args);
 
@@ -26,5 +38,6 @@ describe("listTournaments", () => {
     expect(url.pathname).toBe("/api/v1/tournaments");
     expect(url.searchParams.get("limit")).toBe(String(PAGE_SIZE));
     expect(url.searchParams.get("offset")).toBe(want);
+    expect(url.searchParams.get("q")).toBe(wantQuery);
   });
 });

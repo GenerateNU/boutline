@@ -3,7 +3,7 @@ import { Section } from "@/components/primitives/section";
 import { listTeams } from "@/lib/competitors";
 
 import { MockCountry } from "../_components/mock-country";
-import { SearchForm } from "../_components/search-form";
+import { SearchForm } from "../../_components/search-form";
 
 export default async function ClubsTab({
   params,

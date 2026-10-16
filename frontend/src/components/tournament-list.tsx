@@ -10,9 +10,17 @@ const statusLabel: Record<Tournament["status"], string> = {
   end: "Past",
 };
 
-function TournamentList({ tournaments }: { tournaments: Tournament[] }) {
+type TournamentListProps = {
+  tournaments: Tournament[];
+  emptyMessage?: string;
+};
+
+function TournamentList({
+  tournaments,
+  emptyMessage = "No tournaments yet.",
+}: TournamentListProps) {
   if (tournaments.length === 0) {
-    return <p className="text-sm text-muted-foreground">No tournaments yet.</p>;
+    return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
   }
 
   // TODO(#107): replace with List/ListItem from vindema/lofi-components-4,

@@ -1,4 +1,4 @@
-# boutline's production stack on the shared droplet: Postgres, a one-shot
+# boutline's production stack on the shared droplet: Postgres, Redis, a one-shot
 # migration, and the backend -- the same shape as backend/docker-compose.yml.
 #
 # One of these per project, each in its own directory under /opt. Projects are
@@ -28,6 +28,9 @@ services:
       - backend.env
     environment:
       <<: *database
+      # The backend pings Redis at startup and exits if it can't, so without
+      # this it falls back to localhost and crash-loops behind a Caddy 502.
+      REDIS_HOST: redis
       # Reported by /healthcheck, which is how the deploy confirms the new
       # container, not the old one, is the one answering.
       APP_VERSION: ${APP_VERSION:?set APP_VERSION}
@@ -41,6 +44,8 @@ services:
       caddy.reverse_proxy: "{{upstreams 8000}}"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   # Run on its own by the deploy (`docker compose run --rm migrate`) before
@@ -75,6 +80,20 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d boutline"]
       interval: 2s
+      timeout: 3s
+      retries: 15
+
+  # A cache, so no volume: losing its contents on restart is fine. Internal
+  # only, like db.
+  redis:
+    image: redis:7.4.2-alpine
+    container_name: boutline-redis
+    restart: unless-stopped
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
       timeout: 3s
       retries: 15
 
