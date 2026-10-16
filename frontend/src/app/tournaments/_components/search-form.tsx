@@ -2,10 +2,11 @@
 
 import { Search, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useTransition } from "react";
+import { useTransition } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { Input } from "@/components/primitives/input";
+import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
 
 const debounceMs = 300;
 
@@ -29,11 +30,9 @@ function SearchForm({
   defaultValue = "",
 }: SearchFormProps) {
   const router = useRouter();
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [isPending, startTransition] = useTransition();
 
   function navigate(search: string) {
-    clearTimeout(timer.current);
     const query = search ? `?q=${encodeURIComponent(search)}` : "";
     // replace, not push: typing should not fill the history stack. Leaving
     // offset off puts a new search back on the first page.
@@ -41,6 +40,11 @@ function SearchForm({
       router.replace(`${action}${query}`, { scroll: false });
     });
   }
+
+  const [debouncedNavigate, cancelDebouncedNavigate] = useDebouncedCallback(
+    navigate,
+    debounceMs,
+  );
 
   return (
     <div className="flex items-center gap-2">
@@ -51,6 +55,7 @@ function SearchForm({
         aria-busy={isPending}
         onSubmit={(event) => {
           event.preventDefault();
+          cancelDebouncedNavigate();
           navigate(
             new FormData(event.currentTarget).get("q")?.toString().trim() ?? "",
           );
@@ -67,11 +72,7 @@ function SearchForm({
           type="search"
           placeholder={placeholder}
           defaultValue={defaultValue}
-          onChange={(event) => {
-            const search = event.target.value.trim();
-            clearTimeout(timer.current);
-            timer.current = setTimeout(() => navigate(search), debounceMs);
-          }}
+          onChange={(event) => debouncedNavigate(event.target.value.trim())}
           className="pl-9"
         />
       </form>
