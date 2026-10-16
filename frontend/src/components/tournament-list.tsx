@@ -23,10 +23,6 @@ function TournamentList({
     return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
   }
 
-  // TODO(#107): replace with List/ListItem from vindema/lofi-components-4,
-  // status Chip as `trailing`. ListItem wraps children in one truncating <p>,
-  // so the stacked name + date needs rethinking first, and these rows are
-  // links while ListItem is a plain <li>.
   return (
     <ul className="flex flex-col gap-3">
       {tournaments.map(({ id, name, status, start_time }) => (

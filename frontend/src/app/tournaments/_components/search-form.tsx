@@ -18,12 +18,6 @@ type SearchFormProps = {
 
 // A real GET form, so it still filters before hydration and without
 // JavaScript. Once hydrated, typing navigates on a debounce.
-//
-// TODO(#107): swap the markup below for the SearchBar primitive from
-// vindema/lofi-components-4. Keep the debounce and router.replace — SearchBar
-// is a <div role="search">, not a form, so it must stay wrapped in this
-// <form> or the no-JS fallback is lost. Its default leading icon is a
-// hamburger and its search icon sits on the right, so the lofi needs a look.
 function SearchForm({
   action,
   placeholder,
@@ -78,8 +72,7 @@ function SearchForm({
       </form>
 
       {/* Inert on purpose: the filter popover is a follow-up ticket. type is
-          "button" so it cannot submit the search form. PR #107 adds the Modal
-          and Menu primitives this will be built from. */}
+          "button" so it cannot submit the search form. */}
       <Button
         type="button"
         variant="outline"

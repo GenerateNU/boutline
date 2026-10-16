@@ -37,8 +37,6 @@ export default async function ClubsTab({
         </p>
       ) : (
         <table className="w-full border-collapse text-sm">
-          {/* TODO(#107): List/ListItem from vindema/lofi-components-4 has no
-              column headers, so it no longer fits this table. Revisit. */}
           <thead>
             <tr className="border-b border-foreground text-xs text-muted-foreground uppercase">
               <th scope="col" className="w-6 py-2 text-left font-medium">

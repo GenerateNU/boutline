@@ -37,10 +37,6 @@ export default async function FencersTab({
         </p>
       ) : (
         <table className="w-full border-collapse text-sm">
-          {/* TODO(#107): decide whether List/ListItem from
-              vindema/lofi-components-4 should replace this table. ListItem
-              offers only leading/children/trailing and has no column headers,
-              so Name/Club/Rating may not survive. */}
           <thead>
             <tr className="border-b border-foreground text-xs text-muted-foreground uppercase">
               <th scope="col" className="w-6 py-2 text-left font-medium">
