@@ -2,10 +2,10 @@ package scoring
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"boutline/internal/errs"
+	"boutline/internal/utils"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -36,11 +36,8 @@ func NewScoringRepository(db *gorm.DB) ScoringRepository {
 
 func (r *scoringRepository) CreateScoring(ctx context.Context, scoring *Scoring) error {
 	if err := r.db.WithContext(ctx).Create(scoring).Error; err != nil {
-		if errors.Is(err, gorm.ErrForeignKeyViolated) {
-			return fmt.Errorf("create scoring: %w",
-				errs.Public("created_by, competitor_id and bout_id must reference existing rows", errs.ErrInvalidInput))
-		}
-		return fmt.Errorf("create scoring: %w", err)
+		return utils.TranslateWriteError("create scoring", Scoring{}.TableName(),
+			"created_by, competitor_id and bout_id must reference existing rows", err)
 	}
 
 	return nil
@@ -51,10 +48,7 @@ func (r *scoringRepository) GetScoringByID(ctx context.Context, id int64) (*Scor
 
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&scoring).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("select scoring %d: %w", id, errs.ErrNotFound)
-		}
-		return nil, fmt.Errorf("select scoring %d: %w", id, err)
+		return nil, utils.TranslateReadError(fmt.Sprintf("select scoring %d", id), err)
 	}
 
 	return &scoring, nil
@@ -91,11 +85,8 @@ func (r *scoringRepository) UpdateScoring(ctx context.Context, scoring *Scoring)
 		Select("points", "competitor_id").
 		Updates(scoring)
 	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
-			return fmt.Errorf("update scoring %d: %w",
-				scoring.ID, errs.Public("competitor_id must reference an existing row", errs.ErrInvalidInput))
-		}
-		return fmt.Errorf("update scoring %d: %w", scoring.ID, result.Error)
+		return utils.TranslateWriteError(fmt.Sprintf("update scoring %d", scoring.ID), Scoring{}.TableName(),
+			"competitor_id must reference an existing row", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
@@ -115,11 +106,8 @@ func (r *scoringRepository) RevokeScoring(ctx context.Context, scoring *Scoring)
 		Select("revoked_at", "revoked_by").
 		Updates(scoring)
 	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
-			return fmt.Errorf("update scoring %d: %w",
-				scoring.ID, errs.Public("revoked_by must reference an existing row", errs.ErrInvalidInput))
-		}
-		return fmt.Errorf("update scoring %d: %w", scoring.ID, result.Error)
+		return utils.TranslateWriteError(fmt.Sprintf("update scoring %d", scoring.ID), Scoring{}.TableName(),
+			"revoked_by must reference an existing row", result.Error)
 	}
 
 	if result.RowsAffected == 0 {

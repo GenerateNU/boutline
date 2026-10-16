@@ -2,11 +2,11 @@ package user
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
+	"boutline/internal/utils"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -63,10 +63,7 @@ func (u UserUpdate) columns() map[string]any {
 
 func (r *userRepository) CreateUser(ctx context.Context, user *User) error {
 	if err := r.db.WithContext(ctx).Create(user).Error; err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return fmt.Errorf("create user: %w", errs.ErrDuplicate)
-		}
-		return fmt.Errorf("create user: %w", err)
+		return utils.TranslateWriteError("create user", User{}.TableName(), "", err)
 	}
 
 	return nil
@@ -77,10 +74,7 @@ func (r *userRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, 
 
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&user).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("select user %s: %w", id, errs.ErrNotFound)
-		}
-		return nil, fmt.Errorf("select user %s: %w", id, err)
+		return nil, utils.TranslateReadError(fmt.Sprintf("select user %s", id), err)
 	}
 
 	return &user, nil
@@ -89,10 +83,7 @@ func (r *userRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, 
 func (r *userRepository) UpdateUserByID(ctx context.Context, id uuid.UUID, update UserUpdate) error {
 	result := r.db.WithContext(ctx).Model(&User{}).Where("id = ?", id).Updates(update.columns())
 	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
-			return fmt.Errorf("update user %s: %w", id, errs.ErrDuplicate)
-		}
-		return fmt.Errorf("update user %s: %w", id, result.Error)
+		return utils.TranslateWriteError(fmt.Sprintf("update user %s", id), User{}.TableName(), "", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
@@ -129,10 +120,8 @@ func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) (
 func (r *userRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	result := r.db.WithContext(ctx).Delete(&User{}, "id = ?", id)
 	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
-			return fmt.Errorf("delete user %s: %w", id, errs.ErrConflict)
-		}
-		return fmt.Errorf("delete user %s: %w", id, result.Error)
+		return utils.TranslateDeleteError(fmt.Sprintf("delete user %s", id),
+			"a user who created a tournament or referees a bout cannot be deleted", result.Error)
 	}
 
 	if result.RowsAffected == 0 {

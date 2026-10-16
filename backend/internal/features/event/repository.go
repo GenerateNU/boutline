@@ -2,11 +2,11 @@ package event
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/utils"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -45,6 +45,8 @@ type EventListFilter struct {
 	Offset       int
 }
 
+const eventForeignKeyMessage = "tournament_id does not reference an existing record"
+
 type eventRepository struct {
 	db *gorm.DB
 }
@@ -55,7 +57,7 @@ func NewEventRepository(db *gorm.DB) EventRepository {
 
 func (r *eventRepository) CreateEvent(ctx context.Context, event *Event) error {
 	if err := r.db.WithContext(ctx).Create(event).Error; err != nil {
-		return translateEventWriteError("create event", err)
+		return utils.TranslateWriteError("create event", Event{}.TableName(), eventForeignKeyMessage, err)
 	}
 
 	return nil
@@ -66,10 +68,7 @@ func (r *eventRepository) GetEventByID(ctx context.Context, id uuid.UUID) (*Even
 
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&event).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("select event %s: %w", id, errs.ErrNotFound)
-		}
-		return nil, fmt.Errorf("select event %s: %w", id, err)
+		return nil, utils.TranslateReadError(fmt.Sprintf("select event %s", id), err)
 	}
 
 	return &event, nil
@@ -108,7 +107,8 @@ func (r *eventRepository) UpdateEventByID(ctx context.Context, id uuid.UUID, upd
 
 	result := query.Updates(update.columns())
 	if result.Error != nil {
-		return translateEventWriteError(fmt.Sprintf("update event %s", id), result.Error)
+		return utils.TranslateWriteError(fmt.Sprintf("update event %s", id), Event{}.TableName(),
+			eventForeignKeyMessage, result.Error)
 	}
 
 	if result.RowsAffected == 0 {
@@ -137,17 +137,4 @@ func (r *eventRepository) DeleteEventByID(ctx context.Context, id uuid.UUID) err
 	}
 
 	return nil
-}
-
-func translateEventWriteError(op string, err error) error {
-	if errors.Is(err, gorm.ErrForeignKeyViolated) {
-		return fmt.Errorf("%s: %w", op,
-			errs.Public("tournament_id does not reference an existing record", errs.ErrInvalidInput))
-	}
-	if errors.Is(err, gorm.ErrCheckConstraintViolated) {
-		return fmt.Errorf("%s: %w", op,
-			errs.Public("event fields violate a constraint", errs.ErrInvalidInput))
-	}
-
-	return fmt.Errorf("%s: %w", op, err)
 }

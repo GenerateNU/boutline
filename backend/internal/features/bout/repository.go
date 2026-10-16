@@ -2,11 +2,11 @@ package bout
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/utils"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -89,6 +89,8 @@ type BoutListFilter struct {
 	Offset       int
 }
 
+const boutForeignKeyMessage = "tournament_id, referee_id, or a competitor id does not reference an existing record"
+
 type boutRepository struct {
 	db *gorm.DB
 }
@@ -99,7 +101,7 @@ func NewBoutRepository(db *gorm.DB) BoutRepository {
 
 func (r *boutRepository) CreateBout(ctx context.Context, bout *Bout) error {
 	if err := r.db.WithContext(ctx).Create(bout).Error; err != nil {
-		return translateBoutWriteError("create bout", err)
+		return utils.TranslateWriteError("create bout", Bout{}.TableName(), boutForeignKeyMessage, err)
 	}
 
 	return nil
@@ -110,10 +112,7 @@ func (r *boutRepository) GetBoutByID(ctx context.Context, id uuid.UUID) (*Bout, 
 
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&bout).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("select bout %s: %w", id, errs.ErrNotFound)
-		}
-		return nil, fmt.Errorf("select bout %s: %w", id, err)
+		return nil, utils.TranslateReadError(fmt.Sprintf("select bout %s", id), err)
 	}
 
 	return &bout, nil
@@ -167,7 +166,8 @@ func (r *boutRepository) updateByID(
 
 	result := query.Updates(columns)
 	if result.Error != nil {
-		return translateBoutWriteError(fmt.Sprintf("update bout %s", id), result.Error)
+		return utils.TranslateWriteError(fmt.Sprintf("update bout %s", id), Bout{}.TableName(),
+			boutForeignKeyMessage, result.Error)
 	}
 
 	if result.RowsAffected == 0 {
@@ -185,28 +185,16 @@ func (r *boutRepository) DeleteBoutByID(ctx context.Context, id uuid.UUID) error
 		Where("id = ? AND status IN ?", id, BoutDeletableStatuses()).
 		Delete(&Bout{})
 	if result.Error != nil {
-		return fmt.Errorf("delete bout %s: %w", id, result.Error)
+		return utils.TranslateDeleteError(fmt.Sprintf("delete bout %s", id),
+			"a bout with scoring cannot be deleted", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
 		if _, err := r.GetBoutByID(ctx, id); err != nil {
 			return err
 		}
-		return fmt.Errorf("delete bout %s: %w", id, errs.ErrConflict)
+		return fmt.Errorf("delete bout %s: %w", id, errs.Public("an active bout cannot be deleted", errs.ErrConflict))
 	}
 
 	return nil
-}
-
-func translateBoutWriteError(op string, err error) error {
-	if errors.Is(err, gorm.ErrForeignKeyViolated) {
-		return fmt.Errorf("%s: %w", op,
-			errs.Public("tournament_id, referee_id, or a competitor id does not reference an existing record", errs.ErrInvalidInput))
-	}
-	if errors.Is(err, gorm.ErrCheckConstraintViolated) {
-		return fmt.Errorf("%s: %w", op,
-			errs.Public("bout fields violate a constraint", errs.ErrInvalidInput))
-	}
-
-	return fmt.Errorf("%s: %w", op, err)
 }
