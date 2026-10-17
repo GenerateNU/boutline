@@ -32,11 +32,29 @@ const user = {
   updatedAt: "2026-10-17T00:00:00Z",
 };
 
+function formOf(fields: Record<string, string>) {
+  const form = new FormData();
+  for (const [name, value] of Object.entries(fields)) {
+    form.set(name, value);
+  }
+  return form;
+}
+
+const credentials = formOf({ email: "ada@example.com", password: "hunter2" });
+
 function respond(status: number, body: unknown) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
 describe("auth actions", () => {
+  // Next's dev server prints each Server Action's arguments; a FormData prints
+  // as {}, which is what keeps the password out of the terminal.
+  it("passes credentials in a form whose logged form hides the password", () => {
+    const { formatArgs } = jest.requireActual("next/dist/server/dev/server-action-logger.js");
+
+    expect(formatArgs([credentials])).toBe("{}");
+  });
+
   const fetchMock = jest.fn();
   let store: ReturnType<typeof fakeCookieStore>;
 
@@ -51,20 +69,27 @@ describe("auth actions", () => {
   });
 
   it.each([
-    { name: "login", call: () => login("ada@example.com", "hunter2"), path: "/api/v1/auth/login" },
+    {
+      name: "login",
+      call: () => login(credentials),
+      path: "/api/v1/auth/login",
+      wantBody: { email: "ada@example.com", password: "hunter2" },
+    },
     {
       name: "signup",
       call: () =>
-        signup({ email: "ada@example.com", password: "hunter2", firstName: "Ada", lastName: "Lovelace" }),
+        signup(formOf({ email: "ada@example.com", password: "hunter2", firstName: "Ada", lastName: "Lovelace" })),
       path: "/api/v1/auth/signup",
+      wantBody: { email: "ada@example.com", password: "hunter2", firstName: "Ada", lastName: "Lovelace" },
     },
-  ])("$name stores the token in an httpOnly session cookie", async ({ call, path }) => {
+  ])("$name stores the token in an httpOnly session cookie", async ({ call, path, wantBody }) => {
     fetchMock.mockResolvedValue(respond(200, { token: "jwt-abc", user }));
 
     const result = await call();
 
     expect(result).toEqual({ ok: true, user });
     expect(new URL(fetchMock.mock.calls[0][0]).pathname).toBe(path);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual(wantBody);
     await expect(getSessionToken()).resolves.toBe("jwt-abc");
     expect(store.jar.get(SESSION_COOKIE)?.options).toMatchObject({
       httpOnly: true,
@@ -96,13 +121,13 @@ describe("auth actions", () => {
   ])("login reports $name without starting a session", async ({ response, want }) => {
     fetchMock.mockResolvedValue(response);
 
-    await expect(login("ada@example.com", "nope")).resolves.toEqual({ ok: false, error: want });
+    await expect(login(formOf({ email: "ada@example.com", password: "nope" }))).resolves.toEqual({ ok: false, error: want });
     await expect(getSessionToken()).resolves.toBeUndefined();
   });
 
   it("logout ends the session", async () => {
     fetchMock.mockResolvedValue(respond(200, { token: "jwt-abc", user }));
-    await login("ada@example.com", "hunter2");
+    await login(credentials);
 
     await logout();
 

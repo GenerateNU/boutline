@@ -1,11 +1,10 @@
 "use server";
 
-import type { AuthResponse, AuthResult, SignupFields } from "@/features/auth/types/auth";
+import type { AuthResponse, AuthResult } from "@/features/auth/types/auth";
 import { clearSessionToken, setSessionToken } from "@/features/auth/services/session";
 import { problemMessage } from "@/services/api-request";
 
-// Server Actions run Node-side, where the /api rewrite does not apply, so they
-// call the backend directly like getTournaments does.
+
 const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 
 async function authenticate(path: "login" | "signup", body: object): Promise<AuthResult> {
@@ -31,12 +30,28 @@ async function authenticate(path: "login" | "signup", body: object): Promise<Aut
   return { ok: true, user };
 }
 
-export async function login(email: string, password: string): Promise<AuthResult> {
-  return authenticate("login", { email, password });
+function formField(form: FormData, name: string): string {
+  const value = form.get(name);
+  return typeof value === "string" ? value : "";
 }
 
-export async function signup(fields: SignupFields): Promise<AuthResult> {
-  return authenticate("signup", fields);
+// These take FormData rather than plain arguments because Next's dev server
+// logs every Server Action call with its arguments, and FormData logs as {},
+// so the password never reaches the terminal.
+export async function login(form: FormData): Promise<AuthResult> {
+  return authenticate("login", {
+    email: formField(form, "email"),
+    password: formField(form, "password"),
+  });
+}
+
+export async function signup(form: FormData): Promise<AuthResult> {
+  return authenticate("signup", {
+    email: formField(form, "email"),
+    password: formField(form, "password"),
+    firstName: formField(form, "firstName"),
+    lastName: formField(form, "lastName"),
+  });
 }
 
 export async function logout() {
