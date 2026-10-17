@@ -5,6 +5,7 @@ import (
 
 	"boutline/internal/config"
 	"boutline/internal/errs"
+	"boutline/internal/features/user"
 	"boutline/internal/server/middlewares"
 	"boutline/internal/server/routers"
 	"boutline/internal/types"
@@ -32,6 +33,11 @@ func CreateApp(cfg *config.Configuration, db *gorm.DB, redisClient *redis.Client
 	humaConfig.DocsRenderer = huma.DocsRendererSwaggerUI
 
 	api := humafiber.NewV2(app, humaConfig)
+
+	// Huma copies the middleware chain onto each operation as it registers, so
+	// this must come before SetUpRoutes or no route would be protected.
+	tokens := user.NewUserTokenManager(cfg.JWTSecret, user.UserTokenTTL)
+	api.UseMiddleware(middlewares.NewAuthMiddleware(api, tokens))
 
 	routers.SetUpRoutes(app, types.RouteParams{
 		API:       api,

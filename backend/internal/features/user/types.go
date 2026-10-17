@@ -34,7 +34,7 @@ type UserOutput struct {
 	Body UserResponse
 }
 
-type UserCreateBody struct {
+type UserSignupBody struct {
 	Email string `json:"email" format:"email" minLength:"1" maxLength:"120" doc:"User email"`
 	// Password max length is 72 because that's what bcrypt accepts
 	Password  string `json:"password" format:"password" minLength:"1" maxLength:"72" doc:"User password"`
@@ -42,8 +42,26 @@ type UserCreateBody struct {
 	LastName  string `json:"lastName" minLength:"1" maxLength:"120" doc:"User last name"`
 }
 
-type UserCreateInput struct {
-	Body UserCreateBody
+type UserSignupInput struct {
+	Body UserSignupBody
+}
+
+type UserLoginBody struct {
+	Email    string `json:"email" format:"email" minLength:"1" maxLength:"120" doc:"User email"`
+	Password string `json:"password" format:"password" minLength:"1" maxLength:"72" doc:"User password"`
+}
+
+type UserLoginInput struct {
+	Body UserLoginBody
+}
+
+type UserAuthResponse struct {
+	Token string       `json:"token" doc:"Bearer token for the Authorization header"`
+	User  UserResponse `json:"user"`
+}
+
+type UserAuthOutput struct {
+	Body UserAuthResponse
 }
 
 // TODO: user auth (password omitted for now... do we even want to allow password updates?)

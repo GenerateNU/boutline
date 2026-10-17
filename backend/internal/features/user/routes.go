@@ -8,21 +8,33 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
-const userBasePath = "/api/v1/users"
+const (
+	userBasePath = "/api/v1/users"
+	authBasePath = "/api/v1/auth"
+)
 
 func RegisterUserRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterUserService(api, NewUserService(NewUserRepository(params.DB)))
+	tokens := NewUserTokenManager(params.Config.JWTSecret, UserTokenTTL)
+	RegisterUserService(api, NewUserService(NewUserRepository(params.DB), tokens))
 }
 
 func RegisterUserService(api huma.API, service UserService) {
 	huma.Register(api, huma.Operation{
-		OperationID:   "createUser",
+		OperationID:   "signup",
 		Method:        http.MethodPost,
-		Path:          userBasePath,
-		Summary:       "Create a user",
-		Tags:          []string{"Users"},
+		Path:          authBasePath + "/signup",
+		Summary:       "Create a user and issue a bearer token",
+		Tags:          []string{"Auth"},
 		DefaultStatus: http.StatusCreated,
-	}, service.CreateUser)
+	}, service.Signup)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "login",
+		Method:      http.MethodPost,
+		Path:        authBasePath + "/login",
+		Summary:     "Check an email and password and issue a bearer token",
+		Tags:        []string{"Auth"},
+	}, service.Login)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listUsers",
