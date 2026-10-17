@@ -59,4 +59,13 @@ func RegisterEventService(api huma.API, service EventService) {
 		Tags:          []string{"Events"},
 		DefaultStatus: http.StatusNoContent,
 	}, service.DeleteEventByID)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "previewCompetitorsImport",
+		Method:      http.MethodPost,
+		Path:        eventBasePath + "/{id}/competitors/import",
+		Summary:     "Preview an import of competitors from a CSV",
+		Description: "Reports each row as valid, invalid, or a duplicate. Nothing is saved.",
+		Tags:        []string{"Events"},
+	}, service.PreviewCompetitorsImport)
 }
