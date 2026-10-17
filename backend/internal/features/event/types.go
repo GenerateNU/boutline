@@ -1,6 +1,10 @@
 package event
 
-import "time"
+import (
+	"time"
+
+	"github.com/danielgtaylor/huma/v2"
+)
 
 type EventResponse struct {
 	ID           string      `json:"id" format:"uuid"`
@@ -77,4 +81,42 @@ type EventListBody struct {
 
 type EventListOutput struct {
 	Body EventListBody
+}
+
+type CompetitorImportInput struct {
+	ID      string `path:"id" format:"uuid" doc:"Event ID"`
+	RawBody huma.MultipartFormFiles[struct {
+		File huma.FormFile `form:"file" required:"true"`
+	}]
+}
+
+type ImportedCompetitor struct {
+	FirstName    string `json:"first_name"`
+	LastName     string `json:"last_name"`
+	MemberNumber string `json:"member_number"`
+	Club         string `json:"club" doc:"Empty means unattached"`
+	Division     string `json:"division"`
+	Country      string `json:"country"`
+	Birthdate    string `json:"birthdate"`
+	Gender       string `json:"gender"`
+	Rating       string `json:"rating"`
+	RatingYear   int    `json:"rating_year,omitempty"`
+	Event        string `json:"event"`
+}
+
+type CompetitorImportRow struct {
+	Line        int                `json:"line"`
+	Status      string             `json:"status" enum:"valid,invalid,duplicate"`
+	Competitor  ImportedCompetitor `json:"competitor"`
+	Errors      []string           `json:"errors"`
+	DuplicateOf int                `json:"duplicate_of,omitempty"`
+}
+
+type CompetitorImportBody struct {
+	Rows           []CompetitorImportRow `json:"rows"`
+	UnknownColumns []string              `json:"unknown_columns"`
+}
+
+type CompetitorImportOutput struct {
+	Body CompetitorImportBody
 }
