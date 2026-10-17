@@ -11,6 +11,7 @@ import (
 	"boutline/internal/features/tournament"
 	"boutline/internal/utils"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
 )
 
@@ -21,7 +22,8 @@ const (
 )
 
 type UserService interface {
-	CreateUser(ctx context.Context, input *UserCreateInput) (*UserOutput, error)
+	Signup(ctx context.Context, input *UserSignupInput) (*UserAuthOutput, error)
+	Login(ctx context.Context, input *UserLoginInput) (*UserAuthOutput, error)
 	GetUserByID(ctx context.Context, input *UserIDInput) (*UserOutput, error)
 	ListUsers(ctx context.Context, input *UserListInput) (*UserListOutput, error)
 	UpdateUserByID(ctx context.Context, input *UserUpdateInput) (*UserOutput, error)
@@ -30,14 +32,15 @@ type UserService interface {
 }
 
 type userService struct {
-	repo UserRepository
+	repo   UserRepository
+	tokens *UserTokenManager
 }
 
-func NewUserService(repo UserRepository) UserService {
-	return &userService{repo: repo}
+func NewUserService(repo UserRepository, tokens *UserTokenManager) UserService {
+	return &userService{repo: repo, tokens: tokens}
 }
 
-func (s *userService) CreateUser(ctx context.Context, input *UserCreateInput) (*UserOutput, error) {
+func (s *userService) Signup(ctx context.Context, input *UserSignupInput) (*UserAuthOutput, error) {
 	firstName := strings.TrimSpace(input.Body.FirstName)
 	lastName := strings.TrimSpace(input.Body.LastName)
 	if firstName == "" {
@@ -63,16 +66,47 @@ func (s *userService) CreateUser(ctx context.Context, input *UserCreateInput) (*
 		FirstName: firstName,
 		LastName:  lastName,
 	}
-	if err := s.repo.CreateUser(ctx, user); err != nil {
+	if err := s.repo.SignupUser(ctx, user); err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
-			return nil, errs.HumaError(fmt.Errorf("create user: %w",
+			return nil, errs.HumaError(fmt.Errorf("signup: %w",
 				errs.Public(fmt.Sprintf("a user with email %q already exists", email), err)))
 		}
 
-		return nil, errs.HumaError(fmt.Errorf("create user: %w", err))
+		return nil, errs.HumaError(fmt.Errorf("signup: %w", err))
 	}
 
-	return &UserOutput{Body: newUserResponse(*user)}, nil
+	return s.authOutput(*user)
+}
+
+func (s *userService) Login(ctx context.Context, input *UserLoginInput) (*UserAuthOutput, error) {
+	var found *User
+	if email, err := parseUserEmail(input.Body.Email); err == nil {
+		found, err = s.repo.LoginUser(ctx, email)
+		if err != nil && !errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.HumaError(fmt.Errorf("login: %w", err))
+		}
+	}
+
+	// Compare even when the email is unknown so the response time doesn't
+	// reveal which emails have accounts.
+	hash := dummyPasswordHash
+	if found != nil {
+		hash = found.Password
+	}
+	if !passwordMatches(hash, input.Body.Password) || found == nil {
+		return nil, huma.Error401Unauthorized("email or password is incorrect")
+	}
+
+	return s.authOutput(*found)
+}
+
+func (s *userService) authOutput(user User) (*UserAuthOutput, error) {
+	token, err := s.tokens.IssueToken(user.ID)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("issue token: %w", err))
+	}
+
+	return &UserAuthOutput{Body: UserAuthResponse{Token: token, User: newUserResponse(user)}}, nil
 }
 
 func (s *userService) GetUserByID(ctx context.Context, input *UserIDInput) (*UserOutput, error) {

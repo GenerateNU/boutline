@@ -110,8 +110,9 @@ run inserts anything.
 
 ## Configuration
 
-Every value has a default, so the server runs with no environment set. Override
-by exporting these variables:
+Every value except `JWT_SECRET` has a default, and in dev that one falls back
+to a built-in secret, so the server runs locally with no environment set.
+Override by exporting these variables:
 
 | Variable              | Default    | Purpose                             |
 | --------------------- | ---------- | ----------------------------------- |
@@ -140,8 +141,34 @@ by exporting these variables:
 | `REDIS_PASSWORD` | (empty)     | Password, if the server requires one  |
 | `REDIS_DB`       | `0`         | Logical database index                |
 
+| Variable     | Default                | Purpose                              |
+| ------------ | ---------------------- | ------------------------------------ |
+| `JWT_SECRET` | built-in in `dev` only | Signs auth tokens, at least 32 bytes |
+
+Outside `APP_ENVIRONMENT=dev` the server refuses to start without
+`JWT_SECRET`. Generate one per environment with `openssl rand -hex 32`.
+
 Config is loaded and validated once at startup in `internal/config`; nothing
 below `main` reads the environment directly.
+
+## Auth
+
+`POST /api/v1/auth/signup` and `POST /api/v1/auth/login` return
+`{token, user}`. The token is an HS256 JWT signed with `JWT_SECRET`, valid for
+24 hours, and is sent back as `Authorization: Bearer <token>`. A wrong password
+and an unknown email get the same 401, `email or password is incorrect`.
+
+The auth middleware (`internal/server/middlewares/auth.go`) decides per
+operation:
+
+- `GET` and `HEAD` are public; every other method needs a token, so a new write
+  route is protected even if nobody marks it.
+- An operation's `Security` overrides that: `user.UserBearerSecurity()` protects
+  a read (`listUsers`, `getUserByID`, which return emails), and an empty
+  `[]map[string][]string{}` opens a write (`signup`, `login`).
+
+A handler behind a token reads the caller with `user.UserIDFrom(ctx)`. Nothing
+checks ownership yet, so any signed-in user can change any resource.
 
 ## Layout
 
