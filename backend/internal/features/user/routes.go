@@ -26,6 +26,7 @@ func RegisterUserService(api huma.API, service UserService) {
 		Summary:       "Create a user and issue a bearer token",
 		Tags:          []string{"Auth"},
 		DefaultStatus: http.StatusCreated,
+		Security:      []map[string][]string{},
 	}, service.Signup)
 
 	huma.Register(api, huma.Operation{
@@ -34,6 +35,7 @@ func RegisterUserService(api huma.API, service UserService) {
 		Path:        authBasePath + "/login",
 		Summary:     "Check an email and password and issue a bearer token",
 		Tags:        []string{"Auth"},
+		Security:    []map[string][]string{},
 	}, service.Login)
 
 	huma.Register(api, huma.Operation{
@@ -42,6 +44,7 @@ func RegisterUserService(api huma.API, service UserService) {
 		Path:        userBasePath,
 		Summary:     "List users, optionally fuzzy-matched by name",
 		Tags:        []string{"Users"},
+		Security:    UserBearerSecurity(),
 	}, service.ListUsers)
 
 	huma.Register(api, huma.Operation{
@@ -50,6 +53,7 @@ func RegisterUserService(api huma.API, service UserService) {
 		Path:        userBasePath + "/{id}",
 		Summary:     "Get a user by ID",
 		Tags:        []string{"Users"},
+		Security:    UserBearerSecurity(),
 	}, service.GetUserByID)
 
 	huma.Register(api, huma.Operation{

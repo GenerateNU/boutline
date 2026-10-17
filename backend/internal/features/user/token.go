@@ -9,7 +9,17 @@ import (
 	"github.com/google/uuid"
 )
 
-const UserTokenTTL = 24 * time.Hour
+const (
+	UserTokenTTL = 24 * time.Hour
+	// UserBearerScheme is the OpenAPI security scheme server.CreateApp registers.
+	UserBearerScheme = "bearer"
+)
+
+// UserBearerSecurity marks a read operation as needing a bearer token; writes
+// need one already unless they opt out with an empty Security.
+func UserBearerSecurity() []map[string][]string {
+	return []map[string][]string{{UserBearerScheme: {}}}
+}
 
 // UserTokenManager issues the bearer tokens signup and login hand out, and
 // verifies the ones the auth middleware receives.

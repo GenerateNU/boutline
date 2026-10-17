@@ -30,7 +30,8 @@ func bearerHeaders(t *testing.T, tokens *user.UserTokenManager, userID uuid.UUID
 	return map[string]string{"Authorization": "Bearer " + token}
 }
 
-// Covers the auth middleware's public/protected split and the signup/login
+// Covers the auth middleware's public/protected split (reads public, writes
+// protected, Security overriding either) and the signup/login
 // validation paths over the shared app, which has no database — so only
 // cases that never need to reach one. The DB-gated cases below exercise an
 // actual login.
@@ -100,6 +101,34 @@ func TestAuthMiddleware(t *testing.T) {
 			route:      "/api/v1/users/not-a-uuid",
 			method:     testkit.GET,
 			headers:    valid,
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "reads are public by default",
+			route:      "/api/v1/tournaments/not-a-uuid",
+			method:     testkit.GET,
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "a public read ignores a bad token instead of rejecting it",
+			route:      "/api/v1/tournaments/not-a-uuid",
+			method:     testkit.GET,
+			headers:    map[string]string{"Authorization": "Bearer garbage"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "writes are protected by default",
+			route:      "/api/v1/tournaments/not-a-uuid",
+			method:     testkit.PATCH,
+			body:       map[string]any{},
+			wantStatus: http.StatusUnauthorized,
+		},
+		{
+			name:       "a protected write with a valid token reaches validation",
+			route:      "/api/v1/tournaments/not-a-uuid",
+			method:     testkit.PATCH,
+			headers:    valid,
+			body:       map[string]any{},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{

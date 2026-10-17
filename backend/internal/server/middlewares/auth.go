@@ -14,13 +14,12 @@ import (
 
 var errMissingBearerToken = errors.New("missing bearer token")
 
-// NewAuthMiddleware requires a valid bearer token on every operation except
-// the public ones below, and puts the verified user ID on the request context
+// NewAuthMiddleware requires a valid bearer token on every operation
+// requiresAuth selects, and puts the verified user ID on the request context
 // for handlers to read with user.UserIDFrom.
 func NewAuthMiddleware(api huma.API, tokens *user.UserTokenManager) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
-		switch ctx.Operation().OperationID {
-		case "healthcheck", "signup", "login":
+		if !requiresAuth(ctx.Operation()) {
 			next(ctx)
 			return
 		}
@@ -38,6 +37,18 @@ func NewAuthMiddleware(api huma.API, tokens *user.UserTokenManager) func(huma.Co
 
 		next(huma.WithContext(ctx, user.WithUserID(ctx.Context(), userID)))
 	}
+}
+
+// requiresAuth makes reads public and writes protected, so a write route
+// someone forgets to mark is still locked. An operation overrides that by
+// setting Security: user.UserBearerSecurity() to protect a read, or an empty
+// slice to open a write such as login.
+func requiresAuth(op *huma.Operation) bool {
+	if op.Security != nil {
+		return len(op.Security) > 0
+	}
+
+	return op.Method != http.MethodGet && op.Method != http.MethodHead
 }
 
 func authenticate(ctx huma.Context, tokens *user.UserTokenManager) (uuid.UUID, error) {

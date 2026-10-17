@@ -31,6 +31,9 @@ func CreateApp(cfg *config.Configuration, db *gorm.DB, redisClient *redis.Client
 	// /openapi.json and the docs UI at /docs from the operations they register.
 	humaConfig := huma.DefaultConfig(cfg.App.Name, cfg.App.Version)
 	humaConfig.DocsRenderer = huma.DocsRendererSwaggerUI
+	humaConfig.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+		user.UserBearerScheme: {Type: "http", Scheme: "bearer", BearerFormat: "JWT"},
+	}
 
 	api := humafiber.NewV2(app, humaConfig)
 
