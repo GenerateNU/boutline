@@ -191,10 +191,10 @@ func competitorUpdateFrom(body CompetitorUpdateBody) (*CompetitorUpdate, error) 
 		update.RatingYear = body.RatingYear
 	}
 	// For these, an empty string is allowed: it clears the value.
-	update.PrimaryClub = trimmed(body.PrimaryClub)
-	update.SecondaryClub = trimmed(body.SecondaryClub)
-	update.MemberNumber = trimmed(body.MemberNumber)
-	update.Team = trimmed(body.Team)
+	update.PrimaryClub = body.PrimaryClub
+	update.SecondaryClub = body.SecondaryClub
+	update.MemberNumber = body.MemberNumber
+	update.Team = body.Team
 
 	if update == (CompetitorUpdate{}) {
 		return nil, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
@@ -300,20 +300,10 @@ func validateRatingYear(year *int16) error {
 	return nil
 }
 
-// Trims a value; treats blank as "not provided" (nil)
+// Treats an empty value as "not provided" (nil)
 func optionalText(raw string) *string {
-	value := strings.TrimSpace(raw)
-	if value == "" {
+	if raw == "" {
 		return nil
 	}
-	return &value
-}
-
-// Trims a patch value; keeps "" for clearing a field
-func trimmed(raw *string) *string {
-	if raw == nil {
-		return nil
-	}
-	value := strings.TrimSpace(*raw)
-	return &value
+	return &raw
 }

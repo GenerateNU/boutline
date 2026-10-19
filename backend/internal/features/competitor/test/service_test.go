@@ -173,8 +173,8 @@ func TestCreateCompetitorStoresNewFields(t *testing.T) {
 	t.Parallel()
 	body := withCreate(func(b *competitor.CompetitorCreateBody) {
 		b.RatingYear = ptr(int16(24))
-		b.PrimaryClub = "  NU Fencing "
-		b.SecondaryClub = "   " // blank means "no secondary club"
+		b.PrimaryClub = "NU Fencing"
+		b.SecondaryClub = "" // empty means "no secondary club"
 		b.MemberNumber = "100123"
 	})
 
