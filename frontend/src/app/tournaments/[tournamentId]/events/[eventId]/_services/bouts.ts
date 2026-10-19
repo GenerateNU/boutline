@@ -88,7 +88,7 @@ export const bouts: Bout[] = [
   bout("e0000000-0000-4000-8000-000000000014", "pool", "Winter Classic · Pool 1", LEILA, MARCUS),
   bout("e0000000-0000-4000-8000-000000000015", "tableau", "Semifinal", MAYA, KENJI),
   bout("e0000000-0000-4000-8000-000000000016", "tableau", "Semifinal", HANA, SOFIA),
-  // bout("e0000000-0000-4000-8000-000000000017", "tableau", "Final", MAYA, HANA),
+  bout("e0000000-0000-4000-8000-000000000017", "tableau", "Final", MAYA, HANA),
 ];
 
 export function findBout(id: string) {

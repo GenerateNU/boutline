@@ -21,7 +21,7 @@ function toTableauFencer(fencer: SeededFencer): TableauFencer {
   if (seed === undefined) {
     throw new Error(`No placeholder seed for ${fencer.name}`);
   }
-  // The placeholder fencers have no ids yet, so the name stands in for one.
+  // Name stands in for the fencer's ID, since the seed data has no IDs
   return { id: fencer.name, name: fencer.name, club: fencer.club, seed };
 }
 
@@ -34,7 +34,6 @@ export async function getTableau(eventId: string): Promise<Tableau> {
     return { rounds: [] };
   }
 
-  // Every round is kept, even one with no bouts yet, so the bracket keeps its shape.
   const rounds: TableauRound[] = roundOrder.map(({ round, name, boutName }) => ({
     id: round,
     name,

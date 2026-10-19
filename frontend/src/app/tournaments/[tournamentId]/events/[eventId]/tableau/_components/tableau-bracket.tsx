@@ -5,6 +5,7 @@ import * as React from "react";
 import type { TableauRound } from "../../_types/tableau";
 import { BracketMatch } from "./bracket-match";
 import { matchesQuery } from "./tableau-utils";
+import { TbaBout } from "./tba-bout";
 
 const SLOT_HEIGHT = 140;
 
@@ -19,7 +20,6 @@ function TableauBracket({ rounds, focusedRoundId, query, boutBasePath }: Tableau
   const columnRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const hasMounted = React.useRef(false);
 
-  // Scroll the chosen round's column into view, but not on first load.
   React.useEffect(() => {
     if (!hasMounted.current) {
       hasMounted.current = true;
@@ -60,16 +60,18 @@ function TableauBracket({ rounds, focusedRoundId, query, boutBasePath }: Tableau
                 <div key={groupIndex} className="relative flex flex-1 flex-col">
                   {group.map((bout, slotIndex) => (
                     <div key={slotIndex} className="flex flex-1 items-center">
-                      {bout && (
+                      {bout ? (
                         <BracketMatch
                           bout={bout}
                           href={`${boutBasePath}/${bout.id}`}
                           dimmed={!matchesQuery(bout, query)}
                         />
+                      ) : (
+                        <TbaBout dimmed={query.trim() !== ""} />
                       )}
                     </div>
                   ))}
-                  {group.length === 2 && group.some(Boolean) && (
+                  {group.length === 2 && (
                     <>
                       {/* ⊐ shape joining the centers of the two bouts */}
                       <span
