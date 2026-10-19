@@ -94,9 +94,9 @@ func competitorFromCreate(body CompetitorCreateBody) (*Competitor, error) {
 		Division:      division,
 		Rating:        rating,
 		RatingYear:    body.RatingYear,
-		PrimaryClub:   optionalText(body.PrimaryClub),
-		SecondaryClub: optionalText(body.SecondaryClub),
-		MemberNumber:  optionalText(body.MemberNumber),
+		PrimaryClub:   body.PrimaryClub,
+		SecondaryClub: body.SecondaryClub,
+		MemberNumber:  body.MemberNumber,
 		Team:          strings.TrimSpace(body.Team),
 	}, nil
 }
