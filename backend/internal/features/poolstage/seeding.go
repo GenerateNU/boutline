@@ -22,15 +22,6 @@ type SeedEntry struct {
 	Club         string
 }
 
-var ratingStrength = []competitor.Rating{
-	competitor.RatingA,
-	competitor.RatingB,
-	competitor.RatingC,
-	competitor.RatingD,
-	competitor.RatingE,
-	competitor.RatingU,
-}
-
 // GenerateSeed splits entries into the fewest pools of at most maxPerPool,
 // dealt out in a snake by rating so every pool is equally strong, then moves
 // clubmates apart without letting anyone leave their snake pass. Each pool
@@ -43,9 +34,14 @@ func GenerateSeed(entries []SeedEntry, maxPerPool int, rng *rand.Rand) ([][]uuid
 	if len(entries) < 2 {
 		return nil, errs.Public("at least 2 competitors are needed to generate pools", errs.ErrInvalidInput)
 	}
+	for _, entry := range entries {
+		if !entry.Rating.IsValid() {
+			return nil, errs.Public("every competitor needs a rating of A, B, C, D, E or U", errs.ErrInvalidInput)
+		}
+	}
 
 	seeded := rankEntries(entries, rng)
-	poolCount := (len(seeded) + maxPerPool - 1) / maxPerPool
+	poolCount := 1 + (len(seeded)-1)/maxPerPool
 	pools := make([][]SeedEntry, poolCount)
 
 	for start := 0; start < len(seeded); start += poolCount {
@@ -69,11 +65,17 @@ func rankEntries(entries []SeedEntry, rng *rand.Rand) []SeedEntry {
 	rng.Shuffle(len(ranked), func(i, j int) { ranked[i], ranked[j] = ranked[j], ranked[i] })
 	slices.SortStableFunc(ranked, func(a, b SeedEntry) int {
 		return cmp.Or(
-			cmp.Compare(slices.Index(ratingStrength, a.Rating), slices.Index(ratingStrength, b.Rating)),
+			cmp.Compare(ratingRank(a.Rating), ratingRank(b.Rating)),
 			cmp.Compare(b.RatingYear, a.RatingYear),
 		)
 	})
 	return ranked
+}
+
+// ratingRank puts A first and U (unrated) last; ratings are validated before
+// ranking, so an unknown letter never reaches here.
+func ratingRank(r competitor.Rating) int {
+	return strings.Index("ABCDEU", string(r))
 }
 
 // placeTier gives each fencer of one snake pass a different pool. Starting from

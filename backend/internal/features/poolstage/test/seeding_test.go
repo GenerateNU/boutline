@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"math"
 	"math/rand/v2"
 	"slices"
 	"testing"
@@ -147,6 +148,7 @@ func TestGenerateSeedPoolSizes(t *testing.T) {
 		{name: "forward partial tier fills the first pools", count: 20, maxPerPool: 7, wantSizes: []int{7, 7, 6}},
 		{name: "reversed partial tier fills the last pools", count: 11, maxPerPool: 4, wantSizes: []int{3, 4, 4}},
 		{name: "smallest possible pool", count: 2, maxPerPool: 2, wantSizes: []int{2}},
+		{name: "huge max does not overflow the pool count", count: 2, maxPerPool: math.MaxInt, wantSizes: []int{2}},
 	}
 
 	for _, tc := range tests {
@@ -184,11 +186,29 @@ func TestGenerateSeedRejects(t *testing.T) {
 		name       string
 		count      int
 		maxPerPool int
+		rating     competitor.Rating
 		wantDetail string
 	}{
-		{name: "pool max below two", count: 4, maxPerPool: 1, wantDetail: "max_competitor_per_pool must be at least 2"},
-		{name: "a single competitor", count: 1, maxPerPool: 6, wantDetail: "at least 2 competitors are needed to generate pools"},
-		{name: "no competitors", count: 0, maxPerPool: 6, wantDetail: "at least 2 competitors are needed to generate pools"},
+		{
+			name: "pool max below two", count: 4, maxPerPool: 1, rating: competitor.RatingU,
+			wantDetail: "max_competitor_per_pool must be at least 2",
+		},
+		{
+			name: "a single competitor", count: 1, maxPerPool: 6, rating: competitor.RatingU,
+			wantDetail: "at least 2 competitors are needed to generate pools",
+		},
+		{
+			name: "no competitors", count: 0, maxPerPool: 6, rating: competitor.RatingU,
+			wantDetail: "at least 2 competitors are needed to generate pools",
+		},
+		{
+			name: "empty rating", count: 3, maxPerPool: 6, rating: "",
+			wantDetail: "every competitor needs a rating of A, B, C, D, E or U",
+		},
+		{
+			name: "unknown rating", count: 3, maxPerPool: 6, rating: "Z",
+			wantDetail: "every competitor needs a rating of A, B, C, D, E or U",
+		},
 	}
 
 	for _, tc := range tests {
@@ -197,7 +217,7 @@ func TestGenerateSeedRejects(t *testing.T) {
 
 			entries := make([]poolstage.SeedEntry, tc.count)
 			for i := range entries {
-				entries[i] = poolstage.SeedEntry{CompetitorID: uuid.New(), Rating: competitor.RatingU}
+				entries[i] = poolstage.SeedEntry{CompetitorID: uuid.New(), Rating: tc.rating}
 			}
 
 			pools, err := poolstage.GenerateSeed(entries, tc.maxPerPool, rand.New(rand.NewPCG(1, 2)))
