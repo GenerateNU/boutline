@@ -8,7 +8,7 @@ import (
 )
 
 func parseRating(raw string) (Rating, error) {
-	rating := Rating(raw)
+	rating := Rating(strings.TrimSpace(raw))
 	if !rating.IsValid() {
 		return "", errs.Public("rating must be one of A, B, C, D, E, or U", errs.ErrInvalidInput)
 	}
