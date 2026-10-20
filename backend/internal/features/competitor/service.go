@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"boutline/internal/errs"
 	"boutline/internal/utils"
@@ -61,9 +60,9 @@ func competitorFromCreate(body CompetitorCreateBody) (*Competitor, error) {
 		return nil, errs.Public("last name must not be blank", errs.ErrInvalidInput)
 	}
 
-	gender, err := parseGender(body.Gender)
-	if err != nil {
-		return nil, err
+	gender := Gender(body.Gender)
+	if !gender.IsValid() {
+		return nil, errs.Public("gender must be either F, M, or O", errs.ErrInvalidInput)
 	}
 	birthdate, err := parseBirthdate(body.Birthdate)
 	if err != nil {
@@ -157,9 +156,9 @@ func competitorUpdateFrom(body CompetitorUpdateBody) (*CompetitorUpdate, error) 
 		update.LastName = &lastName
 	}
 	if body.Gender != nil {
-		gender, err := parseGender(*body.Gender)
-		if err != nil {
-			return nil, err
+		gender := Gender(*body.Gender)
+		if !gender.IsValid() {
+			return nil, errs.Public("gender must be either F, M, or O", errs.ErrInvalidInput)
 		}
 		update.Gender = &gender
 	}
@@ -264,46 +263,4 @@ func (s *competitorService) DeleteCompetitor(
 		return nil, errs.HumaError(fmt.Errorf("delete competitor: %w", err))
 	}
 	return nil, nil
-}
-
-func parseRating(raw string) (Rating, error) {
-	rating := Rating(strings.TrimSpace(raw))
-	if !rating.IsValid() {
-		return "", errs.Public("rating must be one of A, B, C, D, E, or U", errs.ErrInvalidInput)
-	}
-	return rating, nil
-}
-
-func parseGender(raw string) (Gender, error) {
-	gender := Gender(strings.TrimSpace(raw))
-	if !gender.IsValid() {
-		return "", errs.Public("gender must be either F, M, or O", errs.ErrInvalidInput)
-	}
-	return gender, nil
-}
-
-func parseBirthdate(raw string) (time.Time, error) {
-	birthdate, err := time.Parse(birthdateLayout, strings.TrimSpace(raw))
-	if err != nil {
-		return time.Time{}, errs.Public("birthdate must be a date in YYYY-MM-DD format", errs.ErrInvalidInput)
-	}
-	if birthdate.After(time.Now()) {
-		return time.Time{}, errs.Public("birthdate must not be in the future", errs.ErrInvalidInput)
-	}
-	return birthdate, nil
-}
-
-func validateRatingYear(year *int16) error {
-	if year != nil && (*year < 0 || *year > 99) {
-		return errs.Public("rating year must be between 0 and 99", errs.ErrInvalidInput)
-	}
-	return nil
-}
-
-// Treats an empty value as "not provided" (nil)
-func optionalText(raw string) *string {
-	if raw == "" {
-		return nil
-	}
-	return &raw
 }
