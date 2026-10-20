@@ -6,9 +6,6 @@ import (
 	"boutline/internal/errs"
 )
 
-// Input checks shared by create, update, and list. Huma's tags catch these over
-// HTTP; these cover callers that don't come through a request.
-
 func parseRating(raw string) (Rating, error) {
 	rating := Rating(raw)
 	if !rating.IsValid() {
