@@ -61,9 +61,9 @@ type CompetitorCreateBody struct {
 	Rating     string `json:"rating,omitempty" enum:"A,B,C,D,E,U" doc:"Rating; defaults to U (unrated)"`
 	RatingYear *int16 `json:"ratingYear,omitempty" minimum:"0" maximum:"99" doc:"Year the rating was earned"`
 
-	PrimaryClub   *string `json:"primaryClub,omitempty" minLength:"1" maxLength:"120" doc:"Primary club; omit if none"`
-	SecondaryClub *string `json:"secondaryClub,omitempty" minLength:"1" maxLength:"120" doc:"Secondary club; omit if none"`
-	MemberNumber  *string `json:"memberNumber,omitempty" minLength:"1" maxLength:"64" doc:"Member number; unique within an event"`
+	PrimaryClub   string `json:"primaryClub,omitempty" maxLength:"120" doc:"Primary club; omit if none"`
+	SecondaryClub string `json:"secondaryClub,omitempty" maxLength:"120" doc:"Secondary club; omit if none"`
+	MemberNumber  string `json:"memberNumber,omitempty" maxLength:"64" doc:"Member number; unique within an event"`
 
 	Team string `json:"team,omitempty" maxLength:"120" doc:"Deprecated: use primaryClub"`
 }

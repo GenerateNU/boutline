@@ -173,8 +173,9 @@ func TestCreateCompetitorStoresNewFields(t *testing.T) {
 	t.Parallel()
 	body := withCreate(func(b *competitor.CompetitorCreateBody) {
 		b.RatingYear = ptr(int16(24))
-		b.PrimaryClub = ptr("NU Fencing")
-		b.MemberNumber = ptr("100123")
+		b.PrimaryClub = "  NU Fencing "
+		b.SecondaryClub = "   " // blank means "no secondary club"
+		b.MemberNumber = "100123"
 	})
 
 	out, err := competitor.NewCompetitorService(NewFakeCompetitorRepository()).
@@ -201,7 +202,7 @@ func TestCreateCompetitorMemberNumber(t *testing.T) {
 		repo := NewFakeCompetitorRepository(existing)
 		_, err := competitor.NewCompetitorService(repo).CreateCompetitor(t.Context(),
 			&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
-				b.MemberNumber = ptr("100123")
+				b.MemberNumber = "100123"
 			})})
 		code, detail := apiError(t, err)
 		assert.Equal(t, http.StatusConflict, code)
@@ -215,7 +216,7 @@ func TestCreateCompetitorMemberNumber(t *testing.T) {
 		_, err := competitor.NewCompetitorService(repo).CreateCompetitor(t.Context(),
 			&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
 				b.EventID = uuid.New().String()
-				b.MemberNumber = ptr("100123")
+				b.MemberNumber = "100123"
 			})})
 		require.NoError(t, err)
 		assert.Len(t, repo.Competitors, 2)

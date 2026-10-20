@@ -1,6 +1,7 @@
 package competitor
 
 import (
+	"strings"
 	"time"
 
 	"boutline/internal/errs"
@@ -30,4 +31,22 @@ func validateRatingYear(year *int16) error {
 		return errs.Public("rating year must be between 0 and 99", errs.ErrInvalidInput)
 	}
 	return nil
+}
+
+// Treats blank as "not provided" (nil)
+func optionalText(raw string) *string {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return nil
+	}
+	return &value
+}
+
+// "" is kept; It clears the field)
+func trimmed(raw *string) *string {
+	if raw == nil {
+		return nil
+	}
+	value := strings.TrimSpace(*raw)
+	return &value
 }

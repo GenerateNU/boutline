@@ -93,9 +93,9 @@ func competitorFromCreate(body CompetitorCreateBody) (*Competitor, error) {
 		Division:      division,
 		Rating:        rating,
 		RatingYear:    body.RatingYear,
-		PrimaryClub:   body.PrimaryClub,
-		SecondaryClub: body.SecondaryClub,
-		MemberNumber:  body.MemberNumber,
+		PrimaryClub:   optionalText(body.PrimaryClub),
+		SecondaryClub: optionalText(body.SecondaryClub),
+		MemberNumber:  optionalText(body.MemberNumber),
 		Team:          strings.TrimSpace(body.Team),
 	}, nil
 }
@@ -190,10 +190,10 @@ func competitorUpdateFrom(body CompetitorUpdateBody) (*CompetitorUpdate, error) 
 		update.RatingYear = body.RatingYear
 	}
 	// For these, an empty string is allowed: it clears the value.
-	update.PrimaryClub = body.PrimaryClub
-	update.SecondaryClub = body.SecondaryClub
-	update.MemberNumber = body.MemberNumber
-	update.Team = body.Team
+	update.PrimaryClub = trimmed(body.PrimaryClub)
+	update.SecondaryClub = trimmed(body.SecondaryClub)
+	update.MemberNumber = trimmed(body.MemberNumber)
+	update.Team = trimmed(body.Team)
 
 	if update == (CompetitorUpdate{}) {
 		return nil, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
