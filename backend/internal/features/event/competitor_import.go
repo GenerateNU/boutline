@@ -71,6 +71,10 @@ func parseCompetitorImport(file huma.FormFile) (*CompetitorImportBody, error) {
 	for i, name := range header {
 		name = strings.TrimSpace(name)
 		if column, ok := importColumns[normalizeImportHeader(name)]; ok {
+			if first, taken := columns[column]; taken {
+				return nil, errs.Public(fmt.Sprintf("columns %q and %q are both %s",
+					strings.TrimSpace(header[first]), name, column), errs.ErrInvalidInput)
+			}
 			columns[column] = i
 		} else if name != "" {
 			unknown = append(unknown, name)
@@ -80,7 +84,7 @@ func parseCompetitorImport(file huma.FormFile) (*CompetitorImportBody, error) {
 		return nil, errs.Public("header row has no recognized columns", errs.ErrInvalidInput)
 	}
 
-	rows, err := readImportRows(reader, columns)
+	rows, err := readImportRows(reader, columns, len(header))
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +100,7 @@ func normalizeImportHeader(name string) string {
 	}, name)
 }
 
-func readImportRows(reader *csv.Reader, columns map[string]int) ([]CompetitorImportRow, error) {
+func readImportRows(reader *csv.Reader, columns map[string]int, width int) ([]CompetitorImportRow, error) {
 	rows := []CompetitorImportRow{}
 	firstLineByMember := map[string]int{}
 	for {
@@ -121,7 +125,7 @@ func readImportRows(reader *csv.Reader, columns map[string]int) ([]CompetitorImp
 			return nil, fmt.Errorf("read csv row: %w", err)
 		case strings.TrimSpace(strings.Join(record, "")) != "":
 			line, _ := reader.FieldPos(0)
-			row := readImportRow(line, columns, record)
+			row := readImportRow(line, columns, width, record)
 			if member := row.Competitor.MemberNumber; member != "" {
 				if first, seen := firstLineByMember[member]; seen {
 					row.DuplicateOf = first
@@ -137,7 +141,7 @@ func readImportRows(reader *csv.Reader, columns map[string]int) ([]CompetitorImp
 	}
 }
 
-func readImportRow(line int, columns map[string]int, record []string) CompetitorImportRow {
+func readImportRow(line int, columns map[string]int, width int, record []string) CompetitorImportRow {
 	value := func(column string) string {
 		if i, ok := columns[column]; ok && i < len(record) {
 			return strings.TrimSpace(record[i])
@@ -159,6 +163,10 @@ func readImportRow(line int, columns map[string]int, record []string) Competitor
 
 	if competitor.MemberNumber == "" && (competitor.FirstName == "" || competitor.LastName == "") {
 		row.Errors = append(row.Errors, "needs a first and last name, or a member number")
+	}
+	// Short rows and trailing empty cells lose nothing, so only extra data is an error.
+	if len(record) > width && strings.TrimSpace(strings.Join(record[width:], "")) != "" {
+		row.Errors = append(row.Errors, fmt.Sprintf("has %d cells but the header has %d", len(record), width))
 	}
 	var err error
 	if competitor.Rating, competitor.RatingYear, err = parseImportRating(value("rating")); err != nil {

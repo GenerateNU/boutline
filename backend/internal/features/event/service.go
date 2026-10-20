@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"boutline/internal/errs"
@@ -188,6 +189,13 @@ func (s *eventService) PreviewCompetitorsImport(
 	ctx context.Context,
 	input *CompetitorImportInput,
 ) (*CompetitorImportOutput, error) {
+	file := input.RawBody.Data().File
+	defer func() {
+		if err := file.Close(); err != nil {
+			slog.WarnContext(ctx, "close competitor import upload", "err", err)
+		}
+	}()
+
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
@@ -196,7 +204,7 @@ func (s *eventService) PreviewCompetitorsImport(
 		return nil, errs.HumaError(fmt.Errorf("get event: %w", err))
 	}
 
-	body, err := parseCompetitorImport(input.RawBody.Data().File)
+	body, err := parseCompetitorImport(file)
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("parse competitor import: %w", err))
 	}
