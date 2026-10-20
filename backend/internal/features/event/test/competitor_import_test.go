@@ -139,6 +139,8 @@ func TestPreviewCompetitorImportRows(t *testing.T) {
 		{name: "impossible date", file: header + "Lee,Kiefer,1,U,2011-13-01\n", wantLines: []int{2}, wantStatus: []string{"invalid"}, errContains: "birthdate"},
 		{name: "member number alone is enough", file: header + ",,1,U,\n", wantLines: []int{2}, wantStatus: []string{"valid"}},
 		{name: "short row", file: header + "Lee,Kiefer\n", wantLines: []int{2}, wantStatus: []string{"valid"}},
+		{name: "surplus cell with data", file: header + "Lee,Kiefer,1,U,,extra\n", wantLines: []int{2}, wantStatus: []string{"invalid"}, errContains: "has 6 cells but the header has 5"},
+		{name: "surplus empty cells", file: header + "Lee,Kiefer,1,U,,,\n", wantLines: []int{2}, wantStatus: []string{"valid"}},
 		{
 			name:        "malformed row does not stop the file; lines count blank and quoted newlines",
 			file:        "First Name,Last Name\nLee,\"Kie\"fer\n\n\"Multi\nLine\",Kiefer\nAlex,Massialas\n",
@@ -191,6 +193,8 @@ func TestPreviewCompetitorImportRejects(t *testing.T) {
 		{name: "binary content", filename: "r.csv", content: "PK\x03\x04\xff", wantStatus: http.StatusBadRequest},
 		{name: "empty file", filename: "r.csv", wantStatus: http.StatusBadRequest},
 		{name: "no recognized headers", filename: "r.csv", content: "foo,bar\n1,2\n", wantStatus: http.StatusBadRequest},
+		{name: "two headers for the same field", filename: "r.csv", content: "First Name,Last Name,Member #,Member Number\nLee,Kiefer,1,\n", wantStatus: http.StatusBadRequest},
+		{name: "same header twice in different case", filename: "r.csv", content: "First Name,first name,Last Name\nLee,Lee,Kiefer\n", wantStatus: http.StatusBadRequest},
 		{name: "too many rows", filename: "r.csv", content: tooManyRows, wantStatus: http.StatusBadRequest},
 		{name: "too large", filename: "r.csv", content: strings.Repeat("a", event.CompetitorImportMaxBytes+1), wantStatus: http.StatusBadRequest},
 		{name: "no file", wantStatus: http.StatusUnprocessableEntity},
