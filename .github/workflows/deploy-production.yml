@@ -117,6 +117,25 @@ jobs:
              && docker compose --env-file backend.env up -d --pull always \
              && docker image prune -f"
 
+          # `up -d` succeeds as soon as the container starts, and with
+          # `restart: unless-stopped` a crash-looping backend still reads as
+          # running, so check the restart count too and surface its own error
+          # instead of the 502 Caddy reports for it. A container failing this
+          # is under 30s old, so its logs are startup output plus at most a few
+          # request lines (method and path only): safe for this public log.
+          ssh "$DROPLET" bash -s <<'EOF'
+          for _ in $(seq 1 15); do
+            sleep 2
+            state=$(docker inspect -f '{{.State.Running}} {{.RestartCount}}' boutline-backend)
+            if [ "$state" = "true 0" ]; then
+              continue
+            fi
+            echo "::error::boutline-backend did not stay up (running, restarts: ${state}). Last lines:"
+            docker logs --tail 50 boutline-backend 2>&1
+            exit 1
+          done
+          EOF
+
       # Matching the version, not just a 200, proves the NEW container is the
       # one answering -- the old one stays healthy until it is replaced. The
       # frontend must never go live against a backend that failed to start.
@@ -135,6 +154,23 @@ jobs:
           done
           echo "::error::https://${API_DOMAIN}/healthcheck never reported version ${DEPLOY_SHA}"
           exit 1
+
+      # Asking the backend directly over `edge` separates a backend that never
+      # came up from Caddy failing to route or provision TLS for it. No
+      # container logs here: this repo's Actions logs are public, and once the
+      # backend has served traffic its logs and Postgres's can hold user data.
+      - name: Show droplet diagnostics
+        if: failure()
+        env:
+          DROPLET: ${{ vars.DROPLET_USER }}@${{ vars.DROPLET_HOST }}
+        run: |
+          ssh "$DROPLET" bash -s <<'EOF'
+          docker inspect -f '{{.Name}} {{.State.Status}} restarts={{.RestartCount}} exit={{.State.ExitCode}} {{.State.Error}}' \
+            boutline-backend boutline-db boutline-redis
+          echo "::group::/healthcheck from inside the edge network, bypassing Caddy"
+          docker run --rm --network edge curlimages/curl:8.11.1 -sS -m 5 http://boutline-backend:8000/healthcheck
+          echo "::endgroup::"
+          EOF
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2

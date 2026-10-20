@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"boutline/internal/features/event"
+	"boutline/internal/features/tournament"
 
 	"github.com/google/uuid"
 )
@@ -41,14 +42,17 @@ func (g Gender) IsValid() bool {
 }
 
 type Competitor struct {
-	ID        uuid.UUID    `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	EventID   uuid.UUID    `gorm:"type:uuid;not null;index;uniqueIndex:idx_competitors_event_member_number"`
-	Event     *event.Event `gorm:"foreignKey:EventID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
-	FirstName string       `gorm:"type:text;not null"`
-	LastName  string       `gorm:"type:text;not null"`
-	Gender    Gender       `gorm:"type:text;not null;check:chk_competitors_gender,gender IN ('F','M','O')"`
-	Birthdate time.Time    `gorm:"type:date;not null"`
-	Division  string       `gorm:"type:text;not null"`
+	ID      uuid.UUID    `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	EventID uuid.UUID    `gorm:"type:uuid;not null;index;uniqueIndex:idx_competitors_event_member_number"`
+	Event   *event.Event `gorm:"foreignKey:EventID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	// Nullable for now: not every competitor is tied to a tournament yet.
+	TournamentID *uuid.UUID             `gorm:"type:uuid;index"`
+	Tournament   *tournament.Tournament `gorm:"foreignKey:TournamentID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	FirstName    string                 `gorm:"type:text;not null"`
+	LastName     string                 `gorm:"type:text;not null"`
+	Gender       Gender                 `gorm:"type:text;not null;check:chk_competitors_gender,gender IN ('F','M','O')"`
+	Birthdate    time.Time              `gorm:"type:date;not null"`
+	Division     string                 `gorm:"type:text;not null"`
 	// Rating defaults to U (unrated) for competitors with no classification on file.
 	Rating        Rating  `gorm:"type:text;not null;default:U;check:chk_competitors_rating,rating IN ('A','B','C','D','E','U')"`
 	RatingYear    *int16  `gorm:"type:smallint;check:chk_competitors_rating_year,rating_year BETWEEN 0 AND 99"`

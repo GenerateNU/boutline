@@ -8,6 +8,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -25,6 +26,14 @@ import (
 
 	"ariga.io/atlas-provider-gorm/gormschema"
 )
+
+// fuzzySearchSchema covers the extension and expression indexes gorm has no
+// way to declare (see migrations/20261014020658_enable_fuzzy_search.sql).
+// Appending it here keeps atlas's desired state in sync with that hand-written
+// migration, so `atlas migrate diff` doesn't try to undo it.
+//
+//go:embed fuzzy_search.sql
+var fuzzySearchSchema string
 
 func main() {
 	if err := run(); err != nil {
@@ -50,7 +59,7 @@ func run() error {
 		return fmt.Errorf("load gorm schema: %w", err)
 	}
 
-	if _, err := io.WriteString(os.Stdout, stmts); err != nil {
+	if _, err := io.WriteString(os.Stdout, stmts+fuzzySearchSchema); err != nil {
 		return fmt.Errorf("write schema: %w", err)
 	}
 

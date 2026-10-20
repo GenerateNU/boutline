@@ -7,10 +7,15 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
+	"boutline/internal/utils"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+// userNameTrigramExpr must match the migration's indexed expression exactly,
+// or the GIN trigram index on users won't be used.
+const userNameTrigramExpr = "first_name || ' ' || last_name"
 
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *User) error
@@ -36,6 +41,7 @@ type UserUpdate struct {
 
 type UserListFilter struct {
 	// TODO: other filter criteria
+	Term   string
 	Limit  int
 	Offset int
 }
@@ -103,19 +109,20 @@ func (r *userRepository) UpdateUserByID(ctx context.Context, id uuid.UUID, updat
 }
 
 func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error) {
-	query := r.db.WithContext(ctx).Model(&User{})
 	// TODO: apply other filters once decided
+	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&User{}), userNameTrigramExpr, filter.Term)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count users: %w", err)
 	}
 
+	query = utils.TrigramOrder(query, userNameTrigramExpr, filter.Term, "created_at DESC", "id")
+
 	users := make([]User, 0, filter.Limit)
 	// Avoid pulling password ever, makes it harder to leak
 	err := query.
 		Omit("password").
-		Order("created_at DESC").
 		Limit(filter.Limit).
 		Offset(filter.Offset).
 		Find(&users).Error
