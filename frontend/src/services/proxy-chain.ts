@@ -2,10 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // requestHeaders is shared by every step, so one step's additions (an auth
 // header, a trace ID) are all forwarded together once the chain finishes.
-export type ProxyContext = {
+export interface ProxyContext {
   request: NextRequest;
   requestHeaders: Headers;
-};
+}
 
 // A step returns a response to end the chain (a redirect, a rewrite, an
 // error) or nothing to hand the request to the next step.

@@ -13,9 +13,9 @@ import { login, logout, signup } from "@/features/auth/services/auth-actions";
 
 type Mode = "login" | "signup";
 
-type AuthFormProps = {
+interface AuthFormProps {
   redirectTo: string;
-};
+}
 
 function AuthForm({ redirectTo }: AuthFormProps) {
   const router = useRouter();

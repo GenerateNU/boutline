@@ -8,7 +8,10 @@ import { SESSION_COOKIE, getSessionToken } from "@/features/auth/services/sessio
 
 jest.mock("next/headers", () => ({ cookies: jest.fn() }));
 
-type StoredCookie = { value: string; options: Record<string, unknown> };
+interface StoredCookie {
+  value: string;
+  options: Record<string, unknown>;
+}
 
 // Stands in for Next's request cookie store so a test reads back what an
 // action stored, the way the next request would.
