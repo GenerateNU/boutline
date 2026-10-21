@@ -145,7 +145,7 @@ func (r *userRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	result := r.db.WithContext(ctx).Delete(&User{}, "id = ?", id)
 	if result.Error != nil {
 		return utils.TranslateDeleteError(fmt.Sprintf("delete user %s", id),
-			"a user who created a tournament or referees a bout cannot be deleted", result.Error)
+			"a user who created a tournament, referees a bout, or created or revoked a score cannot be deleted", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
