@@ -122,8 +122,8 @@ describe("scoringPhase", () => {
     { name: "won", status: "active", tally: result("a"), pending: [], phase: { kind: "confirming", winnerId: "a" } },
     { name: "won and ending", status: "active", tally: result("a"), pending: [end], phase: { kind: "over", winnerId: "a" } },
     { name: "ending", status: "active", tally: result(null), pending: [end], phase: { kind: "over", winnerId: null } },
-    { name: "ended", status: "end", tally: result(null), pending: [], phase: { kind: "over", winnerId: null } },
-    { name: "ended with a winner", status: "end", tally: result("a"), pending: [], phase: { kind: "over", winnerId: "a" } },
+    { name: "ended", status: "ended", tally: result(null), pending: [], phase: { kind: "over", winnerId: null } },
+    { name: "ended with a winner", status: "ended", tally: result("a"), pending: [], phase: { kind: "over", winnerId: "a" } },
   ])("$name -> $phase.kind", ({ status, tally, pending, phase }) => {
     expect(scoringPhase(status, tally, pending)).toEqual(phase);
   });

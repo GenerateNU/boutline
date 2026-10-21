@@ -10,7 +10,7 @@ const badgeVariants = cva(
       status: {
         pending: "bg-amber-600 text-white",
         active: "bg-emerald-600 text-white",
-        end: "bg-muted text-muted-foreground",
+        ended: "bg-muted text-muted-foreground",
       },
     },
   },
@@ -19,7 +19,7 @@ const badgeVariants = cva(
 const statusLabels: Record<TournamentStatus, string> = {
   pending: "Upcoming",
   active: "Active",
-  end: "Ended",
+  ended: "Ended",
 };
 
 interface TournamentStatusBadgeProps extends React.ComponentProps<"span"> {

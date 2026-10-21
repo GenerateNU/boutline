@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"boutline/internal/features/pool"
+	"boutline/internal/features/poolstage"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
@@ -159,4 +160,26 @@ func TestDeleteEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, api.Get(base).Code)
 	assert.Equal(t, http.StatusNotFound, api.Delete(base).Code)
+}
+func TestLifecycleEndpoints(t *testing.T) {
+	t.Parallel()
+
+	stage := seededPoolStage()
+	stage.Status = poolstage.PoolStageStatusActive
+	stored := seededPool(stage.ID)
+	stored.RefereeID = ptr(uuid.New())
+	api := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup(stage))
+	base := "/api/v1/pools/" + stored.ID.String()
+
+	started := api.Post(base + "/start")
+	require.Equal(t, http.StatusOK, started.Code, "body: %s", started.Body)
+	startedBody := decodeBody(t, started.Body.Bytes())
+	assert.NotNil(t, startedBody["started_at"])
+	assert.Nil(t, startedBody["completed_at"])
+
+	ended := api.Post(base + "/end")
+	require.Equal(t, http.StatusOK, ended.Code, "body: %s", ended.Body)
+	endedBody := decodeBody(t, ended.Body.Bytes())
+	assert.Equal(t, startedBody["started_at"], endedBody["started_at"])
+	assert.NotNil(t, endedBody["completed_at"])
 }

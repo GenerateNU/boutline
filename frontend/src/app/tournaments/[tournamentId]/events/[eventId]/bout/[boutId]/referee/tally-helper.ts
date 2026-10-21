@@ -74,7 +74,7 @@ export function scoringPhase(
   pending: ScoringAction[],
 ): ScoringPhase {
   const isEnding = pending.some((action) => action.kind === "end");
-  const isOver = status === "end" || isEnding;
+  const isOver = status === "ended" || isEnding;
   const isUpcoming = status === "upcoming";
   if (isOver) {
     return { kind: "over", winnerId };

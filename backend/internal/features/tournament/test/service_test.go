@@ -520,7 +520,7 @@ func TestUpdateTournamentByID(t *testing.T) {
 		},
 		{
 			name:       "refuses to edit a tournament that has ended",
-			seedStatus: tournament.TournamentStatusEnd,
+			seedStatus: tournament.TournamentStatusEnded,
 			body:       tournament.TournamentUpdateBody{Name: ptr("too late")},
 			wantCode:   http.StatusConflict,
 			wantDetail: "tournament has ended and can no longer be edited",
@@ -590,7 +590,7 @@ func TestStartTournament(t *testing.T) {
 		},
 		{
 			name:       "refuses a tournament that has ended",
-			seedStatus: tournament.TournamentStatusEnd,
+			seedStatus: tournament.TournamentStatusEnded,
 			wantCode:   http.StatusConflict,
 			wantDetail: "only a pending tournament can be started",
 		},
@@ -644,7 +644,7 @@ func TestCompleteTournament(t *testing.T) {
 		},
 		{
 			name:       "refuses a tournament that has already ended",
-			seedStatus: tournament.TournamentStatusEnd,
+			seedStatus: tournament.TournamentStatusEnded,
 			wantCode:   http.StatusConflict,
 			wantDetail: "only an active tournament can be completed",
 		},
@@ -670,7 +670,7 @@ func TestCompleteTournament(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, tournament.TournamentStatusEnd, out.Body.Status)
+			assert.Equal(t, tournament.TournamentStatusEnded, out.Body.Status)
 			require.NotNil(t, out.Body.CompletedAt)
 			assert.NotNil(t, repo.Tournaments[stored.ID].CompletedAt)
 		})
