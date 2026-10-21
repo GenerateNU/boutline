@@ -1,5 +1,5 @@
 export type TournamentVisibility = "private" | "public";
-export type TournamentStatus = "pending" | "active" | "end";
+export type TournamentStatus = "pending" | "active" | "ended";
 
 export type Tournament = {
   id: string;
