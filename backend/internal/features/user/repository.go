@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
@@ -93,9 +94,10 @@ func (r *userRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, 
 	return &user, nil
 }
 
-// LoginUser expects email already normalised (lowercased) by the caller.
 func (r *userRepository) LoginUser(ctx context.Context, email string) (*User, error) {
 	var user User
+	// all emails are normalized
+	email = strings.ToLower(strings.TrimSpace(email))
 
 	err := r.db.WithContext(ctx).
 		Select("id, email, password, first_name, last_name, created_at, updated_at").

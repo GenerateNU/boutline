@@ -77,6 +77,7 @@ func (f *FakeUserRepository) LoginUser(_ context.Context, email string) (*user.U
 		return nil, f.Err
 	}
 
+	email = strings.ToLower(strings.TrimSpace(email))
 	for _, candidate := range f.Users {
 		if candidate.Email == email {
 			found := candidate
