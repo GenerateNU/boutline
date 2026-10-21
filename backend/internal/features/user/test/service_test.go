@@ -31,19 +31,19 @@ func apiError(t *testing.T, err error) (int, string) {
 	return model.Status, model.Detail
 }
 
-func createInput(email, firstName, lastName string) *user.UserCreateInput {
-	return &user.UserCreateInput{
-		Body: user.UserCreateBody{Email: email, Password: "hunter2", FirstName: firstName, LastName: lastName},
+func createInput(email, firstName, lastName string) *user.UserSignupInput {
+	return &user.UserSignupInput{
+		Body: user.UserSignupBody{Email: email, Password: "hunter2", FirstName: firstName, LastName: lastName},
 	}
 }
 
-func TestCreateUser(t *testing.T) {
+func TestSignup(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name          string
 		seed          []user.User
-		input         *user.UserCreateInput
+		input         *user.UserSignupInput
 		wantEmail     string
 		wantFirstName string
 		wantCode      int
@@ -86,8 +86,8 @@ func TestCreateUser(t *testing.T) {
 			// Huma's maxLength:"72" rejects this over HTTP; the check still has
 			// to exist for a caller that does not come through a request.
 			name: "rejects a password over bcrypt's 72 byte limit",
-			input: &user.UserCreateInput{
-				Body: user.UserCreateBody{
+			input: &user.UserSignupInput{
+				Body: user.UserSignupBody{
 					Email: "new@example.com", Password: strings.Repeat("a", 73),
 					FirstName: "Ada", LastName: "Lovelace",
 				},
@@ -102,7 +102,7 @@ func TestCreateUser(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakeUserRepository(tt.seed...)
-			out, err := user.NewUserService(repo).CreateUser(t.Context(), tt.input)
+			out, err := user.NewUserService(repo, newTestTokens()).Signup(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -114,16 +114,81 @@ func TestCreateUser(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantEmail, out.Body.Email)
-			assert.Equal(t, tt.wantFirstName, out.Body.FirstName)
-			assert.NotEmpty(t, out.Body.ID)
+			assert.Equal(t, tt.wantEmail, out.Body.User.Email)
+			assert.Equal(t, tt.wantFirstName, out.Body.User.FirstName)
 			assert.Len(t, repo.Users, len(tt.seed)+1)
 
-			id, err := uuid.Parse(out.Body.ID)
+			id, err := uuid.Parse(out.Body.User.ID)
 			require.NoError(t, err)
+			tokenID, err := newTestTokens().ParseToken(out.Body.Token)
+			require.NoError(t, err)
+			assert.Equal(t, id, tokenID)
 			stored := repo.Users[id]
 			assert.NotEqual(t, tt.input.Body.Password, stored.Password)
 			assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(stored.Password), []byte(tt.input.Body.Password)))
+		})
+	}
+}
+
+func TestLogin(t *testing.T) {
+	t.Parallel()
+
+	hash, err := bcrypt.GenerateFromPassword([]byte("hunter2"), bcrypt.MinCost)
+	require.NoError(t, err)
+	stored := seeded("ada@example.com", "Ada", "Lovelace")
+	stored.Password = string(hash)
+
+	tests := []struct {
+		name       string
+		email      string
+		password   string
+		repoErr    error
+		wantCode   int
+		wantDetail string
+	}{
+		{name: "issues a token for the right password", email: "ada@example.com", password: "hunter2"},
+		{name: "matches the email case-insensitively", email: "ADA@Example.com", password: "hunter2"},
+		{
+			name: "rejects a wrong password", email: "ada@example.com", password: "nope",
+			wantCode: http.StatusUnauthorized, wantDetail: "email or password is incorrect",
+		},
+		{
+			name: "rejects an unknown email the same way", email: "nobody@example.com", password: "hunter2",
+			wantCode: http.StatusUnauthorized, wantDetail: "email or password is incorrect",
+		},
+		{
+			name: "rejects a malformed email the same way", email: "not-an-email", password: "hunter2",
+			wantCode: http.StatusUnauthorized, wantDetail: "email or password is incorrect",
+		},
+		{
+			name: "hides a repository failure", email: "ada@example.com", password: "hunter2",
+			repoErr: errors.New("connection reset"), wantCode: http.StatusInternalServerError, wantDetail: "internal server error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakeUserRepository(stored)
+			repo.Err = tt.repoErr
+			out, err := user.NewUserService(repo, newTestTokens()).Login(t.Context(), &user.UserLoginInput{
+				Body: user.UserLoginBody{Email: tt.email, Password: tt.password},
+			})
+
+			if tt.wantCode != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+				assert.Equal(t, tt.wantDetail, detail)
+				assert.Nil(t, out)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, stored.ID.String(), out.Body.User.ID)
+			tokenID, err := newTestTokens().ParseToken(out.Body.Token)
+			require.NoError(t, err)
+			assert.Equal(t, stored.ID, tokenID)
 		})
 	}
 }
@@ -132,7 +197,7 @@ func TestGetUserByID(t *testing.T) {
 	t.Parallel()
 
 	stored := seeded("stored@example.com", "Stored", "User")
-	service := user.NewUserService(NewFakeUserRepository(stored))
+	service := user.NewUserService(NewFakeUserRepository(stored), newTestTokens())
 
 	t.Run("returns the stored user", func(t *testing.T) {
 		t.Parallel()
@@ -217,7 +282,7 @@ func TestListUsers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := user.NewUserService(NewFakeUserRepository(seed...)).ListUsers(t.Context(), tt.input)
+			out, err := user.NewUserService(NewFakeUserRepository(seed...), newTestTokens()).ListUsers(t.Context(), tt.input)
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantTotal, out.Body.Total)
@@ -295,7 +360,7 @@ func TestUpdateUserByID(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakeUserRepository(tt.seed...)
-			out, err := user.NewUserService(repo).UpdateUserByID(t.Context(), tt.input)
+			out, err := user.NewUserService(repo, newTestTokens()).UpdateUserByID(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -369,7 +434,7 @@ func TestListUsersWithQuery(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := user.NewUserService(NewFakeUserRepository(seed...)).ListUsers(t.Context(), tt.input)
+			out, err := user.NewUserService(NewFakeUserRepository(seed...), newTestTokens()).ListUsers(t.Context(), tt.input)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantTotal, out.Body.Total)
 			assert.Equal(t, tt.wantLimit, out.Body.Limit)
@@ -438,7 +503,7 @@ func TestDeleteUser(t *testing.T) {
 			repo.Referenced = map[uuid.UUID]bool{stored.ID: tt.referenced}
 			repo.Err = tt.repoErr
 
-			_, err := user.NewUserService(repo).DeleteUser(t.Context(), &user.UserIDInput{ID: tt.id})
+			_, err := user.NewUserService(repo, newTestTokens()).DeleteUser(t.Context(), &user.UserIDInput{ID: tt.id})
 
 			if tt.wantStatus == 0 {
 				require.NoError(t, err)
@@ -464,7 +529,7 @@ func TestRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo := NewFakeUserRepository()
 	repo.Err = errors.New("connection refused")
 
-	_, err := user.NewUserService(repo).ListUsers(t.Context(), &user.UserListInput{})
+	_, err := user.NewUserService(repo, newTestTokens()).ListUsers(t.Context(), &user.UserListInput{})
 
 	code, detail := apiError(t, err)
 	assert.Equal(t, http.StatusInternalServerError, code)
@@ -482,7 +547,7 @@ func TestListTournamentsByUser(t *testing.T) {
 		repo := NewFakeUserRepository()
 		repo.Joined[userID] = []tournament.Tournament{joined, alsoJoined}
 
-		return user.NewUserService(repo)
+		return user.NewUserService(repo, newTestTokens())
 	}
 
 	t.Run("returns only the tournaments the user belongs to", func(t *testing.T) {

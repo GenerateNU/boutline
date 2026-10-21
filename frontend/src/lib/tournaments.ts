@@ -3,7 +3,7 @@ import { apiGet, PAGE_SIZE, type Paginated } from "@/lib/api";
 export type Tournament = {
   id: string;
   name: string;
-  status: "pending" | "active" | "end";
+  status: "pending" | "active" | "ended";
   start_time: string | null;
 };
 

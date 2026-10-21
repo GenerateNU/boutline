@@ -393,7 +393,7 @@ func (s *boutService) EndBout(ctx context.Context, input *BoutIDInput) (*BoutOut
 
 	completedAt := time.Now().UTC()
 	err = s.repo.TransitionBoutByID(ctx, id, BoutTransition{
-		To:          BoutStatusEnd,
+		To:          BoutStatusEnded,
 		CompletedAt: &completedAt,
 		From:        []BoutStatus{BoutStatusActive},
 	})

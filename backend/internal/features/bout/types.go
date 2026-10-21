@@ -20,7 +20,7 @@ type BoutResponse struct {
 	TimeLimitSeconds *int       `json:"time_limit_seconds"`
 	PointsToWin      int        `json:"points_to_win"`
 	GroupNumber      int        `json:"group_number"`
-	Status           BoutStatus `json:"status" enum:"upcoming,active,end"`
+	Status           BoutStatus `json:"status" enum:"upcoming,active,ended"`
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
 }
@@ -99,7 +99,7 @@ type BoutUpdateInput struct {
 type BoutListInput struct {
 	TournamentID string     `query:"tournament_id" doc:"Filter by tournament"`
 	PoolID       string     `query:"pool_id" doc:"Filter by pool"`
-	Status       BoutStatus `query:"status" enum:"upcoming,active,end" doc:"Filter by status"`
+	Status       BoutStatus `query:"status" enum:"upcoming,active,ended" doc:"Filter by status"`
 	Limit        int        `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset       int        `query:"offset" default:"0" minimum:"0"`
 }

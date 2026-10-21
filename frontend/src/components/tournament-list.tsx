@@ -7,7 +7,7 @@ import { type Tournament } from "@/lib/tournaments";
 const statusLabel: Record<Tournament["status"], string> = {
   pending: "Upcoming",
   active: "Live",
-  end: "Past",
+  ended: "Past",
 };
 
 type TournamentListProps = {

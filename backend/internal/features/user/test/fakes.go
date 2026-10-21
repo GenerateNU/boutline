@@ -25,6 +25,12 @@ type FakeUserRepository struct {
 	Err        error // when set, every method fails with it
 }
 
+// newTestTokens signs with a fixed secret so a test can parse back the tokens
+// the service issues.
+func newTestTokens() *user.UserTokenManager {
+	return user.NewUserTokenManager("user-feature-test-jwt-secret-of-32-bytes+", user.UserTokenTTL)
+}
+
 func NewFakeUserRepository(seed ...user.User) *FakeUserRepository {
 	users := make(map[uuid.UUID]user.User, len(seed))
 	for _, seeded := range seed {
@@ -34,7 +40,7 @@ func NewFakeUserRepository(seed ...user.User) *FakeUserRepository {
 	return &FakeUserRepository{Users: users, Joined: map[uuid.UUID][]tournament.Tournament{}}
 }
 
-func (f *FakeUserRepository) CreateUser(_ context.Context, toCreate *user.User) error {
+func (f *FakeUserRepository) SignupUser(_ context.Context, toCreate *user.User) error {
 	if f.Err != nil {
 		return f.Err
 	}
@@ -64,6 +70,22 @@ func (f *FakeUserRepository) GetUserByID(_ context.Context, id uuid.UUID) (*user
 	}
 
 	return &found, nil
+}
+
+func (f *FakeUserRepository) LoginUser(_ context.Context, email string) (*user.User, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	email = strings.ToLower(strings.TrimSpace(email))
+	for _, candidate := range f.Users {
+		if candidate.Email == email {
+			found := candidate
+			return &found, nil
+		}
+	}
+
+	return nil, fmt.Errorf("select login user: %w", errs.ErrNotFound)
 }
 
 func (f *FakeUserRepository) ListUsers(

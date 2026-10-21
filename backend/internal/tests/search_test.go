@@ -6,9 +6,14 @@ import (
 
 	"boutline/internal/tests/testkit"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// searchTestUserID need not exist in the database -- no route under test
+// checks the caller's existence, only that the bearer token is valid.
+var searchTestUserID = uuid.MustParse("c0000000-0000-4000-8000-000000000001")
 
 // Exercises the fuzzy search endpoints against seeds/seed.sql's rows over a
 // real Postgres connection, so a GIN-index/pg_trgm mistake that a
@@ -77,10 +82,11 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := testkit.New(t).
 				Request(testkit.Request{
-					App:    app,
-					Route:  tt.route,
-					Method: testkit.GET,
-					Query:  tt.query,
+					App:     app,
+					Route:   tt.route,
+					Method:  testkit.GET,
+					Query:   tt.query,
+					Headers: authHeaders(t, searchTestUserID),
 				}).
 				AssertStatus(tt.wantStatus)
 
@@ -125,10 +131,11 @@ func TestListCompetitorTeamsByTournament(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := testkit.New(t).
 				Request(testkit.Request{
-					App:    app,
-					Route:  "/api/v1/tournaments/" + tt.tournamentID + "/teams",
-					Method: testkit.GET,
-					Query:  map[string]string{"q": "Boston Fencing Club"},
+					App:     app,
+					Route:   "/api/v1/tournaments/" + tt.tournamentID + "/teams",
+					Method:  testkit.GET,
+					Query:   map[string]string{"q": "Boston Fencing Club"},
+					Headers: authHeaders(t, searchTestUserID),
 				}).
 				AssertStatus(http.StatusOK)
 
@@ -145,10 +152,11 @@ func TestTournamentListPagination(t *testing.T) {
 
 	firstPage := testkit.New(t).
 		Request(testkit.Request{
-			App:    app,
-			Route:  "/api/v1/tournaments",
-			Method: testkit.GET,
-			Query:  map[string]string{"limit": "20", "offset": "0"},
+			App:     app,
+			Route:   "/api/v1/tournaments",
+			Method:  testkit.GET,
+			Query:   map[string]string{"limit": "20", "offset": "0"},
+			Headers: authHeaders(t, searchTestUserID),
 		}).
 		AssertStatus(http.StatusOK).
 		GetBody()
@@ -163,10 +171,11 @@ func TestTournamentListPagination(t *testing.T) {
 
 	secondPage := testkit.New(t).
 		Request(testkit.Request{
-			App:    app,
-			Route:  "/api/v1/tournaments",
-			Method: testkit.GET,
-			Query:  map[string]string{"limit": "20", "offset": "20"},
+			App:     app,
+			Route:   "/api/v1/tournaments",
+			Method:  testkit.GET,
+			Query:   map[string]string{"limit": "20", "offset": "20"},
+			Headers: authHeaders(t, searchTestUserID),
 		}).
 		AssertStatus(http.StatusOK).
 		GetBody()

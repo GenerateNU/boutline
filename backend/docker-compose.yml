@@ -11,6 +11,8 @@ services:
       # network rather than localhost.
       DB_HOST: db
       REDIS_HOST: redis
+      # Opts in to the built-in dev JWT secret, so no JWT_SECRET is needed here.
+      APP_ENVIRONMENT: dev
     depends_on:
       db:
         condition: service_healthy
