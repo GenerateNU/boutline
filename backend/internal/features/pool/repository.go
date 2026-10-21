@@ -25,8 +25,8 @@ type PoolRepository interface {
 	DeletePoolByID(ctx context.Context, id uuid.UUID) error
 }
 
-// Mirrors bout.BoutStatusEnd; the bout package imports this one, so it cannot be referenced here.
-const endedBoutStatus = "end"
+// Mirrors bout.BoutStatusEnded; the bout package imports this one, so it cannot be referenced here.
+const endedBoutStatus = "ended"
 
 type PoolUpdate struct {
 	RefereeID *uuid.UUID
