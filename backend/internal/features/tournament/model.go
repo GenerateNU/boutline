@@ -13,13 +13,13 @@ type TournamentStatus string
 const (
 	TournamentStatusPending TournamentStatus = "pending"
 	TournamentStatusActive  TournamentStatus = "active"
-	TournamentStatusEnd     TournamentStatus = "end"
+	TournamentStatusEnded   TournamentStatus = "ended"
 )
 
 func (s TournamentStatus) IsValid() bool {
 	return s == TournamentStatusPending ||
 		s == TournamentStatusActive ||
-		s == TournamentStatusEnd
+		s == TournamentStatusEnded
 }
 
 type TournamentVisibility string
@@ -36,7 +36,7 @@ type Tournament struct {
 	Name        string               `gorm:"type:text;not null"`
 	Visibility  TournamentVisibility `gorm:"type:text;not null;check:chk_tournaments_visibility,visibility IN ('private','public')"`
 	Code        string               `gorm:"type:text;not null;uniqueIndex:idx_tournaments_code"`
-	Status      TournamentStatus     `gorm:"type:text;not null;index;default:pending;check:chk_tournaments_status,status IN ('pending','active','end')"`
+	Status      TournamentStatus     `gorm:"type:text;not null;index;default:pending;check:chk_tournaments_status,status IN ('pending','active','ended')"`
 	CreatedBy   uuid.UUID            `gorm:"type:uuid;not null;index"`
 	StartTime   *time.Time
 	StartedAt   *time.Time

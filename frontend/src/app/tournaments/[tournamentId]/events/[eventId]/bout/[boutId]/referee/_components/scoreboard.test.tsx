@@ -214,7 +214,7 @@ describe("Scoreboard", () => {
         name: "both confirmations end the bout",
         confirms: ["Confirm Alice Chen", "Confirm Ben Ortiz"],
         over: true,
-        status: "end",
+        status: "ended",
       },
     ])("$name", async ({ confirms, over, status }) => {
       const { backend } = await showConfirming();
@@ -343,7 +343,7 @@ describe("Scoreboard", () => {
   });
 
   it("shows only the final score for a bout that has already ended, without naming a winner short of the target", async () => {
-    installBackend([{ id: 1, competitor_id: BEN.id, points: 1 }], { status: "end" });
+    installBackend([{ id: 1, competitor_id: BEN.id, points: 1 }], { status: "ended" });
     render(<Scoreboard boutId={BOUT_ID} />);
     await screen.findByLabelText("Alice Chen score");
 

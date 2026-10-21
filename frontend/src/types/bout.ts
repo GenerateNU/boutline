@@ -1,4 +1,4 @@
-export type BoutStatus = "upcoming" | "active" | "end";
+export type BoutStatus = "upcoming" | "active" | "ended";
 
 export interface Bout {
   id: string;

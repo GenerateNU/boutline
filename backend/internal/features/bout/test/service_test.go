@@ -66,7 +66,7 @@ func TestCreateBout(t *testing.T) {
 
 	activeTournament := seededTournament(tournament.TournamentStatusActive)
 	pendingTournament := seededTournament(tournament.TournamentStatusPending)
-	endedTournament := seededTournament(tournament.TournamentStatusEnd)
+	endedTournament := seededTournament(tournament.TournamentStatusEnded)
 
 	referee := uuid.New().String()
 	competitor1 := uuid.New().String()
@@ -426,7 +426,7 @@ func TestUpdateBoutByID(t *testing.T) {
 	t.Run("refuses to edit an ended bout", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededBout(bout.BoutStatusEnd, uuid.New())
+		stored := seededBout(bout.BoutStatusEnded, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
 		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).UpdateBoutByID(t.Context(),
@@ -536,7 +536,7 @@ func TestStartBout(t *testing.T) {
 	t.Run("refuses to start a bout in an ended tournament", func(t *testing.T) {
 		t.Parallel()
 
-		endedTournament := seededTournament(tournament.TournamentStatusEnd)
+		endedTournament := seededTournament(tournament.TournamentStatusEnded)
 		stored := seededBout(bout.BoutStatusUpcoming, endedTournament.ID)
 		repo := NewFakeBoutRepository(stored)
 
@@ -589,7 +589,7 @@ func TestEndBout(t *testing.T) {
 			EndBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
 
 		require.NoError(t, err)
-		assert.Equal(t, bout.BoutStatusEnd, out.Body.Status)
+		assert.Equal(t, bout.BoutStatusEnded, out.Body.Status)
 		require.NotNil(t, out.Body.CompletedAt)
 		assert.WithinDuration(t, time.Now().UTC(), *out.Body.CompletedAt, time.Minute)
 	})
@@ -632,7 +632,7 @@ func TestDeleteBoutByID(t *testing.T) {
 		wantDetail string
 	}{
 		{name: "deletes an upcoming bout", status: bout.BoutStatusUpcoming},
-		{name: "deletes an ended bout", status: bout.BoutStatusEnd},
+		{name: "deletes an ended bout", status: bout.BoutStatusEnded},
 		{
 			name:       "refuses to delete an active bout",
 			status:     bout.BoutStatusActive,

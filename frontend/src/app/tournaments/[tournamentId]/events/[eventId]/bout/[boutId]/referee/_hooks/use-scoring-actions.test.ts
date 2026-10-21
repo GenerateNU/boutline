@@ -93,8 +93,8 @@ describe("useScoringActions", () => {
     act(() => result.current.submit({ kind: "end", touchCount: 1 }));
     await settle();
 
-    expect(backend.status).toBe("end");
-    expect(result.current.matchup?.bout.status).toBe("end");
+    expect(backend.status).toBe("ended");
+    expect(result.current.matchup?.bout.status).toBe("ended");
     expect(result.current.error).toBeNull();
   });
 
