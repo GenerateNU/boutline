@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -71,10 +70,7 @@ func (u UserUpdate) columns() map[string]any {
 
 func (r *userRepository) SignupUser(ctx context.Context, user *User) error {
 	if err := r.db.WithContext(ctx).Create(user).Error; err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return fmt.Errorf("insert signup user: %w", errs.ErrDuplicate)
-		}
-		return fmt.Errorf("insert signup user: %w", err)
+		return utils.TranslateWriteError("insert signup user", User{}.TableName(), "", err)
 	}
 
 	return nil
@@ -101,10 +97,7 @@ func (r *userRepository) LoginUser(ctx context.Context, email string) (*User, er
 		Where("email = ?", email).
 		First(&user).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("select login user: %w", errs.ErrNotFound)
-		}
-		return nil, fmt.Errorf("select login user: %w", err)
+		return nil, utils.TranslateReadError("select login user", err)
 	}
 
 	return &user, nil
