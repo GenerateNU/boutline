@@ -128,6 +128,18 @@ describe("auth actions", () => {
     await expect(getSessionToken()).resolves.toBeUndefined();
   });
 
+  it("reports an unreachable backend instead of throwing", async () => {
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+
+    await expect(login(credentials)).resolves.toEqual({
+      ok: false,
+      error: "Couldn't reach the server. Try again in a moment.",
+    });
+    await expect(getSessionToken()).resolves.toBeUndefined();
+    consoleError.mockRestore();
+  });
+
   it("logout ends the session", async () => {
     fetchMock.mockResolvedValue(respond(200, { token: "jwt-abc", user }));
     await login(credentials);

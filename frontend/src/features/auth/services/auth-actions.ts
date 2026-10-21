@@ -8,12 +8,20 @@ import { problemMessage } from "@/services/api-request";
 const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 
 async function authenticate(path: "login" | "signup", body: object): Promise<AuthResult> {
-  const response = await fetch(new URL(`/api/v1/auth/${path}`, apiProxyTarget), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(new URL(`/api/v1/auth/${path}`, apiProxyTarget), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch (error) {
+    // An unreachable backend or a malformed API_PROXY_TARGET lands here; the
+    // detail goes to the server log, never the credentials in body.
+    console.error(`auth ${path}: backend request failed`, error);
+    return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
+  }
 
   let payload: unknown = null;
   try {
