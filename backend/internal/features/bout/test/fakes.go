@@ -69,6 +69,9 @@ func (f *FakeBoutRepository) ListBouts(
 		if filter.TournamentID != nil && candidate.TournamentID != *filter.TournamentID {
 			continue
 		}
+		if filter.PoolID != nil && (candidate.PoolID == nil || *candidate.PoolID != *filter.PoolID) {
+			continue
+		}
 		if filter.Status != "" && candidate.Status != filter.Status {
 			continue
 		}
@@ -106,6 +109,9 @@ func (f *FakeBoutRepository) UpdateBoutByID(_ context.Context, id uuid.UUID, upd
 	}
 	if update.RefereeID != nil {
 		stored.RefereeID = update.RefereeID
+	}
+	if update.PoolID != nil {
+		stored.PoolID = update.PoolID
 	}
 	if update.TimeLimitSeconds != nil {
 		stored.TimeLimitSeconds = update.TimeLimitSeconds
@@ -213,4 +219,28 @@ func (f *FakeTournamentLookup) GetTournamentByID(_ context.Context, id uuid.UUID
 	}
 
 	return &found, nil
+}
+
+var _ bout.PoolLookup = (*FakePoolLookup)(nil)
+
+type FakePoolLookup struct {
+	Tournaments map[uuid.UUID]uuid.UUID // pool id to its tournament
+	Err         error
+}
+
+func NewFakePoolLookup(tournamentsByPool map[uuid.UUID]uuid.UUID) *FakePoolLookup {
+	return &FakePoolLookup{Tournaments: tournamentsByPool}
+}
+
+func (f *FakePoolLookup) GetPoolTournamentID(_ context.Context, id uuid.UUID) (uuid.UUID, error) {
+	if f.Err != nil {
+		return uuid.Nil, f.Err
+	}
+
+	tournamentID, ok := f.Tournaments[id]
+	if !ok {
+		return uuid.Nil, fmt.Errorf("select pool %s tournament: %w", id, errs.ErrNotFound)
+	}
+
+	return tournamentID, nil
 }

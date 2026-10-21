@@ -36,6 +36,7 @@ generated spec is at `/openapi.json` and Swagger UI at `/docs`.
 make test              # go test ./... -race
 make test-unit         # everything except internal/tests
 make test-integration  # internal/tests only
+make test-integration-db  # internal/tests against a real, seeded Postgres — run dev-up and dev-seed first
 make test-cover        # every package, with a coverage summary
 make vet
 make lint              # golangci-lint
@@ -76,9 +77,14 @@ Adding or changing a model goes:
 
 `make migrate-new` needs the Atlas CLI (`brew install ariga/tap/atlas`) and
 Docker: Atlas starts a throwaway Postgres to normalise the schema before
-diffing, configured as `dev` in `atlas.hcl`. Migrations are committed, and
-`migrations/atlas.sum` is a checksum over the directory — if you hand-edit a
-file, re-sign it with `atlas migrate hash`.
+diffing, configured as `dev` in `atlas.hcl`. That throwaway Postgres is built
+from `atlas/dev-db` rather than the stock image, because `migrations/20261012020658_enable_fuzzy_search.sql`
+added a `pg_trgm`-based index gorm can't declare, and Atlas Community won't
+let the desired-state schema declare the extension itself — `atlas/dev-db`
+pre-installs it into `template1` instead, which `make migrate-new` builds
+automatically. Migrations are committed, and `migrations/atlas.sum` is a
+checksum over the directory — if you hand-edit a file, re-sign it with `atlas
+migrate hash`.
 
 Run `make lint` and `make test` before opening a PR, or `make be-check` from
 the repo root for everything [Backend CI](../.github/workflows/backend-ci.yml)
@@ -93,7 +99,8 @@ make dev-seed    # or `make db-seed` from the repo root
 
 loads `seeds/seed.sql` into the dev database: five users, three tournaments
 (one each pending, active, and ended) with their memberships and events,
-twelve competitors, and bouts in every status. Every seeded account's password
+twelve competitors, two pool stages (one active with two pools, one upcoming),
+and bouts in every status. Every seeded account's password
 is `password123`. Every row has a fixed id and conflicts are skipped, so
 rerunning it changes nothing; `make dev-reset` first for a clean set. Run it
 after `make dev-up`, since it needs the current schema. A new table or a new
@@ -103,8 +110,10 @@ run inserts anything.
 
 ## Configuration
 
-Every value has a default, so the server runs with no environment set. Override
-by exporting these variables:
+Every value except `JWT_SECRET` has a default, and with `APP_ENVIRONMENT=dev`
+(which `make run` and `make dev-up` set) that one falls back to a built-in
+secret, so the server runs locally with nothing else set. Override by exporting
+these variables:
 
 | Variable              | Default    | Purpose                             |
 | --------------------- | ---------- | ----------------------------------- |
@@ -133,8 +142,35 @@ by exporting these variables:
 | `REDIS_PASSWORD` | (empty)     | Password, if the server requires one  |
 | `REDIS_DB`       | `0`         | Logical database index                |
 
+| Variable     | Default                | Purpose                              |
+| ------------ | ---------------------- | ------------------------------------ |
+| `JWT_SECRET` | built-in in `dev` only | Signs auth tokens, at least 32 bytes |
+
+Unless `APP_ENVIRONMENT` is explicitly `dev`, the server refuses to start
+without its own `JWT_SECRET` (unset does not count as dev, and the built-in
+secret is rejected). Generate one per environment with `openssl rand -hex 32`.
+
 Config is loaded and validated once at startup in `internal/config`; nothing
 below `main` reads the environment directly.
+
+## Auth
+
+`POST /api/v1/auth/signup` and `POST /api/v1/auth/login` return
+`{token, user}`. The token is an HS256 JWT signed with `JWT_SECRET`, valid for
+24 hours, and is sent back as `Authorization: Bearer <token>`. A wrong password
+and an unknown email get the same 401, `email or password is incorrect`.
+
+The auth middleware (`internal/server/middlewares/auth.go`) decides per
+operation:
+
+- `GET` and `HEAD` are public; every other method needs a token, so a new write
+  route is protected even if nobody marks it.
+- An operation's `Security` overrides that: `user.UserBearerSecurity()` protects
+  a read (`listUsers`, `getUserByID`, which return emails), and an empty
+  `[]map[string][]string{}` opens a write (`signup`, `login`).
+
+A handler behind a token reads the caller with `user.UserIDFrom(ctx)`. Nothing
+checks ownership yet, so any signed-in user can change any resource.
 
 ## Layout
 
@@ -142,6 +178,7 @@ below `main` reads the environment directly.
 cmd/main.go                  config load, db connect, signals, graceful shutdown
 cmd/atlasloader/             prints the gorm schema for Atlas to diff against
 migrations/                  versioned SQL, generated, committed
+atlas/dev-db/                Postgres image Atlas normalises the schema against (pg_trgm preinstalled)
 atlas.hcl                    how Atlas finds the models and the migrations
 internal/config/             one file per config group, validated on load
 internal/database/           the gorm/postgres pool

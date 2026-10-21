@@ -198,6 +198,21 @@ func TestListEndpoint(t *testing.T) {
 
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
+
+	t.Run("matches by name when a query is given", func(t *testing.T) {
+		t.Parallel()
+
+		named := []tournament.Tournament{
+			seeded("Northwestern Open", tournament.TournamentStatusPending),
+			seeded("Big Ten Championship", tournament.TournamentStatusActive),
+		}
+		resp := newTestAPI(t, named...).Get("/api/v1/tournaments?q=northwestern")
+
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 1)
+		assert.InDelta(t, 1, body["total"], 0)
+	})
 }
 
 func TestUpdateEndpoint(t *testing.T) {
@@ -273,7 +288,7 @@ func TestLifecycleEndpoints(t *testing.T) {
 	require.Equal(t, http.StatusOK, completed.Code, "body: %s", completed.Body)
 
 	completedBody := decodeBody(t, completed.Body.Bytes())
-	assert.Equal(t, "end", completedBody["status"])
+	assert.Equal(t, "ended", completedBody["status"])
 	assert.NotNil(t, completedBody["completed_at"])
 
 	assert.Equal(t, http.StatusConflict, api.Post(base+"/complete").Code)

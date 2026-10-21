@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // The registered operations are exercised over a fake repository: the schema
@@ -22,7 +23,7 @@ func newTestAPI(t *testing.T, seed ...user.User) humatest.TestAPI {
 	t.Helper()
 
 	_, api := humatest.New(t)
-	user.RegisterUserService(api, user.NewUserService(NewFakeUserRepository(seed...)))
+	user.RegisterUserService(api, user.NewUserService(NewFakeUserRepository(seed...), newTestTokens()))
 
 	return api
 }
@@ -36,7 +37,7 @@ func decodeBody(t *testing.T, raw []byte) map[string]any {
 	return body
 }
 
-func TestCreateEndpoint(t *testing.T) {
+func TestSignupEndpoint(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -47,7 +48,7 @@ func TestCreateEndpoint(t *testing.T) {
 		wantFields map[string]any
 	}{
 		{
-			name: "creates a user and echoes the stored row",
+			name: "creates a user and returns a token with the stored row",
 			body: map[string]any{
 				"email": "new@example.com", "password": "hunter2", "firstName": "  Ada  ", "lastName": "Lovelace",
 			},
@@ -86,17 +87,71 @@ func TestCreateEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t, tt.seed...).Post("/api/v1/users", tt.body)
+			resp := newTestAPI(t, tt.seed...).Post("/api/v1/auth/signup", tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 
 			body := decodeBody(t, resp.Body.Bytes())
+			if resp.Code == http.StatusCreated {
+				assert.NotEmpty(t, body["token"])
+				body, _ = body["user"].(map[string]any)
+			}
 			for field, want := range tt.wantFields {
 				assert.Equal(t, want, body[field])
 			}
 			assert.NotContains(t, body, "password")
 		})
 	}
+}
+
+func TestLoginEndpoint(t *testing.T) {
+	t.Parallel()
+
+	hash, err := bcrypt.GenerateFromPassword([]byte("hunter2"), bcrypt.MinCost)
+	require.NoError(t, err)
+	stored := seeded("ada@example.com", "Ada", "Lovelace")
+	stored.Password = string(hash)
+
+	tests := []struct {
+		name       string
+		body       map[string]any
+		wantStatus int
+	}{
+		{
+			name:       "issues a token for the right password",
+			body:       map[string]any{"email": "ada@example.com", "password": "hunter2"},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "rejects a missing password before the handler runs",
+			body:       map[string]any{"email": "ada@example.com"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := newTestAPI(t, stored).Post("/api/v1/auth/login", tt.body)
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+		})
+	}
+
+	// A client must not be able to tell an unknown email from a wrong password.
+	t.Run("unknown email and wrong password give identical responses", func(t *testing.T) {
+		t.Parallel()
+
+		api := newTestAPI(t, stored)
+		wrongPassword := api.Post("/api/v1/auth/login", map[string]any{"email": "ada@example.com", "password": "nope"})
+		unknownEmail := api.Post("/api/v1/auth/login", map[string]any{"email": "nobody@example.com", "password": "nope"})
+
+		assert.Equal(t, http.StatusUnauthorized, wrongPassword.Code)
+		assert.Equal(t, wrongPassword.Code, unknownEmail.Code)
+		assert.Equal(t, wrongPassword.Body.String(), unknownEmail.Body.String())
+		assert.Equal(t, "email or password is incorrect", decodeBody(t, wrongPassword.Body.Bytes())["detail"])
+	})
 }
 
 func TestGetByIDEndpoint(t *testing.T) {
@@ -153,6 +208,21 @@ func TestListEndpoint(t *testing.T) {
 
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
+
+	t.Run("matches by name when a query is given", func(t *testing.T) {
+		t.Parallel()
+
+		mixed := []user.User{
+			seeded("ada@example.com", "Ada", "Lovelace"),
+			seeded("grace@example.com", "Grace", "Hopper"),
+		}
+		resp := newTestAPI(t, mixed...).Get("/api/v1/users?q=lovelace")
+
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		require.Len(t, body["data"], 1)
+		assert.InDelta(t, 1, body["total"], 0)
+	})
 }
 
 func TestDeleteEndpoint(t *testing.T) {
@@ -196,7 +266,7 @@ func TestDeleteEndpoint(t *testing.T) {
 			repo := NewFakeUserRepository(stored)
 			repo.Referenced = map[uuid.UUID]bool{stored.ID: tt.referenced}
 			_, api := humatest.New(t)
-			user.RegisterUserService(api, user.NewUserService(repo))
+			user.RegisterUserService(api, user.NewUserService(repo, newTestTokens()))
 
 			resp := api.Delete("/api/v1/users/" + tt.path)
 
@@ -269,7 +339,7 @@ func TestListTournamentsByUserEndpoint(t *testing.T) {
 	repo.Joined[userID] = []tournament.Tournament{joined}
 
 	_, api := humatest.New(t)
-	user.RegisterUserService(api, user.NewUserService(repo))
+	user.RegisterUserService(api, user.NewUserService(repo, newTestTokens()))
 
 	resp := api.Get("/api/v1/users/" + userID.String() + "/tournaments")
 	require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)

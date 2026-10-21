@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"boutline/internal/features/competitor"
+	"boutline/internal/features/pool"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 
@@ -15,13 +16,13 @@ type BoutStatus string
 const (
 	BoutStatusUpcoming BoutStatus = "upcoming"
 	BoutStatusActive   BoutStatus = "active"
-	BoutStatusEnd      BoutStatus = "end"
+	BoutStatusEnded    BoutStatus = "ended"
 )
 
 func (s BoutStatus) IsValid() bool {
 	return s == BoutStatusUpcoming ||
 		s == BoutStatusActive ||
-		s == BoutStatusEnd
+		s == BoutStatusEnded
 }
 
 // Two competitor columns hard-code the number of sides into the table. That is
@@ -36,10 +37,12 @@ type Bout struct {
 	CompletedAt      *time.Time
 	RefereeID        *uuid.UUID `gorm:"type:uuid;index"`
 	Referee          *user.User `gorm:"foreignKey:RefereeID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
+	PoolID           *uuid.UUID `gorm:"type:uuid;index"`
+	Pool             *pool.Pool `gorm:"foreignKey:PoolID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
 	TimeLimitSeconds *int       `gorm:"check:chk_bouts_time_limit_seconds,time_limit_seconds > 0"`
 	PointsToWin      int        `gorm:"not null;check:chk_bouts_points_to_win,points_to_win > 0"`
 	GroupNumber      int        `gorm:"not null;default:0;check:chk_bouts_group_number,group_number >= 0"`
-	Status           BoutStatus `gorm:"type:text;not null;index;default:upcoming;check:chk_bouts_status,status IN ('upcoming','active','end')"`
+	Status           BoutStatus `gorm:"type:text;not null;index;default:upcoming;check:chk_bouts_status,status IN ('upcoming','active','ended')"`
 	// RESTRICT rather than CASCADE so removing a competitor cannot silently
 	// erase the bouts they fought.
 	Competitor1ID uuid.UUID              `gorm:"column:competitor_1_id;type:uuid;not null;index:idx_bouts_competitor_1_id"`
@@ -59,5 +62,5 @@ func BoutEditableStatuses() []BoutStatus {
 }
 
 func BoutDeletableStatuses() []BoutStatus {
-	return []BoutStatus{BoutStatusUpcoming, BoutStatusEnd}
+	return []BoutStatus{BoutStatusUpcoming, BoutStatusEnded}
 }

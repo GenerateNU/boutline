@@ -8,28 +8,43 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
-const userBasePath = "/api/v1/users"
+const (
+	userBasePath = "/api/v1/users"
+	authBasePath = "/api/v1/auth"
+)
 
 func RegisterUserRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterUserService(api, NewUserService(NewUserRepository(params.DB)))
+	tokens := NewUserTokenManager(params.Config.JWTSecret, UserTokenTTL)
+	RegisterUserService(api, NewUserService(NewUserRepository(params.DB), tokens))
 }
 
 func RegisterUserService(api huma.API, service UserService) {
 	huma.Register(api, huma.Operation{
-		OperationID:   "createUser",
+		OperationID:   "signup",
 		Method:        http.MethodPost,
-		Path:          userBasePath,
-		Summary:       "Create a user",
-		Tags:          []string{"Users"},
+		Path:          authBasePath + "/signup",
+		Summary:       "Create a user and issue a bearer token",
+		Tags:          []string{"Auth"},
 		DefaultStatus: http.StatusCreated,
-	}, service.CreateUser)
+		Security:      []map[string][]string{},
+	}, service.Signup)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "login",
+		Method:      http.MethodPost,
+		Path:        authBasePath + "/login",
+		Summary:     "Check an email and password and issue a bearer token",
+		Tags:        []string{"Auth"},
+		Security:    []map[string][]string{},
+	}, service.Login)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listUsers",
 		Method:      http.MethodGet,
 		Path:        userBasePath,
-		Summary:     "List users",
+		Summary:     "List users, optionally fuzzy-matched by name",
 		Tags:        []string{"Users"},
+		Security:    UserBearerSecurity(),
 	}, service.ListUsers)
 
 	huma.Register(api, huma.Operation{
@@ -38,6 +53,7 @@ func RegisterUserService(api huma.API, service UserService) {
 		Path:        userBasePath + "/{id}",
 		Summary:     "Get a user by ID",
 		Tags:        []string{"Users"},
+		Security:    UserBearerSecurity(),
 	}, service.GetUserByID)
 
 	huma.Register(api, huma.Operation{

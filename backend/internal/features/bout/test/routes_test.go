@@ -18,7 +18,7 @@ func newTestAPI(t *testing.T, tournaments *FakeTournamentLookup, seed ...bout.Bo
 	t.Helper()
 
 	_, api := humatest.New(t)
-	bout.RegisterBoutService(api, bout.NewBoutService(NewFakeBoutRepository(seed...), tournaments))
+	bout.RegisterBoutService(api, bout.NewBoutService(NewFakeBoutRepository(seed...), tournaments, NewFakePoolLookup(nil)))
 
 	return api
 }
@@ -211,7 +211,7 @@ func TestLifecycleEndpoints(t *testing.T) {
 
 	ended := api.Post(base + "/end")
 	require.Equal(t, http.StatusOK, ended.Code, "body: %s", ended.Body)
-	assert.Equal(t, "end", decodeBody(t, ended.Body.Bytes())["status"])
+	assert.Equal(t, "ended", decodeBody(t, ended.Body.Bytes())["status"])
 
 	assert.Equal(t, http.StatusConflict, api.Post(base+"/end").Code)
 	assert.Equal(t, http.StatusConflict, api.Post(base+"/start").Code)

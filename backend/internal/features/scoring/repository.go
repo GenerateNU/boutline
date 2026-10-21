@@ -17,6 +17,7 @@ type ScoringRepository interface {
 	ListScoring(ctx context.Context, filter ScoringListFilter) ([]Scoring, int64, error)
 	UpdateScoring(ctx context.Context, scoring *Scoring) error
 	RevokeScoring(ctx context.Context, scoring *Scoring) error
+	ListScoringHistory(ctx context.Context, boutID uuid.UUID) ([]Scoring, error)
 }
 
 type ScoringListFilter struct {
@@ -118,4 +119,18 @@ func (r *scoringRepository) RevokeScoring(ctx context.Context, scoring *Scoring)
 	}
 
 	return nil
+}
+
+func (r *scoringRepository) ListScoringHistory(ctx context.Context, boutID uuid.UUID) ([]Scoring, error) {
+	scores := []Scoring{}
+	err := r.db.WithContext(ctx).
+		Select("id", "competitor_id", "points", "created_at", "revoked_at").
+		Where("bout_id = ?", boutID).
+		Order("created_at DESC NULLS LAST, id DESC").
+		Find(&scores).Error
+	if err != nil {
+		return nil, fmt.Errorf("select scoring history for match %s: %w", boutID, err)
+	}
+
+	return scores, nil
 }

@@ -170,10 +170,12 @@ func (s *tournamentService) ListTournaments(
 		return nil, errs.HumaError(errs.Public(
 			fmt.Sprintf("unknown status %q", input.Status), errs.ErrInvalidInput))
 	}
+	term := strings.TrimSpace(input.Query)
 	limit, offset := page(input.Limit, input.Offset)
 
 	tournaments, total, err := s.repo.ListTournaments(ctx, TournamentListFilter{
 		Status: input.Status,
+		Term:   term,
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -273,7 +275,7 @@ func (s *tournamentService) CompleteTournament(
 	completedAt := time.Now().UTC()
 
 	err = s.repo.TransitionTournamentByID(ctx, id, TournamentTransition{
-		To:          TournamentStatusEnd,
+		To:          TournamentStatusEnded,
 		CompletedAt: &completedAt,
 		From:        []TournamentStatus{TournamentStatusActive},
 	})

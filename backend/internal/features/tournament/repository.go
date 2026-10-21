@@ -12,6 +12,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// tournamentNameTrigramExpr must match the expression indexed by
+// idx_tournaments_name_trgm exactly, or the search falls back to a sequential scan.
+const tournamentNameTrigramExpr = "name"
+
 type TournamentRepository interface {
 	CreateTournament(ctx context.Context, tournament *Tournament) error
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*Tournament, error)
@@ -65,6 +69,7 @@ func (t TournamentTransition) columns() map[string]any {
 // TODO: support timestamp filtering (started_at ranges)
 type TournamentListFilter struct {
 	Status TournamentStatus
+	Term   string
 	Limit  int
 	Offset int
 }
@@ -156,15 +161,17 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)
 	}
+	query = utils.TrigramMatch(query, tournamentNameTrigramExpr, filter.Term)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count tournaments: %w", err)
 	}
 
+	query = utils.TrigramOrder(query, tournamentNameTrigramExpr, filter.Term, "created_at DESC", "id")
+
 	tournaments := make([]Tournament, 0, filter.Limit)
 	err := query.
-		Order("created_at DESC").
 		Limit(filter.Limit).
 		Offset(filter.Offset).
 		Find(&tournaments).Error
