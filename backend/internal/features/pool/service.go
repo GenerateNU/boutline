@@ -194,7 +194,7 @@ func (s *poolService) StartPool(ctx context.Context, input *PoolIDInput) (*PoolO
 
 	err = s.repo.StartPoolByID(ctx, id, time.Now().UTC())
 
-	return s.afterUpdate(ctx, id, err, msgPoolStarted)
+	return s.updateResponse(ctx, id, err, msgPoolStarted)
 }
 
 func (s *poolService) EndPool(ctx context.Context, input *PoolIDInput) (*PoolOutput, error) {
@@ -225,10 +225,10 @@ func (s *poolService) EndPool(ctx context.Context, input *PoolIDInput) (*PoolOut
 
 	err = s.repo.EndPoolByID(ctx, id, time.Now().UTC())
 
-	return s.afterUpdate(ctx, id, err, msgPoolEnded)
+	return s.updateResponse(ctx, id, err, msgPoolEnded)
 }
 
-func (s *poolService) afterUpdate(ctx context.Context, id uuid.UUID, err error, conflictMessage string) (*PoolOutput, error) {
+func (s *poolService) updateResponse(ctx context.Context, id uuid.UUID, err error, conflictMessage string) (*PoolOutput, error) {
 	if err != nil {
 		if errors.Is(err, errs.ErrConflict) {
 			return nil, errs.HumaError(fmt.Errorf("update pool: %w", errs.Public(conflictMessage, err)))

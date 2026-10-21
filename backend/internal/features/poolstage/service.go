@@ -170,7 +170,7 @@ func (s *poolStageService) UpdatePoolStageByID(
 
 	err = s.repo.UpdatePoolStageByID(ctx, id, PoolStageUpdate(body))
 
-	return s.afterUpdate(ctx, id, err, "only an upcoming pool stage can be edited")
+	return s.updateResponse(ctx, id, err, "only an upcoming pool stage can be edited")
 }
 
 func (s *poolStageService) StartPoolStage(
@@ -206,7 +206,7 @@ func (s *poolStageService) StartPoolStage(
 		From:      []PoolStageStatus{PoolStageStatusUpcoming},
 	})
 
-	return s.afterUpdate(ctx, id, err, msgOnlyUpcomingCanStart)
+	return s.updateResponse(ctx, id, err, msgOnlyUpcomingCanStart)
 }
 
 func (s *poolStageService) EndPoolStage(
@@ -242,10 +242,10 @@ func (s *poolStageService) EndPoolStage(
 		From:        []PoolStageStatus{PoolStageStatusActive},
 	})
 
-	return s.afterUpdate(ctx, id, err, msgOnlyActiveCanEnd)
+	return s.updateResponse(ctx, id, err, msgOnlyActiveCanEnd)
 }
 
-func (s *poolStageService) afterUpdate(
+func (s *poolStageService) updateResponse(
 	ctx context.Context,
 	id uuid.UUID,
 	err error,
