@@ -39,16 +39,26 @@ func NewAuthMiddleware(api huma.API, tokens *user.UserTokenManager) func(huma.Co
 	}
 }
 
-// requiresAuth makes reads public and writes protected, so a write route
-// someone forgets to mark is still locked. An operation overrides that by
-// setting Security: user.UserBearerSecurity() to protect a read, or an empty
-// slice to open a write such as login.
-func requiresAuth(op *huma.Operation) bool {
+// ApplyDefaultSecurity runs as an OpenAPI OnAddOperation hook, so every
+// documented operation leaves registration with an explicit Security: reads
+// public, writes behind a bearer token. An operation that set its own Security
+// (user.UserBearerSecurity() on a read, an empty slice on login) keeps it. The
+// generated spec and the middleware then read the same value.
+func ApplyDefaultSecurity(_ *huma.OpenAPI, op *huma.Operation) {
 	if op.Security != nil {
-		return len(op.Security) > 0
+		return
 	}
+	if op.Method == http.MethodGet || op.Method == http.MethodHead {
+		op.Security = []map[string][]string{}
+		return
+	}
+	op.Security = user.UserBearerSecurity()
+}
 
-	return op.Method != http.MethodGet && op.Method != http.MethodHead
+// Security is still nil only for an operation the hook never saw (one
+// registered with Hidden: true), and that fails closed rather than open.
+func requiresAuth(op *huma.Operation) bool {
+	return op.Security == nil || len(op.Security) > 0
 }
 
 func authenticate(ctx huma.Context, tokens *user.UserTokenManager) (uuid.UUID, error) {

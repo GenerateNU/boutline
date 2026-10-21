@@ -10,6 +10,7 @@ import (
 	"boutline/internal/tests/testkit/fakes"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -226,4 +227,43 @@ func TestAuthLoginAgainstRealDatabase(t *testing.T) {
 			}).
 			AssertStatus(http.StatusOK)
 	})
+}
+
+// The middleware reads each operation's Security, so the spec at /openapi.json
+// has to show the same requirement or /docs would mislabel what needs a token.
+//
+// Not parallel: Huma builds /openapi.json lazily on its first request without
+// a lock, so this runs before the parallel tests to warm that cache.
+func TestOpenAPISecurityMatchesMiddleware(t *testing.T) {
+	spec := testkit.New(t).
+		Request(testkit.Request{App: fakes.GetSharedTestApp(), Route: "/openapi.json", Method: testkit.GET}).
+		AssertStatus(http.StatusOK).
+		GetBody()
+	paths, ok := spec["paths"].(map[string]any)
+	require.True(t, ok, "spec has no paths")
+
+	tests := []struct {
+		name       string
+		path       string
+		method     string
+		wantBearer bool
+	}{
+		{name: "a write is protected by default", path: "/api/v1/tournaments", method: "post", wantBearer: true},
+		{name: "a read is public by default", path: "/api/v1/tournaments", method: "get", wantBearer: false},
+		{name: "a read can opt in to a token", path: "/api/v1/users/{id}", method: "get", wantBearer: true},
+		{name: "a write can opt out of a token", path: "/api/v1/auth/login", method: "post", wantBearer: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			op, ok := paths[tt.path].(map[string]any)[tt.method].(map[string]any)
+			require.True(t, ok, "no %s %s in spec", tt.method, tt.path)
+			security, ok := op["security"].([]any)
+			require.True(t, ok, "%s %s has no explicit security", tt.method, tt.path)
+
+			assert.Equal(t, tt.wantBearer, len(security) > 0)
+		})
+	}
 }

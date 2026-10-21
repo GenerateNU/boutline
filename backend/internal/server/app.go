@@ -36,6 +36,7 @@ func CreateApp(cfg *config.Configuration, db *gorm.DB, redisClient *redis.Client
 	}
 
 	api := humafiber.NewV2(app, humaConfig)
+	api.OpenAPI().OnAddOperation = append(api.OpenAPI().OnAddOperation, middlewares.ApplyDefaultSecurity)
 
 	// Huma copies the middleware chain onto each operation as it registers, so
 	// this must come before SetUpRoutes or no route would be protected.
