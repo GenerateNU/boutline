@@ -34,7 +34,7 @@ PGPASSWORD=$(grep -E '^DB_PASSWORD=' "$ENV_FILE" | head -1 | cut -d= -f2-)
 echo "==> preview for PR #${PR_NUMBER} at https://${HOST}"
 
 # Idempotent: a re-push to the same PR keeps the database, so data entered
-# during review survives.
+# during review survives unless its migrations stop applying (see below).
 if docker exec -e PGPASSWORD="$PGPASSWORD" preview-db \
      psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1; then
   echo "    database ${DB_NAME} already exists"
@@ -47,9 +47,24 @@ fi
 # leaving the app against a schema it cannot read.
 echo "    applying migrations"
 docker pull --quiet "$MIGRATE_IMAGE"
-docker run --rm --network edge \
-  -e DATABASE_URL="postgres://postgres:${PGPASSWORD}@preview-db:5432/${DB_NAME}?sslmode=disable" \
-  "$MIGRATE_IMAGE"
+migrate() {
+  docker run --rm --network edge \
+    -e DATABASE_URL="postgres://postgres:${PGPASSWORD}@preview-db:5432/${DB_NAME}?sslmode=disable" \
+    "$MIGRATE_IMAGE"
+}
+
+# A long-lived PR's database drifts from its branch: merging main brings in
+# migrations older than ones already applied (Atlas's non-linear error), and a
+# renamed migration re-runs against objects it already created. Review data is
+# disposable, so rebuild from empty; a migration that still fails there is a
+# real bug and fails the preview.
+if ! migrate; then
+  echo "    migrations do not apply to the existing database; recreating ${DB_NAME}"
+  docker exec -e PGPASSWORD="$PGPASSWORD" preview-db \
+    psql -U postgres -tAc "DROP DATABASE ${DB_NAME} WITH (FORCE)" >/dev/null
+  docker exec -e PGPASSWORD="$PGPASSWORD" preview-db createdb -U postgres "${DB_NAME}"
+  migrate
+fi
 
 # Replacing the container is how an update happens; Caddy notices the new one
 # through the Docker socket and reroutes automatically.
