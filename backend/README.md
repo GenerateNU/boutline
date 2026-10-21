@@ -110,9 +110,10 @@ run inserts anything.
 
 ## Configuration
 
-Every value except `JWT_SECRET` has a default, and in dev that one falls back
-to a built-in secret, so the server runs locally with no environment set.
-Override by exporting these variables:
+Every value except `JWT_SECRET` has a default, and with `APP_ENVIRONMENT=dev`
+(which `make run` and `make dev-up` set) that one falls back to a built-in
+secret, so the server runs locally with nothing else set. Override by exporting
+these variables:
 
 | Variable              | Default    | Purpose                             |
 | --------------------- | ---------- | ----------------------------------- |
@@ -145,8 +146,9 @@ Override by exporting these variables:
 | ------------ | ---------------------- | ------------------------------------ |
 | `JWT_SECRET` | built-in in `dev` only | Signs auth tokens, at least 32 bytes |
 
-Outside `APP_ENVIRONMENT=dev` the server refuses to start without
-`JWT_SECRET`. Generate one per environment with `openssl rand -hex 32`.
+Unless `APP_ENVIRONMENT` is explicitly `dev`, the server refuses to start
+without its own `JWT_SECRET` (unset does not count as dev, and the built-in
+secret is rejected). Generate one per environment with `openssl rand -hex 32`.
 
 Config is loaded and validated once at startup in `internal/config`; nothing
 below `main` reads the environment directly.
