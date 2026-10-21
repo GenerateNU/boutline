@@ -65,6 +65,7 @@ func TestTranslateWriteError(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, errs.StatusFor(err))
 			assert.Equal(t, tt.wantMsg, errs.ClientMessage(err))
 			assert.ErrorContains(t, err, "create bout: ")
+			assert.ErrorIs(t, err, tt.err)
 		})
 	}
 }
@@ -137,6 +138,7 @@ func TestTranslateDeleteError(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, errs.StatusFor(err))
 			assert.Equal(t, tt.wantMsg, errs.ClientMessage(err))
 			assert.ErrorContains(t, err, "delete bout: ")
+			assert.ErrorIs(t, err, tt.err)
 		})
 	}
 }
