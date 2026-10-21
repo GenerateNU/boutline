@@ -7,7 +7,7 @@ build:
 	go build -o $(BINARY_NAME) $(MAIN_FILE)
 
 run:
-	go run $(MAIN_FILE)
+	APP_ENVIRONMENT=$${APP_ENVIRONMENT:-dev} go run $(MAIN_FILE)
 
 clean:
 	rm -f $(BINARY_NAME) $(COVERAGE_FILE)

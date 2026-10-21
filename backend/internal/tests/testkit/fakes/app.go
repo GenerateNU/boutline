@@ -11,6 +11,10 @@ import (
 
 const TestEnvironment = "test"
 
+// TestJWTSecret is a fixed, >=32 byte stand-in so integration tests sign and
+// verify tokens against a known value regardless of the developer's shell.
+const TestJWTSecret = "test-only-jwt-signing-secret-not-for-prod-use"
+
 var (
 	sharedApp *fiber.App
 	once      sync.Once
@@ -58,6 +62,7 @@ func TestConfiguration() *config.Configuration {
 			Password: config.DefaultRedisPassword,
 			DB:       config.DefaultRedisDB,
 		},
+		JWTSecret:   TestJWTSecret,
 		Environment: TestEnvironment,
 	}
 }
