@@ -95,9 +95,20 @@ INSERT INTO pool_stages (id, event_id, max_competitor_per_pool, status, start_ti
   ('f0000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000002', 6, 'upcoming', now() + interval '4 hours', NULL,                       NULL, now() - interval '14 days', now())
 ON CONFLICT DO NOTHING;
 
-INSERT INTO pools (id, pool_stage_id, referee_id, started_at, completed_at, created_at, updated_at) VALUES
-  ('f1000000-0000-4000-8000-000000000001', 'f0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', now() - interval '3 hours', NULL, now() - interval '1 day', now()),
-  ('f1000000-0000-4000-8000-000000000002', 'f0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000003', now() - interval '3 hours', NULL, now() - interval '1 day', now())
+INSERT INTO pools (id, pool_stage_id, number, strip, referee_id, start_time, started_at, completed_at, created_at, updated_at) VALUES
+  ('f1000000-0000-4000-8000-000000000001', 'f0000000-0000-4000-8000-000000000001', 1, 'Strip 1', 'a0000000-0000-4000-8000-000000000002', now() - interval '3 hours', now() - interval '3 hours', NULL, now() - interval '1 day', now()),
+  ('f1000000-0000-4000-8000-000000000002', 'f0000000-0000-4000-8000-000000000001', 2, 'Strip 2', 'a0000000-0000-4000-8000-000000000003', now() - interval '3 hours', now() - interval '3 hours', NULL, now() - interval '1 day', now())
+ON CONFLICT DO NOTHING;
+
+INSERT INTO pool_competitors (pool_id, competitor_id, position, created_at, updated_at) VALUES
+  ('f1000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000001', 1, now() - interval '1 day', now()),
+  ('f1000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000002', 2, now() - interval '1 day', now()),
+  ('f1000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000003', 3, now() - interval '1 day', now()),
+  ('f1000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000004', 4, now() - interval '1 day', now()),
+  ('f1000000-0000-4000-8000-000000000002', 'd0000000-0000-4000-8000-000000000005', 1, now() - interval '1 day', now()),
+  ('f1000000-0000-4000-8000-000000000002', 'd0000000-0000-4000-8000-000000000006', 2, now() - interval '1 day', now()),
+  ('f1000000-0000-4000-8000-000000000002', 'd0000000-0000-4000-8000-000000000007', 3, now() - interval '1 day', now()),
+  ('f1000000-0000-4000-8000-000000000002', 'd0000000-0000-4000-8000-000000000008', 4, now() - interval '1 day', now())
 ON CONFLICT DO NOTHING;
 
 -- Fall Open runs two pools of four as round robins, mid-way through: pool 1 has

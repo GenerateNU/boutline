@@ -52,6 +52,7 @@ func run() error {
 		&competitor.Competitor{},
 		&poolstage.PoolStage{},
 		&pool.Pool{},
+		&pool.PoolCompetitor{},
 		&directelimination.DirectElimination{},
 		&scoring.Scoring{},
 	)
