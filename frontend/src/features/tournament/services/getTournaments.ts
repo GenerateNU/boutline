@@ -1,4 +1,7 @@
-import type { TournamentListResult } from "@/features/tournament/types/tournament";
+import type {
+  TournamentListResult,
+  TournamentStatus,
+} from "@/features/tournament/types/tournament";
 
 // Server Components fetch Node-side, so this hits the backend directly
 // instead of going through the /api rewrite in next.config.ts, which only
@@ -9,12 +12,16 @@ export async function getTournaments(
   limit: number,
   offset: number,
   query?: string,
+  status?: TournamentStatus,
 ): Promise<TournamentListResult> {
   const url = new URL("/api/v1/tournaments", apiProxyTarget);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("offset", String(offset));
   if (query) {
     url.searchParams.set("q", query);
+  }
+  if (status) {
+    url.searchParams.set("status", status);
   }
 
   const response = await fetch(url, { cache: "no-store" });

@@ -45,6 +45,16 @@ describe("getTournaments", () => {
     expect(requestedUrl.searchParams.has("q")).toBe(false);
   });
 
+  it("forwards a status filter when given", async () => {
+    const body = { data: [], total: 0, limit: 20, offset: 0 };
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => body });
+
+    await getTournaments(20, 0, undefined, "active");
+
+    const requestedUrl = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(requestedUrl.searchParams.get("status")).toBe("active");
+  });
+
   it("throws when the backend responds with an error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 
