@@ -13,9 +13,14 @@ import { apiRequest } from "@/services/api-request";
 type PrivateTournamentDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  returnFocusTo: React.RefObject<HTMLElement | null>;
 };
 
-function PrivateTournamentDialog({ open, onOpenChange }: PrivateTournamentDialogProps) {
+function PrivateTournamentDialog({
+  open,
+  onOpenChange,
+  returnFocusTo,
+}: PrivateTournamentDialogProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -55,6 +60,11 @@ function PrivateTournamentDialog({ open, onOpenChange }: PrivateTournamentDialog
         <Dialog.Overlay className="fixed inset-0 z-40 bg-foreground/20" />
         <Dialog.Content
           aria-describedby={undefined}
+          // There's no Dialog.Trigger to return focus to, so Radix would drop it on <body>.
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            returnFocusTo.current?.focus();
+          }}
           className="fixed inset-x-4 top-1/2 z-50 mx-auto flex max-w-88 -translate-y-1/2 flex-col gap-5 rounded-xl border border-foreground bg-background px-5 pt-5 pb-8"
         >
           <Dialog.Close asChild>

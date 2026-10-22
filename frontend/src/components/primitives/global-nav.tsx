@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CircleUserRound, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
@@ -11,13 +11,14 @@ import { PrivateTournamentDialog } from "@/features/tournament/components/privat
 function GlobalNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [codeOpen, setCodeOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
 
   return (
     <>
       <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
         <header className="flex h-12 items-center gap-3 border border-foreground pr-3 pl-2">
           <Dialog.Trigger asChild>
-            <Button variant="text" size="icon" aria-label="Open menu">
+            <Button ref={menuButton} variant="text" size="icon" aria-label="Open menu">
               <Menu className="size-6!" />
             </Button>
           </Dialog.Trigger>
@@ -64,7 +65,11 @@ function GlobalNav() {
         </Dialog.Portal>
       </Dialog.Root>
 
-      <PrivateTournamentDialog open={codeOpen} onOpenChange={setCodeOpen} />
+      <PrivateTournamentDialog
+        open={codeOpen}
+        onOpenChange={setCodeOpen}
+        returnFocusTo={menuButton}
+      />
     </>
   );
 }
