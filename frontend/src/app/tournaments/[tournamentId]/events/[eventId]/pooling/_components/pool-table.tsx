@@ -26,12 +26,12 @@ export function PoolTable({ caption, view, data }: PoolTableProps) {
                 key={header}
                 scope="col"
                 className={cn(
-                  "border-t border-r border-b border-neutral-600 bg-neutral-400 px-2.5 py-3 text-center font-semibold",
+                  "border-t border-r border-b border-neutral-600 bg-neutral-400 p-0 font-semibold",
                   column === 0 && "rounded-tl-md border-l",
                   column === lastColumn && "rounded-tr-md",
                 )}
               >
-                {header}
+                <div className="w-12 py-3 text-center">{header}</div>
               </th>
             ))}
           </tr>
@@ -47,14 +47,17 @@ export function PoolTable({ caption, view, data }: PoolTableProps) {
                 <td
                   key={data.headers[column]}
                   className={cn(
-                    "border-r border-b border-neutral-600 px-2.5 py-3 text-center",
+                    "border-r border-b border-neutral-600 p-0",
                     cell.kind === "self" ? "bg-foreground" : view === "bouts" ? "bg-neutral-300" : "bg-background",
                     column === 0 && "border-l",
                     rowIndex === lastRow && column === 0 && "rounded-bl-md",
                     rowIndex === lastRow && column === lastColumn && "rounded-br-md",
                   )}
                 >
-                  {cell.kind === "value" ? cell.label : null}
+                  {/* A fixed box, because the name column's w-full would otherwise squeeze the grid columns. */}
+                  <div className="flex size-12 items-center justify-center">
+                    {cell.kind === "value" ? cell.label : null}
+                  </div>
                 </td>
               ))}
             </tr>
