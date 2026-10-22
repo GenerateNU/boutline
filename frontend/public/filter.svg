@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="55" height="48" viewBox="0 0 55 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Frame 163">
+<rect x="0.5" y="0.5" width="54" height="47" rx="7.5" fill="white"/>
+<rect x="0.5" y="0.5" width="54" height="47" rx="7.5" stroke="black"/>
+<g id="Filter">
+<path id="Icon" d="M27.3333 16.5H10.6667L17.3333 24.3833V29.8333L20.6667 31.5V24.3833L27.3333 16.5Z" stroke-linecap="round" stroke-linejoin="round" stroke="#152156"/>
+</g>
+<path id="Arrow 1" d="M38 23.5L37.5 23.5L37.5 24.5L38 24.5L38.5 24.5L38.5 23.5L38 23.5ZM37.6464 24.8536C37.8417 25.0488 38.1583 25.0488 38.3536 24.8536L41.5355 21.6716C41.7308 21.4763 41.7308 21.1597 41.5355 20.9645C41.3403 20.7692 41.0237 20.7692 40.8284 20.9645L38 23.7929L35.1716 20.9645C34.9763 20.7692 34.6597 20.7692 34.4645 20.9645C34.2692 21.1597 34.2692 21.4763 34.4645 21.6716L37.6464 24.8536Z" fill="black"/>
+</g>
+</svg>
