@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { Chip } from "@/components/primitives/chip";
-import { type Tournament } from "@/lib/tournaments";
+import type { Tournament } from "@/features/tournament/types/tournament";
 
 // The vocabulary the events list already uses, rather than the raw enum.
 const statusLabel: Record<Tournament["status"], string> = {
