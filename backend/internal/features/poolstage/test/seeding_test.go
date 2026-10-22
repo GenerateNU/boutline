@@ -86,22 +86,22 @@ func TestGenerateSeedAssignsPools(t *testing.T) {
 			want:       [][]string{{"a25", "u"}, {"a20", "b25"}},
 		},
 		{
-			name:       "swaps a clubmate with the nearest fencer in the same tier",
+			name:       "moves a clubmate down the seed order into the next tier",
 			fencers:    rankedFencers(9, map[string]string{"s1": "Boston", "s6": "Boston"}),
 			maxPerPool: 3,
-			want:       [][]string{{"s1", "s5", "s7"}, {"s2", "s6", "s8"}, {"s3", "s4", "s9"}},
+			want:       [][]string{{"s1", "s7", "s8"}, {"s2", "s5", "s6"}, {"s3", "s4", "s9"}},
 		},
 		{
 			name:       "matches clubs ignoring case and surrounding spaces",
 			fencers:    rankedFencers(9, map[string]string{"s1": "Boston FC", "s6": " boston fc "}),
 			maxPerPool: 3,
-			want:       [][]string{{"s1", "s5", "s7"}, {"s2", "s6", "s8"}, {"s3", "s4", "s9"}},
+			want:       [][]string{{"s1", "s7", "s8"}, {"s2", "s5", "s6"}, {"s3", "s4", "s9"}},
 		},
 		{
-			name:       "skips a nearer swap that would only move the clash",
+			name:       "keeps moving down past every pool with a clubmate",
 			fencers:    rankedFencers(9, map[string]string{"s1": "Boston", "s2": "Boston", "s6": "Boston"}),
 			maxPerPool: 3,
-			want:       [][]string{{"s1", "s4", "s7"}, {"s2", "s5", "s8"}, {"s3", "s6", "s9"}},
+			want:       [][]string{{"s1", "s7", "s8"}, {"s2", "s5", "s9"}, {"s3", "s4", "s6"}},
 		},
 		{
 			name:       "fencers without a club never clash",
@@ -110,10 +110,10 @@ func TestGenerateSeedAssignsPools(t *testing.T) {
 			want:       [][]string{{"s1", "s6", "s7"}, {"s2", "s5", "s8"}, {"s3", "s4", "s9"}},
 		},
 		{
-			name:       "partial last tier moves into an empty slot",
+			name:       "keeps the slot when no clubmate-free pool has room",
 			fencers:    rankedFencers(5, map[string]string{"s1": "Boston", "s5": "Boston"}),
 			maxPerPool: 3,
-			want:       [][]string{{"s1", "s4"}, {"s2", "s3", "s5"}},
+			want:       [][]string{{"s1", "s4", "s5"}, {"s2", "s3"}},
 		},
 		{
 			name: "keeps the snake when every pool clashes anyway",

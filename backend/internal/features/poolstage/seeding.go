@@ -23,10 +23,9 @@ type SeedEntry struct {
 }
 
 // GenerateSeed splits entries into the fewest pools of at most maxPerPool,
-// dealt out in a snake by rating so every pool is equally strong, then moves
-// clubmates apart without letting anyone leave their snake pass. Each pool
-// lists its fencers from strongest seed down; rng breaks ties between equal
-// ratings.
+// dealt out in a snake by rating so every pool is equally strong, with
+// clubmates kept apart as FIE o.68.2 keeps compatriots apart. Each pool lists
+// its fencers in seed order; rng breaks ties between equal ratings.
 func GenerateSeed(entries []SeedEntry, maxPerPool int, rng *rand.Rand) ([][]uuid.UUID, error) {
 	if maxPerPool < 2 {
 		return nil, errs.Public("max_competitor_per_pool must be at least 2", errs.ErrInvalidInput)
@@ -42,12 +41,7 @@ func GenerateSeed(entries []SeedEntry, maxPerPool int, rng *rand.Rand) ([][]uuid
 
 	seeded := rankEntries(entries, rng)
 	poolCount := 1 + (len(seeded)-1)/maxPerPool
-	pools := make([][]SeedEntry, poolCount)
-
-	for start := 0; start < len(seeded); start += poolCount {
-		tier := seeded[start:min(start+poolCount, len(seeded))]
-		placeTier(pools, tier, (start/poolCount)%2 == 1)
-	}
+	pools := fillSnake(seeded, snakeSlots(len(seeded), poolCount), poolCount)
 
 	ids := make([][]uuid.UUID, poolCount)
 	for p, pool := range pools {
@@ -78,73 +72,67 @@ func ratingRank(r competitor.Rating) int {
 	return strings.Index("ABCDEU", string(r))
 }
 
-// placeTier gives each fencer of one snake pass a different pool. Starting from
-// the snake positions, it swaps fencers between pools, nearest pool first,
-// while a swap lowers the tier's total clubmate clashes. Swapping only within
-// a tier keeps one fencer per tier in every pool, so the rating balance and
-// the pool sizes hold. A partial last tier can also move into an empty slot.
-func placeTier(pools [][]SeedEntry, tier []SeedEntry, reversed bool) {
-	owner := snakeOwners(len(pools), len(tier), reversed)
-	clash := func(p, i int) int {
-		if i < 0 {
-			return 0
+// snakeSlots lists the pool each seed position lands in: left to right
+// across the pools, then right to left, and so on.
+func snakeSlots(count, poolCount int) []int {
+	slots := make([]int, count)
+	for k := range slots {
+		slots[k] = k % poolCount
+		if (k/poolCount)%2 == 1 {
+			slots[k] = poolCount - 1 - k%poolCount
 		}
-		return clubmates(pools[p], tier[i].Club)
+	}
+	return slots
+}
+
+// fillSnake fills the slots in order, each with the best remaining seed who
+// has no clubmate in that slot's pool. A fencer passed over this way moves
+// down the seed order, across tiers if need be, and stays first in line for
+// the next slot. A fencer with no clubmate-free pool left keeps their slot.
+func fillSnake(seeded []SeedEntry, slots []int, poolCount int) [][]SeedEntry {
+	capacity := make([]int, poolCount)
+	for _, p := range slots {
+		capacity[p]++
 	}
 
-	for improved := true; improved; {
-		improved = false
-		for p := range pools {
-		search:
-			for d := 1; d < len(pools); d++ {
-				for _, q := range [2]int{p - d, p + d} {
-					if q < 0 || q >= len(pools) {
-						continue
-					}
-					if clash(p, owner[q])+clash(q, owner[p]) < clash(p, owner[p])+clash(q, owner[q]) {
-						owner[p], owner[q] = owner[q], owner[p]
-						improved = true
-						break search
-					}
-				}
+	pools := make([][]SeedEntry, poolCount)
+	remaining := slices.Clone(seeded)
+	for _, p := range slots {
+		pick := 0
+		for i, entry := range remaining {
+			if !hasClubmate(pools[p], entry.Club) || !canAvoidClubmates(entry, pools, capacity) {
+				pick = i
+				break
 			}
 		}
+		pools[p] = append(pools[p], remaining[pick])
+		remaining = slices.Delete(remaining, pick, pick+1)
 	}
-
-	for p, i := range owner {
-		if i >= 0 {
-			pools[p] = append(pools[p], tier[i])
-		}
-	}
+	return pools
 }
 
-// snakeOwners maps each pool to the tier index the snake deals it, or -1 when
-// a partial tier runs out before reaching that pool.
-func snakeOwners(poolCount, tierSize int, reversed bool) []int {
-	owner := make([]int, poolCount)
-	for p := range owner {
-		owner[p] = p
-		if reversed {
-			owner[p] = poolCount - 1 - p
-		}
-		if owner[p] >= tierSize {
-			owner[p] = -1
+// canAvoidClubmates reports whether entry could still join a pool with an open
+// slot and no clubmate. Every slot before the current one is filled, so an
+// open slot is always further down the snake.
+func canAvoidClubmates(entry SeedEntry, pools [][]SeedEntry, capacity []int) bool {
+	for p, pool := range pools {
+		if len(pool) < capacity[p] && !hasClubmate(pool, entry.Club) {
+			return true
 		}
 	}
-	return owner
+	return false
 }
 
-func clubmates(pool []SeedEntry, club string) int {
+func hasClubmate(pool []SeedEntry, club string) bool {
 	club = strings.TrimSpace(club)
 	if club == "" {
-		return 0
+		return false
 	}
 
-	count := 0
 	for _, entry := range pool {
 		if strings.EqualFold(strings.TrimSpace(entry.Club), club) {
-			count++
+			return true
 		}
 	}
-	return count
+	return false
 }
