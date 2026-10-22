@@ -1,25 +1,11 @@
-import { cva } from "class-variance-authority";
 import { cn } from "cn";
 
 import type { TournamentStatus } from "@/features/tournament/types/tournament";
 
-const badgeVariants = cva(
-  "inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium",
-  {
-    variants: {
-      status: {
-        pending: "bg-amber-600 text-white",
-        active: "bg-emerald-600 text-white",
-        ended: "bg-muted text-muted-foreground",
-      },
-    },
-  },
-);
-
 const statusLabels: Record<TournamentStatus, string> = {
   pending: "Upcoming",
-  active: "Active",
-  ended: "Ended",
+  active: "In Progress",
+  ended: "Completed",
 };
 
 interface TournamentStatusBadgeProps extends React.ComponentProps<"span"> {
@@ -32,10 +18,16 @@ function TournamentStatusBadge({
   ...props
 }: TournamentStatusBadgeProps) {
   return (
-    <span className={cn(badgeVariants({ status }), className)} {...props}>
+    <span
+      className={cn(
+        "inline-flex h-7 min-w-19 items-center justify-center rounded-sm bg-chip px-2 text-xs leading-5 text-foreground",
+        className,
+      )}
+      {...props}
+    >
       {statusLabels[status]}
     </span>
   );
 }
 
-export { TournamentStatusBadge };
+export { TournamentStatusBadge, statusLabels };

@@ -1,18 +1,17 @@
 "use client";
 
-import { Search, SlidersHorizontal } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import Image from "next/image";
+import { useState } from "react";
 
-import { Button } from "@/components/primitives/button";
 import { Input } from "@/components/primitives/input";
+import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
 
 const debounceMs = 300;
 
 type SearchFormProps = {
   action: string;
-  placeholder: string;
+  label: string;
   defaultValue?: string;
 };
 
@@ -20,11 +19,10 @@ type SearchFormProps = {
 // JavaScript. Once hydrated, typing navigates on a debounce.
 function SearchForm({
   action,
-  placeholder,
+  label,
   defaultValue = "",
 }: SearchFormProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const { searchParams, setFilters, isPending } = useTournamentFilters();
   const [value, setValue] = useState(defaultValue);
   const [syncedDefaultValue, setSyncedDefaultValue] = useState(defaultValue);
 
@@ -36,64 +34,52 @@ function SearchForm({
     setValue(defaultValue);
   }
 
-  function navigate(search: string) {
-    const query = search ? `?q=${encodeURIComponent(search)}` : "";
-    // replace, not push: typing should not fill the history stack. Leaving
-    // offset off puts a new search back on the first page.
-    startTransition(() => {
-      router.replace(`${action}${query}`, { scroll: false });
-    });
-  }
-
+  const navigate = (search: string) => setFilters({ q: search });
   const [debouncedNavigate, cancelDebouncedNavigate] = useDebouncedCallback(
     navigate,
     debounceMs,
   );
 
   return (
-    <div className="flex items-center gap-2">
-      <form
-        action={action}
-        role="search"
-        className="relative flex-1"
-        aria-busy={isPending}
-        onSubmit={(event) => {
-          event.preventDefault();
-          cancelDebouncedNavigate();
-          navigate(value.trim());
+    <form
+      action={action}
+      role="search"
+      className="relative flex-1"
+      aria-busy={isPending}
+      onSubmit={(event) => {
+        event.preventDefault();
+        cancelDebouncedNavigate();
+        navigate(value.trim());
+      }}
+    >
+      {/* Carries the other active filters through a plain submit, so searching
+          before hydration doesn't drop them. offset is left off on purpose. */}
+      {Array.from(searchParams)
+        .filter(([key]) => key !== "q" && key !== "offset")
+        .map(([key, value]) => (
+          <input key={key} type="hidden" name={key} value={value} />
+        ))}
+      <Input
+        aria-label={label}
+        name="q"
+        type="search"
+        placeholder="Enter search text"
+        value={value}
+        onChange={(event) => {
+          setValue(event.target.value);
+          debouncedNavigate(event.target.value.trim());
         }}
-      >
-        <Search
-          aria-hidden
-          data-pending={isPending || undefined}
-          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground transition-opacity data-pending:opacity-40"
-        />
-        <Input
-          aria-label={placeholder}
-          name="q"
-          type="search"
-          placeholder={placeholder}
-          value={value}
-          onChange={(event) => {
-            setValue(event.target.value);
-            debouncedNavigate(event.target.value.trim());
-          }}
-          className="pl-9"
-        />
-      </form>
-
-      {/* Inert on purpose: date filtering is a follow-up ticket. type is
-          "button" so it cannot submit the search form. */}
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        aria-label="Filter (not available yet)"
-        className="shrink-0 rounded-md"
-      >
-        <SlidersHorizontal aria-hidden />
-      </Button>
-    </div>
+        className="h-12 rounded-md border-brand pr-12 pl-4 text-brand placeholder:text-brand"
+      />
+      <Image
+        src="/search.svg"
+        alt=""
+        width={24}
+        height={24}
+        data-pending={isPending || undefined}
+        className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 transition-opacity data-pending:opacity-40"
+      />
+    </form>
   );
 }
 
