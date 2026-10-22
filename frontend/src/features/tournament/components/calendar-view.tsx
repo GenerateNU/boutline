@@ -4,7 +4,7 @@ import { addMonths, addYears, format } from "date-fns";
 import Image from "next/image";
 import { useState } from "react";
 
-import { Calendar } from "@/components/primitives/date-picker";
+import { Calendar } from "@/components/primitives/calendar";
 import { useToday } from "@/features/tournament/hooks/use-today";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { formatDateParam, parseDateParam } from "@/features/tournament/lib/date-param";
