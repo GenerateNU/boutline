@@ -32,8 +32,6 @@ function Sidebar() {
             Admin Login
           </Link>
           <Image src="/divider.svg" alt="" width={173} height={1} />
-          {/* The private-tournament code popup is its own frame and not built
-              yet, so this stays inert. */}
           <button type="button" className="cursor-pointer text-left">
             Find Private Tournament
           </button>

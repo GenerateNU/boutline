@@ -32,8 +32,6 @@ function CalendarView() {
       </button>
       <h2 className="pt-2.5 text-xl leading-6 font-medium">Calendar View</h2>
 
-      {/* The calendar marks today itself, so it waits for the browser's today
-          rather than rendering a server guess that may not hydrate. */}
       {today && month && (
         <>
           <div className="flex items-center justify-center gap-2.5 px-2.5 py-1.5">

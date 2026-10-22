@@ -29,7 +29,6 @@ export default async function TournamentsPage({
   const day = parseDateParam(typeof query.date === "string" ? query.date : undefined);
   const date = day && formatDateParam(day);
   const calendarView = query.view === "calendar";
-  // Calendar view has no search bar, so a leftover q must not filter it.
   const search = !calendarView && typeof query.q === "string" ? query.q.trim() : "";
 
   const [{ data, total }, sessionToken] = await Promise.all([

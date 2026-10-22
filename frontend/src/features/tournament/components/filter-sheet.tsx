@@ -62,8 +62,6 @@ function FilterSheet() {
             </button>
           </Dialog.Close>
 
-          {/* A form so "Clear all" can reset the uncontrolled club and country
-              fields natively; the chip groups are cleared in onReset. */}
           <form
             className="flex flex-col gap-5"
             onReset={() => {

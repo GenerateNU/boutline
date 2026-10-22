@@ -52,8 +52,6 @@ function SearchForm({
         navigate(value.trim());
       }}
     >
-      {/* Carries the other active filters through a plain submit, so searching
-          before hydration doesn't drop them. offset is left off on purpose. */}
       {Array.from(searchParams)
         .filter(([key]) => key !== "q" && key !== "offset")
         .map(([key, value]) => (

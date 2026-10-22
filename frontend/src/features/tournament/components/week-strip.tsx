@@ -15,8 +15,6 @@ function WeekStrip() {
   const { searchParams, setFilters } = useTournamentFilters();
   const selected = parseDateParam(searchParams.get("date"));
   const today = useToday();
-  // Unset until the user pages the strip, so it follows the selected day (or
-  // today, once known in the browser) instead of a value frozen at mount.
   const [pagedStart, setPagedStart] = useState<Date>();
   const anchor = selected ?? today;
   const start = pagedStart ?? (anchor && addDays(anchor, -1));
@@ -32,7 +30,6 @@ function WeekStrip() {
   }
 
   function select(day: Date | undefined) {
-    // Pin the window so picking a day doesn't slide the strip under the tap.
     setPagedStart(start);
     setFilters({ date: day ? formatDateParam(day) : undefined });
   }
