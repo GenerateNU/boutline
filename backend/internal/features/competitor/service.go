@@ -13,6 +13,7 @@ const (
 	CompetitorDefaultPageSize = 20
 	CompetitorMinPageSize     = 1
 	CompetitorMaxPageSize     = 100
+	CompetitorMaxIDs          = 100
 )
 
 type CompetitorService interface {
@@ -166,6 +167,15 @@ func (s *competitorService) ListCompetitors(
 	if team := strings.TrimSpace(input.Team); team != "" {
 		filter.Team = &team
 	}
+	ids, err := utils.ParseUUIDList(input.IDs, "ids")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+	if len(ids) > CompetitorMaxIDs {
+		return nil, errs.HumaError(errs.Public(
+			fmt.Sprintf("ids must not contain more than %d values", CompetitorMaxIDs), errs.ErrInvalidInput))
+	}
+	filter.IDs = ids
 
 	competitors, total, err := s.repo.ListCompetitors(ctx, filter)
 

@@ -144,6 +144,21 @@ func TestListEndpoint(t *testing.T) {
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
 
+	t.Run("filters by ids from the query string", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?ids=" + seed[0].ID.String() + "," + seed[1].ID.String())
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 2)
+		assert.InDelta(t, 2, body["total"], 0)
+	})
+
+	t.Run("rejects a malformed ids value", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?ids=not-a-uuid")
+		assert.Equal(t, http.StatusBadRequest, resp.Code)
+	})
+
 	t.Run("matches by name when a query is given", func(t *testing.T) {
 		t.Parallel()
 		named := []competitor.Competitor{
