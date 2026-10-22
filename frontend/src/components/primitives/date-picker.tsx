@@ -16,6 +16,7 @@ function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  components,
   ...props
 }: React.ComponentProps<typeof DayPicker>) {
   return (
@@ -42,6 +43,7 @@ function Calendar({
       components={{
         DayButton: CalendarDayButton,
         MonthCaption: CalendarCaption,
+        ...components,
       }}
       {...props}
     />
@@ -146,4 +148,4 @@ function DatePicker({ value = [], onSelect, onCancel, className }: DatePickerPro
   );
 }
 
-export { DatePicker };
+export { Calendar, DatePicker };
