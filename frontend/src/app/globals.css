@@ -14,6 +14,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-brand: var(--brand);
+  --color-brand-muted: var(--brand-muted);
   --color-selected: var(--selected);
   --color-selected-foreground: var(--selected-foreground);
   --color-secondary: var(--secondary);
@@ -52,6 +54,10 @@
      checkboxes stay neutral. */
   --selected: oklch(0.546 0.215 262.88);
   --selected-foreground: oklch(0.985 0 0);
+  /* The pool list's navy: outlines and text on its search bar, view toggle and
+     View Pool button, with the muted tint marking the chosen toggle segment. */
+  --brand: oklch(0.274 0.097 269.29);
+  --brand-muted: oklch(0.788 0.013 266.68);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
