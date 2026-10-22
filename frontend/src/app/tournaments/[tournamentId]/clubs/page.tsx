@@ -1,9 +1,11 @@
 import { Pagination } from "@/components/primitives/pagination";
 import { Section } from "@/components/primitives/section";
-import { listTeams } from "@/lib/competitors";
+import { getTeams } from "@/features/competitor/services/getTeams";
 
 import { MockCountry } from "../_components/mock-country";
 import { SearchForm } from "../../_components/search-form";
+
+const PAGE_SIZE = 20;
 
 export default async function ClubsTab({
   params,
@@ -15,11 +17,12 @@ export default async function ClubsTab({
   const offset = Math.max(0, Number(query.offset) || 0);
   const basePath = `/tournaments/${tournamentId}/clubs`;
 
-  const { data, total, limit } = await listTeams({
+  const { data, total, limit } = await getTeams(
     tournamentId,
-    search,
+    PAGE_SIZE,
     offset,
-  });
+    search,
+  );
 
   return (
     <Section title="Clubs">

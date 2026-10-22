@@ -1,9 +1,11 @@
 import { Pagination } from "@/components/primitives/pagination";
 import { Section } from "@/components/primitives/section";
-import { listCompetitors } from "@/lib/competitors";
+import { getCompetitors } from "@/features/competitor/services/getCompetitors";
 
 import { MockCountry } from "../_components/mock-country";
 import { SearchForm } from "../../_components/search-form";
+
+const PAGE_SIZE = 20;
 
 export default async function FencersTab({
   params,
@@ -15,11 +17,12 @@ export default async function FencersTab({
   const offset = Math.max(0, Number(query.offset) || 0);
   const basePath = `/tournaments/${tournamentId}/fencers`;
 
-  const { data, total, limit } = await listCompetitors({
+  const { data, total, limit } = await getCompetitors(
     tournamentId,
-    search,
+    PAGE_SIZE,
     offset,
-  });
+    search,
+  );
 
   return (
     <Section title="Fencers">
