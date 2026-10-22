@@ -2,19 +2,19 @@ import Link from "next/link";
 
 import { Button } from "@/components/primitives/button";
 
-type PaginationProps = {
+interface PaginationProps {
   total: number;
   limit: number;
   offset: number;
   basePath: string;
   search?: string;
-};
+}
 
-type StepProps = {
+interface StepProps {
   href: string | null; 
   rel: "prev" | "next";
   children: React.ReactNode;
-};
+}
 
 function Step({ href, rel, children }: StepProps) {
   return (
