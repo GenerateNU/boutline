@@ -48,9 +48,10 @@ type CompetitorUpdate struct {
 }
 
 type CompetitorListFilter struct {
-	Rating *Rating // nil means don't filter by rating
-	Team   *string // nil means don't filter by team
-	Term   string  // fuzzy match against name; empty means don't filter
+	Rating *Rating     // nil means don't filter by rating
+	Team   *string     // nil means don't filter by team
+	Term   string      // fuzzy match against name; empty means don't filter
+	IDs    []uuid.UUID // empty means don't filter by id
 	Limit  int
 	Offset int
 }
@@ -127,6 +128,9 @@ func (r *competitorRepository) ListCompetitors(
 	}
 	if filter.Team != nil {
 		query = query.Where("team = ?", *filter.Team)
+	}
+	if len(filter.IDs) > 0 {
+		query = query.Where("id IN ?", filter.IDs)
 	}
 	query = utils.TrigramMatch(query, competitorNameTrigramExpr, filter.Term)
 

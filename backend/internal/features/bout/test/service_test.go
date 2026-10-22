@@ -3,6 +3,7 @@ package test
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -48,6 +49,15 @@ func apiError(t *testing.T, err error) (int, string) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+func tooManyIDs() string {
+	ids := make([]string, bout.BoutMaxIDs+1)
+	for i := range ids {
+		ids[i] = uuid.New().String()
+	}
+
+	return strings.Join(ids, ",")
+}
 
 func createInput(tournamentID string, refereeID *string, competitor1ID, competitor2ID string, pointsToWin int) *bout.BoutCreateInput {
 	return &bout.BoutCreateInput{
@@ -327,6 +337,46 @@ func TestListBouts(t *testing.T) {
 			name:     "rejects a bad pool_id",
 			seed:     mixed,
 			input:    &bout.BoutListInput{PoolID: "not-a-uuid"},
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:      "filters to just the named ids",
+			seed:      mixed,
+			input:     &bout.BoutListInput{IDs: mixed[0].ID.String() + "," + mixed[1].ID.String()},
+			wantTotal: 2,
+			wantLimit: bout.BoutDefaultPageSize,
+		},
+		{
+			name:      "combines ids with tournament_id",
+			seed:      mixed,
+			input:     &bout.BoutListInput{IDs: mixed[0].ID.String() + "," + mixed[2].ID.String(), TournamentID: tournamentID.String()},
+			wantTotal: 1,
+			wantLimit: bout.BoutDefaultPageSize,
+		},
+		{
+			name:      "combines ids with status",
+			seed:      mixed,
+			input:     &bout.BoutListInput{IDs: mixed[0].ID.String() + "," + mixed[1].ID.String(), Status: bout.BoutStatusActive},
+			wantTotal: 1,
+			wantLimit: bout.BoutDefaultPageSize,
+		},
+		{
+			name:      "an empty ids string returns everything unchanged",
+			seed:      mixed,
+			input:     &bout.BoutListInput{IDs: ""},
+			wantTotal: 3,
+			wantLimit: bout.BoutDefaultPageSize,
+		},
+		{
+			name:     "rejects an invalid id in ids",
+			seed:     mixed,
+			input:    &bout.BoutListInput{IDs: "not-a-uuid"},
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:     "rejects more than the max number of ids",
+			seed:     mixed,
+			input:    &bout.BoutListInput{IDs: tooManyIDs()},
 			wantCode: http.StatusBadRequest,
 		},
 	}
