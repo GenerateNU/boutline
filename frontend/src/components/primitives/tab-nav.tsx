@@ -19,16 +19,13 @@ function TabNav({ label, basePath, tabs }: TabNavProps) {
   const activeSegment = useSelectedLayoutSegment();
 
   return (
-    <nav
-      aria-label={label}
-      className="flex overflow-hidden rounded-full border border-foreground"
-    >
+    <nav aria-label={label} className="flex border-b border-border">
       {tabs.map(({ label, segment }) => (
         <Link
           key={label}
           href={segment ? `${basePath}/${segment}` : basePath}
           aria-current={segment === activeSegment ? "page" : undefined}
-          className="flex-1 border-l border-foreground px-5 py-2 text-center text-sm whitespace-nowrap outline-none transition-colors first:border-l-0 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset aria-[current=page]:text-selected"
+          className="relative flex-1 px-3 py-2 text-center text-sm whitespace-nowrap text-brand outline-none transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-brand after:opacity-0 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset aria-[current=page]:after:opacity-100"
         >
           {label}
         </Link>

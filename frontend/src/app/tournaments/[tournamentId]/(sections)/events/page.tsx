@@ -2,18 +2,31 @@ import Link from "next/link";
 
 import { Chip } from "@/components/primitives/chip";
 import { Section } from "@/components/primitives/section";
+import { getEvents } from "@/features/event/services/getEvents";
+import type { EventStatus } from "@/features/event/types/event";
 
-const events = [
-  { id: "1", name: "Y14 Men's Foil", time: "Sat 8:00 AM", status: "Past" },
-  { id: "2", name: "Cadet Women's Épée", time: "Sat 10:30 AM", status: "Live" },
-  { id: "3", name: "Junior Mixed Sabre", time: "Sat 1:00 PM", status: "Upcoming" },
-  { id: "4", name: "Senior Men's Épée Team", time: "Sun 9:00 AM", status: "Upcoming" },
-];
+const statusLabels: Record<EventStatus, string> = {
+  upcoming: "Upcoming",
+  active: "Live",
+  ended: "Past",
+};
+
+function formatStartTime(startTime: string | null) {
+  if (startTime === null) {
+    return "Time TBD";
+  }
+  return new Date(startTime).toLocaleString("en-US", {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 interface EventsTabProps extends PageProps<"/tournaments/[tournamentId]/events"> {}
 
 export default async function EventsTab({ params }: EventsTabProps) {
   const { tournamentId } = await params;
+  const { data: events } = await getEvents(tournamentId);
 
   return (
     <Section title="Events Tab" className="flex flex-col gap-4">
@@ -24,8 +37,11 @@ export default async function EventsTab({ params }: EventsTabProps) {
         which events are past, live, and upcoming. We should also be able to support
         calendar view
       </p>
+      {events.length === 0 && (
+        <p className="text-sm text-muted-foreground">No events yet.</p>
+      )}
       <ul className="flex flex-col gap-3">
-        {events.map(({ id, name, time, status }) => (
+        {events.map(({ id, name, start_time, status }) => (
           <li key={id}>
             <Link
               href={`/tournaments/${tournamentId}/events/${id}`}
@@ -33,9 +49,11 @@ export default async function EventsTab({ params }: EventsTabProps) {
             >
               <p className="flex flex-col gap-1">
                 <span className="text-sm font-medium">{name}</span>
-                <span className="text-xs text-muted-foreground">{time}</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatStartTime(start_time)}
+                </span>
               </p>
-              <Chip className="rounded-full text-xs">{status}</Chip>
+              <Chip className="rounded-full text-xs">{statusLabels[status]}</Chip>
             </Link>
           </li>
         ))}
