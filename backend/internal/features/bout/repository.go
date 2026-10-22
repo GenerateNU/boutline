@@ -89,6 +89,7 @@ func (t BoutTransition) columns() map[string]any {
 type BoutListFilter struct {
 	TournamentID *uuid.UUID
 	PoolID       *uuid.UUID
+	IDs          []uuid.UUID
 	Status       BoutStatus
 	Limit        int
 	Offset       int
@@ -131,6 +132,9 @@ func (r *boutRepository) ListBouts(ctx context.Context, filter BoutListFilter) (
 	}
 	if filter.PoolID != nil {
 		query = query.Where("pool_id = ?", *filter.PoolID)
+	}
+	if len(filter.IDs) > 0 {
+		query = query.Where("id IN ?", filter.IDs)
 	}
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)

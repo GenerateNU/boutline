@@ -96,6 +96,9 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 		if filter.Team != nil && candidate.Team != *filter.Team {
 			continue
 		}
+		if len(filter.IDs) > 0 && !slices.Contains(filter.IDs, candidate.ID) {
+			continue
+		}
 		haystack := candidate.FirstName + " " + candidate.LastName
 		if !strings.Contains(strings.ToLower(haystack), term) {
 			continue
