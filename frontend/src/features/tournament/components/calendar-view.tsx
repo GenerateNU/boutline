@@ -52,7 +52,11 @@ function CalendarView() {
             today={today}
             month={month}
             selected={selected}
-            onSelect={setDate}
+            onSelect={(day) => {
+              setMonth(undefined);
+              setDate(day);
+            }}
+            onMonthChange={setMonth}
             components={{ MonthCaption: NoCaption }}
             className="mx-auto w-fit border border-brand p-4"
             classNames={{
