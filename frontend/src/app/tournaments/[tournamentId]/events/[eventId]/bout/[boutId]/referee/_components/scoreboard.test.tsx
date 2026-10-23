@@ -36,22 +36,18 @@ describe("Scoreboard", () => {
       expected: { alice: "1", ben: "0" },
     },
     {
-      name: "a tap while the previous one is still saving is ignored",
+      name: "undo tapped before a touch is saved reverts that touch",
       initial: [{ id: 1, competitor_id: BEN.id, points: 1 }],
       taps: ["Touch Alice Chen", "Undo last touch"],
-      settleBetween: false,
-      expected: { alice: "1", ben: "1" },
+      expected: { alice: "0", ben: "1" },
     },
-  ])("$name", async ({ initial, taps, settleBetween = true, expected }) => {
+  ])("$name", async ({ initial, taps, expected }) => {
     const { live } = installBackend(initial);
     render(<Scoreboard boutId={BOUT_ID} />);
     await screen.findByLabelText("Alice Chen score");
 
     for (const label of taps) {
       fireEvent.click(screen.getByRole("button", { name: label }));
-      if (settleBetween) {
-        await settle();
-      }
     }
     await settle();
 
@@ -102,13 +98,65 @@ describe("Scoreboard", () => {
     expect(scoreOf("Ben Ortiz")).toBe(expected.ben);
   });
 
-  it("shows the error and keeps the server score when a touch fails", async () => {
+  it("pauses scoring when it can't reload after a lost response, until a retry succeeds", async () => {
+    const { backend, live } = installBackend([]);
+    render(<Scoreboard boutId={BOUT_ID} />);
+    await screen.findByLabelText("Alice Chen score");
+
+    backend.loseNextCreateResponse = true;
+    fireEvent.click(screen.getByRole("button", { name: "Touch Alice Chen" }));
+    await settle();
+
+    expect(screen.getByRole("alert", { name: "Out of sync" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Touch Alice Chen" }));
+    await settle();
+    expect(live()).toHaveLength(1);
+
+    backend.offline = false;
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await settle();
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(scoreOf("Alice Chen")).toBe("1");
+    fireEvent.click(screen.getByRole("button", { name: "Touch Alice Chen" }));
+    await settle();
+    expect(scoreOf("Alice Chen")).toBe("2");
+    expect(live()).toHaveLength(2);
+  });
+
+  it("ignores Retry while a retry is already reloading", async () => {
+    const { backend } = installBackend([]);
+    render(<Scoreboard boutId={BOUT_ID} />);
+    await screen.findByLabelText("Alice Chen score");
+    backend.loseNextCreateResponse = true;
+    fireEvent.click(screen.getByRole("button", { name: "Touch Alice Chen" }));
+    await settle();
+
+    backend.offline = false;
+    let releaseHistory = () => {};
+    backend.historyGate = new Promise((resolve) => {
+      releaseHistory = resolve;
+    });
+    const boutReloads = () =>
+      (global.fetch as jest.Mock).mock.calls.filter(([url]) => url === `/api/v1/bouts/${BOUT_ID}`).length;
+    const before = boutReloads();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    releaseHistory();
+    await settle();
+
+    expect(boutReloads() - before).toBe(1);
+    expect(screen.queryByRole("alert", { name: "Out of sync" })).not.toBeInTheDocument();
+  });
+
+  it("shows the error, drops taps queued behind the failure, and keeps the server score", async () => {
     const { backend, live } = installBackend([{ id: 1, competitor_id: BEN.id, points: 1 }]);
     render(<Scoreboard boutId={BOUT_ID} />);
     await screen.findByLabelText("Alice Chen score");
 
     backend.failNextCreate = true;
     fireEvent.click(screen.getByRole("button", { name: "Touch Alice Chen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Undo last touch" }));
     await settle();
 
     expect(screen.getByRole("alert")).toHaveTextContent("database unavailable");
@@ -384,6 +432,25 @@ describe("Scoreboard", () => {
       "Alice Chen1 - 0",
     ]);
     expect(historyRows().join()).not.toContain("Saving…");
+  });
+
+  it("says the history couldn't load instead of claiming there are no touches", async () => {
+    const { backend } = installBackend([{ id: 1, competitor_id: ALICE.id, points: 1 }]);
+    backend.failHistory = true;
+    render(<Scoreboard boutId={BOUT_ID} />);
+    await screen.findByLabelText("Alice Chen score");
+    await settle();
+
+    expect(screen.getByText("Couldn't load the latest score history.")).toBeInTheDocument();
+    expect(screen.queryByText("No touches yet.")).not.toBeInTheDocument();
+    expect(scoreOf("Alice Chen")).toBe("1");
+
+    backend.failHistory = false;
+    fireEvent.click(screen.getByRole("button", { name: "Touch Ben Ortiz" }));
+    await settle();
+
+    expect(screen.queryByText("Couldn't load the latest score history.")).not.toBeInTheDocument();
+    expect(historyRows()).toHaveLength(2);
   });
 
   it("keeps an undone touch in the history with the score it produced, marked Revoked", async () => {
