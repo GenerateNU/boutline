@@ -11,7 +11,7 @@ interface PaginationProps {
 }
 
 interface StepProps {
-  href: string | null; 
+  href: string | null;
   rel: "prev" | "next";
   children: React.ReactNode;
 }

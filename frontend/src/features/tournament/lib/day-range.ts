@@ -18,7 +18,7 @@ function offsetMinutes(instant: number, timeZone: string): number {
     value("minute"),
     value("second"),
   );
-  return (asUTC - Math.floor(instant / 1000) * 1000) / 60000;
+  return (asUTC - instant) / 60000;
 }
 
 function zonedMidnight(utcMidnight: number, timeZone: string): number {
