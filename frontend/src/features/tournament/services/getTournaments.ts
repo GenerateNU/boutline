@@ -1,6 +1,7 @@
+import { dayRange } from "@/features/tournament/lib/day-range";
 import type {
+  TournamentListFilters,
   TournamentListResult,
-  TournamentStatus,
 } from "@/features/tournament/types/tournament";
 
 // Server Components fetch Node-side, so this hits the backend directly
@@ -11,8 +12,7 @@ const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 export async function getTournaments(
   limit: number,
   offset: number,
-  query?: string,
-  status?: TournamentStatus,
+  { query, status, visibility, date, timeZone }: TournamentListFilters = {},
 ): Promise<TournamentListResult> {
   const url = new URL("/api/v1/tournaments", apiProxyTarget);
   url.searchParams.set("limit", String(limit));
@@ -22,6 +22,14 @@ export async function getTournaments(
   }
   if (status) {
     url.searchParams.set("status", status);
+  }
+  if (visibility) {
+    url.searchParams.set("visibility", visibility);
+  }
+  if (date) {
+    const { from, to } = dayRange(date, timeZone);
+    url.searchParams.set("start_from", from.toISOString());
+    url.searchParams.set("start_to", to.toISOString());
   }
 
   const response = await fetch(url, { cache: "no-store" });

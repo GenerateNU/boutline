@@ -7,12 +7,12 @@ import { useState } from "react";
 
 import { useToday } from "@/features/tournament/hooks/use-today";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
-import { formatDateParam, parseDateParam } from "@/features/tournament/lib/date-param";
+import { parseDateParam } from "@/features/tournament/lib/date-param";
 
 const visibleDays = 4;
 
 function WeekStrip() {
-  const { searchParams, setFilters } = useTournamentFilters();
+  const { searchParams, setFilters, setDate } = useTournamentFilters();
   const selected = parseDateParam(searchParams.get("date"));
   const today = useToday();
   const [pagedStart, setPagedStart] = useState<Date>();
@@ -31,7 +31,7 @@ function WeekStrip() {
 
   function select(day: Date | undefined) {
     setPagedStart(start);
-    setFilters({ date: day ? formatDateParam(day) : undefined });
+    setDate(day);
   }
 
   return (

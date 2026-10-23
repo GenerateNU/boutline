@@ -7,14 +7,14 @@ import { useState } from "react";
 import { Calendar } from "@/components/primitives/calendar";
 import { useToday } from "@/features/tournament/hooks/use-today";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
-import { formatDateParam, parseDateParam } from "@/features/tournament/lib/date-param";
+import { parseDateParam } from "@/features/tournament/lib/date-param";
 
 function NoCaption() {
   return <></>;
 }
 
 function CalendarView() {
-  const { searchParams, setFilters } = useTournamentFilters();
+  const { searchParams, setFilters, setDate } = useTournamentFilters();
   const selected = parseDateParam(searchParams.get("date"));
   const today = useToday();
   const [pagedMonth, setMonth] = useState<Date>();
@@ -52,7 +52,7 @@ function CalendarView() {
             today={today}
             month={month}
             selected={selected}
-            onSelect={(day) => setFilters({ date: day ? formatDateParam(day) : undefined })}
+            onSelect={setDate}
             components={{ MonthCaption: NoCaption }}
             className="mx-auto w-fit border border-brand p-4"
             classNames={{

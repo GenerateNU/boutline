@@ -30,14 +30,18 @@ export default async function TournamentsPage({
   const calendarView = query.view === "calendar";
   const search = !calendarView && typeof query.q === "string" ? query.q.trim() : "";
 
+  const tz = typeof query.tz === "string" ? query.tz : undefined;
+
   const [{ data, total, limit }, sessionToken] = await Promise.all([
-    getTournaments(PAGE_SIZE, offset, search, status),
+    getTournaments(PAGE_SIZE, offset, {
+      query: search,
+      status,
+      visibility: "public",
+      date,
+      timeZone: tz,
+    }),
     getSessionToken(),
   ]);
-
-  const tournaments = date
-    ? data.filter((tournament) => tournament.start_time?.startsWith(date))
-    : data;
 
   return (
     <main className="mx-auto flex w-full max-w-mobile flex-col px-5 pb-5 font-satoshi">
@@ -76,14 +80,14 @@ export default async function TournamentsPage({
         </>
       )}
 
-      {tournaments.length === 0 && (
+      {data.length === 0 && (
         <p className="pt-2.5 text-sm text-muted-foreground">
           {search ? `No tournaments match "${search}".` : "No tournaments found."}
         </p>
       )}
 
       <ul className={cn("flex flex-col pt-2.5", calendarView ? "gap-2.5" : "gap-5")}>
-        {tournaments.map((tournament) => (
+        {data.map((tournament) => (
           <li key={tournament.id}>
             <TournamentCard tournament={tournament} />
           </li>
@@ -96,7 +100,13 @@ export default async function TournamentsPage({
           limit={limit}
           offset={offset}
           basePath="/tournaments"
-          params={{ q: search, status, date, view: calendarView ? "calendar" : undefined }}
+          params={{
+            q: search,
+            status,
+            date,
+            tz: date ? tz : undefined,
+            view: calendarView ? "calendar" : undefined,
+          }}
         />
       </div>
     </main>

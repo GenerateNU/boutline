@@ -3,6 +3,8 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
+import { formatDateParam } from "@/features/tournament/lib/date-param";
+
 function useTournamentFilters() {
   const router = useRouter();
   const pathname = usePathname();
@@ -27,7 +29,14 @@ function useTournamentFilters() {
     });
   }
 
-  return { searchParams, setFilters, isPending };
+  function setDate(day: Date | undefined) {
+    setFilters({
+      date: day ? formatDateParam(day) : undefined,
+      tz: day ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined,
+    });
+  }
+
+  return { searchParams, setFilters, setDate, isPending };
 }
 
 export { useTournamentFilters };
