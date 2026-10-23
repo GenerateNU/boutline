@@ -21,6 +21,10 @@ type FakePoolRepository struct {
 	Tournaments map[uuid.UUID]uuid.UUID // pool id to the tournament its stage's event belongs to
 	OpenBouts   map[uuid.UUID]int64     // pool id to its bouts that have not ended
 	Err         error                   // when set, every method fails with it
+
+	Bouts            []pool.PoolBout
+	Competitors      map[uuid.UUID]time.Time // competitor id to its created_at
+	StageTournaments map[uuid.UUID]uuid.UUID // pool stage id to its tournament
 }
 
 func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
@@ -34,24 +38,88 @@ func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
 		WithBouts:   map[uuid.UUID]bool{},
 		Tournaments: map[uuid.UUID]uuid.UUID{},
 		OpenBouts:   map[uuid.UUID]int64{},
+
+		Competitors:      map[uuid.UUID]time.Time{},
+		StageTournaments: map[uuid.UUID]uuid.UUID{},
 	}
 }
 
-func (f *FakePoolRepository) CreatePool(_ context.Context, toCreate *pool.Pool) error {
+func (f *FakePoolRepository) CreatePoolsWithBouts(_ context.Context, lineups []pool.PoolLineup) error {
 	if f.Err != nil {
 		return f.Err
 	}
 
-	if f.numberTaken(toCreate.PoolStageID, toCreate.Number, uuid.Nil) {
-		return fmt.Errorf("create pool: %w", errDuplicateNumber())
+	// The unique number and referee foreign key are the database's to enforce; the
+	// real-database test covers them.
+	now := time.Now()
+	for i := range lineups {
+		lineup := &lineups[i]
+		lineup.Pool.ID = uuid.New()
+		lineup.Pool.CreatedAt = now
+		lineup.Pool.UpdatedAt = now
+		f.Pools[lineup.Pool.ID] = lineup.Pool
+
+		for j := range lineup.Bouts {
+			lineup.Bouts[j].ID = uuid.New()
+			lineup.Bouts[j].PoolID = lineup.Pool.ID
+			lineup.Bouts[j].CreatedAt = now
+			lineup.Bouts[j].UpdatedAt = now
+			f.Bouts = append(f.Bouts, lineup.Bouts[j])
+		}
 	}
 
-	toCreate.ID = uuid.New()
-	toCreate.CreatedAt = time.Now()
-	toCreate.UpdatedAt = toCreate.CreatedAt
-	f.Pools[toCreate.ID] = *toCreate
-
 	return nil
+}
+
+func (f *FakePoolRepository) GetPoolStageTournamentID(_ context.Context, poolStageID uuid.UUID) (uuid.UUID, error) {
+	if f.Err != nil {
+		return uuid.Nil, f.Err
+	}
+
+	tournamentID, ok := f.StageTournaments[poolStageID]
+	if !ok {
+		return uuid.Nil, fmt.Errorf("select pool stage %s tournament: %w", poolStageID, errs.ErrNotFound)
+	}
+
+	return tournamentID, nil
+}
+
+func (f *FakePoolRepository) ListPoolEntrants(_ context.Context, competitorIDs []uuid.UUID) ([]pool.PoolEntrant, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	var entrants []pool.PoolEntrant
+	for _, id := range competitorIDs {
+		if createdAt, ok := f.Competitors[id]; ok {
+			entrants = append(entrants, pool.PoolEntrant{ID: id, CreatedAt: createdAt})
+		}
+	}
+
+	return entrants, nil
+}
+
+func (f *FakePoolRepository) ListEnteredCompetitorIDs(
+	_ context.Context,
+	poolStageID uuid.UUID,
+	competitorIDs []uuid.UUID,
+) ([]uuid.UUID, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	var entered []uuid.UUID
+	for _, id := range competitorIDs {
+		for _, bout := range f.Bouts {
+			if f.Pools[bout.PoolID].PoolStageID == poolStageID && (bout.Competitor1ID == id || bout.Competitor2ID == id) {
+				entered = append(entered, id)
+
+				break
+			}
+		}
+	}
+
+	return entered, nil
 }
 
 // numberTaken mirrors the unique index on (pool_stage_id, number); except is the

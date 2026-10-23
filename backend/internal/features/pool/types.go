@@ -36,16 +36,68 @@ func newPoolResponse(pool Pool) PoolResponse {
 	}
 }
 
-type PoolCreateBody struct {
-	PoolStageID string     `json:"pool_stage_id" format:"uuid" doc:"Pool stage this pool belongs to"`
-	RefereeID   *string    `json:"referee_id,omitempty" format:"uuid" doc:"Can be assigned later"`
+type PoolCreateItem struct {
+	PoolStageID string     `json:"pool_stage_id" format:"uuid" doc:"Every pool in one request must share a pool stage"`
 	Number      int        `json:"number" minimum:"1" doc:"Pool number, unique within its pool stage"`
 	Strip       *string    `json:"strip,omitempty" maxLength:"200"`
 	StartTime   *time.Time `json:"start_time,omitempty" doc:"Scheduled start"`
+	RefereeID   *string    `json:"referee_id,omitempty" format:"uuid" doc:"Also referees every bout of the pool"`
+	Fencers     []string   `json:"fencers" format:"uuid" minItems:"2" maxItems:"10" doc:"Competitor ids; grid position follows registration order"`
+}
+
+type PoolCreateBody struct {
+	Pools            []PoolCreateItem `json:"pools" minItems:"1" maxItems:"100"`
+	PointsToWin      int              `json:"points_to_win,omitempty" default:"5" minimum:"1" doc:"Touches to win each generated bout"`
+	TimeLimitSeconds int              `json:"time_limit_seconds,omitempty" default:"180" minimum:"1" doc:"Time limit of each generated bout"`
 }
 
 type PoolCreateInput struct {
 	Body PoolCreateBody
+}
+
+type PoolCreatedFencer struct {
+	CompetitorID string `json:"competitor_id" format:"uuid"`
+	Position     int    `json:"position" doc:"Row and column in the pool grid, from 1"`
+}
+
+type PoolCreatedBout struct {
+	ID            string `json:"id" format:"uuid"`
+	GroupSlot     int    `json:"group_slot"`
+	Competitor1ID string `json:"competitor_1_id" format:"uuid"`
+	Competitor2ID string `json:"competitor_2_id" format:"uuid"`
+}
+
+type PoolCreatedResponse struct {
+	PoolResponse
+	Fencers []PoolCreatedFencer `json:"fencers" doc:"Ordered by position"`
+	Bouts   []PoolCreatedBout   `json:"bouts" doc:"Ordered by group_slot"`
+}
+
+func newPoolCreatedResponse(lineup PoolLineup) PoolCreatedResponse {
+	fencers := make([]PoolCreatedFencer, 0, len(lineup.Fencers))
+	for i, id := range lineup.Fencers {
+		fencers = append(fencers, PoolCreatedFencer{CompetitorID: id.String(), Position: i + 1})
+	}
+
+	bouts := make([]PoolCreatedBout, 0, len(lineup.Bouts))
+	for _, bout := range lineup.Bouts {
+		bouts = append(bouts, PoolCreatedBout{
+			ID:            bout.ID.String(),
+			GroupSlot:     bout.GroupSlot,
+			Competitor1ID: bout.Competitor1ID.String(),
+			Competitor2ID: bout.Competitor2ID.String(),
+		})
+	}
+
+	return PoolCreatedResponse{PoolResponse: newPoolResponse(lineup.Pool), Fencers: fencers, Bouts: bouts}
+}
+
+type PoolCreatedBody struct {
+	Data []PoolCreatedResponse `json:"data"`
+}
+
+type PoolCreatedOutput struct {
+	Body PoolCreatedBody
 }
 
 type PoolIDInput struct {

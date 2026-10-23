@@ -14,9 +14,12 @@ import (
 )
 
 type PoolRepository interface {
-	CreatePool(ctx context.Context, pool *Pool) error
+	CreatePoolsWithBouts(ctx context.Context, lineups []PoolLineup) error
 	GetPoolByID(ctx context.Context, id uuid.UUID) (*Pool, error)
 	GetPoolTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
+	GetPoolStageTournamentID(ctx context.Context, poolStageID uuid.UUID) (uuid.UUID, error)
+	ListPoolEntrants(ctx context.Context, competitorIDs []uuid.UUID) ([]PoolEntrant, error)
+	ListEnteredCompetitorIDs(ctx context.Context, poolStageID uuid.UUID, competitorIDs []uuid.UUID) ([]uuid.UUID, error)
 	ListPools(ctx context.Context, filter PoolListFilter) ([]Pool, int64, error)
 	UpdatePoolByID(ctx context.Context, id uuid.UUID, update PoolUpdate) error
 	StartPoolByID(ctx context.Context, id uuid.UUID, startedAt time.Time) error
@@ -68,12 +71,23 @@ func NewPoolRepository(db *gorm.DB) PoolRepository {
 	return &poolRepository{db: db}
 }
 
-func (r *poolRepository) CreatePool(ctx context.Context, pool *Pool) error {
-	if err := r.db.WithContext(ctx).Create(pool).Error; err != nil {
-		return translatePoolWriteError("create pool", err)
-	}
+func (r *poolRepository) CreatePoolsWithBouts(ctx context.Context, lineups []PoolLineup) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for i := range lineups {
+			if err := tx.Create(&lineups[i].Pool).Error; err != nil {
+				return translatePoolWriteError("create pools", err)
+			}
 
-	return nil
+			for j := range lineups[i].Bouts {
+				lineups[i].Bouts[j].PoolID = lineups[i].Pool.ID
+			}
+			if err := tx.Create(&lineups[i].Bouts).Error; err != nil {
+				return translatePoolWriteError("create pools", err)
+			}
+		}
+
+		return nil
+	})
 }
 
 func (r *poolRepository) GetPoolByID(ctx context.Context, id uuid.UUID) (*Pool, error) {
@@ -109,6 +123,59 @@ func (r *poolRepository) GetPoolTournamentID(ctx context.Context, id uuid.UUID) 
 	}
 
 	return tournamentID, nil
+}
+
+func (r *poolRepository) GetPoolStageTournamentID(ctx context.Context, poolStageID uuid.UUID) (uuid.UUID, error) {
+	var tournamentID uuid.UUID
+
+	err := r.db.WithContext(ctx).
+		Table("pool_stages").
+		Select("events.tournament_id").
+		Joins("JOIN events ON events.id = pool_stages.event_id").
+		Where("pool_stages.id = ?", poolStageID).
+		Row().
+		Scan(&tournamentID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return uuid.Nil, fmt.Errorf("select pool stage %s tournament: %w", poolStageID, errs.ErrNotFound)
+		}
+		return uuid.Nil, fmt.Errorf("select pool stage %s tournament: %w", poolStageID, err)
+	}
+
+	return tournamentID, nil
+}
+
+func (r *poolRepository) ListPoolEntrants(ctx context.Context, competitorIDs []uuid.UUID) ([]PoolEntrant, error) {
+	var entrants []PoolEntrant
+
+	err := r.db.WithContext(ctx).
+		Table("competitors").
+		Select("id, created_at").
+		Where("id IN ?", competitorIDs).
+		Scan(&entrants).Error
+	if err != nil {
+		return nil, fmt.Errorf("select competitors: %w", err)
+	}
+
+	return entrants, nil
+}
+
+func (r *poolRepository) ListEnteredCompetitorIDs(ctx context.Context, poolStageID uuid.UUID, competitorIDs []uuid.UUID) ([]uuid.UUID, error) {
+	var entered []uuid.UUID
+
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT b.competitor_1_id FROM bouts b JOIN pools p ON p.id = b.pool_id
+		WHERE p.pool_stage_id = ? AND b.competitor_1_id IN ?
+		UNION
+		SELECT b.competitor_2_id FROM bouts b JOIN pools p ON p.id = b.pool_id
+		WHERE p.pool_stage_id = ? AND b.competitor_2_id IN ?`,
+		poolStageID, competitorIDs, poolStageID, competitorIDs).
+		Scan(&entered).Error
+	if err != nil {
+		return nil, fmt.Errorf("select competitors already in pool stage %s: %w", poolStageID, err)
+	}
+
+	return entered, nil
 }
 
 func (r *poolRepository) ListPools(ctx context.Context, filter PoolListFilter) ([]Pool, int64, error) {
@@ -214,7 +281,7 @@ func translatePoolWriteError(op string, err error) error {
 	}
 	if errors.Is(err, gorm.ErrForeignKeyViolated) {
 		return fmt.Errorf("%s: %w", op,
-			errs.Public("pool_stage_id or referee_id does not reference an existing record", errs.ErrInvalidInput))
+			errs.Public("referee_id does not reference an existing record", errs.ErrInvalidInput))
 	}
 
 	return fmt.Errorf("%s: %w", op, err)

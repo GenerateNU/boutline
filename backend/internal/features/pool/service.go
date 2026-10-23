@@ -19,6 +19,9 @@ const (
 	PoolMaxPageSize     = 100
 )
 
+// poolMaxFencers caps a pool at the largest size with a standard bout order.
+const poolMaxFencers = 10
+
 const (
 	msgPoolStarted = "this pool has already started"
 	msgPoolEnded   = "this pool has already ended"
@@ -30,7 +33,7 @@ type PoolStageLookup interface {
 }
 
 type PoolService interface {
-	CreatePool(ctx context.Context, input *PoolCreateInput) (*PoolOutput, error)
+	CreatePools(ctx context.Context, input *PoolCreateInput) (*PoolCreatedOutput, error)
 	GetPoolByID(ctx context.Context, input *PoolIDInput) (*PoolOutput, error)
 	ListPools(ctx context.Context, input *PoolListInput) (*PoolListOutput, error)
 	UpdatePoolByID(ctx context.Context, input *PoolUpdateInput) (*PoolOutput, error)
@@ -48,36 +51,49 @@ func NewPoolService(repo PoolRepository, poolStages PoolStageLookup) PoolService
 	return &poolService{repo: repo, poolStages: poolStages}
 }
 
-func (s *poolService) CreatePool(ctx context.Context, input *PoolCreateInput) (*PoolOutput, error) {
-	poolStageID, err := utils.ParseUUID(input.Body.PoolStageID, "pool_stage_id")
-	if err != nil {
-		return nil, errs.HumaError(err)
-	}
-	refereeID, err := parseOptionalUUID(input.Body.RefereeID, "referee_id")
+func (s *poolService) CreatePools(ctx context.Context, input *PoolCreateInput) (*PoolCreatedOutput, error) {
+	requests, err := parsePoolRequests(input.Body.Pools)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
-	if _, err := s.poolStages.GetPoolStageByID(ctx, poolStageID); err != nil {
-		if errors.Is(err, errs.ErrNotFound) {
-			return nil, errs.HumaError(errs.Public(
-				"pool_stage_id must reference an existing pool stage", errs.ErrInvalidInput))
+	stageID := requests[0].pool.PoolStageID
+	stage, err := s.requireUpcomingPoolStage(ctx, stageID)
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+	if err := checkFencerCounts(requests, min(stage.MaxCompetitorPerPool, poolMaxFencers)); err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	entrants, err := s.loadEntrants(ctx, stageID, requests)
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+	tournamentID, err := s.repo.GetPoolStageTournamentID(ctx, stageID)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get pool stage tournament: %w", err))
+	}
+
+	lineups := make([]PoolLineup, 0, len(requests))
+	for _, request := range requests {
+		seated := make([]PoolEntrant, 0, len(request.fencers))
+		for _, id := range request.fencers {
+			seated = append(seated, entrants[id])
 		}
-		return nil, errs.HumaError(fmt.Errorf("get pool stage: %w", err))
+		lineups = append(lineups, newPoolLineup(
+			request.pool, seated, tournamentID, input.Body.PointsToWin, input.Body.TimeLimitSeconds))
+	}
+	if err := s.repo.CreatePoolsWithBouts(ctx, lineups); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("create pools: %w", err))
 	}
 
-	pool := &Pool{
-		PoolStageID: poolStageID,
-		RefereeID:   refereeID,
-		Number:      input.Body.Number,
-		Strip:       input.Body.Strip,
-		StartTime:   input.Body.StartTime,
-	}
-	if err := s.repo.CreatePool(ctx, pool); err != nil {
-		return nil, errs.HumaError(fmt.Errorf("create pool: %w", err))
+	data := make([]PoolCreatedResponse, 0, len(lineups))
+	for _, lineup := range lineups {
+		data = append(data, newPoolCreatedResponse(lineup))
 	}
 
-	return &PoolOutput{Body: newPoolResponse(*pool)}, nil
+	return &PoolCreatedOutput{Body: PoolCreatedBody{Data: data}}, nil
 }
 
 func (s *poolService) GetPoolByID(ctx context.Context, input *PoolIDInput) (*PoolOutput, error) {
