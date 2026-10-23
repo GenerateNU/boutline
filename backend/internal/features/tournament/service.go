@@ -275,7 +275,7 @@ func (s *tournamentService) CompleteTournament(
 	completedAt := time.Now().UTC()
 
 	err = s.repo.TransitionTournamentByID(ctx, id, TournamentTransition{
-		To:          TournamentStatusEnd,
+		To:          TournamentStatusEnded,
 		CompletedAt: &completedAt,
 		From:        []TournamentStatus{TournamentStatusActive},
 	})

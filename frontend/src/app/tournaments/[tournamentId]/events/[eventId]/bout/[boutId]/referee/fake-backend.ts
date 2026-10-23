@@ -89,7 +89,7 @@ export function installBackend(
       if (backend.status !== "active") {
         return reply(409, { detail: "only an active bout can be ended" });
       }
-      backend.status = "end";
+      backend.status = "ended";
       return reply(200, boutBody());
     }
     if (url === "/api/v1/bouts/p1") {

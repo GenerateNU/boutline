@@ -288,7 +288,7 @@ func TestLifecycleEndpoints(t *testing.T) {
 	require.Equal(t, http.StatusOK, completed.Code, "body: %s", completed.Body)
 
 	completedBody := decodeBody(t, completed.Body.Bytes())
-	assert.Equal(t, "end", completedBody["status"])
+	assert.Equal(t, "ended", completedBody["status"])
 	assert.NotNil(t, completedBody["completed_at"])
 
 	assert.Equal(t, http.StatusConflict, api.Post(base+"/complete").Code)
