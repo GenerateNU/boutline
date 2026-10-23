@@ -1,9 +1,9 @@
 import { Pagination } from "@/components/primitives/pagination";
 import { Section } from "@/components/primitives/section";
 import { getTeams } from "@/features/competitor/services/getTeams";
+import { SearchForm } from "@/features/tournament/components/search-form";
 
 import { MockCountry } from "../_components/mock-country";
-import { SearchForm } from "../../_components/search-form";
 
 const PAGE_SIZE = 20;
 
@@ -28,7 +28,7 @@ export default async function ClubsTab({
     <Section title="Clubs">
       <SearchForm
         action={basePath}
-        placeholder="Search clubs"
+        label="Search clubs"
         defaultValue={search}
       />
 
@@ -76,7 +76,7 @@ export default async function ClubsTab({
         limit={limit}
         offset={offset}
         basePath={basePath}
-        search={search}
+        params={{ q: search }}
       />
     </Section>
   );

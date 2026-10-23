@@ -1,9 +1,9 @@
 import { Pagination } from "@/components/primitives/pagination";
 import { Section } from "@/components/primitives/section";
 import { getCompetitors } from "@/features/competitor/services/getCompetitors";
+import { SearchForm } from "@/features/tournament/components/search-form";
 
 import { MockCountry } from "../_components/mock-country";
-import { SearchForm } from "../../_components/search-form";
 
 const PAGE_SIZE = 20;
 
@@ -28,7 +28,7 @@ export default async function FencersTab({
     <Section title="Fencers">
       <SearchForm
         action={basePath}
-        placeholder="Search fencers"
+        label="Search fencers"
         defaultValue={search}
       />
 
@@ -80,7 +80,7 @@ export default async function FencersTab({
         limit={limit}
         offset={offset}
         basePath={basePath}
-        search={search}
+        params={{ q: search }}
       />
     </Section>
   );
