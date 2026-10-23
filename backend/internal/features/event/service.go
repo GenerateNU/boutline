@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"boutline/internal/errs"
@@ -31,7 +30,6 @@ type EventService interface {
 	ListEvents(ctx context.Context, input *EventListInput) (*EventListOutput, error)
 	UpdateEventByID(ctx context.Context, input *EventUpdateInput) (*EventOutput, error)
 	DeleteEventByID(ctx context.Context, input *EventIDInput) (*struct{}, error)
-	PreviewCompetitorsImport(ctx context.Context, input *CompetitorImportInput) (*CompetitorImportOutput, error)
 }
 
 type eventService struct {
@@ -183,31 +181,4 @@ func (s *eventService) DeleteEventByID(ctx context.Context, input *EventIDInput)
 	}
 
 	return nil, nil
-}
-
-func (s *eventService) PreviewCompetitorsImport(
-	ctx context.Context,
-	input *CompetitorImportInput,
-) (*CompetitorImportOutput, error) {
-	file := input.RawBody.Data().File
-	defer func() {
-		if err := file.Close(); err != nil {
-			slog.WarnContext(ctx, "close competitor import upload", "err", err)
-		}
-	}()
-
-	id, err := utils.ParseUUID(input.ID, "id")
-	if err != nil {
-		return nil, errs.HumaError(err)
-	}
-	if _, err := s.repo.GetEventByID(ctx, id); err != nil {
-		return nil, errs.HumaError(fmt.Errorf("get event: %w", err))
-	}
-
-	body, err := parseCompetitorImport(file)
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("parse competitor import: %w", err))
-	}
-
-	return &CompetitorImportOutput{Body: *body}, nil
 }
