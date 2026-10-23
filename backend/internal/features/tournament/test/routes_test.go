@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
@@ -213,6 +214,78 @@ func TestListEndpoint(t *testing.T) {
 		assert.Len(t, body["data"], 1)
 		assert.InDelta(t, 1, body["total"], 0)
 	})
+
+	t.Run("filters by a start_time range and totals the matches", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, datedSeed()...).Get(
+			"/api/v1/tournaments?start_from=2026-06-01T00:00:00Z&start_to=2026-06-03T00:00:00.5Z&limit=1")
+
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 1)
+		assert.InDelta(t, 2, body["total"], 0)
+	})
+
+	t.Run("accepts a URL-encoded offset", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, datedSeed()...).Get("/api/v1/tournaments?start_from=2026-06-01T05:30:00%2B05:30")
+
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		assert.InDelta(t, 2, decodeBody(t, resp.Body.Bytes())["total"], 0)
+	})
+
+	t.Run("rejects a malformed start_from", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, seed...).Get("/api/v1/tournaments?start_from=not-a-time")
+
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+
+	t.Run("rejects start_to before start_from", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, seed...).Get(
+			"/api/v1/tournaments?start_from=2026-06-02T00:00:00Z&start_to=2026-06-01T00:00:00Z")
+
+		assert.Equal(t, http.StatusBadRequest, resp.Code)
+	})
+
+	t.Run("filters by visibility", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, datedSeed()...).Get("/api/v1/tournaments?visibility=public")
+
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.InDelta(t, 1, body["total"], 0)
+		rows, ok := body["data"].([]any)
+		require.True(t, ok)
+		require.Len(t, rows, 1)
+		assert.Equal(t, "public", rows[0].(map[string]any)["visibility"])
+	})
+
+	t.Run("rejects a visibility outside the enum", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, seed...).Get("/api/v1/tournaments?visibility=secret")
+
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+}
+
+func datedSeed() []tournament.Tournament {
+	day := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+	first := seeded("first", tournament.TournamentStatusPending)
+	first.StartTime = &day
+	first.Visibility = tournament.TournamentVisibilityPublic
+	next := day.Add(24 * time.Hour)
+	second := seeded("second", tournament.TournamentStatusPending)
+	second.StartTime = &next
+
+	return []tournament.Tournament{first, second}
 }
 
 func TestUpdateEndpoint(t *testing.T) {
