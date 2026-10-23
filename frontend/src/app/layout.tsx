@@ -3,9 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 
+import { GlobalNav } from "@/components/primitives/global-nav";
 import { Toaster } from "@/components/primitives/toast";
-import { getSessionToken } from "@/features/auth/services/session";
-import { TopAppBar } from "@/features/navigation/components/top-app-bar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,9 +26,7 @@ export const metadata: Metadata = {
   description: "Redefining Fencing Tournaments",
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const sessionToken = await getSessionToken();
-
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
@@ -37,7 +34,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <Toaster>
-          <TopAppBar signedIn={Boolean(sessionToken)} />
+          <GlobalNav />
           {children}
         </Toaster>
       </body>
