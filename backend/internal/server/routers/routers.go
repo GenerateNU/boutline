@@ -7,6 +7,7 @@ import (
 	"boutline/internal/features/event"
 	"boutline/internal/features/health"
 	"boutline/internal/features/pool"
+	"boutline/internal/features/poolboard"
 	"boutline/internal/features/poolstage"
 	"boutline/internal/features/scoring"
 	"boutline/internal/features/tournament"
@@ -29,6 +30,7 @@ func SetUpRoutes(app *fiber.App, routeParams types.RouteParams) {
 	competitor.RegisterCompetitorRoutes(routeParams.API, routeParams.ServiceParams)
 	poolstage.RegisterPoolStageRoutes(routeParams.API, routeParams.ServiceParams)
 	pool.RegisterPoolRoutes(routeParams.API, routeParams.ServiceParams)
+	poolboard.RegisterPoolBoardRoutes(routeParams.API, routeParams.ServiceParams)
 
 	// Fiber owns anything Huma did not claim, so the catch-all stays here.
 	setUpNotFoundHandler(app)
