@@ -46,19 +46,49 @@ func TestCreateEndpoint(t *testing.T) {
 	}{
 		{
 			name:       "creates a pool and echoes the stored row",
-			body:       map[string]any{"pool_stage_id": stage.ID.String(), "referee_id": referee},
+			body:       map[string]any{"pool_stage_id": stage.ID.String(), "number": 1, "referee_id": referee},
 			wantStatus: http.StatusCreated,
 			wantFields: map[string]any{"pool_stage_id": stage.ID.String(), "referee_id": referee},
 		},
 		{
-			name:       "returns a null referee_id when none is given",
-			body:       map[string]any{"pool_stage_id": stage.ID.String()},
+			name:       "returns null referee_id, strip and start_time when none is given",
+			body:       map[string]any{"pool_stage_id": stage.ID.String(), "number": 1},
 			wantStatus: http.StatusCreated,
-			wantFields: map[string]any{"pool_stage_id": stage.ID.String(), "referee_id": nil},
+			wantFields: map[string]any{
+				"pool_stage_id": stage.ID.String(),
+				"referee_id":    nil,
+				"strip":         nil,
+				"start_time":    nil,
+			},
+		},
+		{
+			name: "echoes number, strip and start_time",
+			body: map[string]any{
+				"pool_stage_id": stage.ID.String(),
+				"number":        2,
+				"strip":         "Strip 3",
+				"start_time":    "2026-10-24T09:30:00Z",
+			},
+			wantStatus: http.StatusCreated,
+			wantFields: map[string]any{
+				"number":     float64(2),
+				"strip":      "Strip 3",
+				"start_time": "2026-10-24T09:30:00Z",
+			},
 		},
 		{
 			name:       "rejects a missing pool_stage_id before the handler runs",
-			body:       map[string]any{},
+			body:       map[string]any{"number": 1},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "rejects a missing number before the handler runs",
+			body:       map[string]any{"pool_stage_id": stage.ID.String()},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "rejects a zero number before the handler runs",
+			body:       map[string]any{"pool_stage_id": stage.ID.String(), "number": 0},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 	}
@@ -138,12 +168,18 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 		t.Parallel()
 
 		resp := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup()).
-			Patch("/api/v1/pools/"+stored.ID.String(), map[string]any{"referee_id": referee})
+			Patch("/api/v1/pools/"+stored.ID.String(), map[string]any{
+				"referee_id": referee,
+				"number":     4,
+				"strip":      "Strip 2",
+			})
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 
 		body := decodeBody(t, resp.Body.Bytes())
 		assert.Equal(t, referee, body["referee_id"])
+		assert.InDelta(t, 4, body["number"], 0)
+		assert.Equal(t, "Strip 2", body["strip"])
 	})
 }
 

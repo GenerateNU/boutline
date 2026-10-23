@@ -268,13 +268,6 @@ func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body Bou
 	if update.RefereeID, err = parseOptionalUUID(body.RefereeID, "referee_id"); err != nil {
 		return update, err
 	}
-	if update.PoolID, err = parseOptionalUUID(body.PoolID, "pool_id"); err != nil {
-		return update, err
-	}
-	if err := s.validateUpdatedPool(ctx, id, update.PoolID); err != nil {
-		return update, err
-	}
-
 	if update.Competitor1ID, err = parseOptionalUUID(body.Competitor1ID, "competitor_1_id"); err != nil {
 		return update, err
 	}
@@ -307,26 +300,13 @@ func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body Bou
 	update.Location = body.Location
 	update.StartTime = body.StartTime
 
-	if update.Location == nil && update.StartTime == nil && update.RefereeID == nil && update.PoolID == nil &&
+	if update.Location == nil && update.StartTime == nil && update.RefereeID == nil &&
 		update.TimeLimitSeconds == nil && update.PointsToWin == nil && update.GroupNumber == nil &&
 		update.Competitor1ID == nil && update.Competitor2ID == nil {
 		return update, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
 	}
 
 	return update, nil
-}
-
-func (s *boutService) validateUpdatedPool(ctx context.Context, boutID uuid.UUID, poolID *uuid.UUID) error {
-	if poolID == nil {
-		return nil
-	}
-
-	stored, err := s.repo.GetBoutByID(ctx, boutID)
-	if err != nil {
-		return err
-	}
-
-	return s.validatePool(ctx, poolID, stored.TournamentID)
 }
 
 // When only one competitor is supplied, the other side of the pair comes from

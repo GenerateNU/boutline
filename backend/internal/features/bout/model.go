@@ -37,8 +37,9 @@ type Bout struct {
 	CompletedAt      *time.Time
 	RefereeID        *uuid.UUID `gorm:"type:uuid;index"`
 	Referee          *user.User `gorm:"foreignKey:RefereeID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
-	PoolID           *uuid.UUID `gorm:"type:uuid;index"`
+	PoolID           *uuid.UUID `gorm:"type:uuid;index;uniqueIndex:idx_bouts_pool_id_group_slot,priority:1"`
 	Pool             *pool.Pool `gorm:"foreignKey:PoolID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
+	GroupSlot        *int       `gorm:"uniqueIndex:idx_bouts_pool_id_group_slot,priority:2;check:chk_bouts_group_slot,group_slot >= 1"`
 	TimeLimitSeconds *int       `gorm:"check:chk_bouts_time_limit_seconds,time_limit_seconds > 0"`
 	PointsToWin      int        `gorm:"not null;check:chk_bouts_points_to_win,points_to_win > 0"`
 	GroupNumber      int        `gorm:"not null;default:0;check:chk_bouts_group_number,group_number >= 0"`
