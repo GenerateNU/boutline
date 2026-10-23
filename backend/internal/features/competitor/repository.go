@@ -48,11 +48,12 @@ type CompetitorUpdate struct {
 }
 
 type CompetitorListFilter struct {
-	Rating *Rating // nil means don't filter by rating
-	Team   *string // nil means don't filter by team
-	Term   string  // fuzzy match against name; empty means don't filter
-	Limit  int
-	Offset int
+	TournamentID *uuid.UUID // nil means don't filter by tournament
+	Rating       *Rating    // nil means don't filter by rating
+	Team         *string    // nil means don't filter by team
+	Term         string     // fuzzy match against name; empty means don't filter
+	Limit        int
+	Offset       int
 }
 
 type competitorRepository struct {
@@ -122,6 +123,9 @@ func (r *competitorRepository) ListCompetitors(
 	filter CompetitorListFilter,
 ) ([]Competitor, int64, error) {
 	query := r.db.WithContext(ctx).Model(&Competitor{})
+	if filter.TournamentID != nil {
+		query = query.Where("tournament_id = ?", *filter.TournamentID)
+	}
 	if filter.Rating != nil {
 		query = query.Where("rating = ?", string(*filter.Rating))
 	}
@@ -135,7 +139,9 @@ func (r *competitorRepository) ListCompetitors(
 		return nil, 0, fmt.Errorf("count competitors: %w", err)
 	}
 
-	query = utils.TrigramOrder(query, competitorNameTrigramExpr, filter.Term, "created_at DESC, id", "id")
+	// With no term there is no relevance to rank by, so the roster falls back
+	// to alphabetical order rather than insertion order.
+	query = utils.TrigramOrder(query, competitorNameTrigramExpr, filter.Term, "last_name, first_name, id", "id")
 
 	competitors := make([]Competitor, 0, filter.Limit)
 
@@ -164,7 +170,9 @@ func (r *competitorRepository) ListCompetitorTeams(
 	// over, and SELECT DISTINCT ... ORDER BY word_similarity(...) is
 	// rejected because that expression isn't in the select list.
 	var total int64
-	countQuery := utils.TrigramMatch(r.db.WithContext(ctx).Model(&Competitor{}), expr, filter.Term)
+	// team is "" for an unaffiliated competitor, which is not a club.
+	countQuery := utils.TrigramMatch(
+		r.db.WithContext(ctx).Model(&Competitor{}).Where("team <> ''"), expr, filter.Term)
 	if filter.TournamentID != nil {
 		countQuery = countQuery.Where("tournament_id = ?", *filter.TournamentID)
 	}
@@ -173,7 +181,8 @@ func (r *competitorRepository) ListCompetitorTeams(
 	}
 
 	var teams []CompetitorTeamCount
-	findQuery := utils.TrigramMatch(r.db.WithContext(ctx).Model(&Competitor{}), expr, filter.Term)
+	findQuery := utils.TrigramMatch(
+		r.db.WithContext(ctx).Model(&Competitor{}).Where("team <> ''"), expr, filter.Term)
 	if filter.TournamentID != nil {
 		findQuery = findQuery.Where("tournament_id = ?", *filter.TournamentID)
 	}

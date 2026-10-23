@@ -74,18 +74,38 @@ ON CONFLICT DO NOTHING;
 -- Priya, Diego, and Marcus, left untagged to exercise competitors with no
 -- tournament yet.
 INSERT INTO competitors (id, tournament_id, first_name, last_name, rating, team, created_at, updated_at) VALUES
-  ('d0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Maya',    'Chen',      'A', 'Boston Fencing Club',  now(), now()),
-  ('d0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Liam',    'O''Brien',  'B', 'Northeastern Fencing', now(), now()),
-  ('d0000000-0000-4000-8000-000000000003', NULL,                                   'Priya',   'Patel',     'C', 'Cambridge FC',         now(), now()),
-  ('d0000000-0000-4000-8000-000000000004', NULL,                                   'Diego',   'Martinez',  'U', '',                     now(), now()),
-  ('d0000000-0000-4000-8000-000000000005', 'b0000000-0000-4000-8000-000000000001', 'Hana',    'Sato',      'A', 'Northeastern Fencing', now(), now()),
-  ('d0000000-0000-4000-8000-000000000006', 'b0000000-0000-4000-8000-000000000001', 'Noah',    'Williams',  'D', 'Boston Fencing Club',  now(), now()),
-  ('d0000000-0000-4000-8000-000000000007', 'b0000000-0000-4000-8000-000000000002', 'Amara',   'Okafor',    'B', 'Cambridge FC',         now(), now()),
-  ('d0000000-0000-4000-8000-000000000008', 'b0000000-0000-4000-8000-000000000002', 'Ethan',   'Kowalski',  'E', '',                     now(), now()),
-  ('d0000000-0000-4000-8000-000000000009', 'b0000000-0000-4000-8000-000000000003', 'Sofia',   'Rossi',     'C', 'Boston Fencing Club',  now(), now()),
-  ('d0000000-0000-4000-8000-000000000010', 'b0000000-0000-4000-8000-000000000003', 'Kenji',   'Tanaka',    'U', 'Northeastern Fencing', now(), now()),
-  ('d0000000-0000-4000-8000-000000000011', 'b0000000-0000-4000-8000-000000000003', 'Leila',   'Haddad',    'D', 'Cambridge FC',         now(), now()),
-  ('d0000000-0000-4000-8000-000000000012', NULL,                                   'Marcus',  'Johnson',   'B', '',                     now(), now())
+  ('d0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Maya', 'Chen',         'A', 'Boston Fencing Club',    now(), now()),
+  ('d0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Liam', 'O''Brien',     'B', 'Northeastern Fencing',   now(), now()),
+  ('d0000000-0000-4000-8000-000000000003', NULL, 'Priya', 'Patel',        'C', 'Cambridge FC',           now(), now()),
+  ('d0000000-0000-4000-8000-000000000004', NULL, 'Diego', 'Martinez',     'U', '',                       now(), now()),
+  ('d0000000-0000-4000-8000-000000000005', 'b0000000-0000-4000-8000-000000000001', 'Hana', 'Sato',         'A', 'Northeastern Fencing',   now(), now()),
+  ('d0000000-0000-4000-8000-000000000006', 'b0000000-0000-4000-8000-000000000001', 'Noah', 'Williams',     'D', 'Boston Fencing Club',    now(), now()),
+  ('d0000000-0000-4000-8000-000000000007', 'b0000000-0000-4000-8000-000000000001', 'Amara', 'Okafor',       'B', 'Cambridge FC',           now(), now()),
+  ('d0000000-0000-4000-8000-000000000008', 'b0000000-0000-4000-8000-000000000001', 'Ethan', 'Kowalski',     'E', '',                       now(), now()),
+  ('d0000000-0000-4000-8000-000000000017', 'b0000000-0000-4000-8000-000000000001', 'Isabel', 'Moreau',       'B', 'Cambridge FC',           now(), now()),
+  ('d0000000-0000-4000-8000-000000000018', 'b0000000-0000-4000-8000-000000000001', 'Tomas', 'Novak',        'C', 'Boston Fencing Club',    now(), now()),
+  ('d0000000-0000-4000-8000-000000000019', 'b0000000-0000-4000-8000-000000000001', 'Grace', 'Lindqvist',    'A', 'Allez Fencing',          now(), now()),
+  ('d0000000-0000-4000-8000-000000000020', 'b0000000-0000-4000-8000-000000000001', 'Omar', 'Haddad',       'D', 'Allez Fencing',          now(), now()),
+  ('d0000000-0000-4000-8000-000000000021', 'b0000000-0000-4000-8000-000000000001', 'Yuki', 'Mori',         'U', 'Northeastern Fencing',   now(), now()),
+  ('d0000000-0000-4000-8000-000000000022', 'b0000000-0000-4000-8000-000000000001', 'Elena', 'Petrova',      'B', 'Cambridge FC',           now(), now()),
+  ('d0000000-0000-4000-8000-000000000023', 'b0000000-0000-4000-8000-000000000001', 'Samuel', 'Adeyemi',      'C', 'Allez Fencing',          now(), now()),
+  ('d0000000-0000-4000-8000-000000000024', 'b0000000-0000-4000-8000-000000000001', 'Clara', 'Bauer',        'E', 'Boston Fencing Club',    now(), now()),
+  ('d0000000-0000-4000-8000-000000000025', 'b0000000-0000-4000-8000-000000000001', 'Nina', 'Kovacs',       'A', 'Northeastern Fencing',   now(), now()),
+  ('d0000000-0000-4000-8000-000000000026', 'b0000000-0000-4000-8000-000000000001', 'Felix', 'Dubois',       'D', 'Cambridge FC',           now(), now()),
+  ('d0000000-0000-4000-8000-000000000027', 'b0000000-0000-4000-8000-000000000001', 'Aisha', 'Rahman',       'B', '',                       now(), now()),
+  ('d0000000-0000-4000-8000-000000000028', 'b0000000-0000-4000-8000-000000000001', 'Jonas', 'Berg',         'C', 'Allez Fencing',          now(), now()),
+  ('d0000000-0000-4000-8000-000000000029', 'b0000000-0000-4000-8000-000000000001', 'Mei', 'Lin',          'U', 'Boston Fencing Club',    now(), now()),
+  ('d0000000-0000-4000-8000-000000000030', 'b0000000-0000-4000-8000-000000000001', 'Pablo', 'Ruiz',         'E', 'Northeastern Fencing',   now(), now()),
+  ('d0000000-0000-4000-8000-000000000031', 'b0000000-0000-4000-8000-000000000001', 'Freya', 'Olsen',        'A', 'Allez Fencing',          now(), now()),
+  ('d0000000-0000-4000-8000-000000000032', 'b0000000-0000-4000-8000-000000000001', 'Andre', 'Silva',        'D', 'Cambridge FC',           now(), now()),
+  ('d0000000-0000-4000-8000-000000000009', 'b0000000-0000-4000-8000-000000000002', 'Sofia', 'Rossi',        'C', 'Boston Fencing Club',    now(), now()),
+  ('d0000000-0000-4000-8000-000000000010', 'b0000000-0000-4000-8000-000000000002', 'Kenji', 'Tanaka',       'U', 'Northeastern Fencing',   now(), now()),
+  ('d0000000-0000-4000-8000-000000000011', 'b0000000-0000-4000-8000-000000000002', 'Leila', 'Haddad',       'D', 'Cambridge FC',           now(), now()),
+  ('d0000000-0000-4000-8000-000000000012', NULL, 'Marcus', 'Johnson',      'B', '',                       now(), now()),
+  ('d0000000-0000-4000-8000-000000000013', 'b0000000-0000-4000-8000-000000000003', 'Maya', 'Chen',         'A', 'Boston Fencing Club',    now(), now()),
+  ('d0000000-0000-4000-8000-000000000014', 'b0000000-0000-4000-8000-000000000003', 'Kenji', 'Tanaka',       'U', 'Northeastern Fencing',   now(), now()),
+  ('d0000000-0000-4000-8000-000000000015', 'b0000000-0000-4000-8000-000000000003', 'Hana', 'Sato',         'A', 'Northeastern Fencing',   now(), now()),
+  ('d0000000-0000-4000-8000-000000000016', 'b0000000-0000-4000-8000-000000000003', 'Sofia', 'Rossi',        'C', 'Boston Fencing Club',    now(), now())
 ON CONFLICT DO NOTHING;
 
 -- Mixed Épée is mid-way through its pool stage; Women's Foil has one planned
@@ -118,9 +138,9 @@ INSERT INTO bouts (id, tournament_id, location, start_time, started_at, complete
   ('e0000000-0000-4000-8000-000000000012', 'b0000000-0000-4000-8000-000000000001', 'Strip 2', now() + interval '50 minutes',           NULL,                                    NULL,                           NULL,                                   180, 5, 2, 'upcoming', 'd0000000-0000-4000-8000-000000000006', 'd0000000-0000-4000-8000-000000000007', 'f1000000-0000-4000-8000-000000000002', now() - interval '1 day', now()),
   ('e0000000-0000-4000-8000-000000000013', 'b0000000-0000-4000-8000-000000000002', NULL,      now() + interval '30 days',             NULL,                                    NULL,                           NULL,                                   180, 5, 1, 'upcoming', 'd0000000-0000-4000-8000-000000000009', 'd0000000-0000-4000-8000-000000000010', NULL, now() - interval '2 days', now()),
   ('e0000000-0000-4000-8000-000000000014', 'b0000000-0000-4000-8000-000000000002', NULL,      now() + interval '30 days',             NULL,                                    NULL,                           NULL,                                   180, 5, 1, 'upcoming', 'd0000000-0000-4000-8000-000000000011', 'd0000000-0000-4000-8000-000000000012', NULL, now() - interval '2 days', now()),
-  ('e0000000-0000-4000-8000-000000000015', 'b0000000-0000-4000-8000-000000000003', 'Strip 1', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '5 hours 20 minutes', 'a0000000-0000-4000-8000-000000000003', 540, 15, 0, 'ended', 'd0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000010', NULL, now() - interval '91 days', now()),
-  ('e0000000-0000-4000-8000-000000000016', 'b0000000-0000-4000-8000-000000000003', 'Strip 2', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '5 hours 25 minutes', 'a0000000-0000-4000-8000-000000000003', 540, 15, 0, 'ended', 'd0000000-0000-4000-8000-000000000005', 'd0000000-0000-4000-8000-000000000009', NULL, now() - interval '91 days', now()),
-  ('e0000000-0000-4000-8000-000000000017', 'b0000000-0000-4000-8000-000000000003', 'Strip 1', now() - interval '90 days' + interval '7 hours', now() - interval '90 days' + interval '7 hours', now() - interval '90 days' + interval '7 hours 30 minutes', 'a0000000-0000-4000-8000-000000000003', 540, 15, 0, 'ended', 'd0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000005', NULL, now() - interval '91 days', now())
+  ('e0000000-0000-4000-8000-000000000015', 'b0000000-0000-4000-8000-000000000003', 'Strip 1', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '5 hours 20 minutes', 'a0000000-0000-4000-8000-000000000003', 540, 15, 0, 'ended', 'd0000000-0000-4000-8000-000000000013', 'd0000000-0000-4000-8000-000000000014', NULL, now() - interval '91 days', now()),
+  ('e0000000-0000-4000-8000-000000000016', 'b0000000-0000-4000-8000-000000000003', 'Strip 2', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '5 hours 25 minutes', 'a0000000-0000-4000-8000-000000000003', 540, 15, 0, 'ended', 'd0000000-0000-4000-8000-000000000015', 'd0000000-0000-4000-8000-000000000016', NULL, now() - interval '91 days', now()),
+  ('e0000000-0000-4000-8000-000000000017', 'b0000000-0000-4000-8000-000000000003', 'Strip 1', now() - interval '90 days' + interval '7 hours', now() - interval '90 days' + interval '7 hours', now() - interval '90 days' + interval '7 hours 30 minutes', 'a0000000-0000-4000-8000-000000000003', 540, 15, 0, 'ended', 'd0000000-0000-4000-8000-000000000013', 'd0000000-0000-4000-8000-000000000015', NULL, now() - interval '91 days', now())
 ON CONFLICT DO NOTHING;
 
 -- Open Épée's round is the finished table above; Mixed Épée's waits on its pools.
