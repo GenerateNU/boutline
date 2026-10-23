@@ -4,6 +4,17 @@ import {
   parseCompetitorImport,
 } from "@/lib/competitor-import/parse-competitor-import";
 
+// jsdom's Blob lacks text(), which every browser has. FileReader decodes the
+// same way: UTF-8, byte-order mark stripped, invalid bytes as U+FFFD.
+Blob.prototype.text ??= function (this: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(this);
+  });
+};
+
 // The ticket's example upload, plus a blank line 10.
 const EXAMPLE = `Last Name,First Name,Member #,Club,Division,Country,Birth Date,Gender,Rating,Event
 Alvarez,Maria,100234501,Boston Fencing Club,New England,USA,2011-03-14,F,C24,Y14 Women's Foil
