@@ -19,17 +19,19 @@ import { PoolTable } from "./pool-table";
 interface PoolCardProps {
   pool: PoolBoard;
   poolingPath: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const viewItemClass =
   "h-10 border-brand bg-background py-0 text-brand data-[state=on]:bg-brand-muted data-[state=on]:text-brand";
 
-export function PoolCard({ pool, poolingPath }: PoolCardProps) {
+export function PoolCard({ pool, poolingPath, open, onOpenChange }: PoolCardProps) {
   const [view, setView] = useState<PoolView>("bouts");
   const title = poolTitle(pool);
 
   return (
-    <Collapsible.Root defaultOpen className="flex flex-col gap-5 rounded-md border border-foreground bg-neutral-200 p-4">
+    <Collapsible.Root open={open} onOpenChange={onOpenChange} className="flex flex-col gap-5 rounded-md border border-foreground bg-neutral-200 p-4">
       <div className="flex items-center gap-2">
         <h3 className="flex-1 text-xl leading-6 font-medium">{title}</h3>
         <PoolStatusBadge status={pool.status} />
@@ -58,7 +60,6 @@ export function PoolCard({ pool, poolingPath }: PoolCardProps) {
         </SegmentedButton>
         <PoolTable
           caption={`${title} ${view}`}
-          view={view}
           data={view === "bouts" ? boutsTable(pool) : standingsTable(pool)}
         />
         <Button asChild variant="outline" className="w-full rounded-sm border-brand bg-background font-normal text-brand">

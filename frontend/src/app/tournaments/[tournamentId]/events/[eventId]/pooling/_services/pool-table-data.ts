@@ -9,18 +9,17 @@ function byPosition(pool: PoolBoard): PoolFencer[] {
 }
 
 function boutCell(pool: PoolBoard, row: PoolFencer, column: PoolFencer): PoolTableCell {
-  // A bout can be won on priority, so a decided bout is detected by its winner rather than its status.
   const bout = pool.bouts.find(
     (b) =>
-      b.winner_id !== null &&
       [b.competitor_1_id, b.competitor_2_id].includes(row.competitor_id) &&
       [b.competitor_1_id, b.competitor_2_id].includes(column.competitor_id),
   );
-  if (!bout) {
-    return { kind: "value", label: "" };
+  // A bout can be won on priority, so a decided bout is detected by its winner rather than its status.
+  if (!bout || bout.winner_id === null) {
+    return { kind: "bout", label: "", boutId: bout?.id ?? null };
   }
   const score = bout.competitor_1_id === row.competitor_id ? bout.competitor_1_score : bout.competitor_2_score;
-  return { kind: "value", label: `${bout.winner_id === row.competitor_id ? "V" : "D"}${score}` };
+  return { kind: "bout", label: `${bout.winner_id === row.competitor_id ? "V" : "D"}${score}`, boutId: bout.id };
 }
 
 export function boutsTable(pool: PoolBoard): PoolTableData {

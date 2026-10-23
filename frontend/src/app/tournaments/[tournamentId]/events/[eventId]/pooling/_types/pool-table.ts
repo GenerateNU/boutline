@@ -1,5 +1,8 @@
 export type PoolView = "bouts" | "standings";
-export type PoolTableCell = { kind: "self" } | { kind: "value"; label: string };
+export type PoolTableCell =
+  | { kind: "self" }
+  | { kind: "value"; label: string }
+  | { kind: "bout"; label: string; boutId: string | null };
 export interface PoolTableRow {
   name: string;
   team: string;

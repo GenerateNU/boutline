@@ -71,16 +71,28 @@ describe("boutsTable", () => {
     { case: "loser who was competitor 2", bouts: [bout("b", "a", 5, 4, "b")], label: "D4" },
     { case: "active bout without a winner", bouts: [bout("a", "b", 2, 1, null)], label: "" },
     { case: "no bout between the pair", bouts: [], label: "" },
-  ])("gives the first fencer the cell '$label' for $case", ({ bouts, label }) => {
+  ])("gives the first fencer the label '$label' for $case", ({ bouts, label }) => {
     const table = boutsTable(pool([fencer("a", 1), fencer("b", 2)], bouts));
 
-    expect(table.rows[0].cells[1]).toEqual({ kind: "value", label });
+    expect(table.rows[0].cells[1]).toMatchObject({ kind: "bout", label });
+  });
+
+  it.each([
+    { case: "decided bout", bouts: [bout("a", "b", 5, 2, "a")], boutId: "a-b" },
+    { case: "active bout", bouts: [bout("a", "b", 2, 1, null)], boutId: "a-b" },
+    { case: "bout listed in the opposite order", bouts: [bout("b", "a", 1, 2, null)], boutId: "b-a" },
+    { case: "no bout between the pair", bouts: [], boutId: null },
+  ])("gives both mirrored cells the bout id for $case", ({ bouts, boutId }) => {
+    const table = boutsTable(pool([fencer("a", 1), fencer("b", 2)], bouts));
+
+    expect(table.rows[0].cells[1]).toMatchObject({ kind: "bout", boutId });
+    expect(table.rows[1].cells[0]).toMatchObject({ kind: "bout", boutId });
   });
 
   it("mirrors the result in the opponent's row", () => {
     const table = boutsTable(pool([fencer("a", 1), fencer("b", 2)], [bout("a", "b", 5, 2, "a")]));
 
-    expect(table.rows[1].cells[0]).toEqual({ kind: "value", label: "D2" });
+    expect(table.rows[1].cells[0]).toEqual({ kind: "bout", label: "D2", boutId: "a-b" });
   });
 });
 

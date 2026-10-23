@@ -1,39 +1,28 @@
-import { ListFilter, Search } from "lucide-react";
+import type { PoolFilters } from "../_types/pool-filters";
 
-import { Button } from "@/components/primitives/button";
-import { Input } from "@/components/primitives/input";
+import { PoolFilterSheet } from "./pool-filter-sheet";
+import { SearchField } from "./search-field";
 
 interface PoolSearchProps {
   value: string;
   onChange: (value: string) => void;
+  filters: PoolFilters;
+  poolNumbers: number[];
+  onFiltersChange: (filters: PoolFilters) => void;
 }
 
-export function PoolSearch({ value, onChange }: PoolSearchProps) {
+export function PoolSearch({ value, onChange, filters, poolNumbers, onFiltersChange }: PoolSearchProps) {
   return (
     <div className="flex gap-2">
-      <div role="search" className="relative flex-1">
-        <Input
-          type="search"
+      <div role="search" className="flex-1">
+        <SearchField
           aria-label="Search pools"
           placeholder="Enter search text"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-12 rounded-md border-brand pr-10"
-        />
-        <Search
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 right-3 size-5 -translate-y-1/2 text-brand"
         />
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        aria-label="Filter (not available yet)"
-        className="size-12 shrink-0 rounded-md border-brand text-brand"
-      >
-        <ListFilter aria-hidden />
-      </Button>
+      <PoolFilterSheet filters={filters} poolNumbers={poolNumbers} onApply={onFiltersChange} />
     </div>
   );
 }

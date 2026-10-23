@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { useState } from "react";
 
 import { poolBoards } from "../_services/pools";
 
@@ -6,8 +7,13 @@ import { PoolCard } from "./pool-card";
 
 const poolingPath = "/tournaments/t/events/e/pooling";
 
+function OpenableCard() {
+  const [open, setOpen] = useState(true);
+  return <PoolCard pool={poolBoards[0]} poolingPath={poolingPath} open={open} onOpenChange={setOpen} />;
+}
+
 function renderCard() {
-  render(<PoolCard pool={poolBoards[0]} poolingPath={poolingPath} />);
+  render(<OpenableCard />);
   return screen.getByRole("button", { name: "Pool 1 - Strip 3" });
 }
 

@@ -8,10 +8,19 @@ interface PoolSectionProps {
   title: string;
   pools: PoolBoard[];
   poolingPath: string;
+  collapsedIds: ReadonlySet<string>;
+  onPoolOpenChange: (poolId: string, open: boolean) => void;
   emptyMessage?: string;
 }
 
-export function PoolSection({ title, pools, poolingPath, emptyMessage }: PoolSectionProps) {
+export function PoolSection({
+  title,
+  pools,
+  poolingPath,
+  collapsedIds,
+  onPoolOpenChange,
+  emptyMessage,
+}: PoolSectionProps) {
   const headingId = useId();
 
   return (
@@ -23,7 +32,12 @@ export function PoolSection({ title, pools, poolingPath, emptyMessage }: PoolSec
         <ul className="flex flex-col gap-2">
           {pools.map((pool) => (
             <li key={pool.id}>
-              <PoolCard pool={pool} poolingPath={poolingPath} />
+              <PoolCard
+                pool={pool}
+                poolingPath={poolingPath}
+                open={!collapsedIds.has(pool.id)}
+                onOpenChange={(open) => onPoolOpenChange(pool.id, open)}
+              />
             </li>
           ))}
         </ul>

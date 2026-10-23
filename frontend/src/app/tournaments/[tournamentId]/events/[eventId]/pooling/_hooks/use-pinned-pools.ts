@@ -1,18 +1,27 @@
-import { useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
-import { placeholderPinnedPoolIds } from "../_services/pools";
+import {
+  parsePinnedPools,
+  readPinnedPools,
+  subscribePinnedPools,
+  writePinnedPools,
+} from "../_services/pinned-pools-store";
 
-export function usePinnedPools() {
-  const [pinnedIds, setPinnedIds] = useState<ReadonlySet<string>>(() => new Set(placeholderPinnedPoolIds));
+export function usePinnedPools(eventId: string) {
+  // The snapshot is the raw string so React sees a stable value between renders.
+  const raw = useSyncExternalStore(
+    subscribePinnedPools,
+    () => readPinnedPools(eventId),
+    () => null,
+  );
+  const pinnedIds: ReadonlySet<string> = useMemo(() => new Set(parsePinnedPools(raw)), [raw]);
 
   const togglePinned = (poolId: string) => {
-    setPinnedIds((current) => {
-      const next = new Set(current);
-      if (!next.delete(poolId)) {
-        next.add(poolId);
-      }
-      return next;
-    });
+    const next = new Set(pinnedIds);
+    if (!next.delete(poolId)) {
+      next.add(poolId);
+    }
+    writePinnedPools(eventId, [...next]);
   };
 
   return { pinnedIds, togglePinned };

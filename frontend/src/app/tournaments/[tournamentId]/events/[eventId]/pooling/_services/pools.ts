@@ -72,6 +72,32 @@ const kenji = fencer(2, "Kenji", "Tanaka", "Northeastern Fencing", NO_STANDING);
 const amara = fencer(3, "Amara", "Okafor", "Cambridge FC", NO_STANDING);
 const ethan = fencer(4, "Ethan", "Kowalski", "MIT Fencing", NO_STANDING);
 
+const pool4Fencers = [
+  fencer(1, "Lucas", "Martin", "Boston Fencing Club", [5, 1, 2, 0.5, 8, 9]),
+  fencer(2, "Ava", "Johnson", "MIT Fencing", [1, 2, 2, 1, 10, 6]),
+  fencer(3, "Mateo", "Garcia", "Cambridge FC", [3, 1, 2, 0.5, 8, 7]),
+  fencer(4, "Zoe", "Kim", "New York Fencers Club", [4, 1, 2, 0.5, 7, 7]),
+  fencer(5, "Oliver", "Brown", "Northeastern Fencing", [2, 1, 2, 0.5, 9, 5]),
+  fencer(6, "Isla", "Nguyen", "Boston Fencing Club", [6, 1, 2, 0.5, 5, 6]),
+  fencer(7, "Felix", "Wagner", "MIT Fencing", [7, 1, 2, 0.5, 7, 9]),
+  fencer(8, "Nora", "Silva", "Cambridge FC", [8, 0, 2, 0, 5, 10]),
+];
+
+// Fencer positions per bout, in bout order; the first eight are ended, the ninth is live.
+const pool4Pairings: [number, number][] = [
+  [2, 3], [1, 5], [7, 4], [6, 8], [1, 2], [3, 4], [5, 6], [8, 7], [4, 1], [5, 2], [8, 3], [6, 7], [4, 2], [8, 1],
+  [7, 5], [3, 6], [2, 8], [5, 4], [6, 1], [3, 7], [4, 8], [2, 6], [3, 5], [1, 7], [4, 6], [8, 5], [7, 2], [1, 3],
+];
+const pool4Scores: [number, number][] = [[5, 3], [5, 4], [2, 5], [5, 1], [3, 5], [5, 2], [5, 0], [4, 5], [3, 2]];
+const pool4StartTimes = ["10:05", "10:12", "10:19", "10:26", "10:33", "10:40", "10:47", "10:54", "11:01"];
+
+function pool4Status(index: number): BoutStatus {
+  if (index < 8) {
+    return "end";
+  }
+  return index === 8 ? "active" : "upcoming";
+}
+
 export const poolBoards: PoolBoard[] = [
   {
     id: "pool-1",
@@ -133,5 +159,27 @@ export const poolBoards: PoolBoard[] = [
       bout(3, 5, "Strip 5", [sofia, ethan], [0, 0], "upcoming", null),
       bout(3, 6, "Strip 5", [kenji, amara], [0, 0], "upcoming", null),
     ],
+  },
+  {
+    id: "pool-4",
+    pool_stage_id: "stage-1",
+    number: 4,
+    strip: "Strip 2",
+    status: "active",
+    start_time: "2026-10-24T10:00:00Z",
+    started_at: "2026-10-24T10:03:00Z",
+    completed_at: null,
+    fencers: pool4Fencers,
+    bouts: pool4Pairings.map(([first, second], index) =>
+      bout(
+        4,
+        index + 1,
+        "Strip 2",
+        [pool4Fencers[first - 1], pool4Fencers[second - 1]],
+        pool4Scores[index] ?? [0, 0],
+        pool4Status(index),
+        pool4StartTimes[index] ? `2026-10-24T${pool4StartTimes[index]}:00Z` : null,
+      ),
+    ),
   },
 ];
