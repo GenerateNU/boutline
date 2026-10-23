@@ -7,7 +7,7 @@ function TournamentCard({ tournament }: { tournament: Tournament }) {
   return (
     <Link
       href={`/tournaments/${tournament.id}`}
-      className="flex h-21 flex-col justify-center rounded-md border border-foreground px-4 py-3 transition-colors hover:bg-muted"
+      className="flex h-21 flex-col justify-center rounded-md border border-foreground px-4 transition-colors hover:bg-muted"
     >
       <p className="truncate leading-5 font-medium uppercase">{tournament.name}</p>
       <div className="flex items-center justify-between">

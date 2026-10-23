@@ -5,7 +5,7 @@ function CreateTournamentCard() {
   return (
     <Link
       href="/admin/tournament/new"
-      className="flex h-24 items-center gap-3 border border-brand px-5 py-3 text-brand transition-colors hover:bg-muted"
+      className="flex h-24 items-center gap-3 border border-brand px-5 text-brand transition-colors hover:bg-muted"
     >
       <div className="flex flex-1 flex-col gap-1">
         <p className="text-xl leading-6 font-medium">CREATE TOURNAMENT</p>

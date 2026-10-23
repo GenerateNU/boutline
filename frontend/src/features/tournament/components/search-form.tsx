@@ -25,16 +25,23 @@ function SearchForm({
   const { searchParams, setFilters, isPending } = useTournamentFilters();
   const [value, setValue] = useState(defaultValue);
   const [syncedDefaultValue, setSyncedDefaultValue] = useState(defaultValue);
+  const [sentSearch, setSentSearch] = useState(defaultValue);
 
-  // Keeps the field in sync when the URL's query changes from elsewhere
-  // (e.g. navigating back), without resetting it on every keystroke. Adjusted
-  // during render, not an effect, so it lands before the stale value paints.
+  // Follows the URL when its query changes from elsewhere (e.g. navigating
+  // back), but not when it is only catching up to a search this field sent,
+  // or it would overwrite whatever was typed since. Adjusted during render,
+  // not an effect, so it lands before the stale value paints.
   if (defaultValue !== syncedDefaultValue) {
     setSyncedDefaultValue(defaultValue);
-    setValue(defaultValue);
+    if (defaultValue !== sentSearch) {
+      setValue(defaultValue);
+    }
   }
 
-  const navigate = (search: string) => setFilters({ q: search });
+  const navigate = (search: string) => {
+    setSentSearch(search);
+    setFilters({ q: search });
+  };
   const [debouncedNavigate, cancelDebouncedNavigate] = useDebouncedCallback(
     navigate,
     debounceMs,
@@ -67,7 +74,7 @@ function SearchForm({
           setValue(event.target.value);
           debouncedNavigate(event.target.value.trim());
         }}
-        className="h-12 rounded-md border-brand pr-12 pl-4 text-brand placeholder:text-brand"
+        className="h-12 border-brand pr-12 pl-4 text-brand placeholder:text-brand"
       />
       <Image
         src="/search.svg"

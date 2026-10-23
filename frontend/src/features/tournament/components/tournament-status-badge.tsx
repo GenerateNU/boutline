@@ -20,7 +20,7 @@ function TournamentStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex h-7 min-w-19 items-center justify-center rounded-sm bg-chip px-2 text-xs leading-5 text-foreground",
+        "inline-flex h-7 min-w-19 items-center justify-center rounded-sm bg-chip px-2 text-xs leading-5",
         className,
       )}
       {...props}
