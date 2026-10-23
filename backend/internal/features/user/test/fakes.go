@@ -160,7 +160,8 @@ func (f *FakeUserRepository) DeleteUser(_ context.Context, id uuid.UUID) error {
 		return fmt.Errorf("delete user %s: %w", id, errs.ErrNotFound)
 	}
 	if f.Referenced[id] {
-		return fmt.Errorf("delete user %s: %w", id, errs.ErrConflict)
+		return fmt.Errorf("delete user %s: %w", id,
+			errs.Public("a user who created a tournament, referees a bout, or created or revoked a score cannot be deleted", errs.ErrConflict))
 	}
 
 	delete(f.Users, id)

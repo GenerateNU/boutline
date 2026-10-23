@@ -482,7 +482,7 @@ func TestDeleteUser(t *testing.T) {
 			id:         stored.ID.String(),
 			referenced: true,
 			wantStatus: http.StatusConflict,
-			wantDetail: "a user who created a tournament or referees a bout cannot be deleted",
+			wantDetail: "a user who created a tournament, referees a bout, or created or revoked a score cannot be deleted",
 			wantKept:   true,
 		},
 		{

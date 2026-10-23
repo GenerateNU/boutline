@@ -2,10 +2,10 @@ package tournamentuser
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"boutline/internal/errs"
+	"boutline/internal/utils"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -30,15 +30,8 @@ func NewTournamentUserRepository(db *gorm.DB) TournamentUserRepository {
 
 func (r *tournamentUserRepository) CreateTournamentUser(ctx context.Context, membership *TournamentUser) error {
 	if err := r.db.WithContext(ctx).Create(membership).Error; err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return fmt.Errorf("create tournament user: %w", errs.ErrDuplicate)
-		}
-		if errors.Is(err, gorm.ErrForeignKeyViolated) {
-			return fmt.Errorf("create tournament user: %w",
-				errs.Public("user_id and tournament_id must reference an existing user and tournament",
-					errs.ErrInvalidInput))
-		}
-		return fmt.Errorf("create tournament user: %w", err)
+		return utils.TranslateWriteError("create tournament user", TournamentUser{}.TableName(),
+			"user_id and tournament_id must reference an existing user and tournament", err)
 	}
 
 	return nil
@@ -75,7 +68,8 @@ func (r *tournamentUserRepository) UpdateTournamentUserRole(
 		Where("tournament_id = ? AND user_id = ?", tournamentID, userID).
 		Update("role", role)
 	if result.Error != nil {
-		return fmt.Errorf("update tournament user %s/%s: %w", tournamentID, userID, result.Error)
+		return utils.TranslateWriteError(fmt.Sprintf("update tournament user %s/%s", tournamentID, userID),
+			TournamentUser{}.TableName(), "", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
@@ -113,10 +107,7 @@ func (r *tournamentUserRepository) GetTournamentUser(
 		Where("tournament_id = ? AND user_id = ?", tournamentID, userID).
 		First(&membership).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("select tournament user %s/%s: %w", tournamentID, userID, errs.ErrNotFound)
-		}
-		return nil, fmt.Errorf("select tournament user %s/%s: %w", tournamentID, userID, err)
+		return nil, utils.TranslateReadError(fmt.Sprintf("select tournament user %s/%s", tournamentID, userID), err)
 	}
 
 	return &membership, nil

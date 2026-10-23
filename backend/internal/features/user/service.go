@@ -223,10 +223,6 @@ func (s *userService) DeleteUser(ctx context.Context, input *UserIDInput) (*stru
 	}
 
 	if err := s.repo.DeleteUser(ctx, id); err != nil {
-		if errors.Is(err, errs.ErrConflict) {
-			return nil, errs.HumaError(fmt.Errorf("delete user: %w",
-				errs.Public("a user who created a tournament or referees a bout cannot be deleted", err)))
-		}
 		return nil, errs.HumaError(fmt.Errorf("delete user: %w", err))
 	}
 

@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -158,6 +159,9 @@ func (f *FakeBoutRepository) TransitionBoutByID(
 
 func (f *FakeBoutRepository) DeleteBoutByID(_ context.Context, id uuid.UUID) error {
 	if _, err := f.guard(id, bout.BoutDeletableStatuses()); err != nil {
+		if errors.Is(err, errs.ErrConflict) {
+			return errs.Public("an active bout cannot be deleted", err)
+		}
 		return err
 	}
 

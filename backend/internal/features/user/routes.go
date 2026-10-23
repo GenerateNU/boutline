@@ -70,7 +70,7 @@ func RegisterUserService(api huma.API, service UserService) {
 		Method:        http.MethodDelete,
 		Path:          userBasePath + "/{id}",
 		Summary:       "Delete a user",
-		Description:   "A user who created a tournament or referees a bout cannot be deleted.",
+		Description:   "A user who created a tournament, referees a bout, or created or revoked a score cannot be deleted.",
 		Tags:          []string{"Users"},
 		DefaultStatus: http.StatusNoContent,
 	}, service.DeleteUser)

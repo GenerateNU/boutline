@@ -2,7 +2,6 @@ package competitor
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"boutline/internal/errs"
@@ -83,7 +82,7 @@ func (u CompetitorUpdate) columns() map[string]any {
 
 func (r *competitorRepository) CreateCompetitor(ctx context.Context, competitor *Competitor) error {
 	if err := r.db.WithContext(ctx).Create(competitor).Error; err != nil {
-		return fmt.Errorf("create competitor: %w", err)
+		return utils.TranslateWriteError("create competitor", Competitor{}.TableName(), "", err)
 	}
 
 	return nil
@@ -94,10 +93,7 @@ func (r *competitorRepository) GetCompetitorByID(ctx context.Context, id uuid.UU
 
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&competitor).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("select competitor %s: %w", id, errs.ErrNotFound)
-		}
-		return nil, fmt.Errorf("select competitor %s: %w", id, err)
+		return nil, utils.TranslateReadError(fmt.Sprintf("select competitor %s", id), err)
 	}
 
 	return &competitor, nil
@@ -110,7 +106,7 @@ func (r *competitorRepository) UpdateCompetitorByID(
 ) error {
 	result := r.db.WithContext(ctx).Model(&Competitor{}).Where("id = ?", id).Updates(update.columns())
 	if result.Error != nil {
-		return fmt.Errorf("update competitor %s: %w", id, result.Error)
+		return utils.TranslateWriteError(fmt.Sprintf("update competitor %s", id), Competitor{}.TableName(), "", result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("update competitor %s: %w", id, errs.ErrNotFound)
@@ -205,7 +201,8 @@ func (r *competitorRepository) ListCompetitorTeams(
 func (r *competitorRepository) DeleteCompetitor(ctx context.Context, id uuid.UUID) error {
 	result := r.db.WithContext(ctx).Delete(&Competitor{}, "id = ?", id)
 	if result.Error != nil {
-		return fmt.Errorf("delete competitor %s: %w", id, result.Error)
+		return utils.TranslateDeleteError(fmt.Sprintf("delete competitor %s", id),
+			"a competitor assigned to a bout cannot be deleted", result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("delete competitor %s: %w", id, errs.ErrNotFound)

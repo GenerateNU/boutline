@@ -2,7 +2,6 @@ package tournament
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -85,14 +84,8 @@ func NewTournamentRepository(db *gorm.DB) TournamentRepository {
 
 func (r *tournamentRepository) CreateTournament(ctx context.Context, tournament *Tournament) error {
 	if err := r.db.WithContext(ctx).Create(tournament).Error; err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return fmt.Errorf("create tournament: %w", errs.ErrDuplicate)
-		}
-		if errors.Is(err, gorm.ErrForeignKeyViolated) {
-			return fmt.Errorf("create tournament: %w",
-				errs.Public("created_by must reference an existing user", errs.ErrInvalidInput))
-		}
-		return fmt.Errorf("create tournament: %w", err)
+		return utils.TranslateWriteError("create tournament", Tournament{}.TableName(),
+			"created_by must reference an existing user", err)
 	}
 
 	return nil
@@ -103,10 +96,7 @@ func (r *tournamentRepository) GetTournamentByID(ctx context.Context, id uuid.UU
 
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&tournament).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("select tournament %s: %w", id, errs.ErrNotFound)
-		}
-		return nil, fmt.Errorf("select tournament %s: %w", id, err)
+		return nil, utils.TranslateReadError(fmt.Sprintf("select tournament %s", id), err)
 	}
 
 	return &tournament, nil
@@ -117,10 +107,7 @@ func (r *tournamentRepository) GetTournamentByCode(ctx context.Context, code str
 
 	err := r.db.WithContext(ctx).Where("code = ?", code).First(&tournament).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("select tournament by code: %w", errs.ErrNotFound)
-		}
-		return nil, fmt.Errorf("select tournament by code: %w", err)
+		return nil, utils.TranslateReadError("select tournament by code", err)
 	}
 
 	return &tournament, nil
@@ -155,7 +142,8 @@ func (r *tournamentRepository) updateByID(
 
 	result := query.Updates(columns)
 	if result.Error != nil {
-		return fmt.Errorf("update tournament %s: %w", id, result.Error)
+		return utils.TranslateWriteError(fmt.Sprintf("update tournament %s", id), Tournament{}.TableName(),
+			"created_by must reference an existing user", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
