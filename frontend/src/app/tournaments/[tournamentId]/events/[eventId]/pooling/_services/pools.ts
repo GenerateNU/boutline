@@ -48,7 +48,7 @@ function bout(
     competitor_2_id: second.competitor_id,
     competitor_1_score: score1,
     competitor_2_score: score2,
-    winner_id: status === "end" ? winner.competitor_id : null,
+    winner_id: status === "ended" ? winner.competitor_id : null,
     location: strip,
     start_time: startTime,
   };
@@ -93,7 +93,7 @@ const pool4StartTimes = ["10:05", "10:12", "10:19", "10:26", "10:33", "10:40", "
 
 function pool4Status(index: number): BoutStatus {
   if (index < 8) {
-    return "end";
+    return "ended";
   }
   return index === 8 ? "active" : "upcoming";
 }
@@ -110,10 +110,10 @@ export const poolBoards: PoolBoard[] = [
     completed_at: null,
     fencers: [yan, caitlin, claire, traci],
     bouts: [
-      bout(1, 1, "Strip 3", [yan, caitlin], [5, 2], "end", "2026-10-24T09:05:00Z"),
-      bout(1, 2, "Strip 3", [traci, claire], [5, 3], "end", "2026-10-24T09:15:00Z"),
-      bout(1, 3, "Strip 3", [claire, yan], [5, 4], "end", "2026-10-24T09:25:00Z"),
-      bout(1, 4, "Strip 3", [caitlin, traci], [5, 1], "end", "2026-10-24T09:35:00Z"),
+      bout(1, 1, "Strip 3", [yan, caitlin], [5, 2], "ended", "2026-10-24T09:05:00Z"),
+      bout(1, 2, "Strip 3", [traci, claire], [5, 3], "ended", "2026-10-24T09:15:00Z"),
+      bout(1, 3, "Strip 3", [claire, yan], [5, 4], "ended", "2026-10-24T09:25:00Z"),
+      bout(1, 4, "Strip 3", [caitlin, traci], [5, 1], "ended", "2026-10-24T09:35:00Z"),
       bout(1, 5, "Strip 3", [yan, traci], [2, 1], "active", "2026-10-24T09:45:00Z"),
       bout(1, 6, "Strip 3", [caitlin, claire], [0, 0], "upcoming", null),
     ],
@@ -129,16 +129,16 @@ export const poolBoards: PoolBoard[] = [
     completed_at: "2026-10-24T10:20:00Z",
     fencers: [maya, liam, priya, hana, noah],
     bouts: [
-      bout(2, 1, "Strip 4", [maya, liam], [5, 3], "end", "2026-10-24T09:05:00Z"),
-      bout(2, 2, "Strip 4", [priya, maya], [5, 4], "end", "2026-10-24T09:12:00Z"),
-      bout(2, 3, "Strip 4", [maya, hana], [5, 0], "end", "2026-10-24T09:20:00Z"),
-      bout(2, 4, "Strip 4", [noah, maya], [5, 2], "end", "2026-10-24T09:28:00Z"),
-      bout(2, 5, "Strip 4", [liam, priya], [5, 1], "end", "2026-10-24T09:36:00Z"),
-      bout(2, 6, "Strip 4", [hana, liam], [5, 4], "end", "2026-10-24T09:44:00Z"),
-      bout(2, 7, "Strip 4", [liam, noah], [5, 3], "end", "2026-10-24T09:52:00Z"),
-      bout(2, 8, "Strip 4", [priya, hana], [5, 2], "end", "2026-10-24T10:00:00Z"),
-      bout(2, 9, "Strip 4", [priya, noah], [5, 4], "end", "2026-10-24T10:08:00Z"),
-      bout(2, 10, "Strip 4", [hana, noah], [5, 1], "end", "2026-10-24T10:15:00Z"),
+      bout(2, 1, "Strip 4", [maya, liam], [5, 3], "ended", "2026-10-24T09:05:00Z"),
+      bout(2, 2, "Strip 4", [priya, maya], [5, 4], "ended", "2026-10-24T09:12:00Z"),
+      bout(2, 3, "Strip 4", [maya, hana], [5, 0], "ended", "2026-10-24T09:20:00Z"),
+      bout(2, 4, "Strip 4", [noah, maya], [5, 2], "ended", "2026-10-24T09:28:00Z"),
+      bout(2, 5, "Strip 4", [liam, priya], [5, 1], "ended", "2026-10-24T09:36:00Z"),
+      bout(2, 6, "Strip 4", [hana, liam], [5, 4], "ended", "2026-10-24T09:44:00Z"),
+      bout(2, 7, "Strip 4", [liam, noah], [5, 3], "ended", "2026-10-24T09:52:00Z"),
+      bout(2, 8, "Strip 4", [priya, hana], [5, 2], "ended", "2026-10-24T10:00:00Z"),
+      bout(2, 9, "Strip 4", [priya, noah], [5, 4], "ended", "2026-10-24T10:08:00Z"),
+      bout(2, 10, "Strip 4", [hana, noah], [5, 1], "ended", "2026-10-24T10:15:00Z"),
     ],
   },
   {

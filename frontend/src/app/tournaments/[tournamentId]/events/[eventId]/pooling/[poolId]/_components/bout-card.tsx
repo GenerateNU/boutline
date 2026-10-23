@@ -14,7 +14,7 @@ interface BoutCardProps {
 }
 
 const statusLabels: Record<BoutStatus, string> = {
-  end: "Final",
+  ended: "Final",
   active: "In Progress",
   upcoming: "Upcoming",
 };

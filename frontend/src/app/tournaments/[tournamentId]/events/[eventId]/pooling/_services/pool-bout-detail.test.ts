@@ -16,7 +16,7 @@ function fencer(id: string, first: string, last: string, position: number): Pool
 function bout(id: string, overrides: Partial<PoolBout>): PoolBout {
   return {
     id,
-    status: "end",
+    status: "ended",
     competitor_1_id: "a",
     competitor_2_id: "b",
     competitor_1_score: 5,
@@ -65,7 +65,7 @@ describe("poolBoutDetail", () => {
     expect(poolBoutDetail(pool, "second-wins")).toMatchObject({
       number: 2,
       total: 5,
-      status: "end",
+      status: "ended",
       poolNumber: 7,
       strip: "3",
       sides: [

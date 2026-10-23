@@ -24,7 +24,7 @@ function fencer(id: string, position: number, ratio = 0): PoolFencer {
 function bout(c1: string, c2: string, s1: number, s2: number, winner: string | null): PoolBout {
   return {
     id: `${c1}-${c2}`,
-    status: winner ? "end" : "active",
+    status: winner ? "ended" : "active",
     competitor_1_id: c1,
     competitor_2_id: c2,
     competitor_1_score: s1,
