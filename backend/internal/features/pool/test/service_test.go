@@ -43,11 +43,15 @@ func TestCreatePool(t *testing.T) {
 	t.Parallel()
 
 	stage := seededPoolStage()
+	otherStage := seededPoolStage()
 	referee := uuid.New()
+	startTime := time.Date(2026, 10, 24, 9, 30, 0, 0, time.UTC)
+	numberOne := pool.Pool{ID: uuid.New(), PoolStageID: stage.ID, Number: 1}
 
 	tests := []struct {
 		name        string
 		lookup      *FakePoolStageLookup
+		existing    []pool.Pool
 		body        pool.PoolCreateBody
 		wantCode    int
 		wantDetail  string
@@ -56,39 +60,63 @@ func TestCreatePool(t *testing.T) {
 		{
 			name:   "creates a pool without a referee",
 			lookup: NewFakePoolStageLookup(stage),
-			body:   pool.PoolCreateBody{PoolStageID: stage.ID.String()},
+			body:   pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1},
 		},
 		{
 			name:        "creates a pool with a referee",
 			lookup:      NewFakePoolStageLookup(stage),
-			body:        pool.PoolCreateBody{PoolStageID: stage.ID.String(), RefereeID: ptr(referee.String())},
+			body:        pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1, RefereeID: ptr(referee.String())},
 			wantReferee: ptr(referee.String()),
+		},
+		{
+			name:   "echoes number, strip and start_time",
+			lookup: NewFakePoolStageLookup(stage),
+			body: pool.PoolCreateBody{
+				PoolStageID: stage.ID.String(),
+				Number:      3,
+				Strip:       ptr("Strip 4"),
+				StartTime:   &startTime,
+			},
+		},
+		{
+			name:       "rejects a number already used in the pool stage",
+			lookup:     NewFakePoolStageLookup(stage),
+			existing:   []pool.Pool{numberOne},
+			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1},
+			wantCode:   http.StatusConflict,
+			wantDetail: "a pool with this number already exists in the pool stage",
+		},
+		{
+			name:     "accepts a number used in another pool stage",
+			lookup:   NewFakePoolStageLookup(stage, otherStage),
+			existing: []pool.Pool{numberOne},
+			body:     pool.PoolCreateBody{PoolStageID: otherStage.ID.String(), Number: 1},
 		},
 		{
 			name:       "rejects a pool_stage_id that does not exist",
 			lookup:     NewFakePoolStageLookup(),
-			body:       pool.PoolCreateBody{PoolStageID: uuid.New().String()},
+			body:       pool.PoolCreateBody{PoolStageID: uuid.New().String(), Number: 1},
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "pool_stage_id must reference an existing pool stage",
 		},
 		{
 			name:       "rejects a bad pool_stage_id",
 			lookup:     NewFakePoolStageLookup(stage),
-			body:       pool.PoolCreateBody{PoolStageID: "not-a-uuid"},
+			body:       pool.PoolCreateBody{PoolStageID: "not-a-uuid", Number: 1},
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "pool_stage_id must be a valid uuid",
 		},
 		{
 			name:       "rejects a bad referee_id",
 			lookup:     NewFakePoolStageLookup(stage),
-			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String(), RefereeID: ptr("not-a-uuid")},
+			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1, RefereeID: ptr("not-a-uuid")},
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "referee_id must be a valid uuid",
 		},
 		{
 			name:       "reports a pool stage lookup failure as a server error",
 			lookup:     &FakePoolStageLookup{Err: errors.New("connection refused")},
-			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String()},
+			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1},
 			wantCode:   http.StatusInternalServerError,
 			wantDetail: "internal server error",
 		},
@@ -98,7 +126,7 @@ func TestCreatePool(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			repo := NewFakePoolRepository()
+			repo := NewFakePoolRepository(tt.existing...)
 			out, err := pool.NewPoolService(repo, tt.lookup).
 				CreatePool(t.Context(), &pool.PoolCreateInput{Body: tt.body})
 
@@ -107,15 +135,18 @@ func TestCreatePool(t *testing.T) {
 				assert.Equal(t, tt.wantCode, code)
 				assert.Equal(t, tt.wantDetail, detail)
 				assert.Nil(t, out)
-				assert.Empty(t, repo.Pools)
+				assert.Len(t, repo.Pools, len(tt.existing))
 
 				return
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, stage.ID.String(), out.Body.PoolStageID)
+			assert.Equal(t, tt.body.PoolStageID, out.Body.PoolStageID)
 			assert.Equal(t, tt.wantReferee, out.Body.RefereeID)
-			assert.Len(t, repo.Pools, 1)
+			assert.Equal(t, tt.body.Number, out.Body.Number)
+			assert.Equal(t, tt.body.Strip, out.Body.Strip)
+			assert.Equal(t, tt.body.StartTime, out.Body.StartTime)
+			assert.Len(t, repo.Pools, len(tt.existing)+1)
 		})
 	}
 }
@@ -182,7 +213,11 @@ func TestUpdatePoolByID(t *testing.T) {
 	t.Parallel()
 
 	referee := uuid.New()
+	startTime := time.Date(2026, 10, 24, 9, 30, 0, 0, time.UTC)
 	stored := seededPool(uuid.New())
+	stored.Number = 1
+	sibling := seededPool(stored.PoolStageID)
+	sibling.Number = 2
 
 	tests := []struct {
 		name       string
@@ -195,6 +230,18 @@ func TestUpdatePoolByID(t *testing.T) {
 			name: "assigns a referee",
 			id:   stored.ID.String(),
 			body: pool.PoolUpdateBody{RefereeID: ptr(referee.String())},
+		},
+		{
+			name: "updates number, strip and start_time",
+			id:   stored.ID.String(),
+			body: pool.PoolUpdateBody{Number: ptr(3), Strip: ptr("Strip 4"), StartTime: &startTime},
+		},
+		{
+			name:       "rejects a number already used in the pool stage",
+			id:         stored.ID.String(),
+			body:       pool.PoolUpdateBody{Number: ptr(2)},
+			wantCode:   http.StatusConflict,
+			wantDetail: "a pool with this number already exists in the pool stage",
 		},
 		{
 			name:       "refuses an empty patch",
@@ -229,7 +276,7 @@ func TestUpdatePoolByID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			repo := NewFakePoolRepository(stored)
+			repo := NewFakePoolRepository(stored, sibling)
 			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
 				UpdatePoolByID(t.Context(), &pool.PoolUpdateInput{ID: tt.id, Body: tt.body})
 
@@ -240,14 +287,29 @@ func TestUpdatePoolByID(t *testing.T) {
 					assert.Equal(t, tt.wantDetail, detail)
 				}
 				assert.Nil(t, out)
-				assert.Nil(t, repo.Pools[stored.ID].RefereeID)
+				assert.Equal(t, stored, repo.Pools[stored.ID])
 
 				return
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, ptr(referee.String()), out.Body.RefereeID)
-			assert.Equal(t, &referee, repo.Pools[stored.ID].RefereeID)
+			after := repo.Pools[stored.ID]
+			assert.Equal(t, after.Number, out.Body.Number)
+			assert.Equal(t, after.Strip, out.Body.Strip)
+			assert.Equal(t, after.StartTime, out.Body.StartTime)
+			if tt.body.RefereeID != nil {
+				assert.Equal(t, tt.body.RefereeID, out.Body.RefereeID)
+				assert.Equal(t, &referee, after.RefereeID)
+			}
+			if tt.body.Number != nil {
+				assert.Equal(t, *tt.body.Number, out.Body.Number)
+			}
+			if tt.body.Strip != nil {
+				assert.Equal(t, tt.body.Strip, out.Body.Strip)
+			}
+			if tt.body.StartTime != nil {
+				assert.Equal(t, tt.body.StartTime, out.Body.StartTime)
+			}
 		})
 	}
 }

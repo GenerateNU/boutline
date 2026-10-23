@@ -42,12 +42,32 @@ func (f *FakePoolRepository) CreatePool(_ context.Context, toCreate *pool.Pool) 
 		return f.Err
 	}
 
+	if f.numberTaken(toCreate.PoolStageID, toCreate.Number, uuid.Nil) {
+		return fmt.Errorf("create pool: %w", errDuplicateNumber())
+	}
+
 	toCreate.ID = uuid.New()
 	toCreate.CreatedAt = time.Now()
 	toCreate.UpdatedAt = toCreate.CreatedAt
 	f.Pools[toCreate.ID] = *toCreate
 
 	return nil
+}
+
+// numberTaken mirrors the unique index on (pool_stage_id, number); except is the
+// pool being updated, which may keep its own number.
+func (f *FakePoolRepository) numberTaken(poolStageID uuid.UUID, number int, except uuid.UUID) bool {
+	for id, existing := range f.Pools {
+		if id != except && existing.PoolStageID == poolStageID && existing.Number == number {
+			return true
+		}
+	}
+
+	return false
+}
+
+func errDuplicateNumber() error {
+	return errs.Public("a pool with this number already exists in the pool stage", errs.ErrDuplicate)
 }
 
 func (f *FakePoolRepository) GetPoolByID(_ context.Context, id uuid.UUID) (*pool.Pool, error) {
@@ -119,8 +139,21 @@ func (f *FakePoolRepository) UpdatePoolByID(_ context.Context, id uuid.UUID, upd
 		return fmt.Errorf("select pool %s: %w", id, errs.ErrNotFound)
 	}
 
+	if update.Number != nil && f.numberTaken(stored.PoolStageID, *update.Number, id) {
+		return fmt.Errorf("update pool: %w", errDuplicateNumber())
+	}
+
 	if update.RefereeID != nil {
 		stored.RefereeID = update.RefereeID
+	}
+	if update.Number != nil {
+		stored.Number = *update.Number
+	}
+	if update.Strip != nil {
+		stored.Strip = update.Strip
+	}
+	if update.StartTime != nil {
+		stored.StartTime = update.StartTime
 	}
 	stored.UpdatedAt = time.Now()
 	f.Pools[id] = stored

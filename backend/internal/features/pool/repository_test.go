@@ -27,6 +27,12 @@ func TestTranslatePoolWriteError(t *testing.T) {
 			wantMsg:    "pool_stage_id or referee_id does not reference an existing record",
 		},
 		{
+			name:       "duplicate key becomes a conflict",
+			err:        fmt.Errorf("insert: %w", gorm.ErrDuplicatedKey),
+			wantStatus: http.StatusConflict,
+			wantMsg:    "a pool with this number already exists in the pool stage",
+		},
+		{
 			name:       "unrelated error stays internal",
 			err:        fmt.Errorf("connection refused"),
 			wantStatus: http.StatusInternalServerError,
