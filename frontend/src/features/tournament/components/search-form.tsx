@@ -12,6 +12,7 @@ const debounceMs = 300;
 type SearchFormProps = {
   action: string;
   label: string;
+  placeholder: string;
   defaultValue?: string;
 };
 
@@ -20,6 +21,7 @@ type SearchFormProps = {
 function SearchForm({
   action,
   label,
+  placeholder,
   defaultValue = "",
 }: SearchFormProps) {
   const { searchParams, setFilters, isPending } = useTournamentFilters();
@@ -68,7 +70,7 @@ function SearchForm({
         aria-label={label}
         name="q"
         type="search"
-        placeholder="Enter search text"
+        placeholder={placeholder}
         value={value}
         onChange={(event) => {
           setValue(event.target.value);

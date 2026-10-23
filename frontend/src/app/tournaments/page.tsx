@@ -69,6 +69,7 @@ export default async function TournamentsPage({
             <SearchForm
               action="/tournaments"
               label="Search tournaments"
+              placeholder="e.g. Fall Open 2026"
               defaultValue={search}
             />
             <FilterSheet />

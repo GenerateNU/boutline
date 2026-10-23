@@ -29,6 +29,7 @@ export default async function ClubsTab({
       <SearchForm
         action={basePath}
         label="Search clubs"
+        placeholder="e.g. Boston Fencing Club"
         defaultValue={search}
       />
 

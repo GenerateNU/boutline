@@ -29,6 +29,7 @@ export default async function FencersTab({
       <SearchForm
         action={basePath}
         label="Search fencers"
+        placeholder="e.g. Jordan Lee"
         defaultValue={search}
       />
 
