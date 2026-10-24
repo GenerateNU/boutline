@@ -35,78 +35,126 @@ func decodeBody(t *testing.T, raw []byte) map[string]any {
 func TestCreateEndpoint(t *testing.T) {
 	t.Parallel()
 
-	stage := seededPoolStage()
-	referee := uuid.New().String()
+	t.Run("creates pools and returns them with fencers and bouts", func(t *testing.T) {
+		t.Parallel()
 
-	tests := []struct {
-		name       string
-		body       map[string]any
-		wantStatus int
-		wantFields map[string]any
-	}{
-		{
-			name:       "creates a pool and echoes the stored row",
-			body:       map[string]any{"pool_stage_id": stage.ID.String(), "number": 1, "referee_id": referee},
-			wantStatus: http.StatusCreated,
-			wantFields: map[string]any{"pool_stage_id": stage.ID.String(), "referee_id": referee},
-		},
-		{
-			name:       "returns null referee_id, strip and start_time when none is given",
-			body:       map[string]any{"pool_stage_id": stage.ID.String(), "number": 1},
-			wantStatus: http.StatusCreated,
-			wantFields: map[string]any{
-				"pool_stage_id": stage.ID.String(),
-				"referee_id":    nil,
-				"strip":         nil,
-				"start_time":    nil,
-			},
-		},
-		{
-			name: "echoes number, strip and start_time",
-			body: map[string]any{
-				"pool_stage_id": stage.ID.String(),
+		f := newCreateFixture()
+		resp := newTestAPI(t, f.repo, f.lookup).Post("/api/v1/pools", map[string]any{
+			"pools": []any{map[string]any{
+				"pool_stage_id": f.stage.ID.String(),
 				"number":        2,
 				"strip":         "Strip 3",
 				"start_time":    "2026-10-24T09:30:00Z",
-			},
-			wantStatus: http.StatusCreated,
-			wantFields: map[string]any{
-				"number":     float64(2),
-				"strip":      "Strip 3",
-				"start_time": "2026-10-24T09:30:00Z",
-			},
-		},
-		{
-			name:       "rejects a missing pool_stage_id before the handler runs",
-			body:       map[string]any{"number": 1},
-			wantStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name:       "rejects a missing number before the handler runs",
-			body:       map[string]any{"pool_stage_id": stage.ID.String()},
-			wantStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name:       "rejects a zero number before the handler runs",
-			body:       map[string]any{"pool_stage_id": stage.ID.String(), "number": 0},
-			wantStatus: http.StatusUnprocessableEntity,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			resp := newTestAPI(t, NewFakePoolRepository(), NewFakePoolStageLookup(stage)).Post("/api/v1/pools", tt.body)
-
-			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
-
-			body := decodeBody(t, resp.Body.Bytes())
-			for field, want := range tt.wantFields {
-				assert.Equal(t, want, body[field])
-			}
+				"referee_id":    f.referee.String(),
+				"fencers":       fencerIDs(1, 2, 3, 4),
+			}},
+			"points_to_win":      15,
+			"time_limit_seconds": 540,
 		})
+
+		require.Equal(t, http.StatusCreated, resp.Code, "body: %s", resp.Body)
+
+		data := decodeBody(t, resp.Body.Bytes())["data"].([]any)
+		require.Len(t, data, 1)
+		created := data[0].(map[string]any)
+		assert.Equal(t, f.stage.ID.String(), created["pool_stage_id"])
+		assert.InDelta(t, 2, created["number"], 0)
+		assert.Equal(t, "Strip 3", created["strip"])
+		assert.Equal(t, "2026-10-24T09:30:00Z", created["start_time"])
+		assert.Equal(t, f.referee.String(), created["referee_id"])
+
+		fencers := created["fencers"].([]any)
+		require.Len(t, fencers, 4)
+		first := fencers[0].(map[string]any)
+		assert.Equal(t, competitor(2).String(), first["competitor_id"])
+		assert.InDelta(t, 1, first["position"], 0)
+
+		bouts := created["bouts"].([]any)
+		require.Len(t, bouts, 6)
+		firstBout := bouts[0].(map[string]any)
+		assert.InDelta(t, 1, firstBout["pool_order"], 0)
+		assert.NotEmpty(t, firstBout["id"])
+		assert.NotEmpty(t, firstBout["competitor_1_id"])
+		assert.NotEmpty(t, firstBout["competitor_2_id"])
+
+		require.Len(t, f.repo.Bouts, 6)
+		for _, bout := range f.repo.Bouts {
+			assert.Equal(t, 15, bout.PointsToWin)
+			assert.Equal(t, 540, bout.TimeLimitSeconds)
+		}
+	})
+
+	t.Run("defaults points_to_win and time_limit_seconds", func(t *testing.T) {
+		t.Parallel()
+
+		f := newCreateFixture()
+		resp := newTestAPI(t, f.repo, f.lookup).Post("/api/v1/pools", map[string]any{
+			"pools": []any{map[string]any{
+				"pool_stage_id": f.stage.ID.String(),
+				"number":        1,
+				"fencers":       fencerIDs(1, 2),
+			}},
+		})
+
+		require.Equal(t, http.StatusCreated, resp.Code, "body: %s", resp.Body)
+
+		created := decodeBody(t, resp.Body.Bytes())["data"].([]any)[0].(map[string]any)
+		assert.Nil(t, created["referee_id"])
+		assert.Nil(t, created["strip"])
+		assert.Nil(t, created["start_time"])
+
+		require.Len(t, f.repo.Bouts, 1)
+		assert.Equal(t, 5, f.repo.Bouts[0].PointsToWin)
+		assert.Equal(t, 180, f.repo.Bouts[0].TimeLimitSeconds)
+	})
+
+	t.Run("rejects malformed bodies before the handler runs", func(t *testing.T) {
+		t.Parallel()
+
+		f := newCreateFixture()
+		pools := func(item map[string]any) map[string]any {
+			return map[string]any{"pools": []any{item}}
+		}
+		item := func(number int, fencers []string) map[string]any {
+			return map[string]any{"pool_stage_id": f.stage.ID.String(), "number": number, "fencers": fencers}
+		}
+
+		tests := []struct {
+			name string
+			body map[string]any
+		}{
+			{"empty pools", map[string]any{"pools": []any{}}},
+			{"missing pools", map[string]any{}},
+			{"one fencer", pools(item(1, fencerIDs(1)))},
+			{"eleven fencers", pools(item(1, fencerIDs(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)))},
+			{"non-uuid fencer", pools(item(1, []string{competitor(1).String(), "not-a-uuid"}))},
+			{"zero number", pools(item(0, fencerIDs(1, 2)))},
+			{"zero points_to_win", map[string]any{
+				"pools":         []any{item(1, fencerIDs(1, 2))},
+				"points_to_win": 0,
+			}},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				resp := newTestAPI(t, f.repo, f.lookup).Post("/api/v1/pools", tt.body)
+
+				assert.Equal(t, http.StatusUnprocessableEntity, resp.Code, "body: %s", resp.Body)
+				assert.Empty(t, f.repo.Pools)
+			})
+		}
+	})
+}
+
+func fencerIDs(ns ...int) []string {
+	ids := make([]string, 0, len(ns))
+	for _, n := range ns {
+		ids = append(ids, competitor(n).String())
 	}
+
+	return ids
 }
 
 func TestListEndpoint(t *testing.T) {
