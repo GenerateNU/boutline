@@ -1,0 +1,27 @@
+export interface TableauFencer {
+  id: string;
+  name: string;
+  club: string;
+  flag?: string; // left this optional for now, since the seed data has no flags
+  seed: number;
+}
+
+export interface TableauBout {
+  id: string;
+  number: number;
+  top: TableauFencer;
+  bottom: TableauFencer;
+  topScore?: number;
+  bottomScore?: number;
+}
+
+export interface TableauRound {
+  id: string;
+  name: string;
+  boutName: string;
+  bouts: TableauBout[];
+}
+
+export interface Tableau {
+  rounds: TableauRound[];
+}
