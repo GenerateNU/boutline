@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { Search } from "lucide-react";
 import { useState } from "react";
 
 import { Input } from "@/components/primitives/input";
@@ -78,13 +78,9 @@ function SearchForm({
         }}
         className="h-12 border-brand pr-12 pl-4 text-brand placeholder:text-brand"
       />
-      <Image
-        src="/search.svg"
-        alt=""
-        width={24}
-        height={24}
+      <Search
         data-pending={isPending || undefined}
-        className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 transition-opacity data-pending:opacity-40"
+        className="pointer-events-none absolute top-1/2 right-3 size-6 -translate-y-1/2 text-brand transition-opacity data-pending:opacity-40"
       />
     </form>
   );

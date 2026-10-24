@@ -1,7 +1,7 @@
 "use client";
 
 import { addDays, format, isSameDay } from "date-fns";
-import Image from "next/image";
+import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
 import { cn } from "cn";
 import { useState } from "react";
 
@@ -42,13 +42,7 @@ function WeekStrip() {
         onClick={() => page(-visibleDays)}
         className="shrink-0 cursor-pointer"
       >
-        <Image
-          src="/arrow.svg"
-          alt=""
-          width={19}
-          height={15}
-          className="rotate-180"
-        />
+        <ArrowLeft className="size-5" />
       </button>
       <div className="flex flex-1 justify-between">
         {days.map((day) => {
@@ -60,20 +54,11 @@ function WeekStrip() {
               aria-pressed={isSelected}
               onClick={() => select(isSelected ? undefined : day)}
               className={cn(
-                "flex cursor-pointer flex-col gap-1.5 leading-5 font-medium text-muted-foreground",
-                isSelected && "font-semibold text-foreground",
+                "cursor-pointer border-b-2 border-transparent pb-1.5 leading-5 font-medium text-muted-foreground",
+                isSelected && "border-foreground font-semibold text-foreground",
               )}
             >
               {format(day, "MMM d")}
-              {isSelected && (
-                <Image
-                  src="/tab-underline.svg"
-                  alt=""
-                  width={41}
-                  height={2}
-                  className="h-0.5 w-full"
-                />
-              )}
             </button>
           );
         })}
@@ -84,7 +69,7 @@ function WeekStrip() {
         onClick={() => page(visibleDays)}
         className="shrink-0 cursor-pointer"
       >
-        <Image src="/arrow.svg" alt="" width={19} height={15} />
+        <ArrowRight className="size-5" />
       </button>
       <button
         type="button"
@@ -92,12 +77,7 @@ function WeekStrip() {
         onClick={() => setFilters({ view: "calendar" })}
         className="shrink-0 cursor-pointer"
       >
-        <Image
-          src="/calendar.svg"
-          alt=""
-          width={40}
-          height={38}
-        />
+        <CalendarDays className="size-8" />
       </button>
     </div>
   );

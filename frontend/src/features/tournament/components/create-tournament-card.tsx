@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 
 function CreateTournamentCard() {
@@ -12,7 +12,7 @@ function CreateTournamentCard() {
         <p className="text-sm leading-5">Start a new tournament</p>
       </div>
       <span className="shrink-0 rounded-full border border-brand bg-chip p-2">
-        <Image src="/add.svg" alt="" width={24} height={24} />
+        <Plus className="size-6" />
       </span>
     </Link>
   );

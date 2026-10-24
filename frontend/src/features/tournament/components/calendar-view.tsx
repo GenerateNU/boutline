@@ -1,7 +1,7 @@
 "use client";
 
 import { addMonths, addYears, format } from "date-fns";
-import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 import { Calendar } from "@/components/primitives/calendar";
@@ -27,7 +27,7 @@ function CalendarView() {
         onClick={() => setFilters({ view: undefined })}
         className="flex cursor-pointer items-center self-start leading-5"
       >
-        <Image src="/chevron-left.svg" alt="" width={24} height={24} />
+        <ChevronLeft className="size-6" />
         Weekly View
       </button>
       <h2 className="pt-2.5 text-xl leading-6 font-medium">Calendar View</h2>
@@ -86,7 +86,7 @@ function Stepper({ label, unit, onStep }: StepperProps) {
         onClick={() => onStep(-1)}
         className="shrink-0 cursor-pointer"
       >
-        <Image src="/chevron-back.svg" alt="" width={20} height={20} />
+        <ChevronLeft className="size-5" />
       </button>
       <p className="w-20 text-center leading-5 font-medium">{label}</p>
       <button
@@ -95,13 +95,7 @@ function Stepper({ label, unit, onStep }: StepperProps) {
         onClick={() => onStep(1)}
         className="shrink-0 cursor-pointer"
       >
-        <Image
-          src="/chevron-back.svg"
-          alt=""
-          width={20}
-          height={20}
-          className="rotate-180"
-        />
+        <ChevronRight className="size-5" />
       </button>
     </div>
   );

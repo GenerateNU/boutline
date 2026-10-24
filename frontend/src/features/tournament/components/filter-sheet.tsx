@@ -1,7 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
-import Image from "next/image";
+import { ChevronDown, Funnel, Search, X } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { useState } from "react";
 
@@ -40,9 +39,10 @@ function FilterSheet() {
         <button
           type="button"
           aria-label="Filter tournaments"
-          className="shrink-0 cursor-pointer"
+          className="flex h-12 shrink-0 cursor-pointer items-center gap-1 rounded-lg border border-foreground bg-background px-2.5"
         >
-          <Image src="/filter.svg" alt="" width={55} height={48} />
+          <Funnel className="size-5 text-brand" />
+          <ChevronDown className="size-4" />
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -124,7 +124,7 @@ function SearchField({ label }: { label: string }) {
           placeholder={`Search ${label.toLowerCase()}`}
           className="flex-1 text-sm text-brand outline-none placeholder:text-brand"
         />
-        <Image src="/search.svg" alt="" width={24} height={24} />
+        <Search className="size-6" />
       </span>
     </label>
   );
