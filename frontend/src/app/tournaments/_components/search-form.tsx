@@ -14,6 +14,7 @@ type SearchFormProps = {
   action: string;
   placeholder: string;
   defaultValue?: string;
+  params?: Record<string, string>;
 };
 
 // A real GET form, so it still filters before hydration and without
@@ -22,16 +23,22 @@ function SearchForm({
   action,
   placeholder,
   defaultValue = "",
+  params,
 }: SearchFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   function navigate(search: string) {
-    const query = search ? `?q=${encodeURIComponent(search)}` : "";
+    const query = new URLSearchParams(params);
+    if (search) {
+      query.set("q", search);
+    }
     // replace, not push: typing should not fill the history stack. Leaving
     // offset off puts a new search back on the first page.
     startTransition(() => {
-      router.replace(`${action}${query}`, { scroll: false });
+      router.replace(`${action}${query.size ? `?${query}` : ""}`, {
+        scroll: false,
+      });
     });
   }
 
@@ -55,6 +62,9 @@ function SearchForm({
           );
         }}
       >
+        {Object.entries(params ?? {}).map(([key, value]) => (
+          <input key={key} type="hidden" name={key} value={value} />
+        ))}
         <Search
           aria-hidden
           data-pending={isPending || undefined}
