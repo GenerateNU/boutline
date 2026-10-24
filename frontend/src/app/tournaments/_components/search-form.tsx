@@ -10,12 +10,12 @@ import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
 
 const debounceMs = 300;
 
-interface SearchFormProps {
+type SearchFormProps = {
   action: string;
   placeholder: string;
   defaultValue?: string;
   params?: Record<string, string>;
-}
+};
 
 // A real GET form, so it still filters before hydration and without
 // JavaScript. Once hydrated, typing navigates on a debounce.
