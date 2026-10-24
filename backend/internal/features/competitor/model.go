@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/user"
 
 	"github.com/google/uuid"
 )
@@ -33,8 +34,13 @@ type Competitor struct {
 	// Nullable for now: not every competitor is tied to a tournament yet.
 	TournamentID *uuid.UUID             `gorm:"type:uuid;index"`
 	Tournament   *tournament.Tournament `gorm:"foreignKey:TournamentID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
-	FirstName    string                 `gorm:"type:text;not null"`
-	LastName     string                 `gorm:"type:text;not null"`
+	// The fencer this record belongs to. Nullable: competitors created before
+	// ownership existed have no owner, and deleting the account unlinks rather
+	// than deletes the record so its results survive.
+	UserID    *uuid.UUID `gorm:"type:uuid;index"`
+	User      *user.User `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:SET NULL,OnUpdate:CASCADE"`
+	FirstName string     `gorm:"type:text;not null"`
+	LastName  string     `gorm:"type:text;not null"`
 	// Rating defaults to U (unrated) for competitors with no classification on file.
 	Rating    Rating `gorm:"type:text;not null;default:U;check:chk_competitors_rating,rating IN ('A','B','C','D','E','U')"`
 	Team      string `gorm:"type:text;not null;default:''"`

@@ -8,6 +8,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/competitor"
+	"boutline/internal/features/user"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -428,41 +429,133 @@ func TestListCompetitorsWithQuery(t *testing.T) {
 func TestDeleteCompetitor(t *testing.T) {
 	t.Parallel()
 
-	t.Run("removes the stored competitor", func(t *testing.T) {
-		t.Parallel()
-		stored := seeded("Lee", "Kiefer", competitor.RatingU, "")
-		repo := NewFakeCompetitorRepository(stored)
-		_, err := NewTestService(repo).
-			DeleteCompetitor(t.Context(), &competitor.CompetitorIDInput{ID: stored.ID.String()})
-		require.NoError(t, err)
-		assert.Empty(t, repo.Competitors)
-	})
+	const forbidden = "only the competitor's owner or the tournament's creator or admins can delete this competitor"
+	const fenced = "a competitor who has fenced a bout cannot be deleted"
+
+	owned := func(owner uuid.UUID) competitor.Competitor {
+		c := seeded("Lee", "Kiefer", competitor.RatingU, "")
+		c.UserID = &owner
+		return c
+	}
+	unowned := seeded("Lee", "Kiefer", competitor.RatingU, "")
+	noTournament := competitor.Competitor{
+		ID: uuid.New(), FirstName: "Lee", LastName: "Kiefer", Rating: competitor.RatingU,
+	}
+	ownedNoTournament := noTournament
+	ownedNoTournament.UserID = ptr(TestRefereeID)
 
 	tests := []struct {
 		name       string
-		repoErr    error
+		caller     *uuid.UUID
+		stored     competitor.Competitor
+		id         string
+		deleteErr  error
 		wantStatus int
 		wantDetail string
 	}{
-		{name: "reports an unknown id as not found", wantStatus: http.StatusNotFound, wantDetail: "not found"},
+		{name: "owner deletes their own competitor", caller: ptr(TestRefereeID), stored: owned(TestRefereeID)},
 		{
-			name:       "refuses a competitor who has fenced a bout",
-			repoErr:    fmt.Errorf("delete competitor: %w", errs.ErrConflict),
-			wantStatus: http.StatusConflict,
-			wantDetail: "a competitor who has fenced a bout cannot be deleted",
+			name: "tournament creator deletes an owned competitor", caller: ptr(TestCreatorID),
+			stored: owned(TestRefereeID),
+		},
+		{name: "tournament admin deletes an unowned competitor", caller: ptr(TestAdminID), stored: unowned},
+		{
+			name: "owner deletes a competitor with no tournament", caller: ptr(TestRefereeID),
+			stored: ownedNoTournament,
+		},
+		{
+			name: "referee is refused", caller: ptr(TestRefereeID), stored: unowned,
+			wantStatus: http.StatusForbidden, wantDetail: forbidden,
+		},
+		{
+			name: "unrelated user is refused", caller: ptr(uuid.New()), stored: unowned,
+			wantStatus: http.StatusForbidden, wantDetail: forbidden,
+		},
+		{
+			name: "admin of another tournament is refused", caller: ptr(TestOtherAdminID), stored: unowned,
+			wantStatus: http.StatusForbidden, wantDetail: forbidden,
+		},
+		{
+			name: "unauthenticated caller is refused", stored: unowned,
+			wantStatus: http.StatusForbidden, wantDetail: forbidden,
+		},
+		{
+			name: "nobody can delete an unowned competitor with no tournament", caller: ptr(TestAdminID),
+			stored: noTournament, wantStatus: http.StatusForbidden, wantDetail: forbidden,
+		},
+		{
+			name: "reports an unknown id as not found", caller: ptr(TestAdminID), stored: unowned,
+			id: uuid.New().String(), wantStatus: http.StatusNotFound, wantDetail: "not found",
+		},
+		{
+			name: "refuses a competitor who has fenced a bout", caller: ptr(TestRefereeID),
+			stored:     owned(TestRefereeID),
+			deleteErr:  fmt.Errorf("delete competitor: %w", errs.ErrConflict),
+			wantStatus: http.StatusConflict, wantDetail: fenced,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			repo := NewFakeCompetitorRepository()
-			repo.Err = tt.repoErr
-			_, err := NewTestService(repo).
-				DeleteCompetitor(t.Context(), &competitor.CompetitorIDInput{ID: uuid.New().String()})
+			repo := NewFakeCompetitorRepository(tt.stored)
+			repo.DeleteErr = tt.deleteErr
+			id := tt.id
+			if id == "" {
+				id = tt.stored.ID.String()
+			}
+			ctx := t.Context()
+			if tt.caller != nil {
+				ctx = user.WithUserID(ctx, *tt.caller)
+			}
+
+			_, err := NewTestService(repo).DeleteCompetitor(ctx, &competitor.CompetitorIDInput{ID: id})
+
+			if tt.wantStatus == 0 {
+				require.NoError(t, err)
+				assert.NotContains(t, repo.Competitors, tt.stored.ID)
+				return
+			}
 			code, detail := apiError(t, err)
 			assert.Equal(t, tt.wantStatus, code)
 			assert.Equal(t, tt.wantDetail, detail)
+			assert.Contains(t, repo.Competitors, tt.stored.ID)
+		})
+	}
+}
+
+func TestCreateCompetitorRecordsOwner(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		caller    *uuid.UUID
+		wantOwner *uuid.UUID
+	}{
+		{name: "the caller becomes the owner", caller: ptr(TestRefereeID), wantOwner: ptr(TestRefereeID)},
+		{name: "no caller leaves it unowned"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			repo := NewFakeCompetitorRepository()
+			ctx := t.Context()
+			if tt.caller != nil {
+				ctx = user.WithUserID(ctx, *tt.caller)
+			}
+
+			_, err := NewTestService(repo).CreateCompetitor(ctx, &competitor.CompetitorCreateInput{
+				Body: competitor.CompetitorCreateBody{
+					TournamentID: TestTournamentID.String(), FirstName: "Lee", LastName: "Kiefer",
+				},
+			})
+
+			require.NoError(t, err)
+			require.Len(t, repo.Competitors, 1)
+			for _, stored := range repo.Competitors {
+				assert.Equal(t, tt.wantOwner, stored.UserID)
+			}
 		})
 	}
 }
