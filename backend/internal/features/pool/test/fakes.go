@@ -19,6 +19,7 @@ type FakePoolRepository struct {
 	Pools       map[uuid.UUID]pool.Pool
 	WithBouts   map[uuid.UUID]bool      // pools the real database would refuse to delete
 	Tournaments map[uuid.UUID]uuid.UUID // pool id to the tournament its stage's event belongs to
+	OpenBouts   map[uuid.UUID]int64     // pool id to its bouts that have not ended
 	Err         error                   // when set, every method fails with it
 }
 
@@ -28,7 +29,12 @@ func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
 		pools[seeded.ID] = seeded
 	}
 
-	return &FakePoolRepository{Pools: pools, WithBouts: map[uuid.UUID]bool{}, Tournaments: map[uuid.UUID]uuid.UUID{}}
+	return &FakePoolRepository{
+		Pools:       pools,
+		WithBouts:   map[uuid.UUID]bool{},
+		Tournaments: map[uuid.UUID]uuid.UUID{},
+		OpenBouts:   map[uuid.UUID]int64{},
+	}
 }
 
 func (f *FakePoolRepository) CreatePool(_ context.Context, toCreate *pool.Pool) error {
@@ -120,6 +126,55 @@ func (f *FakePoolRepository) UpdatePoolByID(_ context.Context, id uuid.UUID, upd
 	f.Pools[id] = stored
 
 	return nil
+}
+
+func (f *FakePoolRepository) StartPoolByID(_ context.Context, id uuid.UUID, startedAt time.Time) error {
+	return f.stamp(id, func(p *pool.Pool) bool {
+		if p.StartedAt != nil {
+			return false
+		}
+		p.StartedAt = &startedAt
+
+		return true
+	})
+}
+
+func (f *FakePoolRepository) EndPoolByID(_ context.Context, id uuid.UUID, completedAt time.Time) error {
+	return f.stamp(id, func(p *pool.Pool) bool {
+		if p.StartedAt == nil || p.CompletedAt != nil {
+			return false
+		}
+		p.CompletedAt = &completedAt
+
+		return true
+	})
+}
+
+func (f *FakePoolRepository) stamp(id uuid.UUID, apply func(*pool.Pool) bool) error {
+	if f.Err != nil {
+		return f.Err
+	}
+
+	stored, ok := f.Pools[id]
+	if !ok {
+		return fmt.Errorf("select pool %s: %w", id, errs.ErrNotFound)
+	}
+	if !apply(&stored) {
+		return fmt.Errorf("update pool %s: %w", id, errs.ErrConflict)
+	}
+
+	stored.UpdatedAt = time.Now()
+	f.Pools[id] = stored
+
+	return nil
+}
+
+func (f *FakePoolRepository) CountOpenPoolBouts(_ context.Context, id uuid.UUID) (int64, error) {
+	if f.Err != nil {
+		return 0, f.Err
+	}
+
+	return f.OpenBouts[id], nil
 }
 
 func (f *FakePoolRepository) DeletePoolByID(_ context.Context, id uuid.UUID) error {

@@ -11,6 +11,34 @@ services:
       # network rather than localhost.
       DB_HOST: db
       REDIS_HOST: redis
+      # Opts in to the built-in dev JWT secret, so no JWT_SECRET is needed here.
+      APP_ENVIRONMENT: dev
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # Runs the integration suite (internal/tests) against the real, migrated,
+  # seeded db/redis on this network — the same database `make dev-seed` loads,
+  # unreachable directly from the host for the same reason as db/redis below.
+  # `target: build` stops at the golang stage of ./Dockerfile instead of the
+  # final distroless one, so the toolchain and source are still there to test.
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      target: build
+    environment:
+      DB_HOST: db
+      REDIS_HOST: redis
+      REQUIRE_DB: "1"
+    # No -race here: the build stage is Alpine/musl with no C toolchain
+    # installed (it's CGO_ENABLED=0 for the shipped binary), and -race needs
+    # cgo. CI runs the same package with -race on a normal Go toolchain.
+    command: ["go", "test", "./internal/tests/..."]
     depends_on:
       db:
         condition: service_healthy

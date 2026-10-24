@@ -7,7 +7,7 @@ build:
 	go build -o $(BINARY_NAME) $(MAIN_FILE)
 
 run:
-	go run $(MAIN_FILE)
+	APP_ENVIRONMENT=$${APP_ENVIRONMENT:-dev} go run $(MAIN_FILE)
 
 clean:
 	rm -f $(BINARY_NAME) $(COVERAGE_FILE)
@@ -34,12 +34,19 @@ test-unit:
 test-integration:
 	go test ./internal/tests/... -race
 
+# Runs the integration suite against a real, migrated, seeded Postgres instead
+# of the fakes test-integration uses. Needs dev-up and dev-seed first; the test
+# service builds and runs on the same compose network as the db it reads.
+test-integration-db:
+	$(COMPOSE) run --rm --build test
+
 # Write the next versioned migration by diffing the gorm models against
 # ./migrations. Needs the atlas CLI and Docker, and should be run before
 # dev-up so the stack has a schema to apply.
 migrate-new:
 	@test -n "$(NAME)" || { echo "NAME is required, e.g. make migrate-new NAME=create_examples"; exit 1; }
 	@command -v atlas >/dev/null || { echo "atlas CLI not found: brew install ariga/tap/atlas"; exit 1; }
+	docker build --tag postgres:17-trgm atlas/dev-db
 	atlas migrate diff $(NAME) --env local
 
 # dev-up applies migrations on its own; these are for doing it out of band.

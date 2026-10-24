@@ -1,29 +1,42 @@
+import { Pagination } from "@/components/primitives/pagination";
 import { Section } from "@/components/primitives/section";
-import Link from "next/link";
+import { TournamentList } from "@/components/tournament-list";
+import { getTournaments } from "@/features/tournament/services/getTournaments";
 
-export default function TournamentsPage() {
+import { SearchForm } from "./_components/search-form";
+
+const PAGE_SIZE = 20;
+
+export default async function TournamentsPage({
+  searchParams,
+}: PageProps<"/tournaments">) {
+  const query = await searchParams;
+  const search = typeof query.q === "string" ? query.q.trim() : "";
+  const offset = Math.max(0, Number(query.offset) || 0);
+
+  const { data, total, limit } = await getTournaments(PAGE_SIZE, offset, search);
+
   return (
     <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 py-10">
-      <Section title="Tournament Page" className="flex flex-col gap-4">
-        <p>This is the tournament page.</p>
-        <p>lists of tournaments</p>
-        <p>also have a space to enter in a &apos;private code&apos;</p>
-        <p>also they should be able to login/register here via navbar</p>
-        <p>
-          they should also be able to search / filter for tournaments here.
-          There will be a calendar / weekly view that displays past, present,
-          and future tournaments
-        </p>
-      </Section>
-
-      <Section title="quick link" className="flex flex-col gap-4">
-        <ul className="flex flex-col gap-2">
-          <li>
-            <Link href="/tournaments/2" className="text-primary underline">
-              some random id
-            </Link>
-          </li>
-        </ul>
+      <Section title="Tournaments" className="flex flex-col gap-4">
+        <SearchForm
+          action="/tournaments"
+          placeholder="Search tournaments"
+          defaultValue={search}
+        />
+        <TournamentList
+          tournaments={data}
+          emptyMessage={
+            search ? `No tournaments match “${search}”.` : undefined
+          }
+        />
+        <Pagination
+          total={total}
+          limit={limit}
+          offset={offset}
+          basePath="/tournaments"
+          search={search}
+        />
       </Section>
     </div>
   );

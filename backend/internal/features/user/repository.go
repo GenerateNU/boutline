@@ -4,17 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
+	"boutline/internal/utils"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
+// userNameTrigramExpr must match the migration's indexed expression exactly,
+// or the GIN trigram index on users won't be used.
+const userNameTrigramExpr = "first_name || ' ' || last_name"
+
 type UserRepository interface {
-	CreateUser(ctx context.Context, user *User) error
+	SignupUser(ctx context.Context, user *User) error
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
+	LoginUser(ctx context.Context, email string) (*User, error)
 	ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error)
 	UpdateUserByID(ctx context.Context, id uuid.UUID, update UserUpdate) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
@@ -36,6 +43,7 @@ type UserUpdate struct {
 
 type UserListFilter struct {
 	// TODO: other filter criteria
+	Term   string
 	Limit  int
 	Offset int
 }
@@ -61,12 +69,12 @@ func (u UserUpdate) columns() map[string]any {
 	return columns
 }
 
-func (r *userRepository) CreateUser(ctx context.Context, user *User) error {
+func (r *userRepository) SignupUser(ctx context.Context, user *User) error {
 	if err := r.db.WithContext(ctx).Create(user).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return fmt.Errorf("create user: %w", errs.ErrDuplicate)
+			return fmt.Errorf("insert signup user: %w", errs.ErrDuplicate)
 		}
-		return fmt.Errorf("create user: %w", err)
+		return fmt.Errorf("insert signup user: %w", err)
 	}
 
 	return nil
@@ -81,6 +89,25 @@ func (r *userRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, 
 			return nil, fmt.Errorf("select user %s: %w", id, errs.ErrNotFound)
 		}
 		return nil, fmt.Errorf("select user %s: %w", id, err)
+	}
+
+	return &user, nil
+}
+
+func (r *userRepository) LoginUser(ctx context.Context, email string) (*User, error) {
+	var user User
+	// all emails are normalized
+	email = strings.ToLower(strings.TrimSpace(email))
+
+	err := r.db.WithContext(ctx).
+		Select("id, email, password, first_name, last_name, created_at, updated_at").
+		Where("email = ?", email).
+		First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("select login user: %w", errs.ErrNotFound)
+		}
+		return nil, fmt.Errorf("select login user: %w", err)
 	}
 
 	return &user, nil
@@ -103,19 +130,20 @@ func (r *userRepository) UpdateUserByID(ctx context.Context, id uuid.UUID, updat
 }
 
 func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error) {
-	query := r.db.WithContext(ctx).Model(&User{})
 	// TODO: apply other filters once decided
+	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&User{}), userNameTrigramExpr, filter.Term)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count users: %w", err)
 	}
 
+	query = utils.TrigramOrder(query, userNameTrigramExpr, filter.Term, "created_at DESC", "id")
+
 	users := make([]User, 0, filter.Limit)
 	// Avoid pulling password ever, makes it harder to leak
 	err := query.
 		Omit("password").
-		Order("created_at DESC").
 		Limit(filter.Limit).
 		Offset(filter.Offset).
 		Find(&users).Error
