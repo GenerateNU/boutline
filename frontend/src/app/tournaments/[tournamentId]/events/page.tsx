@@ -1,10 +1,19 @@
+import {
+  Card,
+  CardAction,
+  CardHeader,
+  CardTitle,
+} from "@/components/primitives/card";
+import { Chip } from "@/components/primitives/chip";
+import { Section } from "@/components/primitives/section";
 import { EventDateStrip } from "@/features/event/components/event-date-strip";
-import { EventSchedule } from "@/features/event/components/event-schedule";
 import { getEvents } from "@/features/event/services/getEvents";
 import {
   eventDay,
   eventDays,
+  eventStatusLabel,
   formatDayLabel,
+  formatTimeLabel,
   scheduleForDay,
   selectEventDay,
 } from "@/lib/event-schedule";
@@ -61,11 +70,40 @@ export default async function EventsTab({
         />
       )}
 
-      {groups.length === 0 ? (
+      {groups.length === 0 && (
         <p className="text-sm text-muted-foreground">{emptyMessage()}</p>
-      ) : (
-        <EventSchedule groups={groups} />
       )}
+      {groups.map(({ startTime, events }) => (
+        <Section
+          key={startTime ?? "tbc"}
+          title={startTime ? formatTimeLabel(startTime) : "Time TBC"}
+        >
+          <ul className="flex flex-col gap-3">
+            {events.map((event) => (
+              <li key={event.id}>
+                {/* A button with no handler: the event detail page is a separate ticket. */}
+                <button type="button" className="w-full cursor-pointer text-left">
+                  <Card
+                    orientation="horizontal"
+                    className="transition-colors hover:bg-muted"
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium">
+                        {event.name}
+                      </CardTitle>
+                      <CardAction>
+                        <Chip className="text-xs">
+                          {eventStatusLabel[event.status]}
+                        </Chip>
+                      </CardAction>
+                    </CardHeader>
+                  </Card>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      ))}
 
       {total > data.length && (
         <p className="text-xs text-muted-foreground">

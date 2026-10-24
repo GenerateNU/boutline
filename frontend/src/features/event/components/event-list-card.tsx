@@ -1,9 +1,9 @@
 import { ExternalLink } from "lucide-react";
 
 import { Card, CardHeader, CardTitle } from "@/components/primitives/card";
-import { EventStatusChip } from "@/features/event/components/event-status-chip";
+import { Chip } from "@/components/primitives/chip";
 import type { TournamentEvent } from "@/features/event/types/event";
-import { formatTimeLabel } from "@/lib/event-schedule";
+import { eventStatusLabel, formatTimeLabel } from "@/lib/event-schedule";
 
 interface EventListCardProps {
   title: string;
@@ -34,9 +34,10 @@ function EventListCard({ title, events, emptyMessage }: EventListCardProps) {
                   {event.start_time ? formatTimeLabel(event.start_time) : "TBC"}
                 </span>
                 <span className="min-w-0 flex-1 truncate">{event.name}</span>
-                <EventStatusChip status={event.status} className="bg-foreground text-background">
+                <Chip className="bg-foreground text-xs text-background">
+                  {eventStatusLabel[event.status]}
                   <ExternalLink aria-hidden />
-                </EventStatusChip>
+                </Chip>
               </button>
             </li>
           ))}

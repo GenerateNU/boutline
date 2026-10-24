@@ -5,6 +5,12 @@ export interface EventTimeGroup {
   events: TournamentEvent[];
 }
 
+export const eventStatusLabel: Record<EventStatus, string> = {
+  upcoming: "Upcoming",
+  active: "Live",
+  ended: "Past",
+};
+
 const dayFormat = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
