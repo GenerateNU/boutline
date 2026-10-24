@@ -41,6 +41,12 @@ func TestHumaError(t *testing.T) {
 			wantDetail: "invalid input",
 		},
 		{
+			name:       "forbidden maps to 403",
+			err:        fmt.Errorf("delete example: %w", errs.ErrForbidden),
+			wantStatus: http.StatusForbidden,
+			wantDetail: "forbidden",
+		},
+		{
 			name: "a public message reaches the client",
 			err: fmt.Errorf("create example: %w",
 				errs.Public("name must not be blank", errs.ErrInvalidInput)),

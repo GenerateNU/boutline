@@ -205,6 +205,9 @@ func (r *competitorRepository) ListCompetitorTeams(
 func (r *competitorRepository) DeleteCompetitor(ctx context.Context, id uuid.UUID) error {
 	result := r.db.WithContext(ctx).Delete(&Competitor{}, "id = ?", id)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
+			return fmt.Errorf("delete competitor %s: %w", id, errs.ErrConflict)
+		}
 		return fmt.Errorf("delete competitor %s: %w", id, result.Error)
 	}
 	if result.RowsAffected == 0 {
