@@ -44,6 +44,8 @@ const EMPTY_COMPETITOR: ImportedCompetitor = {
   event: "",
 };
 
+// Turns an uploaded registration CSV into a preview of rows. Problems with the
+// whole file throw; problems with a single row are reported on that row.
 export async function parseCompetitorImport(file: File): Promise<CompetitorImportPreview> {
   if (!file.name.toLowerCase().endsWith(".csv")) {
     throw new Error("upload must be a .csv file");
@@ -52,7 +54,7 @@ export async function parseCompetitorImport(file: File): Promise<CompetitorImpor
     throw new Error("file is larger than 2 MiB");
   }
   const text = await file.text();
-  if (text.includes("�")) {
+  if (text.includes("\uFFFD")) {
     throw new Error("file is not a text CSV");
   }
 
@@ -88,6 +90,9 @@ export async function parseCompetitorImport(file: File): Promise<CompetitorImpor
   return { rows, unknownColumns };
 }
 
+// Splits the CSV into non-blank records, each tagged with the line it starts on
+// (counted from PapaParse's position, so quoted multi-line cells stay correct).
+// Stops one record past the row cap so an oversized file isn't read to the end.
 function readRecords(text: string): CsvRecord[] {
   const records: CsvRecord[] = [];
   let rowStart = 0;
@@ -110,6 +115,8 @@ function readRecords(text: string): CsvRecord[] {
   return records;
 }
 
+// Maps each recognized header to its column index and collects the rest as
+// unknown. Throws if two headers mean the same field or none are recognized.
 function readHeader(cells: string[]) {
   const columns = new Map<Column, number>();
   const unknownColumns: string[] = [];
@@ -134,6 +141,8 @@ function readHeader(cells: string[]) {
   return { columns, unknownColumns };
 }
 
+// Reads one data record into a competitor and lists everything wrong with it.
+// A malformed record gets only its CSV error, since its cells can't be trusted.
 function readRow({ line, cells, error }: CsvRecord, columns: Map<Column, number>, width: number): CompetitorImportRow {
   if (error) {
     return { line, status: "invalid", competitor: { ...EMPTY_COMPETITOR }, errors: [`malformed CSV: ${error}`] };
@@ -158,19 +167,26 @@ function readRow({ line, cells, error }: CsvRecord, columns: Map<Column, number>
     event: value("event"),
   };
 
+  const hasFullName = competitor.firstName !== "" && competitor.lastName !== "";
+  const hasMemberNumber = competitor.memberNumber !== "";
+  const isUnidentifiable = !hasFullName && !hasMemberNumber;
   // Short rows and trailing empty cells lose nothing, so only extra data is an error.
+  const hasSurplusData = cells.slice(width).join("").trim() !== "";
+  const hasInvalidRating = rating === undefined;
+  const hasInvalidBirthdate = birthdate === undefined;
+
   const errors = [
-    !competitor.memberNumber &&
-      !(competitor.firstName && competitor.lastName) &&
-      "needs a first and last name, or a member number",
-    cells.slice(width).join("").trim() && `has ${cells.length} cells but the header has ${width}`,
-    !rating && `invalid rating "${value("rating")}": must be A-E with an optional 2- or 4-digit year, or U`,
-    birthdate === undefined && `invalid birthdate "${value("birthdate")}": use YYYY-MM-DD or MM/DD/YYYY`,
+    isUnidentifiable && "needs a first and last name, or a member number",
+    hasSurplusData && `has ${cells.length} cells but the header has ${width}`,
+    hasInvalidRating && `invalid rating "${value("rating")}": must be A-E with an optional 2- or 4-digit year, or U`,
+    hasInvalidBirthdate && `invalid birthdate "${value("birthdate")}": use YYYY-MM-DD or MM/DD/YYYY`,
   ].filter((message): message is string => Boolean(message));
 
   return { line, status: errors.length > 0 ? "invalid" : "valid", competitor, errors };
 }
 
+// Splits a rating like "C24" or "D2023" into its letter and year (2-digit years
+// are 20xx). Blank means unrated (U); returns undefined when invalid.
 function parseRating(raw: string): { rating: CompetitorRating; year?: number } | undefined {
   const value = raw.toUpperCase();
   if (value === "" || value === "U") {
@@ -187,10 +203,15 @@ function parseRating(raw: string): { rating: CompetitorRating; year?: number } |
   };
 }
 
+// Normalizes a birthdate to YYYY-MM-DD. Blank stays blank; returns undefined
+// when the value isn't a real date (round-tripping through Date rejects Feb 30).
 function parseBirthdate(raw: string): string | undefined {
   if (raw === "") {
     return "";
   }
+  // Parses MM/DD/YYYY into YYYY-MM-DD; a value already in YYYY-MM-DD passes
+  // through. The regex captures a 1–2 digit month, a 1–2 digit day and a
+  // 4-digit year separated by slashes, anchored so nothing else may surround it.
   const us = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(raw);
   const iso = us ? `${us[3]}-${us[1].padStart(2, "0")}-${us[2].padStart(2, "0")}` : raw;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
