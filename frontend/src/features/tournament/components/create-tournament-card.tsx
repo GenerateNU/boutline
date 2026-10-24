@@ -11,9 +11,7 @@ function CreateTournamentCard() {
         <p className="text-xl leading-6 font-medium">CREATE TOURNAMENT</p>
         <p className="text-sm leading-5">Start a new tournament</p>
       </div>
-      <span className="shrink-0 rounded-full border border-brand bg-chip p-2">
-        <Plus className="size-6" />
-      </span>
+      <Plus className="size-10 shrink-0 rounded-full border border-brand bg-chip p-2" />
     </Link>
   );
 }

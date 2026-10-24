@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
 import { cn } from "cn";
 import { useState } from "react";
 
+import { Button } from "@/components/primitives/button";
 import { useToday } from "@/features/tournament/hooks/use-today";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { parseDateParam } from "@/features/tournament/lib/date-param";
@@ -36,49 +37,53 @@ function WeekStrip() {
 
   return (
     <div className="flex items-center justify-between gap-2">
-      <button
+      <Button
         type="button"
+        variant="text"
+        size="icon"
         aria-label="Earlier days"
         onClick={() => page(-visibleDays)}
-        className="shrink-0 cursor-pointer"
       >
-        <ArrowLeft className="size-5" />
-      </button>
+        <ArrowLeft className="size-5!" />
+      </Button>
       <div className="flex flex-1 justify-between">
         {days.map((day) => {
           const isSelected = selected !== undefined && isSameDay(day, selected);
           return (
-            <button
+            <Button
               key={day.toISOString()}
               type="button"
+              variant="text"
               aria-pressed={isSelected}
               onClick={() => select(isSelected ? undefined : day)}
               className={cn(
-                "cursor-pointer border-b-2 border-transparent pb-1.5 leading-5 font-medium text-muted-foreground",
+                "h-auto rounded-none border-b-2 border-transparent px-0 pb-1.5 text-base leading-5 text-muted-foreground hover:bg-transparent",
                 isSelected && "border-foreground font-semibold text-foreground",
               )}
             >
               {format(day, "MMM d")}
-            </button>
+            </Button>
           );
         })}
       </div>
-      <button
+      <Button
         type="button"
+        variant="text"
+        size="icon"
         aria-label="Later days"
         onClick={() => page(visibleDays)}
-        className="shrink-0 cursor-pointer"
       >
-        <ArrowRight className="size-5" />
-      </button>
-      <button
+        <ArrowRight className="size-5!" />
+      </Button>
+      <Button
         type="button"
+        variant="text"
+        size="icon"
         aria-label="Calendar view"
         onClick={() => setFilters({ view: "calendar" })}
-        className="shrink-0 cursor-pointer"
       >
-        <CalendarDays className="size-8" />
-      </button>
+        <CalendarDays className="size-8!" />
+      </Button>
     </div>
   );
 }

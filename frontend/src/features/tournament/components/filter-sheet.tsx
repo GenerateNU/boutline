@@ -5,6 +5,7 @@ import { Dialog } from "radix-ui";
 import { useState } from "react";
 
 import { Button } from "@/components/primitives/button";
+import { Input } from "@/components/primitives/input";
 import {
   SegmentedButton,
   SegmentedButtonItem,
@@ -36,14 +37,15 @@ function FilterSheet() {
       }}
     >
       <Dialog.Trigger asChild>
-        <button
+        <Button
           type="button"
+          variant="outline"
           aria-label="Filter tournaments"
-          className="flex h-12 shrink-0 cursor-pointer items-center gap-1 rounded-lg border border-foreground bg-background px-2.5"
+          className="h-12 gap-1 rounded-lg bg-background px-2.5"
         >
-          <Funnel className="size-5 text-brand" />
-          <ChevronDown className="size-4" />
-        </button>
+          <Funnel className="size-5! text-brand" />
+          <ChevronDown />
+        </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-foreground/40" />
@@ -53,13 +55,15 @@ function FilterSheet() {
             Narrow the tournament list
           </Dialog.Description>
           <Dialog.Close asChild>
-            <button
+            <Button
               type="button"
+              variant="text"
+              size="icon"
               aria-label="Close"
-              className="absolute top-4 right-4 cursor-pointer"
+              className="absolute top-2 right-2"
             >
-              <X aria-hidden className="size-5" />
-            </button>
+              <X aria-hidden className="size-5!" />
+            </Button>
           </Dialog.Close>
 
           <form
@@ -94,12 +98,13 @@ function FilterSheet() {
             </ChipGroup>
 
             <div className="flex items-center justify-between gap-4">
-              <button
+              <Button
                 type="reset"
-                className="cursor-pointer text-sm font-bold underline"
+                variant="text"
+                className="h-auto px-0 font-bold underline hover:bg-transparent"
               >
                 Clear all
-              </button>
+              </Button>
               <Button
                 type="submit"
                 className="w-69 rounded-sm bg-brand font-normal text-background hover:bg-brand/90"
@@ -116,17 +121,18 @@ function FilterSheet() {
 
 function SearchField({ label }: { label: string }) {
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-sm font-bold">{label}</span>
-      <span className="flex items-center gap-3 border border-brand py-3 pr-3 pl-4">
-        <input
+    <div className="flex flex-col gap-1">
+      <p className="text-sm font-bold">{label}</p>
+      <div className="flex items-center gap-3 border border-brand py-3 pr-3 pl-4 focus-within:ring-2 focus-within:ring-ring">
+        <Input
           type="search"
+          aria-label={label}
           placeholder={`Search ${label.toLowerCase()}`}
-          className="flex-1 text-sm text-brand outline-none placeholder:text-brand"
+          className="h-auto flex-1 rounded-none border-0 px-0 text-brand placeholder:text-brand focus-visible:ring-0"
         />
-        <Search className="size-6" />
-      </span>
-    </label>
+        <Search className="size-6 shrink-0" />
+      </div>
+    </div>
   );
 }
 

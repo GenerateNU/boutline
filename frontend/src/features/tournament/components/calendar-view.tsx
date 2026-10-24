@@ -4,6 +4,7 @@ import { addMonths, addYears, format } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
+import { Button } from "@/components/primitives/button";
 import { Calendar } from "@/components/primitives/calendar";
 import { useToday } from "@/features/tournament/hooks/use-today";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
@@ -22,14 +23,15 @@ function CalendarView() {
 
   return (
     <div className="flex flex-col gap-2.5">
-      <button
+      <Button
         type="button"
+        variant="text"
         onClick={() => setFilters({ view: undefined })}
-        className="flex cursor-pointer items-center self-start leading-5"
+        className="h-auto gap-0 self-start px-0 text-base leading-5 font-normal hover:bg-transparent"
       >
-        <ChevronLeft className="size-6" />
+        <ChevronLeft className="size-6!" />
         Weekly View
-      </button>
+      </Button>
       <h2 className="pt-2.5 text-xl leading-6 font-medium">Calendar View</h2>
 
       {today && month && (
@@ -80,23 +82,27 @@ type StepperProps = {
 function Stepper({ label, unit, onStep }: StepperProps) {
   return (
     <div className="flex w-38.5 items-center justify-center gap-2.5 px-5.5">
-      <button
+      <Button
         type="button"
+        variant="text"
+        size="icon"
         aria-label={`Previous ${unit}`}
         onClick={() => onStep(-1)}
-        className="shrink-0 cursor-pointer"
+        className="-m-2.5"
       >
-        <ChevronLeft className="size-5" />
-      </button>
+        <ChevronLeft className="size-5!" />
+      </Button>
       <p className="w-20 text-center leading-5 font-medium">{label}</p>
-      <button
+      <Button
         type="button"
+        variant="text"
+        size="icon"
         aria-label={`Next ${unit}`}
         onClick={() => onStep(1)}
-        className="shrink-0 cursor-pointer"
+        className="-m-2.5"
       >
-        <ChevronRight className="size-5" />
-      </button>
+        <ChevronRight className="size-5!" />
+      </Button>
     </div>
   );
 }
