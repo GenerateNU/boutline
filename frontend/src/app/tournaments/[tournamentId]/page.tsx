@@ -32,12 +32,15 @@ export default async function OverviewTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <Card>
+      <Card className="rounded-lg">
         <CardHeader>
-          <CardTitle role="heading" aria-level={1}>
+          <CardTitle role="heading" aria-level={1} className="font-normal">
             {tournament.name}
           </CardTitle>
-          {dates && <CardDescription>{dates}</CardDescription>}
+          {dates && <CardDescription className="text-sm">{dates}</CardDescription>}
+          {/* The backend has no venue or organizer fields yet. */}
+          <CardDescription className="text-sm">Location - TBC</CardDescription>
+          <CardDescription className="text-sm">Organizer Contact - TBC</CardDescription>
         </CardHeader>
       </Card>
       <EventListCard

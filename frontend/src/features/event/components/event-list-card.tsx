@@ -13,9 +13,9 @@ type EventListCardProps = {
 
 function EventListCard({ title, events, emptyMessage }: EventListCardProps) {
   return (
-    <Card>
+    <Card className="rounded-lg">
       <CardHeader>
-        <CardTitle role="heading" aria-level={2} className="text-base">
+        <CardTitle role="heading" aria-level={2} className="text-lg font-normal">
           {title}
         </CardTitle>
       </CardHeader>
@@ -30,11 +30,11 @@ function EventListCard({ title, events, emptyMessage }: EventListCardProps) {
                 type="button"
                 className="flex w-full cursor-pointer items-center gap-3 py-2 text-left text-sm transition-colors hover:bg-muted"
               >
-                <span className="w-16 shrink-0 text-muted-foreground tabular-nums">
+                <span className="w-16 shrink-0 tabular-nums">
                   {event.start_time ? formatTimeLabel(event.start_time) : "TBC"}
                 </span>
                 <span className="min-w-0 flex-1 truncate">{event.name}</span>
-                <EventStatusChip status={event.status}>
+                <EventStatusChip status={event.status} className="bg-foreground text-background">
                   <ExternalLink aria-hidden />
                 </EventStatusChip>
               </button>
