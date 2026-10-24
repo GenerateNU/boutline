@@ -221,6 +221,10 @@ func (s *competitorService) DeleteCompetitor(
 		return nil, errs.HumaError(err)
 	}
 	if err := s.repo.DeleteCompetitor(ctx, id); err != nil {
+		if errors.Is(err, errs.ErrConflict) {
+			return nil, errs.HumaError(fmt.Errorf("delete competitor: %w",
+				errs.Public("a competitor who has fenced a bout cannot be deleted", err)))
+		}
 		return nil, errs.HumaError(fmt.Errorf("delete competitor: %w", err))
 	}
 	return nil, nil

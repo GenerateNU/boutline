@@ -71,6 +71,7 @@ func RegisterCompetitorService(api huma.API, service CompetitorService) {
 		Method:        http.MethodDelete,
 		Path:          competitorBasePath + "/{id}",
 		Summary:       "Delete a competitor",
+		Description:   "A competitor who has fenced a bout cannot be deleted.",
 		Tags:          []string{"Competitors"},
 		DefaultStatus: http.StatusNoContent,
 	}, service.DeleteCompetitor)

@@ -2,9 +2,11 @@ package test
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 
+	"boutline/internal/errs"
 	"boutline/internal/features/competitor"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -436,13 +438,33 @@ func TestDeleteCompetitor(t *testing.T) {
 		assert.Empty(t, repo.Competitors)
 	})
 
-	t.Run("reports an unknown id as not found", func(t *testing.T) {
-		t.Parallel()
-		_, err := NewTestService(NewFakeCompetitorRepository()).
-			DeleteCompetitor(t.Context(), &competitor.CompetitorIDInput{ID: uuid.New().String()})
-		code, _ := apiError(t, err)
-		assert.Equal(t, http.StatusNotFound, code)
-	})
+	tests := []struct {
+		name       string
+		repoErr    error
+		wantStatus int
+		wantDetail string
+	}{
+		{name: "reports an unknown id as not found", wantStatus: http.StatusNotFound, wantDetail: "not found"},
+		{
+			name:       "refuses a competitor who has fenced a bout",
+			repoErr:    fmt.Errorf("delete competitor: %w", errs.ErrConflict),
+			wantStatus: http.StatusConflict,
+			wantDetail: "a competitor who has fenced a bout cannot be deleted",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			repo := NewFakeCompetitorRepository()
+			repo.Err = tt.repoErr
+			_, err := NewTestService(repo).
+				DeleteCompetitor(t.Context(), &competitor.CompetitorIDInput{ID: uuid.New().String()})
+			code, detail := apiError(t, err)
+			assert.Equal(t, tt.wantStatus, code)
+			assert.Equal(t, tt.wantDetail, detail)
+		})
+	}
 }
 
 func TestRepositoryFailureIsNotAClientError(t *testing.T) {
