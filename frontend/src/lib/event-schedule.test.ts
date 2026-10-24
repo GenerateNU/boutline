@@ -3,7 +3,9 @@ import {
   dayWindow,
   eventDay,
   eventDays,
+  eventsWithStatus,
   formatDayLabel,
+  formatEventDateRange,
   formatTimeLabel,
   scheduleForDay,
   selectEventDay,
@@ -165,6 +167,86 @@ describe("formatDayLabel", () => {
     { name: "a double-digit day", day: "2026-12-25", want: "Dec 25" },
   ])("$name", ({ day, want }) => {
     expect(normalize(formatDayLabel(day))).toBe(want);
+  });
+});
+
+describe("formatEventDateRange", () => {
+  it.each([
+    {
+      name: "two days",
+      events: [{ start_time: "2026-10-13T09:00:00Z" }, { start_time: "2026-10-12T09:00:00Z" }],
+      fallback: null,
+      want: "October 12 – October 13",
+    },
+    {
+      name: "a single day with several events",
+      events: [{ start_time: "2026-10-12T09:00:00Z" }, { start_time: "2026-10-12T15:00:00Z" }],
+      fallback: null,
+      want: "October 12",
+    },
+    {
+      name: "undated events ignored",
+      events: [{ start_time: null }, { start_time: "2026-10-12T09:00:00Z" }],
+      fallback: "2026-11-01T09:00:00Z",
+      want: "October 12",
+    },
+    { name: "no dated events with a fallback", events: [{ start_time: null }], fallback: "2026-10-12T09:00:00Z", want: "October 12" },
+    { name: "nothing at all", events: [], fallback: null, want: null },
+    {
+      name: "an offset that crosses into the next UTC day",
+      events: [{ start_time: "2026-10-12T23:30:00-04:00" }],
+      fallback: null,
+      want: "October 13",
+    },
+  ])("$name", ({ events, fallback, want }) => {
+    const got = formatEventDateRange(events, fallback);
+    expect(got === null ? got : normalize(got)).toBe(want);
+  });
+});
+
+describe("eventsWithStatus", () => {
+  const upcoming = (id: string, name: string, start: string | null) => makeEvent(id, name, start);
+  const active = (id: string) => ({ ...makeEvent(id, "Active", "2026-10-05T08:00:00Z"), status: "active" as const });
+
+  it.each([
+    {
+      name: "filters out other statuses",
+      events: [upcoming("a", "A", "2026-10-05T09:00:00Z"), active("b")],
+      want: ["a"],
+    },
+    {
+      name: "sorts ascending by instant, including offset inputs",
+      events: [
+        upcoming("late", "A", "2026-10-05T10:00:00Z"),
+        upcoming("early", "B", "2026-10-05T05:00:00-04:00"),
+        upcoming("earliest", "C", "2026-10-05T08:00:00Z"),
+      ],
+      want: ["earliest", "early", "late"],
+    },
+    {
+      name: "puts undated last",
+      events: [upcoming("u", "A", null), upcoming("d", "B", "2026-10-05T09:00:00Z")],
+      want: ["d", "u"],
+    },
+    {
+      name: "breaks ties by name then id",
+      events: [
+        upcoming("z2", "Alpha", "2026-10-05T09:00:00Z"),
+        upcoming("y", "Beta", "2026-10-05T09:00:00Z"),
+        upcoming("z1", "Alpha", "2026-10-05T09:00:00Z"),
+      ],
+      want: ["z1", "z2", "y"],
+    },
+  ])("$name", ({ events, want }) => {
+    expect(eventsWithStatus(events, "upcoming").map((e) => e.id)).toEqual(want);
+  });
+
+  it("leaves the input array unmodified", () => {
+    const events = [upcoming("b", "B", "2026-10-06T09:00:00Z"), upcoming("a", "A", "2026-10-05T09:00:00Z")];
+
+    eventsWithStatus(events, "upcoming");
+
+    expect(events.map((e) => e.id)).toEqual(["b", "a"]);
   });
 });
 

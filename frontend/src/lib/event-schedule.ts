@@ -1,4 +1,4 @@
-import type { TournamentEvent } from "@/features/event/types/event";
+import type { EventStatus, TournamentEvent } from "@/features/event/types/event";
 
 export interface EventTimeGroup {
   startTime: string | null;
@@ -7,6 +7,12 @@ export interface EventTimeGroup {
 
 const dayFormat = new Intl.DateTimeFormat("en-US", {
   month: "short",
+  day: "numeric",
+  timeZone: "UTC",
+});
+
+const longDayFormat = new Intl.DateTimeFormat("en-US", {
+  month: "long",
   day: "numeric",
   timeZone: "UTC",
 });
@@ -95,6 +101,39 @@ export function scheduleForDay(
 
 export function formatDayLabel(day: string): string {
   return dayFormat.format(new Date(`${day}T00:00:00Z`));
+}
+
+export function formatEventDateRange(
+  events: Pick<TournamentEvent, "start_time">[],
+  fallbackStart: string | null,
+): string | null {
+  const days = eventDays(events);
+  if (days.length === 0 && fallbackStart) {
+    days.push(eventDay(fallbackStart));
+  }
+  if (days.length === 0) {
+    return null;
+  }
+  const [first, last] = [days[0], days[days.length - 1]].map((day) =>
+    longDayFormat.format(new Date(`${day}T00:00:00Z`)),
+  );
+  return days.length === 1 ? first : `${first} – ${last}`;
+}
+
+export function eventsWithStatus(
+  events: TournamentEvent[],
+  status: EventStatus,
+): TournamentEvent[] {
+  return events
+    .filter((event) => event.status === status)
+    .sort((a, b) => {
+      const aTime = a.start_time ? Date.parse(a.start_time) : Infinity;
+      const bTime = b.start_time ? Date.parse(b.start_time) : Infinity;
+      if (aTime !== bTime) {
+        return aTime < bTime ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name, "en") || a.id.localeCompare(b.id);
+    });
 }
 
 export function formatTimeLabel(startTime: string): string {

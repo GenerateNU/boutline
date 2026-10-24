@@ -4,17 +4,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/primitives/card";
-import { Chip } from "@/components/primitives/chip";
-import type {
-  EventStatus,
-  TournamentEvent,
-} from "@/features/event/types/event";
-
-const statusLabel: Record<EventStatus, string> = {
-  upcoming: "Upcoming",
-  active: "Live",
-  ended: "Past",
-};
+import { EventStatusChip } from "@/features/event/components/event-status-chip";
+import type { TournamentEvent } from "@/features/event/types/event";
 
 type EventCardProps = {
   event: TournamentEvent;
@@ -29,7 +20,7 @@ function EventCard({ event }: EventCardProps) {
         <CardHeader>
           <CardTitle className="text-sm font-medium">{event.name}</CardTitle>
           <CardAction>
-            <Chip className="text-xs">{statusLabel[event.status]}</Chip>
+            <EventStatusChip status={event.status} />
           </CardAction>
         </CardHeader>
       </Card>

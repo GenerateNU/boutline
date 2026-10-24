@@ -1,30 +1,54 @@
-import { Section } from "@/components/primitives/section";
+import { notFound } from "next/navigation";
 
-export default function TournamentIdPage() {
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/primitives/card";
+import { EventListCard } from "@/features/event/components/event-list-card";
+import { getEvents } from "@/features/event/services/getEvents";
+import { getTournament } from "@/features/tournament/services/getTournament";
+import { eventsWithStatus, formatEventDateRange } from "@/lib/event-schedule";
+
+// The backend's maximum page size.
+const EVENT_FETCH_LIMIT = 100;
+
+export default async function OverviewTab({
+  params,
+}: PageProps<"/tournaments/[tournamentId]">) {
+  const { tournamentId } = await params;
+  const [tournament, { data }] = await Promise.all([
+    getTournament(tournamentId),
+    getEvents(tournamentId, EVENT_FETCH_LIMIT, 0),
+  ]);
+
+  if (!tournament) {
+    notFound();
+  }
+
+  const dates = formatEventDateRange(data, tournament.start_time);
+
   return (
-    <Section title="Tournament id details">
-      <p>
-        This is the tournament id details page where we list all the important
-        info (dashboard).
-      </p>
-      <p>
-        still waiting on lofis technically, but we could list the details here!
-      </p>
-      <br />
-      <p>This page specifically is &apos; overview &apos; of the tournament.</p>
-      <ul>
-        <li>tournament name</li>
-        <li>tournament location/venue</li>
-        <li>tournament date</li>
-        <li>tournament time</li>
-        <li>tournament contact information</li>
-        <li>ongoing live events</li>
-      </ul>
-      <p>
-        if this tournament is private, then we ensure that the password is at
-        least stored in their session to unlock it, if not then prompt them to
-        enter the password/code
-      </p>
-    </Section>
+    <div className="flex flex-col gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle role="heading" aria-level={1}>
+            {tournament.name}
+          </CardTitle>
+          {dates && <CardDescription>{dates}</CardDescription>}
+        </CardHeader>
+      </Card>
+      <EventListCard
+        title="Ongoing Events"
+        events={eventsWithStatus(data, "active")}
+        emptyMessage="No events are live right now."
+      />
+      <EventListCard
+        title="Upcoming Events"
+        events={eventsWithStatus(data, "upcoming")}
+        emptyMessage="No upcoming events."
+      />
+    </div>
   );
 }
