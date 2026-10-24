@@ -6,7 +6,6 @@ import {
 } from "@/components/primitives/card";
 import { Chip } from "@/components/primitives/chip";
 import { Section } from "@/components/primitives/section";
-import { EventDateStrip } from "@/features/event/components/event-date-strip";
 import { getEvents } from "@/features/event/services/getEvents";
 import {
   eventDay,
@@ -19,6 +18,7 @@ import {
 } from "@/lib/event-schedule";
 
 import { SearchForm } from "../../_components/search-form";
+import { EventDateStrip } from "./_components/event-date-strip";
 
 export default async function EventsTab({
   params,

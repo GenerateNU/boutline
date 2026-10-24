@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 
-import { EventListCard } from "@/features/event/components/event-list-card";
+import { EventListCard } from "./event-list-card";
 import type { TournamentEvent } from "@/features/event/types/event";
 
 function makeEvent(overrides: Partial<TournamentEvent>): TournamentEvent {

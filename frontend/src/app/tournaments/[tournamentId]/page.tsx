@@ -6,10 +6,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/primitives/card";
-import { EventListCard } from "@/features/event/components/event-list-card";
 import { getEvents } from "@/features/event/services/getEvents";
 import { getTournament } from "@/features/tournament/services/getTournament";
 import { eventsWithStatus, formatEventDateRange } from "@/lib/event-schedule";
+
+import { EventListCard } from "./_components/event-list-card";
 
 export default async function OverviewTab({
   params,

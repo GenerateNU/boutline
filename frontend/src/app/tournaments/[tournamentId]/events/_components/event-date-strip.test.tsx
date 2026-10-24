@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 
-import { EventDateStrip } from "@/features/event/components/event-date-strip";
+import { EventDateStrip } from "./event-date-strip";
 
 const days = ["2026-10-04", "2026-10-05", "2026-10-06", "2026-10-07"];
 const base = "/tournaments/t1/events";
