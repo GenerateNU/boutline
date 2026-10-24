@@ -11,16 +11,13 @@ import { getEvents } from "@/features/event/services/getEvents";
 import { getTournament } from "@/features/tournament/services/getTournament";
 import { eventsWithStatus, formatEventDateRange } from "@/lib/event-schedule";
 
-// The backend's maximum page size.
-const EVENT_FETCH_LIMIT = 100;
-
 export default async function OverviewTab({
   params,
 }: PageProps<"/tournaments/[tournamentId]">) {
   const { tournamentId } = await params;
   const [tournament, { data }] = await Promise.all([
     getTournament(tournamentId),
-    getEvents(tournamentId, EVENT_FETCH_LIMIT, 0),
+    getEvents(tournamentId),
   ]);
 
   if (!tournament) {

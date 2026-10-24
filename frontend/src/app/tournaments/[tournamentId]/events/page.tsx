@@ -11,10 +11,6 @@ import {
 
 import { SearchForm } from "../../_components/search-form";
 
-// The backend's maximum page size. Days and search are applied to this one
-// page, so there is no Pagination here.
-const EVENT_FETCH_LIMIT = 100;
-
 export default async function EventsTab({
   params,
   searchParams,
@@ -25,7 +21,7 @@ export default async function EventsTab({
   const requestedDay = typeof query.date === "string" ? query.date : undefined;
   const basePath = `/tournaments/${tournamentId}/events`;
 
-  const { data, total } = await getEvents(tournamentId, EVENT_FETCH_LIMIT, 0);
+  const { data, total } = await getEvents(tournamentId);
 
   const days = eventDays(data);
   const selectedDay = selectEventDay(

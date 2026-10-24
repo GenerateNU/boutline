@@ -9,9 +9,9 @@ const statusLabel: Record<EventStatus, string> = {
   ended: "Past",
 };
 
-type EventStatusChipProps = React.ComponentProps<typeof Chip> & {
+interface EventStatusChipProps extends React.ComponentProps<typeof Chip> {
   status: EventStatus;
-};
+}
 
 function EventStatusChip({
   status,

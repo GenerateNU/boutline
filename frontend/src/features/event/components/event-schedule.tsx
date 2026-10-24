@@ -9,13 +9,17 @@ import { EventStatusChip } from "@/features/event/components/event-status-chip";
 import type { TournamentEvent } from "@/features/event/types/event";
 import { type EventTimeGroup, formatTimeLabel } from "@/lib/event-schedule";
 
-type EventScheduleProps = {
+interface EventScheduleProps {
   groups: EventTimeGroup[];
-};
+}
+
+interface EventCardProps {
+  event: TournamentEvent;
+}
 
 // A button with no handler: the event detail page is a separate ticket, which
 // will swap this for a Link.
-function EventCard({ event }: { event: TournamentEvent }) {
+function EventCard({ event }: EventCardProps) {
   return (
     <button type="button" className="w-full cursor-pointer text-left">
       <Card orientation="horizontal" className="transition-colors hover:bg-muted">

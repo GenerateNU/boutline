@@ -5,11 +5,11 @@ import { EventStatusChip } from "@/features/event/components/event-status-chip";
 import type { TournamentEvent } from "@/features/event/types/event";
 import { formatTimeLabel } from "@/lib/event-schedule";
 
-type EventListCardProps = {
+interface EventListCardProps {
   title: string;
   events: TournamentEvent[];
   emptyMessage: string;
-};
+}
 
 function EventListCard({ title, events, emptyMessage }: EventListCardProps) {
   return (

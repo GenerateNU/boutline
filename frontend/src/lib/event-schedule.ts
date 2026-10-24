@@ -23,18 +23,29 @@ const timeFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+const utcMidnight = (day: string) => new Date(`${day}T00:00:00Z`);
+
+// Start time ascending with undated events last, then name, then id.
+function byStartThenName(a: TournamentEvent, b: TournamentEvent): number {
+  const aTime = a.start_time ? Date.parse(a.start_time) : Infinity;
+  const bTime = b.start_time ? Date.parse(b.start_time) : Infinity;
+  if (aTime !== bTime) {
+    return aTime < bTime ? -1 : 1;
+  }
+  return a.name.localeCompare(b.name, "en") || a.id.localeCompare(b.id);
+}
+
+function fold(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 export function eventDay(startTime: string): string {
   return new Date(startTime).toISOString().slice(0, 10);
 }
 
 export function eventDays(events: Pick<TournamentEvent, "start_time">[]): string[] {
-  const days = new Set<string>();
-  for (const event of events) {
-    if (event.start_time) {
-      days.add(eventDay(event.start_time));
-    }
-  }
-  return [...days].sort();
+  const days = events.flatMap(({ start_time }) => (start_time ? [eventDay(start_time)] : []));
+  return [...new Set(days)].sort();
 }
 
 export function selectEventDay(
@@ -55,10 +66,7 @@ export function dayWindow(days: string[], selected: string, size: number): strin
   return days.slice(start, start + size);
 }
 
-function fold(text: string): string {
-  return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-}
-
+// Sorting first means the Map's insertion order is already the display order.
 export function scheduleForDay(
   events: TournamentEvent[],
   day: string | null,
@@ -67,40 +75,25 @@ export function scheduleForDay(
   const needle = fold(search);
   const groups = new Map<string | null, TournamentEvent[]>();
 
-  for (const event of events) {
+  for (const event of [...events].sort(byStartThenName)) {
     const startTime = event.start_time ? new Date(event.start_time).toISOString() : null;
-    if (startTime !== null && eventDay(startTime) !== day) {
-      continue;
+    if ((startTime === null || eventDay(startTime) === day) && fold(event.name).includes(needle)) {
+      groups.set(startTime, [...(groups.get(startTime) ?? []), event]);
     }
-    if (!fold(event.name).includes(needle)) {
-      continue;
-    }
-    groups.set(startTime, [...(groups.get(startTime) ?? []), event]);
   }
 
-  return [...groups]
-    .sort(([a], [b]) => {
-      if (a === b) {
-        return 0;
-      }
-      if (a === null) {
-        return 1;
-      }
-      if (b === null) {
-        return -1;
-      }
-      return a < b ? -1 : 1;
-    })
-    .map(([startTime, grouped]) => ({
-      startTime,
-      events: grouped.sort(
-        (a, b) => a.name.localeCompare(b.name, "en") || a.id.localeCompare(b.id),
-      ),
-    }));
+  return [...groups].map(([startTime, grouped]) => ({ startTime, events: grouped }));
+}
+
+export function eventsWithStatus(
+  events: TournamentEvent[],
+  status: EventStatus,
+): TournamentEvent[] {
+  return events.filter((event) => event.status === status).sort(byStartThenName);
 }
 
 export function formatDayLabel(day: string): string {
-  return dayFormat.format(new Date(`${day}T00:00:00Z`));
+  return dayFormat.format(utcMidnight(day));
 }
 
 export function formatEventDateRange(
@@ -108,32 +101,13 @@ export function formatEventDateRange(
   fallbackStart: string | null,
 ): string | null {
   const days = eventDays(events);
-  if (days.length === 0 && fallbackStart) {
-    days.push(eventDay(fallbackStart));
-  }
-  if (days.length === 0) {
+  const first = days[0] ?? (fallbackStart ? eventDay(fallbackStart) : null);
+  if (!first) {
     return null;
   }
-  const [first, last] = [days[0], days[days.length - 1]].map((day) =>
-    longDayFormat.format(new Date(`${day}T00:00:00Z`)),
-  );
-  return days.length === 1 ? first : `${first} – ${last}`;
-}
-
-export function eventsWithStatus(
-  events: TournamentEvent[],
-  status: EventStatus,
-): TournamentEvent[] {
-  return events
-    .filter((event) => event.status === status)
-    .sort((a, b) => {
-      const aTime = a.start_time ? Date.parse(a.start_time) : Infinity;
-      const bTime = b.start_time ? Date.parse(b.start_time) : Infinity;
-      if (aTime !== bTime) {
-        return aTime < bTime ? -1 : 1;
-      }
-      return a.name.localeCompare(b.name, "en") || a.id.localeCompare(b.id);
-    });
+  const last = days[days.length - 1] ?? first;
+  const format = (day: string) => longDayFormat.format(utcMidnight(day));
+  return first === last ? format(first) : `${format(first)} – ${format(last)}`;
 }
 
 export function formatTimeLabel(startTime: string): string {

@@ -7,19 +7,19 @@ import { dayWindow, formatDayLabel } from "@/lib/event-schedule";
 
 const VISIBLE_DAYS = 3;
 
-type EventDateStripProps = {
+interface EventDateStripProps {
   basePath: string;
   days: string[];
   selected: string;
   search: string;
-};
+}
 
-type StepProps = {
+interface StepProps {
   href: string | null;
   rel: "prev" | "next";
   label: string;
   children: React.ReactNode;
-};
+}
 
 function Step({ href, rel, label, children }: StepProps) {
   return (
