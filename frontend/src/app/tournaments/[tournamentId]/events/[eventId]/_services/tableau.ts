@@ -1,4 +1,3 @@
-import type { SeededFencer } from "../_types/bouts";
 import type { Tableau, TableauFencer, TableauRound } from "../_types/tableau";
 import { bouts } from "./bouts";
 
@@ -16,7 +15,7 @@ const placeholderSeeds: Record<string, number> = {
   "Kenji Tanaka": 4,
 };
 
-function toTableauFencer(fencer: SeededFencer): TableauFencer {
+function toTableauFencer(fencer: { name: string; club: string }): TableauFencer {
   const seed = placeholderSeeds[fencer.name];
   if (seed === undefined) {
     throw new Error(`No placeholder seed for ${fencer.name}`);
