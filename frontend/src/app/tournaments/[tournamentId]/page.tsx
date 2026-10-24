@@ -28,6 +28,7 @@ export default async function OverviewTab({
   }
 
   const dates = formatEventDateRange(data, tournament.start_time);
+  const ended = tournament.status === "ended";
 
   return (
     <div className="flex flex-col gap-4">
@@ -42,12 +43,12 @@ export default async function OverviewTab({
       <EventListCard
         title="Ongoing Events"
         events={eventsWithStatus(data, "active")}
-        emptyMessage="No events are live right now."
+        emptyMessage={ended ? "Tournament has ended." : "No events are live right now."}
       />
       <EventListCard
         title="Upcoming Events"
         events={eventsWithStatus(data, "upcoming")}
-        emptyMessage="No upcoming events."
+        emptyMessage={ended ? "Tournament has ended." : "No upcoming events."}
       />
     </div>
   );
