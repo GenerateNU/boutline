@@ -47,6 +47,8 @@ func (e BoutUpdate) columns() map[string]any {
 	}
 	if e.PoolID != nil {
 		columns["pool_id"] = *e.PoolID
+		// Moving a bout to another pool drops its slot, which could collide with a bout already there.
+		columns["pool_order"] = gorm.Expr("CASE WHEN pool_id = ? THEN pool_order END", *e.PoolID)
 	}
 	if e.TimeLimitSeconds != nil {
 		columns["time_limit_seconds"] = *e.TimeLimitSeconds

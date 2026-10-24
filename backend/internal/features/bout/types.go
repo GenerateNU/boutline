@@ -11,6 +11,7 @@ type BoutResponse struct {
 	TournamentID     string     `json:"tournament_id" format:"uuid"`
 	RefereeID        *string    `json:"referee_id" format:"uuid" doc:"Null until a referee is assigned"`
 	PoolID           *string    `json:"pool_id" format:"uuid" doc:"Null for a bout outside the pool stage"`
+	PoolOrder        *int       `json:"pool_order" doc:"Slot in its pool's bout order, from 1; null outside a pool or for a bout added by hand"`
 	Competitor1ID    string     `json:"competitor_1_id" format:"uuid"`
 	Competitor2ID    string     `json:"competitor_2_id" format:"uuid"`
 	Location         *string    `json:"location"`
@@ -31,6 +32,7 @@ func newBoutResponse(bout Bout) BoutResponse {
 		TournamentID:     bout.TournamentID.String(),
 		RefereeID:        optionalUUIDString(bout.RefereeID),
 		PoolID:           optionalUUIDString(bout.PoolID),
+		PoolOrder:        bout.PoolOrder,
 		Competitor1ID:    bout.Competitor1ID.String(),
 		Competitor2ID:    bout.Competitor2ID.String(),
 		Location:         bout.Location,
