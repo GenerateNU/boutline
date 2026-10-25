@@ -13,24 +13,24 @@ import { Competitor } from "@/types/competitor";
 import { Bout } from "@/types/bout";
 
 export default function PinnedPage() {
-  const { pinned, pinFencer, unpinFencer, pinMatch, unpinMatch } = usePinnedItems();
+  const { pinned, pinFencer, unpinFencer, pinBout, unpinBout } = usePinnedItems();
   const [availableFencers, setAvailableFencers] = useState<Competitor[]>([]);
-  const [availableMatches, setAvailableMatches] = useState<Bout[]>([]);
+  const [availableBouts, setAvailableBouts] = useState<Bout[]>([]);
   const [selectedFencerId, setSelectedFencerId] = useState("");
-  const [selectedMatchId, setSelectedMatchId] = useState("");
+  const [selectedBoutId, setSelectedBoutId] = useState("");
   const [fencers, setFencers] = useState<Competitor[]>([]);
-  const [matches, setMatches] = useState<Bout[]>([]);
+  const [bouts, setBouts] = useState<Bout[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAvailableItems()
       .then((items) => {
         setAvailableFencers(items.fencers);
-        setAvailableMatches(items.bouts);
+        setAvailableBouts(items.bouts);
         setSelectedFencerId(items.fencers[0]?.id ?? "");
-        setSelectedMatchId(items.bouts[0]?.id ?? "");
+        setSelectedBoutId(items.bouts[0]?.id ?? "");
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load fencers/matches"));
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load fencers/bouts"));
   }, []);
 
   async function handleLoad() {
@@ -38,7 +38,7 @@ export default function PinnedPage() {
     try {
       const items = await fetchPinnedItems(pinned);
       setFencers(items.fencers);
-      setMatches(items.bouts);
+      setBouts(items.bouts);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load pinned items");
     }
@@ -77,31 +77,31 @@ export default function PinnedPage() {
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2>Matches</h2>
+        <h2>Bouts</h2>
         <div className="flex gap-2">
           <Select
             className="max-w-xs"
-            value={selectedMatchId}
-            onChange={(e) => setSelectedMatchId(e.target.value)}
+            value={selectedBoutId}
+            onChange={(e) => setSelectedBoutId(e.target.value)}
           >
-            {availableMatches.map((match) => (
-              <option key={match.id} value={match.id}>
-                {match.competitor_1_id} vs {match.competitor_2_id} ({match.status})
+            {availableBouts.map((bout) => (
+              <option key={bout.id} value={bout.id}>
+                {bout.competitor_1_id} vs {bout.competitor_2_id} ({bout.status})
               </option>
             ))}
           </Select>
           <button
             className="border p-1"
-            disabled={!selectedMatchId}
-            onClick={() => pinMatch(selectedMatchId)}
+            disabled={!selectedBoutId}
+            onClick={() => pinBout(selectedBoutId)}
           >
             Pin
           </button>
-          <button className="border p-1" onClick={() => unpinMatch(selectedMatchId)}>
+          <button className="border p-1" onClick={() => unpinBout(selectedBoutId)}>
             Unpin
           </button>
         </div>
-        <p>Pinned match ids: {pinned.matchIds.join(", ") || "none"}</p>
+        <p>Pinned bout ids: {pinned.boutIds.join(", ") || "none"}</p>
       </section>
 
       <button className="border p-1" onClick={handleLoad}>
@@ -121,11 +121,11 @@ export default function PinnedPage() {
       </section>
 
       <section>
-        <h2>Matches data</h2>
+        <h2>Bouts data</h2>
         <ul>
-          {matches.map((match) => (
-            <li key={match.id}>
-              {match.id}: {match.competitor_1_id} vs {match.competitor_2_id} ({match.status})
+          {bouts.map((bout) => (
+            <li key={bout.id}>
+              {bout.id}: {bout.competitor_1_id} vs {bout.competitor_2_id} ({bout.status})
             </li>
           ))}
         </ul>

@@ -4,14 +4,14 @@ import { useCallback } from "react";
 import { useSessionStorage } from "@/lib/hooks/use-session-storage";
 import { PINNED_MAX_IDS, PINNED_STORAGE_KEY, PinnedIds } from "@/features/pinning/types/pinning";
 
-const initialPinnedIds: PinnedIds = { fencerIds: [], matchIds: [] };
+const initialPinnedIds: PinnedIds = { fencerIds: [], boutIds: [] };
 
 function isPinnedIds(value: unknown): value is PinnedIds {
   if (typeof value !== "object" || value === null) {
     return false;
   }
-  const { fencerIds, matchIds } = value as Record<string, unknown>;
-  return Array.isArray(fencerIds) && Array.isArray(matchIds);
+  const { fencerIds, boutIds } = value as Record<string, unknown>;
+  return Array.isArray(fencerIds) && Array.isArray(boutIds);
 }
 
 function pin(ids: string[], id: string): string[] {
@@ -37,16 +37,16 @@ function usePinnedItems() {
     (id: string) => setPinned({ ...pinned, fencerIds: unpin(pinned.fencerIds, id) }),
     [pinned, setPinned],
   );
-  const pinMatch = useCallback(
-    (id: string) => setPinned({ ...pinned, matchIds: pin(pinned.matchIds, id) }),
+  const pinBout = useCallback(
+    (id: string) => setPinned({ ...pinned, boutIds: pin(pinned.boutIds, id) }),
     [pinned, setPinned],
   );
-  const unpinMatch = useCallback(
-    (id: string) => setPinned({ ...pinned, matchIds: unpin(pinned.matchIds, id) }),
+  const unpinBout = useCallback(
+    (id: string) => setPinned({ ...pinned, boutIds: unpin(pinned.boutIds, id) }),
     [pinned, setPinned],
   );
 
-  return { pinned, pinFencer, unpinFencer, pinMatch, unpinMatch };
+  return { pinned, pinFencer, unpinFencer, pinBout, unpinBout };
 }
 
 export { usePinnedItems };

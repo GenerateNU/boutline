@@ -20,7 +20,7 @@ function fetchByIds<T>(path: string, ids: string[]): Promise<T[]> {
 async function fetchPinnedItems(pinned: PinnedIds): Promise<PinnedItems> {
   const [fencers, bouts] = await Promise.all([
     fetchByIds<Competitor>("/competitors", pinned.fencerIds),
-    fetchByIds<Bout>("/bouts", pinned.matchIds),
+    fetchByIds<Bout>("/bouts", pinned.boutIds),
   ]);
   return { fencers, bouts };
 }
