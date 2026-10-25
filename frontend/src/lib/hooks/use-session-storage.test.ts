@@ -40,4 +40,20 @@ describe("useSessionStorage", () => {
     expect(result.current[0]).toBe("updated");
     expect(sessionStorage.getItem("key")).toBe(JSON.stringify("updated"));
   });
+
+  it("keeps the new value in memory when the storage write throws", () => {
+    const { result } = renderHook(() => useSessionStorage("key", "default"));
+
+    const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("quota exceeded");
+    });
+
+    act(() => {
+      result.current[1]("updated");
+    });
+
+    expect(result.current[0]).toBe("updated");
+
+    setItem.mockRestore();
+  });
 });

@@ -38,7 +38,7 @@ describe("fetchPinnedItems", () => {
 
     const result = await fetchPinnedItems({ fencerIds: ["f1"], matchIds: ["m1"] });
 
-    expect(result).toEqual({ fencers: [fencer], matches: [match] });
+    expect(result).toEqual({ fencers: [fencer], bouts: [match] });
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     const competitorsUrl = new URL(fetchMock.mock.calls[0][0] as string, "http://localhost");
@@ -61,7 +61,7 @@ describe("fetchPinnedItems", () => {
 
     const result = await fetchPinnedItems({ fencerIds: ["f1", "f2"], matchIds: [] });
 
-    expect(result).toEqual({ fencers: [fencer], matches: [] });
+    expect(result).toEqual({ fencers: [fencer], bouts: [] });
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     const requestedUrl = new URL(fetchMock.mock.calls[0][0] as string, "http://localhost");
@@ -79,7 +79,7 @@ describe("fetchPinnedItems", () => {
 
     const result = await fetchPinnedItems({ fencerIds: [], matchIds: ["m1"] });
 
-    expect(result).toEqual({ fencers: [], matches: [match] });
+    expect(result).toEqual({ fencers: [], bouts: [match] });
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     const requestedUrl = new URL(fetchMock.mock.calls[0][0] as string, "http://localhost");
@@ -90,7 +90,7 @@ describe("fetchPinnedItems", () => {
   it("makes no requests and returns empty lists when both id lists are empty", async () => {
     const result = await fetchPinnedItems({ fencerIds: [], matchIds: [] });
 
-    expect(result).toEqual({ fencers: [], matches: [] });
+    expect(result).toEqual({ fencers: [], bouts: [] });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

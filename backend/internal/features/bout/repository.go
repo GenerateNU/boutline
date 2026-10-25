@@ -87,9 +87,9 @@ func (t BoutTransition) columns() map[string]any {
 }
 
 type BoutListFilter struct {
+	IDs          []uuid.UUID
 	TournamentID *uuid.UUID
 	PoolID       *uuid.UUID
-	IDs          []uuid.UUID
 	Status       BoutStatus
 	Limit        int
 	Offset       int

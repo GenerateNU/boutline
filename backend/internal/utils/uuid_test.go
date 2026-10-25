@@ -18,10 +18,11 @@ func TestParseUUIDList(t *testing.T) {
 	idB := "22222222-2222-2222-2222-222222222222"
 
 	tests := []struct {
-		name    string
-		raw     string
-		want    []uuid.UUID
-		wantErr bool
+		name       string
+		raw        string
+		want       []uuid.UUID
+		wantErr    bool
+		wantErrMsg string
 	}{
 		{
 			name: "empty string",
@@ -29,9 +30,10 @@ func TestParseUUIDList(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "only commas",
-			raw:  ",,,",
-			want: nil,
+			name:       "only commas",
+			raw:        ",,,",
+			wantErr:    true,
+			wantErrMsg: "ids must contain at least one valid uuid",
 		},
 		{
 			name: "whitespace-padded single id",
@@ -49,9 +51,10 @@ func TestParseUUIDList(t *testing.T) {
 			want: []uuid.UUID{uuid.MustParse(idA), uuid.MustParse(idA)},
 		},
 		{
-			name:    "one invalid element among valid ones",
-			raw:     idA + ",not-a-uuid," + idB,
-			wantErr: true,
+			name:       "one invalid element among valid ones",
+			raw:        idA + ",not-a-uuid," + idB,
+			wantErr:    true,
+			wantErrMsg: "ids must be a valid uuid",
 		},
 	}
 
@@ -64,7 +67,7 @@ func TestParseUUIDList(t *testing.T) {
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Equal(t, http.StatusBadRequest, errs.StatusFor(err))
-				assert.Equal(t, "ids must be a valid uuid", errs.ClientMessage(err))
+				assert.Equal(t, tt.wantErrMsg, errs.ClientMessage(err))
 				assert.Nil(t, got)
 				return
 			}

@@ -9,6 +9,10 @@ const listeners = new Map<string, Set<Listener>>();
 interface CacheEntry<T> {
   raw: string | null;
   value: T;
+  // True when the last write to this key threw (quota exceeded or storage
+  // unavailable). Reads then trust this cached value instead of comparing
+  // against storage, which still holds the pre-write string.
+  writeFailed: boolean;
 }
 
 // useSyncExternalStore requires getSnapshot to return the same reference while
@@ -37,7 +41,7 @@ function readValue<T>(key: string, initialValue: T): T {
   }
 
   const cached = cache.get(key);
-  if (cached && cached.raw === raw) {
+  if (cached && (cached.writeFailed || cached.raw === raw)) {
     return cached.value as T;
   }
 
@@ -49,18 +53,19 @@ function readValue<T>(key: string, initialValue: T): T {
       value = initialValue;
     }
   }
-  cache.set(key, { raw, value });
+  cache.set(key, { raw, value, writeFailed: false });
   return value;
 }
 
 function writeValue<T>(key: string, value: T) {
   const raw = JSON.stringify(value);
+  let writeFailed = false;
   try {
     window.sessionStorage.setItem(key, raw);
   } catch {
-    // Quota exceeded or sessionStorage unavailable: cache still reflects the new value.
+    writeFailed = true;
   }
-  cache.set(key, { raw, value });
+  cache.set(key, { raw, value, writeFailed });
   emit(key);
 }
 

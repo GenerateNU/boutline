@@ -1,18 +1,12 @@
 import { apiRequest } from "@/services/api-request";
 import { PinnedIds } from "@/features/pinning/types/pinning";
+import { ListResponse } from "@/types/list-response";
 import { Competitor } from "@/types/competitor";
 import { Bout } from "@/types/bout";
 
 interface PinnedItems {
   fencers: Competitor[];
-  matches: Bout[];
-}
-
-interface ListResponse<T> {
-  data: T[];
-  total: number;
-  limit: number;
-  offset: number;
+  bouts: Bout[];
 }
 
 function fetchByIds<T>(path: string, ids: string[]): Promise<T[]> {
@@ -24,11 +18,11 @@ function fetchByIds<T>(path: string, ids: string[]): Promise<T[]> {
 }
 
 async function fetchPinnedItems(pinned: PinnedIds): Promise<PinnedItems> {
-  const [fencers, matches] = await Promise.all([
+  const [fencers, bouts] = await Promise.all([
     fetchByIds<Competitor>("/competitors", pinned.fencerIds),
     fetchByIds<Bout>("/bouts", pinned.matchIds),
   ]);
-  return { fencers, matches };
+  return { fencers, bouts };
 }
 
 export { fetchPinnedItems };

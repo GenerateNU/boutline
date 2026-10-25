@@ -26,9 +26,9 @@ export default function PinnedPage() {
     fetchAvailableItems()
       .then((items) => {
         setAvailableFencers(items.fencers);
-        setAvailableMatches(items.matches);
+        setAvailableMatches(items.bouts);
         setSelectedFencerId(items.fencers[0]?.id ?? "");
-        setSelectedMatchId(items.matches[0]?.id ?? "");
+        setSelectedMatchId(items.bouts[0]?.id ?? "");
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load fencers/matches"));
   }, []);
@@ -38,7 +38,7 @@ export default function PinnedPage() {
     try {
       const items = await fetchPinnedItems(pinned);
       setFencers(items.fencers);
-      setMatches(items.matches);
+      setMatches(items.bouts);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load pinned items");
     }
@@ -62,7 +62,11 @@ export default function PinnedPage() {
               </option>
             ))}
           </Select>
-          <button className="border p-1" onClick={() => pinFencer(selectedFencerId)}>
+          <button
+            className="border p-1"
+            disabled={!selectedFencerId}
+            onClick={() => pinFencer(selectedFencerId)}
+          >
             Pin
           </button>
           <button className="border p-1" onClick={() => unpinFencer(selectedFencerId)}>
@@ -86,7 +90,11 @@ export default function PinnedPage() {
               </option>
             ))}
           </Select>
-          <button className="border p-1" onClick={() => pinMatch(selectedMatchId)}>
+          <button
+            className="border p-1"
+            disabled={!selectedMatchId}
+            onClick={() => pinMatch(selectedMatchId)}
+          >
             Pin
           </button>
           <button className="border p-1" onClick={() => unpinMatch(selectedMatchId)}>

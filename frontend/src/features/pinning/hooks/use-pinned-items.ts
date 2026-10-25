@@ -6,6 +6,14 @@ import { PINNED_MAX_IDS, PINNED_STORAGE_KEY, PinnedIds } from "@/features/pinnin
 
 const initialPinnedIds: PinnedIds = { fencerIds: [], matchIds: [] };
 
+function isPinnedIds(value: unknown): value is PinnedIds {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const { fencerIds, matchIds } = value as Record<string, unknown>;
+  return Array.isArray(fencerIds) && Array.isArray(matchIds);
+}
+
 function pin(ids: string[], id: string): string[] {
   if (ids.includes(id) || ids.length >= PINNED_MAX_IDS) {
     return ids;
@@ -18,7 +26,8 @@ function unpin(ids: string[], id: string): string[] {
 }
 
 function usePinnedItems() {
-  const [pinned, setPinned] = useSessionStorage<PinnedIds>(PINNED_STORAGE_KEY, initialPinnedIds);
+  const [stored, setPinned] = useSessionStorage<unknown>(PINNED_STORAGE_KEY, initialPinnedIds);
+  const pinned = isPinnedIds(stored) ? stored : initialPinnedIds;
 
   const pinFencer = useCallback(
     (id: string) => setPinned({ ...pinned, fencerIds: pin(pinned.fencerIds, id) }),

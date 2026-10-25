@@ -20,7 +20,9 @@ func ParseUUID(raw string, field string) (uuid.UUID, error) {
 }
 
 // ParseUUIDList splits raw on commas, skipping empty elements, and parses each
-// remaining one with ParseUUID. Duplicates are passed through unchanged.
+// remaining one with ParseUUID. Duplicates are passed through unchanged. A
+// nonempty raw with no parsable elements (e.g. ",,,") is rejected rather than
+// treated as an empty filter, which would otherwise match every row.
 func ParseUUIDList(raw string, field string) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
 
@@ -36,6 +38,11 @@ func ParseUUIDList(raw string, field string) ([]uuid.UUID, error) {
 		}
 
 		ids = append(ids, id)
+	}
+
+	if raw != "" && len(ids) == 0 {
+		return nil, errs.Public(
+			fmt.Sprintf("%s must contain at least one valid uuid", field), errs.ErrInvalidInput)
 	}
 
 	return ids, nil
