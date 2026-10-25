@@ -73,11 +73,11 @@ function CalendarView() {
   );
 }
 
-type StepperProps = {
+interface StepperProps {
   label: string;
   unit: string;
   onStep: (step: number) => void;
-};
+}
 
 function Stepper({ label, unit, onStep }: StepperProps) {
   return (

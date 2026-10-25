@@ -136,12 +136,12 @@ function SearchField({ label }: { label: string }) {
   );
 }
 
-type ChipGroupProps = {
+interface ChipGroupProps {
   label: string;
   value: string;
   onValueChange: (value: string) => void;
   children: React.ReactNode;
-};
+}
 
 function ChipGroup({ label, value, onValueChange, children }: ChipGroupProps) {
   return (

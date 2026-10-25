@@ -4,10 +4,10 @@ import { Chip } from "@/components/primitives/chip";
 import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import type { Tournament } from "@/features/tournament/types/tournament";
 
-type TournamentListProps = {
+interface TournamentListProps {
   tournaments: Tournament[];
   emptyMessage?: string;
-};
+}
 
 function TournamentList({
   tournaments,
