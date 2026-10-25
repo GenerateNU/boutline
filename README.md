@@ -133,8 +133,9 @@ migration. Read the generated SQL before committing it;
 ### Schema
 
 The schema as of `20261024043137_add_competitor_owner`. Every table also has
-`created_at` and `updated_at`, left out below. Dotted lines are references the
-code relies on but the database does not enforce with a foreign key.
+`created_at` and `updated_at`, left out below. Relationships labelled "no FK"
+are references the code relies on but the database does not enforce with a
+foreign key.
 
 ```mermaid
 erDiagram
@@ -237,7 +238,7 @@ erDiagram
     tournaments ||--o{ events : holds
     tournaments ||--o{ bouts : holds
     events ||--o{ pool_stages : "runs"
-    events ||..o{ direct_eliminations : "runs"
+    events ||--o{ direct_eliminations : "runs (no FK)"
     pool_stages ||--o{ pools : splits
     pools |o--o{ bouts : groups
     users |o--o{ pools : referees
@@ -245,7 +246,7 @@ erDiagram
     competitors ||--o{ bouts : "fences as 1"
     competitors ||--o{ bouts : "fences as 2"
     bouts ||--o{ scorings : records
-    competitors ||..o{ scorings : scores
+    competitors ||--o{ scorings : "scores (no FK)"
     users ||--o{ scorings : creates
     users |o--o{ scorings : revokes
 ```
