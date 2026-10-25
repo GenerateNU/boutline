@@ -58,16 +58,17 @@ migrate-status:
 
 # Rewrite the Mermaid ER diagram between the schema-diagram markers in the root
 # README from ./migrations rather than the models, so column order matches the
-# deployed tables. The README is only replaced if both markers were found.
+# deployed tables. The README is only replaced if a start marker was closed by
+# an end marker, so a missing or misordered marker can't truncate it.
 schema-diagram:
 	@command -v atlas >/dev/null || { echo "atlas CLI not found: brew install ariga/tap/atlas"; exit 1; }
 	docker build --tag postgres:17-trgm atlas/dev-db
 	@diagram=$$(atlas schema inspect --env local --url file://migrations --format '{{ mermaid . }}') && \
 	DIAGRAM="$$diagram" awk ' \
-		/<!-- schema-diagram:end -->/ { skip = 0; ended = 1 } \
+		/<!-- schema-diagram:end -->/ { if (skip) replaced = 1; skip = 0 } \
 		!skip { print } \
 		/<!-- schema-diagram:start -->/ { d = ENVIRON["DIAGRAM"]; sub(/[[:space:]]+$$/, "", d); print "```mermaid"; print d; print "```"; skip = 1 } \
-		END { exit !ended } \
+		END { exit skip || !replaced } \
 	' ../README.md > ../README.md.tmp && mv ../README.md.tmp ../README.md || { rm -f ../README.md.tmp; exit 1; }
 
 # Build the image from ./Dockerfile and run it against a Postgres container.
