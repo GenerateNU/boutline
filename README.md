@@ -130,6 +130,126 @@ must be registered in `backend/cmd/atlasloader/main.go` or it will never get a
 migration. Read the generated SQL before committing it;
 [backend/README.md](backend/README.md) has the full workflow.
 
+### Schema
+
+The schema as of `20261024043137_add_competitor_owner`. Every table also has
+`created_at` and `updated_at`, left out below. Dotted lines are references the
+code relies on but the database does not enforce with a foreign key.
+
+```mermaid
+erDiagram
+    users {
+        uuid id PK
+        text email UK
+        text password "hashed"
+        text first_name
+        text last_name
+    }
+    tournaments {
+        uuid id PK
+        text name
+        text visibility "private | public"
+        text code UK
+        text status "pending | active | ended"
+        uuid created_by FK
+        timestamptz start_time
+        timestamptz started_at
+        timestamptz completed_at
+    }
+    tournament_users {
+        uuid user_id PK, FK
+        uuid tournament_id PK, FK
+        text role "referee | admin"
+    }
+    competitors {
+        uuid id PK
+        uuid tournament_id FK "nullable"
+        uuid user_id FK "nullable, owner"
+        text first_name
+        text last_name
+        text rating "A-E or U"
+        text team
+    }
+    events {
+        uuid id PK
+        uuid tournament_id FK
+        text format "pool_then_direct_elimination"
+        text name
+        text status "upcoming | active | ended"
+        timestamptz start_time
+        timestamptz started_at
+        timestamptz completed_at
+    }
+    pool_stages {
+        uuid id PK
+        uuid event_id FK
+        bigint max_competitor_per_pool ">= 2"
+        text status "upcoming | active | ended"
+        timestamptz start_time
+        timestamptz started_at
+        timestamptz completed_at
+    }
+    pools {
+        uuid id PK
+        uuid pool_stage_id FK
+        uuid referee_id FK "nullable"
+        timestamptz started_at
+        timestamptz completed_at
+    }
+    direct_eliminations {
+        uuid id PK
+        uuid event_id "no FK"
+        text status "upcoming | active | ended"
+        timestamptz started_at
+        timestamptz completed_at
+    }
+    bouts {
+        uuid id PK
+        uuid tournament_id FK
+        uuid pool_id FK "nullable"
+        uuid competitor_1_id FK
+        uuid competitor_2_id FK "differs from competitor_1_id"
+        uuid referee_id FK "nullable"
+        text location
+        bigint points_to_win "> 0"
+        bigint time_limit_seconds "> 0"
+        bigint group_number
+        text status "upcoming | active | ended"
+        timestamptz start_time
+        timestamptz started_at
+        timestamptz completed_at
+    }
+    scorings {
+        bigserial id PK
+        uuid bout_id FK
+        uuid competitor_id "no FK"
+        bigint points ">= 1"
+        uuid created_by FK
+        uuid revoked_by FK "nullable"
+        timestamptz revoked_at
+    }
+
+    users ||--o{ tournaments : creates
+    users ||--o{ tournament_users : "is member"
+    tournaments ||--o{ tournament_users : has
+    tournaments |o--o{ competitors : enters
+    users |o--o{ competitors : owns
+    tournaments ||--o{ events : holds
+    tournaments ||--o{ bouts : holds
+    events ||--o{ pool_stages : "runs"
+    events ||..o{ direct_eliminations : "runs"
+    pool_stages ||--o{ pools : splits
+    pools |o--o{ bouts : groups
+    users |o--o{ pools : referees
+    users |o--o{ bouts : referees
+    competitors ||--o{ bouts : "fences as 1"
+    competitors ||--o{ bouts : "fences as 2"
+    bouts ||--o{ scorings : records
+    competitors ||..o{ scorings : scores
+    users ||--o{ scorings : creates
+    users |o--o{ scorings : revokes
+```
+
 ## Deployment
 
 The backend and its Postgres deploy to Generate's shared DigitalOcean droplet,
