@@ -18,6 +18,7 @@ var (
 	ErrDuplicate    = errors.New("already exists")
 	ErrInvalidInput = errors.New("invalid input")
 	ErrConflict     = errors.New("conflict")
+	ErrForbidden    = errors.New("forbidden")
 )
 
 type APIError struct {

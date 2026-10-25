@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -18,6 +19,7 @@ func RegisterCompetitorRoutes(api huma.API, params *types.ServiceParams) {
 	RegisterCompetitorService(api, NewCompetitorService(
 		NewCompetitorRepository(params.DB),
 		tournament.NewTournamentRepository(params.DB),
+		tournamentuser.NewTournamentUserRepository(params.DB),
 	))
 }
 
@@ -67,10 +69,12 @@ func RegisterCompetitorService(api huma.API, service CompetitorService) {
 	}, service.UpdateCompetitorByID)
 
 	huma.Register(api, huma.Operation{
-		OperationID:   "deleteCompetitor",
-		Method:        http.MethodDelete,
-		Path:          competitorBasePath + "/{id}",
-		Summary:       "Delete a competitor",
+		OperationID: "deleteCompetitor",
+		Method:      http.MethodDelete,
+		Path:        competitorBasePath + "/{id}",
+		Summary:     "Delete a competitor",
+		Description: "Only the competitor's owner or the tournament's creator or admins can delete a competitor. " +
+			"A competitor who has fenced a bout cannot be deleted.",
 		Tags:          []string{"Competitors"},
 		DefaultStatus: http.StatusNoContent,
 	}, service.DeleteCompetitor)

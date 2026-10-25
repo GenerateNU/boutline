@@ -8,6 +8,8 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
+	"boutline/internal/features/user"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -16,6 +18,14 @@ import (
 type TournamentLookup interface {
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*tournament.Tournament, error)
 }
+
+// TournamentMembershipLookup is the subset of the tournament-user repository needed here.
+type TournamentMembershipLookup interface {
+	GetTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) (*tournamentuser.TournamentUser, error)
+}
+
+var errCompetitorDeleteForbidden = errs.Public(
+	"only the competitor's owner or the tournament's creator or admins can delete this competitor", errs.ErrForbidden)
 
 const (
 	CompetitorDefaultPageSize = 20
@@ -35,10 +45,15 @@ type CompetitorService interface {
 type competitorService struct {
 	repo        CompetitorRepository
 	tournaments TournamentLookup
+	memberships TournamentMembershipLookup
 }
 
-func NewCompetitorService(repo CompetitorRepository, tournaments TournamentLookup) CompetitorService {
-	return &competitorService{repo: repo, tournaments: tournaments}
+func NewCompetitorService(
+	repo CompetitorRepository,
+	tournaments TournamentLookup,
+	memberships TournamentMembershipLookup,
+) CompetitorService {
+	return &competitorService{repo: repo, tournaments: tournaments, memberships: memberships}
 }
 
 func (s *competitorService) CreateCompetitor(
@@ -83,6 +98,9 @@ func (s *competitorService) CreateCompetitor(
 		LastName:     lastName,
 		Rating:       rating,
 		Team:         strings.TrimSpace(input.Body.Team),
+	}
+	if callerID, ok := user.UserIDFrom(ctx); ok {
+		competitor.UserID = &callerID
 	}
 
 	if err := s.repo.CreateCompetitor(ctx, competitor); err != nil {
@@ -220,10 +238,54 @@ func (s *competitorService) DeleteCompetitor(
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
+	stored, err := s.repo.GetCompetitorByID(ctx, id)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get competitor: %w", err))
+	}
+	if err := s.authorizeCompetitorDelete(ctx, stored); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("delete competitor: %w", err))
+	}
 	if err := s.repo.DeleteCompetitor(ctx, id); err != nil {
+		if errors.Is(err, errs.ErrConflict) {
+			return nil, errs.HumaError(fmt.Errorf("delete competitor: %w",
+				errs.Public("a competitor who has fenced a bout cannot be deleted", err)))
+		}
 		return nil, errs.HumaError(fmt.Errorf("delete competitor: %w", err))
 	}
 	return nil, nil
+}
+
+func (s *competitorService) authorizeCompetitorDelete(ctx context.Context, stored *Competitor) error {
+	caller, ok := user.UserIDFrom(ctx)
+	if !ok {
+		return errCompetitorDeleteForbidden
+	}
+	if stored.UserID != nil && *stored.UserID == caller {
+		return nil
+	}
+	if stored.TournamentID == nil {
+		return errCompetitorDeleteForbidden
+	}
+
+	owningTournament, err := s.tournaments.GetTournamentByID(ctx, *stored.TournamentID)
+	if err != nil {
+		return fmt.Errorf("get tournament: %w", err)
+	}
+	if owningTournament.CreatedBy == caller {
+		return nil
+	}
+
+	membership, err := s.memberships.GetTournamentUser(ctx, *stored.TournamentID, caller)
+	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			return errCompetitorDeleteForbidden
+		}
+		return fmt.Errorf("get tournament user: %w", err)
+	}
+	if membership.Role != tournamentuser.TournamentUserRoleAdmin {
+		return errCompetitorDeleteForbidden
+	}
+	return nil
 }
 
 func (s *competitorService) ListTeamsByTournament(

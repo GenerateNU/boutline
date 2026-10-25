@@ -47,6 +47,8 @@ func ClientMessage(err error) string {
 		return ErrInvalidInput.Error()
 	case errors.Is(err, ErrConflict):
 		return ErrConflict.Error()
+	case errors.Is(err, ErrForbidden):
+		return ErrForbidden.Error()
 	default:
 		return "internal server error"
 	}
@@ -64,6 +66,8 @@ func StatusFor(err error) int {
 		return http.StatusBadRequest
 	case errors.Is(err, ErrConflict):
 		return http.StatusConflict
+	case errors.Is(err, ErrForbidden):
+		return http.StatusForbidden
 	default:
 		return http.StatusInternalServerError
 	}
