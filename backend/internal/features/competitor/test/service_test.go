@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"boutline/internal/errs"
@@ -255,6 +256,21 @@ func TestListCompetitorsFilters(t *testing.T) {
 			input:    &competitor.CompetitorListInput{Query: "a Ada"},
 			wantLast: []string{"Adams"},
 		},
+		{
+			name:     "filters by ids",
+			input:    &competitor.CompetitorListInput{IDs: seed[0].ID.String() + "," + seed[2].ID.String()},
+			wantLast: []string{"Adams", "Clark"},
+		},
+		{
+			name:     "combines ids and rating",
+			input:    &competitor.CompetitorListInput{IDs: seed[0].ID.String() + "," + seed[2].ID.String(), Rating: "A"},
+			wantLast: []string{"Adams"},
+		},
+		{
+			name:     "an empty ids string returns everything",
+			input:    &competitor.CompetitorListInput{IDs: ""},
+			wantLast: []string{"Adams", "Baker", "Clark"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -278,6 +294,26 @@ func TestListCompetitorsFilters(t *testing.T) {
 		t.Parallel()
 		_, err := NewTestService(NewFakeCompetitorRepository(seed...)).
 			ListCompetitors(t.Context(), &competitor.CompetitorListInput{Rating: "Z"})
+		code, _ := apiError(t, err)
+		assert.Equal(t, http.StatusBadRequest, code)
+	})
+
+	t.Run("rejects an invalid id in the ids filter", func(t *testing.T) {
+		t.Parallel()
+		_, err := NewTestService(NewFakeCompetitorRepository(seed...)).
+			ListCompetitors(t.Context(), &competitor.CompetitorListInput{IDs: "not-a-uuid"})
+		code, _ := apiError(t, err)
+		assert.Equal(t, http.StatusBadRequest, code)
+	})
+
+	t.Run("rejects more ids than the limit", func(t *testing.T) {
+		t.Parallel()
+		ids := make([]string, competitor.CompetitorMaxIDs+1)
+		for i := range ids {
+			ids[i] = uuid.New().String()
+		}
+		_, err := NewTestService(NewFakeCompetitorRepository(seed...)).
+			ListCompetitors(t.Context(), &competitor.CompetitorListInput{IDs: strings.Join(ids, ",")})
 		code, _ := apiError(t, err)
 		assert.Equal(t, http.StatusBadRequest, code)
 	})

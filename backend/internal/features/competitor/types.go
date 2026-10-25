@@ -64,7 +64,11 @@ type CompetitorUpdateInput struct {
 	Body CompetitorUpdateBody
 }
 
+// IDs has no format:"uuid" tag because Huma rejects an empty optional query
+// string against that format; an empty value is validated by
+// utils.ParseUUIDList only when it is actually set.
 type CompetitorListInput struct {
+	IDs          string `query:"ids" doc:"Comma-separated competitor IDs; omit to return every competitor"`
 	Query        string `query:"q" maxLength:"120" doc:"Fuzzy match term; omit to return every competitor"`
 	Limit        int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset       int    `query:"offset" default:"0" minimum:"0"`
