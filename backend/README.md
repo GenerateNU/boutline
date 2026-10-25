@@ -63,6 +63,7 @@ missing from `./migrations` as the next versioned file.
 make migrate-new NAME=create_examples  # write the next migration
 make migrate-status                    # what the dev database has applied
 make migrate-apply                     # apply out of band; dev-up already does
+make schema-diagram                    # regenerate schema.md, the ER diagram
 ```
 
 Adding or changing a model goes:
@@ -73,7 +74,8 @@ Adding or changing a model goes:
 2. `make migrate-new NAME=what_changed`
 3. read the generated SQL; it is an ordinary file, so correct it if the diff is
    not what you meant
-4. `make dev-up`
+4. `make schema-diagram` so [schema.md](schema.md) matches
+5. `make dev-up`
 
 `make migrate-new` needs the Atlas CLI (`brew install ariga/tap/atlas`) and
 Docker: Atlas starts a throwaway Postgres to normalise the schema before
