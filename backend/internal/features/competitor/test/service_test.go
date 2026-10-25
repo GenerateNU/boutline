@@ -300,7 +300,7 @@ func TestListCompetitorsFilters(t *testing.T) {
 
 	t.Run("rejects an invalid id in the ids filter", func(t *testing.T) {
 		t.Parallel()
-		_, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
+		_, err := NewTestService(NewFakeCompetitorRepository(seed...)).
 			ListCompetitors(t.Context(), &competitor.CompetitorListInput{IDs: "not-a-uuid"})
 		code, _ := apiError(t, err)
 		assert.Equal(t, http.StatusBadRequest, code)
@@ -312,7 +312,7 @@ func TestListCompetitorsFilters(t *testing.T) {
 		for i := range ids {
 			ids[i] = uuid.New().String()
 		}
-		_, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
+		_, err := NewTestService(NewFakeCompetitorRepository(seed...)).
 			ListCompetitors(t.Context(), &competitor.CompetitorListInput{IDs: strings.Join(ids, ",")})
 		code, _ := apiError(t, err)
 		assert.Equal(t, http.StatusBadRequest, code)

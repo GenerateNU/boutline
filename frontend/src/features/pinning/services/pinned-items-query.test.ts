@@ -13,7 +13,7 @@ describe("fetchPinnedItems", () => {
     fetchMock.mockReset();
   });
 
-  const fencer: Competitor = { id: "f1", firstName: "Jane", lastName: "Doe", team: "A" };
+  const fencer: Competitor = { id: "f1", firstName: "Jane", lastName: "Doe", rating: "A", team: "A" };
   const bout: Bout = {
     id: "m1",
     referee_id: null,
