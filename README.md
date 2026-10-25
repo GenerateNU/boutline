@@ -132,124 +132,143 @@ migration. Read the generated SQL before committing it;
 
 ### Schema
 
-The schema as of `20261024043137_add_competitor_owner`. Every table also has
-`created_at` and `updated_at`, left out below. Relationships labelled "no FK"
-are references the code relies on but the database does not enforce with a
-foreign key.
+Generated from `backend/migrations` by `make db-diagram`, so don't edit it by
+hand. Run that after adding a migration; Backend CI fails while it is stale.
+Relationships are labelled with their foreign key's name, so a column the code
+treats as a reference without a foreign key behind it does not appear as one.
 
+<!-- schema-diagram:start -->
 ```mermaid
 erDiagram
-    users {
-        uuid id PK
-        text email UK
-        text password "hashed"
-        text first_name
-        text last_name
+    bouts {
+      uuid id PK
+      uuid tournament_id FK
+      text location
+      timestamptz start_time
+      timestamptz started_at
+      timestamptz completed_at
+      uuid referee_id FK
+      bigint time_limit_seconds
+      bigint points_to_win
+      bigint group_number
+      text status
+      uuid competitor_1_id FK
+      uuid competitor_2_id FK
+      timestamptz created_at
+      timestamptz updated_at
+      uuid pool_id FK
     }
-    tournaments {
-        uuid id PK
-        text name
-        text visibility "private | public"
-        text code UK
-        text status "pending | active | ended"
-        uuid created_by FK
-        timestamptz start_time
-        timestamptz started_at
-        timestamptz completed_at
-    }
-    tournament_users {
-        uuid user_id PK, FK
-        uuid tournament_id PK, FK
-        text role "referee | admin"
-    }
+    bouts }o--o| competitors : fk_bouts_competitor1
+    bouts }o--o| competitors : fk_bouts_competitor2
+    bouts }o--o| pools : fk_bouts_pool
+    bouts }o--o| users : fk_bouts_referee
+    bouts }o--o| tournaments : fk_bouts_tournament
     competitors {
-        uuid id PK
-        uuid tournament_id FK "nullable"
-        uuid user_id FK "nullable, owner"
-        text first_name
-        text last_name
-        text rating "A-E or U"
-        text team
+      uuid id PK
+      text first_name
+      text last_name
+      text rating
+      text team
+      timestamptz created_at
+      timestamptz updated_at
+      uuid tournament_id FK
+      uuid user_id FK
+    }
+    competitors }o--o| tournaments : fk_competitors_tournament
+    competitors }o--o| users : fk_competitors_user
+    direct_eliminations {
+      uuid id PK
+      text status
+      uuid event_id
+      timestamptz started_at
+      timestamptz completed_at
+      timestamptz created_at
+      timestamptz updated_at
     }
     events {
-        uuid id PK
-        uuid tournament_id FK
-        text format "pool_then_direct_elimination"
-        text name
-        text status "upcoming | active | ended"
-        timestamptz start_time
-        timestamptz started_at
-        timestamptz completed_at
+      uuid id PK
+      uuid tournament_id FK
+      text format
+      text name
+      text status
+      timestamptz start_time
+      timestamptz started_at
+      timestamptz completed_at
+      timestamptz created_at
+      timestamptz updated_at
     }
+    events }o--o| tournaments : fk_events_tournament
     pool_stages {
-        uuid id PK
-        uuid event_id FK
-        bigint max_competitor_per_pool ">= 2"
-        text status "upcoming | active | ended"
-        timestamptz start_time
-        timestamptz started_at
-        timestamptz completed_at
+      uuid id PK
+      uuid event_id FK
+      bigint max_competitor_per_pool
+      text status
+      timestamptz start_time
+      timestamptz started_at
+      timestamptz completed_at
+      timestamptz created_at
+      timestamptz updated_at
     }
+    pool_stages }o--o| events : fk_pool_stages_event
     pools {
-        uuid id PK
-        uuid pool_stage_id FK
-        uuid referee_id FK "nullable"
-        timestamptz started_at
-        timestamptz completed_at
+      uuid id PK
+      uuid pool_stage_id FK
+      uuid referee_id FK
+      timestamptz started_at
+      timestamptz completed_at
+      timestamptz created_at
+      timestamptz updated_at
     }
-    direct_eliminations {
-        uuid id PK
-        uuid event_id "no FK"
-        text status "upcoming | active | ended"
-        timestamptz started_at
-        timestamptz completed_at
-    }
-    bouts {
-        uuid id PK
-        uuid tournament_id FK
-        uuid pool_id FK "nullable"
-        uuid competitor_1_id FK
-        uuid competitor_2_id FK "differs from competitor_1_id"
-        uuid referee_id FK "nullable"
-        text location
-        bigint points_to_win "> 0"
-        bigint time_limit_seconds "> 0"
-        bigint group_number
-        text status "upcoming | active | ended"
-        timestamptz start_time
-        timestamptz started_at
-        timestamptz completed_at
-    }
+    pools }o--o| pool_stages : fk_pools_pool_stage
+    pools }o--o| users : fk_pools_referee
     scorings {
-        bigserial id PK
-        uuid bout_id FK
-        uuid competitor_id "no FK"
-        bigint points ">= 1"
-        uuid created_by FK
-        uuid revoked_by FK "nullable"
-        timestamptz revoked_at
+      bigserial id PK
+      uuid created_by FK
+      bigint points
+      uuid competitor_id
+      uuid bout_id FK
+      timestamptz revoked_at
+      uuid revoked_by FK
+      timestamptz created_at
+      timestamptz updated_at
     }
-
-    users ||--o{ tournaments : creates
-    users ||--o{ tournament_users : "is member"
-    tournaments ||--o{ tournament_users : has
-    tournaments |o--o{ competitors : enters
-    users |o--o{ competitors : owns
-    tournaments ||--o{ events : holds
-    tournaments ||--o{ bouts : holds
-    events ||--o{ pool_stages : "runs"
-    events ||--o{ direct_eliminations : "runs (no FK)"
-    pool_stages ||--o{ pools : splits
-    pools |o--o{ bouts : groups
-    users |o--o{ pools : referees
-    users |o--o{ bouts : referees
-    competitors ||--o{ bouts : "fences as 1"
-    competitors ||--o{ bouts : "fences as 2"
-    bouts ||--o{ scorings : records
-    competitors ||--o{ scorings : "scores (no FK)"
-    users ||--o{ scorings : creates
-    users |o--o{ scorings : revokes
+    scorings }o--o| bouts : fk_scorings_bout
+    scorings }o--o| users : fk_scorings_creator
+    scorings }o--o| users : fk_scorings_revoker
+    tournament_users {
+      uuid user_id PK,FK
+      uuid tournament_id PK,FK
+      text role
+      timestamptz created_at
+      timestamptz updated_at
+    }
+    tournament_users }o--o| tournaments : fk_tournaments_memberships
+    tournament_users }o--o| users : fk_users_memberships
+    tournaments {
+      uuid id PK
+      text name
+      text visibility
+      text code
+      text status
+      uuid created_by FK
+      timestamptz start_time
+      timestamptz started_at
+      timestamptz completed_at
+      timestamptz created_at
+      timestamptz updated_at
+    }
+    tournaments }o--o| users : fk_users_created_tournaments
+    users {
+      uuid id PK
+      text email
+      text password
+      text first_name
+      text last_name
+      timestamptz created_at
+      timestamptz updated_at
+    }
 ```
+<!-- schema-diagram:end -->
 
 ## Deployment
 
