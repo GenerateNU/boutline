@@ -15,6 +15,14 @@ export interface Tournament {
   updated_at: string;
 }
 
+export interface TournamentListFilters {
+  query?: string;
+  status?: TournamentStatus;
+  visibility?: TournamentVisibility;
+  date?: string;
+  timeZone?: string;
+}
+
 export interface TournamentListResult {
   data: Tournament[];
   total: number;

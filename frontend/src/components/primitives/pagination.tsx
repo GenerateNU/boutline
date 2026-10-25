@@ -7,11 +7,11 @@ interface PaginationProps {
   limit: number;
   offset: number;
   basePath: string;
-  search?: string;
+  params?: Record<string, string | undefined>;
 }
 
 interface StepProps {
-  href: string | null; 
+  href: string | null;
   rel: "prev" | "next";
   children: React.ReactNode;
 }
@@ -40,21 +40,23 @@ function Pagination({
   limit,
   offset,
   basePath,
-  search,
+  params = {},
 }: PaginationProps) {
   if (total === 0) {
     return null;
   }
 
   function href(to: number) {
-    const params = new URLSearchParams();
-    if (search) {
-      params.set("q", search);
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value) {
+        query.set(key, value);
+      }
     }
     if (to > 0) {
-      params.set("offset", String(to));
+      query.set("offset", String(to));
     }
-    return params.size ? `${basePath}?${params}` : basePath;
+    return query.size ? `${basePath}?${query}` : basePath;
   }
 
   // offset comes from the URL, so it need not be a multiple of limit and may

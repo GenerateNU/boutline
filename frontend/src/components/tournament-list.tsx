@@ -1,19 +1,13 @@
 import Link from "next/link";
 
 import { Chip } from "@/components/primitives/chip";
+import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import type { Tournament } from "@/features/tournament/types/tournament";
 
-// The vocabulary the events list already uses, rather than the raw enum.
-const statusLabel: Record<Tournament["status"], string> = {
-  pending: "Upcoming",
-  active: "Live",
-  ended: "Past",
-};
-
-type TournamentListProps = {
+interface TournamentListProps {
   tournaments: Tournament[];
   emptyMessage?: string;
-};
+}
 
 function TournamentList({
   tournaments,
@@ -38,7 +32,7 @@ function TournamentList({
               </span>
             </span>
             <Chip className="shrink-0 rounded-full text-xs">
-              {statusLabel[status]}
+              {statusLabels[status]}
             </Chip>
           </Link>
         </li>
