@@ -100,6 +100,17 @@ jobs:
             exit 1
           fi
 
+      # schema.md is generated from the same models, so it goes stale the same
+      # way. --porcelain rather than git diff so a never-committed file fails too.
+      - name: schema.md matches the models
+        run: |
+          make schema-diagram
+          if [ -n "$(git status --porcelain schema.md)" ]; then
+            git diff schema.md
+            echo "::error::schema.md is out of date — run 'make schema-diagram' and commit the result"
+            exit 1
+          fi
+
   seed:
     name: Seed data
     runs-on: ubuntu-latest

@@ -91,7 +91,8 @@ migrate hash`.
 Run `make lint` and `make test` before opening a PR, or `make be-check` from
 the repo root for everything [Backend CI](../.github/workflows/backend-ci.yml)
 gates on. CI additionally builds the Docker image and re-diffs the models against
-`./migrations` so a model change without a migration cannot merge.
+`./migrations` so a model change without a migration cannot merge, and
+regenerates `schema.md` so neither can one without `make schema-diagram`.
 
 ## Seed data
 
