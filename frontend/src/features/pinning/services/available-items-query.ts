@@ -1,3 +1,7 @@
+// TEMPORARY: used to make a dropdown of all pinnable UUIDs on the dummy pinning page
+// Actual pinning will be done through other interfaces with UUIDs obtained through
+// other GET requests, so this entiry file should be deletable.
+
 import { apiRequest } from "@/services/api-request";
 import { ListResponse } from "@/types/list-response";
 import { Competitor } from "@/types/competitor";
@@ -8,8 +12,6 @@ interface AvailableItems {
   bouts: Bout[];
 }
 
-// TEMPORARY: dropdown options for the /pinned scaffold page only. Not a
-// general-purpose fencer/bout listing service — delete alongside that page.
 const AVAILABLE_ITEMS_LIMIT = 100;
 
 async function fetchAvailableItems(): Promise<AvailableItems> {
