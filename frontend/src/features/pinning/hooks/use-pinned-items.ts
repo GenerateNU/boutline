@@ -25,6 +25,8 @@ function unpin(ids: string[], id: string): string[] {
   return ids.includes(id) ? ids.filter((existing) => existing !== id) : ids;
 }
 
+// TODO: nothing currently removes stale pinneg IDS from the session storage (if they no longer
+// exist in the database). Something to address once the pinning frontend is more clarified.
 function usePinnedItems() {
   const [stored, setPinned] = useSessionStorage<unknown>(PINNED_STORAGE_KEY, initialPinnedIds);
   const pinned = isPinnedIds(stored) ? stored : initialPinnedIds;
