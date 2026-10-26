@@ -31,6 +31,7 @@ func SetUpRoutes(app *fiber.App, routeParams types.RouteParams) {
 	competitor.RegisterCompetitorRoutes(routeParams.API, routeParams.ServiceParams)
 	poolstage.RegisterPoolStageRoutes(routeParams.API, routeParams.ServiceParams)
 	pool.RegisterPoolRoutes(routeParams.API, routeParams.ServiceParams)
+	pool.RegisterPoolBoardRoutes(routeParams.API, routeParams.ServiceParams)
 
 	// Fiber owns anything Huma did not claim, so the catch-all stays here.
 	setUpNotFoundHandler(app)
