@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   Card,
   CardAction,
@@ -7,6 +9,7 @@ import {
 import { Chip } from "@/components/primitives/chip";
 import { Section } from "@/components/primitives/section";
 import { getEvents } from "@/features/event/services/getEvents";
+import { SearchForm } from "@/features/tournament/components/search-form";
 import {
   eventDay,
   eventDays,
@@ -17,28 +20,29 @@ import {
   selectEventDay,
 } from "@/lib/event-schedule";
 
-import { SearchForm } from "../../_components/search-form";
 import { EventDateStrip } from "./_components/event-date-strip";
 
 export default async function EventsTab({
   params,
   searchParams,
 }: PageProps<"/tournaments/[tournamentId]/events">) {
+  // params and searchParams are both Promises in Next 15+. Promise.all awaits
+  // them in parallel, and the array destructuring unpacks the two results.
   const [{ tournamentId }, query] = await Promise.all([params, searchParams]);
 
   const search = typeof query.q === "string" ? query.q.trim() : "";
   const requestedDay = typeof query.date === "string" ? query.date : undefined;
   const basePath = `/tournaments/${tournamentId}/events`;
 
-  const { data, total } = await getEvents(tournamentId);
+  const events = await getEvents(tournamentId);
 
-  const days = eventDays(data);
+  const days = eventDays(events);
   const selectedDay = selectEventDay(
     days,
     requestedDay,
     eventDay(new Date().toISOString()),
   );
-  const groups = scheduleForDay(data, selectedDay, search);
+  const groups = scheduleForDay(events, selectedDay, search);
 
   function emptyMessage() {
     if (!search) {
@@ -56,9 +60,9 @@ export default async function EventsTab({
       </h2>
       <SearchForm
         action={basePath}
+        label="Search events"
         placeholder="Enter Search Text"
         defaultValue={search}
-        params={selectedDay ? { date: selectedDay } : undefined}
       />
 
       {selectedDay && (
@@ -73,16 +77,15 @@ export default async function EventsTab({
       {groups.length === 0 && (
         <p className="text-sm text-muted-foreground">{emptyMessage()}</p>
       )}
-      {groups.map(({ startTime, events }) => (
+      {groups.map(({ startTime, events: grouped }) => (
         <Section
           key={startTime ?? "tbc"}
           title={startTime ? formatTimeLabel(startTime) : "Time TBC"}
         >
           <ul className="flex flex-col gap-3">
-            {events.map((event) => (
+            {grouped.map((event) => (
               <li key={event.id}>
-                {/* A button with no handler: the event detail page is a separate ticket. */}
-                <button type="button" className="w-full cursor-pointer text-left">
+                <Link href={`${basePath}/${event.id}`} className="block">
                   <Card
                     orientation="horizontal"
                     className="transition-colors hover:bg-muted"
@@ -98,18 +101,12 @@ export default async function EventsTab({
                       </CardAction>
                     </CardHeader>
                   </Card>
-                </button>
+                </Link>
               </li>
             ))}
           </ul>
         </Section>
       ))}
-
-      {total > data.length && (
-        <p className="text-xs text-muted-foreground">
-          Showing the first {data.length} of {total} events.
-        </p>
-      )}
     </section>
   );
 }

@@ -48,10 +48,11 @@ type CompetitorUpdate struct {
 }
 
 type CompetitorListFilter struct {
-	TournamentID *uuid.UUID // nil means don't filter by tournament
-	Rating       *Rating    // nil means don't filter by rating
-	Team         *string    // nil means don't filter by team
-	Term         string     // fuzzy match against name; empty means don't filter
+	IDs          []uuid.UUID // empty means don't filter by id
+	TournamentID *uuid.UUID  // nil means don't filter by tournament
+	Rating       *Rating     // nil means don't filter by rating
+	Team         *string     // nil means don't filter by team
+	Term         string      // fuzzy match against name; empty means don't filter
 	Limit        int
 	Offset       int
 }
@@ -132,6 +133,9 @@ func (r *competitorRepository) ListCompetitors(
 	if filter.Team != nil {
 		query = query.Where("team = ?", *filter.Team)
 	}
+	if len(filter.IDs) > 0 {
+		query = query.Where("id IN ?", filter.IDs)
+	}
 	query = utils.TrigramMatch(query, competitorNameTrigramExpr, filter.Term)
 
 	var total int64
@@ -205,6 +209,9 @@ func (r *competitorRepository) ListCompetitorTeams(
 func (r *competitorRepository) DeleteCompetitor(ctx context.Context, id uuid.UUID) error {
 	result := r.db.WithContext(ctx).Delete(&Competitor{}, "id = ?", id)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
+			return fmt.Errorf("delete competitor %s: %w", id, errs.ErrConflict)
+		}
 		return fmt.Errorf("delete competitor %s: %w", id, result.Error)
 	}
 	if result.RowsAffected == 0 {

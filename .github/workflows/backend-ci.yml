@@ -7,6 +7,7 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
+      - "README.md"
 
 # A new push to the same ref makes in-flight runs irrelevant, so cancel them.
 concurrency:
@@ -97,6 +98,15 @@ jobs:
           if [ -n "$(git status --porcelain migrations)" ]; then
             git status --porcelain migrations
             echo "::error::gorm models and ./migrations disagree — run 'make migrate-new NAME=what_changed' and commit the result"
+            exit 1
+          fi
+
+      - name: README schema diagram matches the migrations
+        run: |
+          make schema-diagram
+          if ! git diff --quiet ../README.md; then
+            git diff ../README.md
+            echo "::error::README.md's schema diagram is stale — run 'make db-diagram' and commit the result"
             exit 1
           fi
 

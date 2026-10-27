@@ -57,12 +57,13 @@ describe("EventListCard", () => {
 
     expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
 
-    const buttons = screen.queryAllByRole("button");
-    expect(buttons).toHaveLength(rows.length);
+    const links = screen.queryAllByRole("link");
+    expect(links).toHaveLength(rows.length);
     rows.forEach((row, i) => {
-      const text = normalise(buttons[i].textContent);
+      const text = normalise(links[i].textContent);
       row.forEach((part) => expect(text).toContain(part));
-      expect(within(buttons[i]).getByText(row[1])).toBeInTheDocument();
+      expect(within(links[i]).getByText(row[1])).toBeInTheDocument();
+      expect(links[i]).toHaveAttribute("href", `/tournaments/t1/events/${events[i].id}`);
     });
 
     if (rows.length === 0) {

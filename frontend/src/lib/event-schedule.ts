@@ -11,6 +11,9 @@ export const eventStatusLabel: Record<EventStatus, string> = {
   ended: "Past",
 };
 
+// Every formatter uses UTC so a day label matches eventDay(), which slices the
+// UTC ISO string. Formatting in local time could put a late-evening event on
+// the next or previous day.
 const dayFormat = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
@@ -29,6 +32,7 @@ const timeFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+// Turns a "YYYY-MM-DD" day key back into a Date so the formatters can label it.
 const utcMidnight = (day: string) => new Date(`${day}T00:00:00Z`);
 
 // Start time ascending with undated events last, then name, then id.
@@ -41,19 +45,25 @@ function byStartThenName(a: TournamentEvent, b: TournamentEvent): number {
   return a.name.localeCompare(b.name, "en") || a.id.localeCompare(b.id);
 }
 
+// Lowercases and strips accents, so a search for "epee" matches "Épée".
 function fold(text: string): string {
   return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
+// The UTC calendar day of a start time, as "YYYY-MM-DD". These keys sort
+// correctly as plain strings, which the functions below rely on.
 export function eventDay(startTime: string): string {
   return new Date(startTime).toISOString().slice(0, 10);
 }
 
+// Each day that has at least one scheduled event, earliest first.
 export function eventDays(events: Pick<TournamentEvent, "start_time">[]): string[] {
   const days = events.flatMap(({ start_time }) => (start_time ? [eventDay(start_time)] : []));
   return [...new Set(days)].sort();
 }
 
+// The day the Events tab opens on: the day in the URL if it has events,
+// otherwise today or the next day with events, otherwise the last event day.
 export function selectEventDay(
   days: string[],
   requested: string | undefined,
@@ -65,6 +75,8 @@ export function selectEventDay(
   return days.find((day) => day >= today) ?? days[days.length - 1] ?? null;
 }
 
+// The `size` days shown in the date strip, centred on the selected day but
+// shifted inward at either end so the strip is always full.
 export function dayWindow(days: string[], selected: string, size: number): string[] {
   const maxStart = Math.max(0, days.length - size);
   const centred = days.indexOf(selected) - Math.floor(size / 2);
@@ -72,7 +84,8 @@ export function dayWindow(days: string[], selected: string, size: number): strin
   return days.slice(start, start + size);
 }
 
-// Sorting first means the Map's insertion order is already the display order.
+// Events on `day` whose name matches `search`, grouped by start time.
+// Events with no start time match every day. Sorting first means the Map's insertion order is already the display order.
 export function scheduleForDay(
   events: TournamentEvent[],
   day: string | null,
@@ -102,6 +115,8 @@ export function formatDayLabel(day: string): string {
   return dayFormat.format(utcMidnight(day));
 }
 
+// "October 12" for a one-day tournament, "October 12 – October 14" otherwise.
+// Uses the tournament's own start time if no event has been scheduled yet.
 export function formatEventDateRange(
   events: Pick<TournamentEvent, "start_time">[],
   fallbackStart: string | null,

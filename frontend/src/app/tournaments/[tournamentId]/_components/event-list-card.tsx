@@ -1,5 +1,7 @@
 import { ExternalLink } from "lucide-react";
+import Link from "next/link";
 
+import { Button } from "@/components/primitives/button";
 import { Card, CardHeader, CardTitle } from "@/components/primitives/card";
 import { Chip } from "@/components/primitives/chip";
 import type { TournamentEvent } from "@/features/event/types/event";
@@ -25,20 +27,22 @@ function EventListCard({ title, events, emptyMessage }: EventListCardProps) {
         <ul className="flex flex-col">
           {events.map((event) => (
             <li key={event.id}>
-              {/* A button with no handler: the event detail page is a separate ticket. */}
-              <button
-                type="button"
-                className="flex w-full cursor-pointer items-center gap-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+              <Button
+                asChild
+                variant="text"
+                className="h-auto w-full justify-start gap-3 px-0 py-2 font-normal"
               >
-                <span className="w-16 shrink-0 tabular-nums">
-                  {event.start_time ? formatTimeLabel(event.start_time) : "TBC"}
-                </span>
-                <span className="min-w-0 flex-1 truncate">{event.name}</span>
-                <Chip className="bg-foreground text-xs text-background">
-                  {eventStatusLabel[event.status]}
-                  <ExternalLink aria-hidden />
-                </Chip>
-              </button>
+                <Link href={`/tournaments/${event.tournament_id}/events/${event.id}`}>
+                  <p className="w-16 shrink-0 tabular-nums">
+                    {event.start_time ? formatTimeLabel(event.start_time) : "TBC"}
+                  </p>
+                  <p className="min-w-0 flex-1 truncate">{event.name}</p>
+                  <Chip className="bg-foreground text-xs text-background">
+                    {eventStatusLabel[event.status]}
+                    <ExternalLink aria-hidden />
+                  </Chip>
+                </Link>
+              </Button>
             </li>
           ))}
         </ul>

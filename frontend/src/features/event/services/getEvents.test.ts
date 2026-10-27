@@ -1,5 +1,13 @@
 import { getEvents } from "@/features/event/services/getEvents";
 
+function page(ids: string[], total: number, offset: number) {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({ data: ids.map((id) => ({ id })), total, limit: 100, offset }),
+  };
+}
+
 describe("getEvents", () => {
   const fetchMock = jest.fn();
 
@@ -11,17 +19,29 @@ describe("getEvents", () => {
     fetchMock.mockReset();
   });
 
-  it("requests the tournament's events and returns the parsed body", async () => {
-    const body = { data: [], total: 0, limit: 100, offset: 0 };
-    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => body });
+  const cases = [
+    { name: "a single page", total: 2, pages: [["e1", "e2"]] },
+    { name: "every page past the first", total: 201, pages: [["e1"], ["e2"], ["e3"]] },
+  ];
 
-    const result = await getEvents("t1");
+  it.each(cases)("returns the events from $name", async ({ total, pages }) => {
+    fetchMock.mockImplementation(async (url: URL) => {
+      const offset = Number(url.searchParams.get("offset"));
+      return page(pages[offset / 100], total, offset);
+    });
 
-    expect(result).toEqual(body);
-    const requestedUrl = new URL(fetchMock.mock.calls[0][0] as string);
-    expect(requestedUrl.pathname).toBe("/api/v1/events");
-    expect(requestedUrl.searchParams.get("tournament_id")).toBe("t1");
-    expect(requestedUrl.searchParams.get("limit")).toBe("100");
+    const events = await getEvents("t1");
+
+    expect(events.map(({ id }) => id)).toEqual(pages.flat());
+    const urls = fetchMock.mock.calls.map(([url]) => new URL(url));
+    expect(urls.map((url) => url.searchParams.get("offset"))).toEqual(
+      pages.map((_, i) => String(i * 100)),
+    );
+    for (const url of urls) {
+      expect(url.pathname).toBe("/api/v1/events");
+      expect(url.searchParams.get("tournament_id")).toBe("t1");
+      expect(url.searchParams.get("limit")).toBe("100");
+    }
   });
 
   it("throws when the backend responds with an error status", async () => {

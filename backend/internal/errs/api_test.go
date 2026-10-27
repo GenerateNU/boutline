@@ -66,6 +66,12 @@ func TestErrorHandler(t *testing.T) {
 			wantMessage: "invalid input",
 		},
 		{
+			name:        "forbidden maps to 403",
+			err:         errs.ErrForbidden,
+			wantStatus:  http.StatusForbidden,
+			wantMessage: "forbidden",
+		},
+		{
 			name:        "an explicit APIError is passed through",
 			err:         errs.InvalidJSON(),
 			wantStatus:  http.StatusBadRequest,

@@ -1,8 +1,9 @@
 import type { Tournament } from "@/features/tournament/types/tournament";
 
-// Server Components fetch Node-side, so this hits the backend directly
-// instead of going through the /api rewrite in next.config.ts, which only
-// applies to requests that reach the Next server over HTTP.
+// Not apiRequest: it fetches the relative path /api/v1/..., which only resolves
+// in the browser. Server Components fetch Node-side, where a relative URL
+// throws, so this hits the backend directly instead of going through the /api
+// rewrite in next.config.ts.
 const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 
 export async function getTournament(id: string): Promise<Tournament | null> {

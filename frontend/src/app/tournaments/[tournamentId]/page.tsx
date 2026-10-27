@@ -16,7 +16,7 @@ export default async function OverviewTab({
   params,
 }: PageProps<"/tournaments/[tournamentId]">) {
   const { tournamentId } = await params;
-  const [tournament, { data }] = await Promise.all([
+  const [tournament, events] = await Promise.all([
     getTournament(tournamentId),
     getEvents(tournamentId),
   ]);
@@ -25,7 +25,7 @@ export default async function OverviewTab({
     notFound();
   }
 
-  const dates = formatEventDateRange(data, tournament.start_time);
+  const dates = formatEventDateRange(events, tournament.start_time);
   const ended = tournament.status === "ended";
 
   return (
@@ -43,12 +43,12 @@ export default async function OverviewTab({
       </Card>
       <EventListCard
         title="Ongoing Events"
-        events={eventsWithStatus(data, "active")}
+        events={eventsWithStatus(events, "active")}
         emptyMessage={ended ? "Tournament has ended." : "No events are live right now."}
       />
       <EventListCard
         title="Upcoming Events"
-        events={eventsWithStatus(data, "upcoming")}
+        events={eventsWithStatus(events, "upcoming")}
         emptyMessage={ended ? "Tournament has ended." : "No upcoming events."}
       />
     </div>

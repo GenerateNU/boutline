@@ -56,7 +56,7 @@ function GlobalNav() {
                 Find Private Tournament
               </button>
               <Dialog.Close asChild>
-                <Link href="/">Search Tournaments</Link>
+                <Link href="/tournaments">Search Tournaments</Link>
               </Dialog.Close>
               {/* No settings page yet, so clicking will yield nothing. */}
               <span>Settings</span>
