@@ -34,7 +34,7 @@ PGPASSWORD=$(grep -E '^DB_PASSWORD=' "$ENV_FILE" | head -1 | cut -d= -f2-)
 echo "==> preview for PR #${PR_NUMBER} at https://${HOST}"
 
 # Idempotent: a re-push to the same PR keeps the database, so data entered
-# during review survives.
+# during review survives unless its migrations stop applying (see below).
 if docker exec -e PGPASSWORD="$PGPASSWORD" preview-db \
      psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1; then
   echo "    database ${DB_NAME} already exists"
@@ -47,9 +47,30 @@ fi
 # leaving the app against a schema it cannot read.
 echo "    applying migrations"
 docker pull --quiet "$MIGRATE_IMAGE"
-docker run --rm --network edge \
-  -e DATABASE_URL="postgres://postgres:${PGPASSWORD}@preview-db:5432/${DB_NAME}?sslmode=disable" \
-  "$MIGRATE_IMAGE"
+migrate() {
+  docker run --rm --network edge \
+    -e DATABASE_URL="postgres://postgres:${PGPASSWORD}@preview-db:5432/${DB_NAME}?sslmode=disable" \
+    "$MIGRATE_IMAGE"
+}
+
+# A long-lived PR's database drifts from its branch: merging main brings in
+# migrations older than ones already applied (Atlas's non-linear error), and a
+# renamed migration re-runs against objects it already created. Review data is
+# disposable, so rebuild from empty; a migration that still fails there is a
+# real bug and fails the preview. Only those two errors mean drift: anything
+# else (Postgres unreachable, image missing, disk full) keeps the database.
+DRIFT_ERRORS='added out of order|already exists'
+if ! migrate_output=$(migrate 2>&1 | tee /dev/stderr); then
+  if ! grep -qE "$DRIFT_ERRORS" <<<"$migrate_output"; then
+    echo "::error::migrations failed for a reason other than drift; keeping ${DB_NAME}" >&2
+    exit 1
+  fi
+  echo "    migrations do not apply to the existing database; recreating ${DB_NAME}"
+  docker exec -e PGPASSWORD="$PGPASSWORD" preview-db \
+    psql -U postgres -tAc "DROP DATABASE ${DB_NAME} WITH (FORCE)" >/dev/null
+  docker exec -e PGPASSWORD="$PGPASSWORD" preview-db createdb -U postgres "${DB_NAME}"
+  migrate
+fi
 
 # Replacing the container is how an update happens; Caddy notices the new one
 # through the Docker socket and reroutes automatically.
@@ -79,5 +100,14 @@ for _ in $(seq 1 15); do
   docker logs --tail 30 "$CONTAINER" >&2 2>&1 || true
   exit 1
 done
+
+# Every push pulls two new images and nothing else removes the old ones, so they
+# pile up until the droplet's disk fills. Scoped to this PR rather than
+# `prune -a` because the droplet is shared with other projects.
+echo "    removing this PR's older images"
+docker images --format '{{.Repository}}:{{.Tag}}' \
+  | grep -E "/${PROJECT}/(backend|migrate):pr-${PR_NUMBER}-" \
+  | grep -vxF -e "$BACKEND_IMAGE" -e "$MIGRATE_IMAGE" \
+  | xargs -r docker rmi >/dev/null 2>&1 || true
 
 echo "==> https://${HOST}"
