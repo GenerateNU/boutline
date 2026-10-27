@@ -33,7 +33,7 @@ function EventListCard({ title, events, emptyMessage }: EventListCardProps) {
                 className="h-auto w-full justify-start gap-3 px-0 py-2 font-normal"
               >
                 <Link href={`/tournaments/${event.tournament_id}/events/${event.id}`}>
-                  <p className="w-16 shrink-0 tabular-nums">
+                  <p className="w-24 shrink-0 tabular-nums">
                     {event.start_time ? formatTimeLabel(event.start_time) : "TBC"}
                   </p>
                   <p className="min-w-0 flex-1 truncate">{event.name}</p>

@@ -30,6 +30,7 @@ const timeFormat = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
   minute: "2-digit",
   timeZone: "UTC",
+  timeZoneName: "short",
 });
 
 // Turns a "YYYY-MM-DD" day key back into a Date so the formatters can label it.

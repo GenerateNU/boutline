@@ -252,10 +252,10 @@ describe("eventsWithStatus", () => {
 
 describe("formatTimeLabel", () => {
   it.each([
-    { name: "morning", startTime: "2026-10-05T09:00:00Z", want: "9:00 AM" },
-    { name: "half hour", startTime: "2026-10-05T09:30:00Z", want: "9:30 AM" },
-    { name: "afternoon", startTime: "2026-10-05T15:05:00Z", want: "3:05 PM" },
-    { name: "an offset input shown in UTC", startTime: "2026-10-05T09:00:00-04:00", want: "1:00 PM" },
+    { name: "morning", startTime: "2026-10-05T09:00:00Z", want: "9:00 AM UTC" },
+    { name: "half hour", startTime: "2026-10-05T09:30:00Z", want: "9:30 AM UTC" },
+    { name: "afternoon", startTime: "2026-10-05T15:05:00Z", want: "3:05 PM UTC" },
+    { name: "an offset input shown in UTC", startTime: "2026-10-05T09:00:00-04:00", want: "1:00 PM UTC" },
   ])("$name", ({ startTime, want }) => {
     expect(normalize(formatTimeLabel(startTime))).toBe(want);
   });

@@ -90,9 +90,10 @@ function EventDateStrip({
         <ChevronRight aria-hidden />
       </Step>
 
-      {/* Inert on purpose: the calendar view is a follow-up ticket. */}
+      {/* Disabled until the calendar view (a follow-up ticket) exists. */}
       <Button
         type="button"
+        disabled
         variant="outline"
         size="icon"
         aria-label="Calendar view (not available yet)"
