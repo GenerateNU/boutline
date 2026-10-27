@@ -114,8 +114,20 @@ jobs:
              && export BACKEND_IMAGE='$IMAGE' MIGRATE_IMAGE='$MIGRATE_IMAGE' APP_VERSION='$DEPLOY_SHA' API_DOMAIN='$API_DOMAIN' \
              && docker pull --quiet '$MIGRATE_IMAGE' \
              && docker compose --env-file backend.env run --rm migrate \
-             && docker compose --env-file backend.env up -d --pull always \
-             && docker image prune -f"
+             && docker compose --env-file backend.env up -d --pull always"
+
+          # Old <sha> tags are not dangling, so `docker image prune` keeps every
+          # release's images forever -- that filled the shared disk once.
+          # Remove boutline's older release images by name instead of with
+          # `prune -a`, which acts on every project's images on the droplet.
+          # PR previews' pr-* tags are theirs to clean up.
+          ssh "$DROPLET" bash -s -- "$IMAGE" "$MIGRATE_IMAGE" <<'EOF'
+          docker images --format '{{.Repository}}:{{.Tag}}' \
+            | grep -E "^(${1%:*}|${2%:*}):" \
+            | grep -v ':pr-' \
+            | grep -vxF "$1" \
+            | xargs -r docker rmi >/dev/null 2>&1 || true
+          EOF
 
           # `up -d` succeeds as soon as the container starts, and with
           # `restart: unless-stopped` a crash-looping backend still reads as
