@@ -19,6 +19,7 @@ import {
   scheduleForDay,
   selectEventDay,
 } from "@/lib/event-schedule";
+import { readStringParam } from "@/lib/search-params";
 
 import { EventDateStrip } from "./_components/event-date-strip";
 
@@ -30,8 +31,8 @@ export default async function EventsTab({
   // them in parallel, and the array destructuring unpacks the two results.
   const [{ tournamentId }, query] = await Promise.all([params, searchParams]);
 
-  const search = typeof query.q === "string" ? query.q.trim() : "";
-  const requestedDay = typeof query.date === "string" ? query.date : undefined;
+  const search = readStringParam(query, "q");
+  const requestedDay = readStringParam(query, "date") || undefined;
   const basePath = `/tournaments/${tournamentId}/events`;
 
   const events = await getEvents(tournamentId);
