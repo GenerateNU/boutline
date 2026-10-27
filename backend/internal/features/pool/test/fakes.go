@@ -103,6 +103,7 @@ func (f *FakePoolRepository) ListEnteredCompetitorIDs(
 	_ context.Context,
 	poolStageID uuid.UUID,
 	competitorIDs []uuid.UUID,
+	exceptPoolID uuid.UUID,
 ) ([]uuid.UUID, error) {
 	if f.Err != nil {
 		return nil, f.Err
@@ -111,7 +112,8 @@ func (f *FakePoolRepository) ListEnteredCompetitorIDs(
 	var entered []uuid.UUID
 	for _, id := range competitorIDs {
 		for _, bout := range f.Bouts {
-			if f.Pools[bout.PoolID].PoolStageID == poolStageID && (bout.Competitor1ID == id || bout.Competitor2ID == id) {
+			if bout.PoolID != exceptPoolID && f.Pools[bout.PoolID].PoolStageID == poolStageID &&
+				(bout.Competitor1ID == id || bout.Competitor2ID == id) {
 				entered = append(entered, id)
 
 				break
@@ -124,6 +126,61 @@ func (f *FakePoolRepository) ListEnteredCompetitorIDs(
 
 // numberTaken mirrors the unique index on (pool_stage_id, number); except is the
 // pool being updated, which may keep its own number.
+func (f *FakePoolRepository) GetPoolBoutSummary(_ context.Context, poolID uuid.UUID) (pool.PoolBoutSummary, error) {
+	if f.Err != nil {
+		return pool.PoolBoutSummary{}, f.Err
+	}
+
+	var summary pool.PoolBoutSummary
+	for _, bout := range f.Bouts {
+		if bout.PoolID != poolID {
+			continue
+		}
+		summary.Total++
+		if bout.Status != "upcoming" {
+			summary.Started++
+		}
+		summary.PointsToWin = bout.PointsToWin
+		summary.TimeLimitSeconds = bout.TimeLimitSeconds
+	}
+
+	return summary, nil
+}
+
+// ReplacePoolBouts swaps the pool's bouts; the unique number and referee foreign key are
+// the database's to enforce, and the real-database test covers them.
+func (f *FakePoolRepository) ReplacePoolBouts(ctx context.Context, id uuid.UUID, update pool.PoolUpdate, bouts []pool.PoolBout) error {
+	if f.Err != nil {
+		return f.Err
+	}
+
+	if _, ok := f.Pools[id]; !ok {
+		return fmt.Errorf("select pool %s: %w", id, errs.ErrNotFound)
+	}
+
+	kept := make([]pool.PoolBout, 0, len(f.Bouts))
+	for _, bout := range f.Bouts {
+		if bout.PoolID != id {
+			kept = append(kept, bout)
+		}
+	}
+	if err := f.UpdatePoolByID(ctx, id, update); err != nil {
+		return err
+	}
+
+	now := time.Now()
+	for i := range bouts {
+		bouts[i].ID = uuid.New()
+		bouts[i].PoolID = id
+		bouts[i].CreatedAt = now
+		bouts[i].UpdatedAt = now
+		kept = append(kept, bouts[i])
+	}
+	f.Bouts = kept
+
+	return nil
+}
+
 func (f *FakePoolRepository) numberTaken(poolStageID uuid.UUID, number int, except uuid.UUID) bool {
 	for id, existing := range f.Pools {
 		if id != except && existing.PoolStageID == poolStageID && existing.Number == number {

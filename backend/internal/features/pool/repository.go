@@ -19,9 +19,11 @@ type PoolRepository interface {
 	GetPoolTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	GetPoolStageTournamentID(ctx context.Context, poolStageID uuid.UUID) (uuid.UUID, error)
 	ListPoolEntrants(ctx context.Context, competitorIDs []uuid.UUID) ([]PoolEntrant, error)
-	ListEnteredCompetitorIDs(ctx context.Context, poolStageID uuid.UUID, competitorIDs []uuid.UUID) ([]uuid.UUID, error)
+	ListEnteredCompetitorIDs(ctx context.Context, poolStageID uuid.UUID, competitorIDs []uuid.UUID, exceptPoolID uuid.UUID) ([]uuid.UUID, error)
+	GetPoolBoutSummary(ctx context.Context, poolID uuid.UUID) (PoolBoutSummary, error)
 	ListPools(ctx context.Context, filter PoolListFilter) ([]Pool, int64, error)
 	UpdatePoolByID(ctx context.Context, id uuid.UUID, update PoolUpdate) error
+	ReplacePoolBouts(ctx context.Context, id uuid.UUID, update PoolUpdate, bouts []PoolBout) error
 	StartPoolByID(ctx context.Context, id uuid.UUID, startedAt time.Time) error
 	EndPoolByID(ctx context.Context, id uuid.UUID, completedAt time.Time) error
 	CountOpenPoolBouts(ctx context.Context, id uuid.UUID) (int64, error)
@@ -160,16 +162,21 @@ func (r *poolRepository) ListPoolEntrants(ctx context.Context, competitorIDs []u
 	return entrants, nil
 }
 
-func (r *poolRepository) ListEnteredCompetitorIDs(ctx context.Context, poolStageID uuid.UUID, competitorIDs []uuid.UUID) ([]uuid.UUID, error) {
+func (r *poolRepository) ListEnteredCompetitorIDs(
+	ctx context.Context,
+	poolStageID uuid.UUID,
+	competitorIDs []uuid.UUID,
+	exceptPoolID uuid.UUID,
+) ([]uuid.UUID, error) {
 	var entered []uuid.UUID
 
 	err := r.db.WithContext(ctx).Raw(`
 		SELECT b.competitor_1_id FROM bouts b JOIN pools p ON p.id = b.pool_id
-		WHERE p.pool_stage_id = ? AND b.competitor_1_id IN ?
+		WHERE p.pool_stage_id = ? AND p.id <> ? AND b.competitor_1_id IN ?
 		UNION
 		SELECT b.competitor_2_id FROM bouts b JOIN pools p ON p.id = b.pool_id
-		WHERE p.pool_stage_id = ? AND b.competitor_2_id IN ?`,
-		poolStageID, competitorIDs, poolStageID, competitorIDs).
+		WHERE p.pool_stage_id = ? AND p.id <> ? AND b.competitor_2_id IN ?`,
+		poolStageID, exceptPoolID, competitorIDs, poolStageID, exceptPoolID, competitorIDs).
 		Scan(&entered).Error
 	if err != nil {
 		return nil, fmt.Errorf("select competitors already in pool stage %s: %w", poolStageID, err)
@@ -216,6 +223,67 @@ func (r *poolRepository) UpdatePoolByID(ctx context.Context, id uuid.UUID, updat
 	}
 
 	return nil
+}
+
+// PoolBoutSummary is what re-seating a pool needs to know about its current bouts.
+type PoolBoutSummary struct {
+	Total            int64
+	Started          int64 `gorm:"column:started"`
+	PointsToWin      int
+	TimeLimitSeconds int
+}
+
+func (r *poolRepository) GetPoolBoutSummary(ctx context.Context, poolID uuid.UUID) (PoolBoutSummary, error) {
+	var summary PoolBoutSummary
+
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT count(*) AS total,
+		       count(*) FILTER (WHERE status <> ?) AS started,
+		       COALESCE(max(points_to_win), 0) AS points_to_win,
+		       COALESCE(max(time_limit_seconds), 0) AS time_limit_seconds
+		FROM bouts WHERE pool_id = ?`, poolBoutStatusUpcoming, poolID).
+		Scan(&summary).Error
+	if err != nil {
+		return PoolBoutSummary{}, fmt.Errorf("summarise bouts of pool %s: %w", poolID, err)
+	}
+
+	return summary, nil
+}
+
+// ReplacePoolBouts applies the update and swaps the pool's bouts in one transaction.
+// Only upcoming bouts are deleted, and a bout that started since the caller checked
+// rolls the whole change back.
+func (r *poolRepository) ReplacePoolBouts(ctx context.Context, id uuid.UUID, update PoolUpdate, bouts []PoolBout) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if columns := update.columns(); len(columns) > 0 {
+			if err := tx.Model(&Pool{}).Where("id = ?", id).Updates(columns).Error; err != nil {
+				return translatePoolWriteError(fmt.Sprintf("update pool %s", id), err)
+			}
+		}
+
+		if err := tx.Where("pool_id = ? AND status = ?", id, poolBoutStatusUpcoming).Delete(&PoolBout{}).Error; err != nil {
+			if errors.Is(err, gorm.ErrForeignKeyViolated) {
+				return fmt.Errorf("delete bouts of pool %s: %w", id, errs.Public(msgPoolFencersLocked, errs.ErrConflict))
+			}
+			return fmt.Errorf("delete bouts of pool %s: %w", id, err)
+		}
+		var remaining int64
+		if err := tx.Model(&PoolBout{}).Where("pool_id = ?", id).Count(&remaining).Error; err != nil {
+			return fmt.Errorf("count bouts of pool %s: %w", id, err)
+		}
+		if remaining > 0 {
+			return fmt.Errorf("replace bouts of pool %s: %w", id, errs.Public(msgPoolFencersLocked, errs.ErrConflict))
+		}
+
+		for i := range bouts {
+			bouts[i].PoolID = id
+		}
+		if err := tx.Create(&bouts).Error; err != nil {
+			return translatePoolWriteError(fmt.Sprintf("insert bouts of pool %s", id), err)
+		}
+
+		return nil
+	})
 }
 
 func (r *poolRepository) StartPoolByID(ctx context.Context, id uuid.UUID, startedAt time.Time) error {

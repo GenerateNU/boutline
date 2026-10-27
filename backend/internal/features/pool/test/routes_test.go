@@ -228,6 +228,25 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 		assert.InDelta(t, 4, body["number"], 0)
 		assert.Equal(t, "Strip 2", body["strip"])
 	})
+
+	tooMany := make([]string, 11)
+	for i := range tooMany {
+		tooMany[i] = uuid.NewString()
+	}
+	for name, fencers := range map[string][]string{
+		"rejects a single fencer before the handler runs":    {uuid.NewString()},
+		"rejects eleven fencers before the handler runs":     tooMany,
+		"rejects a malformed fencer before the handler runs": {"nope", uuid.NewString()},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup()).
+				Patch("/api/v1/pools/"+stored.ID.String(), map[string]any{"fencers": fencers})
+
+			assert.Equal(t, http.StatusUnprocessableEntity, resp.Code, "body: %s", resp.Body)
+		})
+	}
 }
 
 func TestDeleteEndpoint(t *testing.T) {
