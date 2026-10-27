@@ -57,8 +57,14 @@ migrate() {
 # migrations older than ones already applied (Atlas's non-linear error), and a
 # renamed migration re-runs against objects it already created. Review data is
 # disposable, so rebuild from empty; a migration that still fails there is a
-# real bug and fails the preview.
-if ! migrate; then
+# real bug and fails the preview. Only those two errors mean drift: anything
+# else (Postgres unreachable, image missing, disk full) keeps the database.
+DRIFT_ERRORS='added out of order|already exists'
+if ! migrate_output=$(migrate 2>&1 | tee /dev/stderr); then
+  if ! grep -qE "$DRIFT_ERRORS" <<<"$migrate_output"; then
+    echo "::error::migrations failed for a reason other than drift; keeping ${DB_NAME}" >&2
+    exit 1
+  fi
   echo "    migrations do not apply to the existing database; recreating ${DB_NAME}"
   docker exec -e PGPASSWORD="$PGPASSWORD" preview-db \
     psql -U postgres -tAc "DROP DATABASE ${DB_NAME} WITH (FORCE)" >/dev/null
