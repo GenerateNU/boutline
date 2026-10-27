@@ -32,4 +32,10 @@ if [ -r "$ENV_FILE" ]; then
   fi
 fi
 
+docker images --format '{{.Repository}}:{{.Tag}}' \
+  | grep -E "/${PROJECT}/(backend|migrate):pr-${PR_NUMBER}-" \
+  | xargs -r docker rmi >/dev/null 2>&1 \
+  && echo "    removed images for PR #${PR_NUMBER}" \
+  || echo "    no images for PR #${PR_NUMBER}"
+
 echo "==> done"

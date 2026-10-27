@@ -95,4 +95,13 @@ for _ in $(seq 1 15); do
   exit 1
 done
 
+# Every push pulls two new images and nothing else removes the old ones, so they
+# pile up until the droplet's disk fills. Scoped to this PR rather than
+# `prune -a` because the droplet is shared with other projects.
+echo "    removing this PR's older images"
+docker images --format '{{.Repository}}:{{.Tag}}' \
+  | grep -E "/${PROJECT}/(backend|migrate):pr-${PR_NUMBER}-" \
+  | grep -vxF -e "$BACKEND_IMAGE" -e "$MIGRATE_IMAGE" \
+  | xargs -r docker rmi >/dev/null 2>&1 || true
+
 echo "==> https://${HOST}"
