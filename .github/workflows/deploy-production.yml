@@ -104,6 +104,26 @@ jobs:
             exit 1
           }
 
+          # Old <sha> tags are not dangling, so `docker image prune` alone keeps
+          # every release's images forever -- that filled the shared disk once.
+          # This removes boutline's release images by name instead of with
+          # `prune -a`, which acts on every project's images on the droplet;
+          # `docker rmi` refuses any image a container still uses, so the live
+          # backend keeps its own. `prune -f` takes dangling images, such as a
+          # postgres or redis image that `--pull always` replaced. PR previews'
+          # pr-* tags are theirs to clean up. Run before the pulls as well, so a
+          # nearly full disk cannot fail a pull before cleanup is reached.
+          remove_unused_images() {
+            ssh "$DROPLET" bash -s -- "$IMAGE" "$MIGRATE_IMAGE" <<'EOF'
+          docker images --format '{{.Repository}}:{{.Tag}}' \
+            | grep -E "^(${1%:*}|${2%:*}):" \
+            | grep -v ':pr-' \
+            | xargs -r docker rmi >/dev/null 2>&1 || true
+          docker image prune -f >/dev/null
+          EOF
+          }
+          remove_unused_images
+
           # Ship the compose file too, so the droplet runs what this commit
           # describes rather than drifting from a hand-edited copy.
           scp deploy/app/docker-compose.yml "$DROPLET:/opt/boutline/docker-compose.yml"
@@ -116,18 +136,7 @@ jobs:
              && docker compose --env-file backend.env run --rm migrate \
              && docker compose --env-file backend.env up -d --pull always"
 
-          # Old <sha> tags are not dangling, so `docker image prune` keeps every
-          # release's images forever -- that filled the shared disk once.
-          # Remove boutline's older release images by name instead of with
-          # `prune -a`, which acts on every project's images on the droplet.
-          # PR previews' pr-* tags are theirs to clean up.
-          ssh "$DROPLET" bash -s -- "$IMAGE" "$MIGRATE_IMAGE" <<'EOF'
-          docker images --format '{{.Repository}}:{{.Tag}}' \
-            | grep -E "^(${1%:*}|${2%:*}):" \
-            | grep -v ':pr-' \
-            | grep -vxF "$1" \
-            | xargs -r docker rmi >/dev/null 2>&1 || true
-          EOF
+          remove_unused_images
 
           # `up -d` succeeds as soon as the container starts, and with
           # `restart: unless-stopped` a crash-looping backend still reads as
