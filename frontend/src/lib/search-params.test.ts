@@ -16,6 +16,8 @@ describe("readOffsetParam", () => {
     { name: "zero for a negative offset", query: { offset: "-5" }, want: 0 },
     { name: "zero for a non-number", query: { offset: "abc" }, want: 0 },
     { name: "zero when absent", query: {}, want: 0 },
+    { name: "zero for a fraction", query: { offset: "1.5" }, want: 0 },
+    { name: "zero for infinity", query: { offset: "Infinity" }, want: 0 },
   ])("returns $name", ({ query, want }) => {
     expect(readOffsetParam(query)).toBe(want);
   });

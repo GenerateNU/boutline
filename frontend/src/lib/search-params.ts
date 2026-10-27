@@ -7,8 +7,9 @@ export function readStringParam(query: SearchParams, key: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-// Anything that isn't a non-negative number (missing, "abc", "-5") falls
-// back to the first page instead of erroring.
+// Anything that isn't a non-negative integer (missing, "abc", "-5", "1.5")
+// falls back to the first page, since the backend rejects it.
 export function readOffsetParam(query: SearchParams): number {
-  return Math.max(0, Number(query.offset) || 0);
+  const offset = Number(query.offset);
+  return Number.isInteger(offset) && offset > 0 ? offset : 0;
 }

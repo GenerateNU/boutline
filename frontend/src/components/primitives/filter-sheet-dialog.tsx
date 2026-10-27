@@ -42,7 +42,7 @@ function FilterSheetDialog({
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-foreground/40" />
-        <Dialog.Content className="fixed inset-x-0 bottom-0 mx-auto flex w-full max-w-mobile flex-col gap-5 rounded-t-3xl bg-background px-4 pt-4 pb-8 font-satoshi">
+        <Dialog.Content className="fixed inset-x-0 bottom-0 mx-auto flex max-h-dvh w-full max-w-mobile flex-col gap-5 overflow-y-auto rounded-t-3xl bg-background px-4 pt-4 pb-8 font-satoshi">
           <Dialog.Title className="text-xl font-semibold">Filter</Dialog.Title>
           <Dialog.Description className="sr-only">{description}</Dialog.Description>
           <Dialog.Close asChild>
