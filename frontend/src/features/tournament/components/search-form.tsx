@@ -61,6 +61,9 @@ function SearchForm({
         navigate(value.trim());
       }}
     >
+      {/* Submitting a GET form replaces the whole query string with its own
+          fields, so the other current params (e.g. date) ride along as hidden
+          inputs. This is the path taken before JS hydrates. */}
       {Array.from(searchParams)
         .filter(([key]) => key !== "q" && key !== "offset")
         .map(([key, value]) => (
