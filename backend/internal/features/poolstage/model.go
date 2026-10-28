@@ -3,6 +3,7 @@ package poolstage
 import (
 	"time"
 
+	"boutline/internal/features/competitor"
 	"boutline/internal/features/event"
 
 	"github.com/google/uuid"
@@ -47,4 +48,14 @@ type PoolStage struct {
 
 func (PoolStage) TableName() string {
 	return "pool_stages"
+}
+
+// PoolStageEntrant is a competitor as a pool proposal needs them.
+type PoolStageEntrant struct {
+	ID           uuid.UUID
+	TournamentID *uuid.UUID
+	FirstName    string
+	LastName     string
+	Rating       competitor.Rating
+	Team         string
 }

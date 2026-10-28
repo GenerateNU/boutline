@@ -37,6 +37,7 @@ type PoolStageService interface {
 	StartPoolStage(ctx context.Context, input *PoolStageIDInput) (*PoolStageOutput, error)
 	EndPoolStage(ctx context.Context, input *PoolStageIDInput) (*PoolStageOutput, error)
 	DeletePoolStageByID(ctx context.Context, input *PoolStageIDInput) (*struct{}, error)
+	ProposePools(ctx context.Context, input *PoolStageProposalInput) (*PoolStageProposalOutput, error)
 }
 
 type poolStageService struct {
