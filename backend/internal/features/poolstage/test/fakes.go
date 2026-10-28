@@ -22,7 +22,8 @@ type FakePoolStageRepository struct {
 	PoolStages map[uuid.UUID]poolstage.PoolStage
 	WithBouts  map[uuid.UUID]bool // stages whose pools have bouts, so a delete is refused
 	PoolCounts map[uuid.UUID]PoolCount
-	Err        error // when set, every method fails with it
+	Entrants   map[uuid.UUID]poolstage.PoolStageEntrant // competitors a proposal can read
+	Err        error                                    // when set, every method fails with it
 }
 
 func NewFakePoolStageRepository(seed ...poolstage.PoolStage) *FakePoolStageRepository {
@@ -35,6 +36,7 @@ func NewFakePoolStageRepository(seed ...poolstage.PoolStage) *FakePoolStageRepos
 		PoolStages: stages,
 		WithBouts:  map[uuid.UUID]bool{},
 		PoolCounts: map[uuid.UUID]PoolCount{},
+		Entrants:   map[uuid.UUID]poolstage.PoolStageEntrant{},
 	}
 }
 
@@ -168,6 +170,24 @@ func (f *FakePoolStageRepository) DeletePoolStageByID(_ context.Context, id uuid
 	delete(f.PoolStages, id)
 
 	return nil
+}
+
+func (f *FakePoolStageRepository) ListPoolStageEntrants(
+	_ context.Context,
+	competitorIDs []uuid.UUID,
+) ([]poolstage.PoolStageEntrant, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	var entrants []poolstage.PoolStageEntrant
+	for _, id := range competitorIDs {
+		if entrant, ok := f.Entrants[id]; ok {
+			entrants = append(entrants, entrant)
+		}
+	}
+
+	return entrants, nil
 }
 
 func (f *FakePoolStageRepository) guard(

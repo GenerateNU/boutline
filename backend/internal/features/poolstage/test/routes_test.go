@@ -204,3 +204,40 @@ func TestDeleteEndpoint(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, api.Get(base).Code)
 	assert.Equal(t, http.StatusNotFound, api.Delete(base).Code)
 }
+
+func TestProposePoolsEndpoint(t *testing.T) {
+	t.Parallel()
+
+	f := newProposalFixture(5, 6, nil)
+	path := "/api/v1/pool-stages/" + f.stage.ID.String() + "/proposed-pools"
+	api := func(t *testing.T) humatest.TestAPI { return newTestAPI(t, f.repo, NewFakeEventLookup(f.event)) }
+
+	t.Run("returns the proposal with snake_case keys", func(t *testing.T) {
+		t.Parallel()
+
+		resp := api(t).Post(path, map[string]any{"competitor_ids": entrantIDs(1, 5)})
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+		pools := decodeBody(t, resp.Body.Bytes())["pools"].([]any)
+		require.Len(t, pools, 1)
+		first := pools[0].(map[string]any)
+		assert.InDelta(t, 1, first["number"], 0)
+		fencers := first["fencers"].([]any)
+		require.Len(t, fencers, 5)
+		for _, key := range []string{"competitor_id", "first_name", "last_name", "rating", "team"} {
+			assert.Contains(t, fencers[0], key)
+		}
+	})
+
+	for name, ids := range map[string][]string{
+		"rejects a single competitor before the handler runs":    entrantIDs(1, 1),
+		"rejects a malformed competitor before the handler runs": {"nope", entrant(1).String()},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := api(t).Post(path, map[string]any{"competitor_ids": ids})
+			assert.Equal(t, http.StatusUnprocessableEntity, resp.Code, "body: %s", resp.Body)
+		})
+	}
+}
