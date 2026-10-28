@@ -17,13 +17,16 @@ func RegisterPoolRoutes(api huma.API, params *types.ServiceParams) {
 
 func RegisterPoolService(api huma.API, service PoolService) {
 	huma.Register(api, huma.Operation{
-		OperationID:   "createPool",
-		Method:        http.MethodPost,
-		Path:          poolBasePath,
-		Summary:       "Create a pool",
+		OperationID: "createPools",
+		Method:      http.MethodPost,
+		Path:        poolBasePath,
+		Summary:     "Create pools with their bouts",
+		Description: "Creates every pool in one transaction, seats each pool's fencers by registration order " +
+			"(competitor created_at, then id) and schedules its bouts in the standard pool order. " +
+			"Every pool must belong to the same upcoming pool stage.",
 		Tags:          []string{"Pools"},
 		DefaultStatus: http.StatusCreated,
-	}, service.CreatePool)
+	}, service.CreatePools)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listPools",
