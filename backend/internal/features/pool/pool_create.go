@@ -49,13 +49,9 @@ func parsePoolRequest(item PoolCreateItem) (poolRequest, error) {
 		return poolRequest{}, err
 	}
 
-	fencers := make([]uuid.UUID, 0, len(item.Fencers))
-	for _, raw := range item.Fencers {
-		id, err := utils.ParseUUID(raw, "fencers")
-		if err != nil {
-			return poolRequest{}, err
-		}
-		fencers = append(fencers, id)
+	fencers, err := parseFencers(item.Fencers)
+	if err != nil {
+		return poolRequest{}, err
 	}
 
 	return poolRequest{
@@ -68,6 +64,19 @@ func parsePoolRequest(item PoolCreateItem) (poolRequest, error) {
 		},
 		fencers: fencers,
 	}, nil
+}
+
+func parseFencers(raw []string) ([]uuid.UUID, error) {
+	fencers := make([]uuid.UUID, 0, len(raw))
+	for _, value := range raw {
+		id, err := utils.ParseUUID(value, "fencers")
+		if err != nil {
+			return nil, err
+		}
+		fencers = append(fencers, id)
+	}
+
+	return fencers, nil
 }
 
 func checkSharedStage(requests []poolRequest) error {
@@ -122,8 +131,13 @@ func checkFencerCounts(requests []poolRequest, limit int) error {
 }
 
 // loadEntrants returns every requested competitor by id, after checking each exists and
-// none is already seated in a pool of the stage.
-func (s *poolService) loadEntrants(ctx context.Context, stageID uuid.UUID, requests []poolRequest) (map[uuid.UUID]PoolEntrant, error) {
+// none is already seated in a pool of the stage other than exceptPoolID (uuid.Nil for none).
+func (s *poolService) loadEntrants(
+	ctx context.Context,
+	stageID uuid.UUID,
+	requests []poolRequest,
+	exceptPoolID uuid.UUID,
+) (map[uuid.UUID]PoolEntrant, error) {
 	var requested []uuid.UUID
 	for _, request := range requests {
 		requested = append(requested, request.fencers...)
@@ -143,7 +157,7 @@ func (s *poolService) loadEntrants(ctx context.Context, stageID uuid.UUID, reque
 		}
 	}
 
-	entered, err := s.repo.ListEnteredCompetitorIDs(ctx, stageID, requested)
+	entered, err := s.repo.ListEnteredCompetitorIDs(ctx, stageID, requested, exceptPoolID)
 	if err != nil {
 		return nil, fmt.Errorf("list entered competitors: %w", err)
 	}
