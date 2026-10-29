@@ -422,43 +422,6 @@ func TestUpdateBoutByID(t *testing.T) {
 		assert.Equal(t, 21, repo.Bouts[stored.ID].PointsToWin)
 	})
 
-	t.Run("moves an upcoming bout into a pool of its tournament", func(t *testing.T) {
-		t.Parallel()
-
-		stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
-		repo := NewFakeBoutRepository(stored)
-		poolID := uuid.New()
-		pools := NewFakePoolLookup(map[uuid.UUID]uuid.UUID{poolID: stored.TournamentID})
-
-		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), pools).UpdateBoutByID(t.Context(),
-			&bout.BoutUpdateInput{ID: stored.ID.String(), Body: bout.BoutUpdateBody{
-				PoolID: ptr(poolID.String()),
-			}})
-
-		require.NoError(t, err)
-		assert.Equal(t, ptr(poolID.String()), out.Body.PoolID)
-		assert.Equal(t, &poolID, repo.Bouts[stored.ID].PoolID)
-	})
-
-	t.Run("refuses a pool from another tournament", func(t *testing.T) {
-		t.Parallel()
-
-		stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
-		repo := NewFakeBoutRepository(stored)
-		poolID := uuid.New()
-		pools := NewFakePoolLookup(map[uuid.UUID]uuid.UUID{poolID: uuid.New()})
-
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), pools).UpdateBoutByID(t.Context(),
-			&bout.BoutUpdateInput{ID: stored.ID.String(), Body: bout.BoutUpdateBody{
-				PoolID: ptr(poolID.String()),
-			}})
-
-		code, detail := apiError(t, err)
-		assert.Equal(t, http.StatusBadRequest, code)
-		assert.Equal(t, "pool_id must reference a pool in the bout's tournament", detail)
-		assert.Nil(t, repo.Bouts[stored.ID].PoolID)
-	})
-
 	t.Run("refuses to edit an active bout", func(t *testing.T) {
 		t.Parallel()
 

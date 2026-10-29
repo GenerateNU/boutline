@@ -30,13 +30,25 @@ const endedBoutStatus = "ended"
 
 type PoolUpdate struct {
 	RefereeID *uuid.UUID
+	Number    *int
+	Strip     *string
+	StartTime *time.Time
 }
 
 func (p PoolUpdate) columns() map[string]any {
-	columns := make(map[string]any, 1)
+	columns := make(map[string]any, 4)
 
 	if p.RefereeID != nil {
 		columns["referee_id"] = *p.RefereeID
+	}
+	if p.Number != nil {
+		columns["number"] = *p.Number
+	}
+	if p.Strip != nil {
+		columns["strip"] = *p.Strip
+	}
+	if p.StartTime != nil {
+		columns["start_time"] = *p.StartTime
 	}
 
 	return columns
@@ -196,6 +208,10 @@ func (r *poolRepository) DeletePoolByID(ctx context.Context, id uuid.UUID) error
 }
 
 func translatePoolWriteError(op string, err error) error {
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return fmt.Errorf("%s: %w", op,
+			errs.Public("a pool with this number already exists in the pool stage", errs.ErrDuplicate))
+	}
 	if errors.Is(err, gorm.ErrForeignKeyViolated) {
 		return fmt.Errorf("%s: %w", op,
 			errs.Public("pool_stage_id or referee_id does not reference an existing record", errs.ErrInvalidInput))

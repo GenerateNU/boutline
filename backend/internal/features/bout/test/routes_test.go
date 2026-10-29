@@ -214,6 +214,15 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 		body := decodeBody(t, resp.Body.Bytes())
 		assert.InDelta(t, 21, body["points_to_win"], 0)
 	})
+
+	t.Run("refuses to move a bout to another pool", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, NewFakeTournamentLookup(), stored).
+			Patch("/api/v1/bouts/"+stored.ID.String(), map[string]any{"pool_id": uuid.New().String()})
+
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code, "body: %s", resp.Body)
+	})
 }
 
 func TestLifecycleEndpoints(t *testing.T) {

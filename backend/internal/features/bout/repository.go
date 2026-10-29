@@ -25,7 +25,6 @@ type BoutUpdate struct {
 	Location         *string
 	StartTime        *time.Time
 	RefereeID        *uuid.UUID
-	PoolID           *uuid.UUID
 	TimeLimitSeconds *int
 	PointsToWin      *int
 	GroupNumber      *int
@@ -34,7 +33,7 @@ type BoutUpdate struct {
 }
 
 func (e BoutUpdate) columns() map[string]any {
-	columns := make(map[string]any, 9)
+	columns := make(map[string]any, 8)
 
 	if e.Location != nil {
 		columns["location"] = *e.Location
@@ -44,9 +43,6 @@ func (e BoutUpdate) columns() map[string]any {
 	}
 	if e.RefereeID != nil {
 		columns["referee_id"] = *e.RefereeID
-	}
-	if e.PoolID != nil {
-		columns["pool_id"] = *e.PoolID
 	}
 	if e.TimeLimitSeconds != nil {
 		columns["time_limit_seconds"] = *e.TimeLimitSeconds
