@@ -20,6 +20,7 @@ function LoginForm({ redirectTo, signupHref }: LoginFormProps) {
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError(null);
     const form = new FormData(event.currentTarget);
 
     startTransition(async () => {

@@ -22,6 +22,7 @@ function SignupForm({ redirectTo, loginHref }: SignupFormProps) {
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError(null);
     const form = new FormData(event.currentTarget);
 
     if (form.get("password") !== form.get("confirmPassword")) {
@@ -90,7 +91,7 @@ function SignupForm({ redirectTo, loginHref }: SignupFormProps) {
       <p className="text-center">
         Have an account?{" "}
         <Link href={loginHref} className="underline">
-          Login in here
+          Login here
         </Link>
       </p>
     </>
