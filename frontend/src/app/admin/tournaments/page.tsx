@@ -5,6 +5,7 @@ import { Pagination } from "@/components/primitives/pagination";
 import { Section } from "@/components/primitives/section";
 import { TournamentList } from "@/components/tournament-list";
 import { getTournaments } from "@/features/tournament/services/getTournaments";
+import { readOffsetParam } from "@/lib/search-params";
 
 const PAGE_SIZE = 20;
 
@@ -12,7 +13,7 @@ export default async function AdminTournamentsPage({
   searchParams,
 }: PageProps<"/admin/tournaments">) {
   const query = await searchParams;
-  const offset = Math.max(0, Number(query.offset) || 0);
+  const offset = readOffsetParam(query);
 
   const { data, total, limit } = await getTournaments(PAGE_SIZE, offset);
 

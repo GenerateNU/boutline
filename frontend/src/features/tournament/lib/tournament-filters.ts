@@ -1,25 +1,20 @@
 import { formatDateParam, parseDateParam } from "@/features/tournament/lib/date-param";
 import type { TournamentStatus } from "@/features/tournament/types/tournament";
-
-type SearchParams = Record<string, string | string[] | undefined>;
+import { readOffsetParam, type SearchParams, readStringParam } from "@/lib/search-params";
 
 const statuses: TournamentStatus[] = ["pending", "active", "ended"];
 
-function single(value: string | string[] | undefined) {
-  return typeof value === "string" ? value : undefined;
-}
-
 export function parseTournamentFilters(query: SearchParams) {
   const calendarView = query.view === "calendar";
-  const day = parseDateParam(single(query.date));
+  const day = parseDateParam(readStringParam(query, "date") || undefined);
 
   return {
-    offset: Math.max(0, Number(query.offset) || 0),
+    offset: readOffsetParam(query),
     status: statuses.find((status) => status === query.status),
     day,
     date: day && formatDateParam(day),
     calendarView,
-    search: calendarView ? "" : (single(query.q)?.trim() ?? ""),
-    tz: single(query.tz),
+    search: calendarView ? "" : readStringParam(query, "q"),
+    tz: readStringParam(query, "tz") || undefined,
   };
 }
