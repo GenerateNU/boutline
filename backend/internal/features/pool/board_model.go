@@ -47,6 +47,7 @@ type PoolBoardFencerRow struct {
 type PoolBoardBoutRow struct {
 	ID               uuid.UUID
 	PoolID           uuid.UUID
+	GroupSlot        *int
 	Status           string
 	Competitor1ID    uuid.UUID `gorm:"column:competitor_1_id"`
 	Competitor2ID    uuid.UUID `gorm:"column:competitor_2_id"`
