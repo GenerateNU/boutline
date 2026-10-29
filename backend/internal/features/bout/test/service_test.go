@@ -3,6 +3,7 @@ package test
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -49,6 +50,15 @@ func apiError(t *testing.T, err error) (int, string) {
 
 func ptr[T any](v T) *T { return &v }
 
+func tooManyIDs() string {
+	ids := make([]string, bout.BoutMaxIDs+1)
+	for i := range ids {
+		ids[i] = uuid.New().String()
+	}
+
+	return strings.Join(ids, ",")
+}
+
 func createInput(tournamentID string, refereeID *string, competitor1ID, competitor2ID string, pointsToWin int) *bout.BoutCreateInput {
 	return &bout.BoutCreateInput{
 		Body: bout.BoutCreateBody{
@@ -66,7 +76,7 @@ func TestCreateBout(t *testing.T) {
 
 	activeTournament := seededTournament(tournament.TournamentStatusActive)
 	pendingTournament := seededTournament(tournament.TournamentStatusPending)
-	endedTournament := seededTournament(tournament.TournamentStatusEnd)
+	endedTournament := seededTournament(tournament.TournamentStatusEnded)
 
 	referee := uuid.New().String()
 	competitor1 := uuid.New().String()
@@ -329,6 +339,46 @@ func TestListBouts(t *testing.T) {
 			input:    &bout.BoutListInput{PoolID: "not-a-uuid"},
 			wantCode: http.StatusBadRequest,
 		},
+		{
+			name:      "filters to just the named ids",
+			seed:      mixed,
+			input:     &bout.BoutListInput{IDs: mixed[0].ID.String() + "," + mixed[1].ID.String()},
+			wantTotal: 2,
+			wantLimit: bout.BoutDefaultPageSize,
+		},
+		{
+			name:      "combines ids with tournament_id",
+			seed:      mixed,
+			input:     &bout.BoutListInput{IDs: mixed[0].ID.String() + "," + mixed[2].ID.String(), TournamentID: tournamentID.String()},
+			wantTotal: 1,
+			wantLimit: bout.BoutDefaultPageSize,
+		},
+		{
+			name:      "combines ids with status",
+			seed:      mixed,
+			input:     &bout.BoutListInput{IDs: mixed[0].ID.String() + "," + mixed[1].ID.String(), Status: bout.BoutStatusActive},
+			wantTotal: 1,
+			wantLimit: bout.BoutDefaultPageSize,
+		},
+		{
+			name:      "an empty ids string returns everything unchanged",
+			seed:      mixed,
+			input:     &bout.BoutListInput{IDs: ""},
+			wantTotal: 3,
+			wantLimit: bout.BoutDefaultPageSize,
+		},
+		{
+			name:     "rejects an invalid id in ids",
+			seed:     mixed,
+			input:    &bout.BoutListInput{IDs: "not-a-uuid"},
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:     "rejects more than the max number of ids",
+			seed:     mixed,
+			input:    &bout.BoutListInput{IDs: tooManyIDs()},
+			wantCode: http.StatusBadRequest,
+		},
 	}
 
 	for _, tt := range tests {
@@ -426,7 +476,7 @@ func TestUpdateBoutByID(t *testing.T) {
 	t.Run("refuses to edit an ended bout", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededBout(bout.BoutStatusEnd, uuid.New())
+		stored := seededBout(bout.BoutStatusEnded, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
 		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).UpdateBoutByID(t.Context(),
@@ -536,7 +586,7 @@ func TestStartBout(t *testing.T) {
 	t.Run("refuses to start a bout in an ended tournament", func(t *testing.T) {
 		t.Parallel()
 
-		endedTournament := seededTournament(tournament.TournamentStatusEnd)
+		endedTournament := seededTournament(tournament.TournamentStatusEnded)
 		stored := seededBout(bout.BoutStatusUpcoming, endedTournament.ID)
 		repo := NewFakeBoutRepository(stored)
 
@@ -589,7 +639,7 @@ func TestEndBout(t *testing.T) {
 			EndBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
 
 		require.NoError(t, err)
-		assert.Equal(t, bout.BoutStatusEnd, out.Body.Status)
+		assert.Equal(t, bout.BoutStatusEnded, out.Body.Status)
 		require.NotNil(t, out.Body.CompletedAt)
 		assert.WithinDuration(t, time.Now().UTC(), *out.Body.CompletedAt, time.Minute)
 	})
@@ -632,7 +682,7 @@ func TestDeleteBoutByID(t *testing.T) {
 		wantDetail string
 	}{
 		{name: "deletes an upcoming bout", status: bout.BoutStatusUpcoming},
-		{name: "deletes an ended bout", status: bout.BoutStatusEnd},
+		{name: "deletes an ended bout", status: bout.BoutStatusEnded},
 		{
 			name:       "refuses to delete an active bout",
 			status:     bout.BoutStatusActive,

@@ -17,6 +17,7 @@ const (
 	BoutMinPageSize     = 1
 	BoutDefaultPageSize = 20
 	BoutMaxPageSize     = 100
+	BoutMaxIDs          = 100
 )
 
 // TournamentLookup is the slice of tournament.TournamentRepository the bout
@@ -203,6 +204,14 @@ func (s *boutService) ListBouts(ctx context.Context, input *BoutListInput) (*Bou
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
+	ids, err := utils.ParseUUIDList(input.IDs, "ids")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+	if len(ids) > BoutMaxIDs {
+		return nil, errs.HumaError(errs.Public(
+			fmt.Sprintf("ids must not contain more than %d values", BoutMaxIDs), errs.ErrInvalidInput))
+	}
 
 	limit := input.Limit
 	if limit <= 0 {
@@ -214,6 +223,7 @@ func (s *boutService) ListBouts(ctx context.Context, input *BoutListInput) (*Bou
 	bouts, total, err := s.repo.ListBouts(ctx, BoutListFilter{
 		TournamentID: tournamentID,
 		PoolID:       poolID,
+		IDs:          ids,
 		Status:       input.Status,
 		Limit:        limit,
 		Offset:       offset,
@@ -393,7 +403,7 @@ func (s *boutService) EndBout(ctx context.Context, input *BoutIDInput) (*BoutOut
 
 	completedAt := time.Now().UTC()
 	err = s.repo.TransitionBoutByID(ctx, id, BoutTransition{
-		To:          BoutStatusEnd,
+		To:          BoutStatusEnded,
 		CompletedAt: &completedAt,
 		From:        []BoutStatus{BoutStatusActive},
 	})

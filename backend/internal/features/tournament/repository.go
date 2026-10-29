@@ -67,12 +67,14 @@ func (t TournamentTransition) columns() map[string]any {
 	return columns
 }
 
-// TODO: support timestamp filtering (started_at ranges)
 type TournamentListFilter struct {
-	Status TournamentStatus
-	Term   string
-	Limit  int
-	Offset int
+	Status     TournamentStatus
+	Term       string
+	StartFrom  time.Time
+	StartTo    time.Time
+	Visibility TournamentVisibility
+	Limit      int
+	Offset     int
 }
 
 type tournamentRepository struct {
@@ -172,6 +174,15 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 	query := r.db.WithContext(ctx).Model(&Tournament{})
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)
+	}
+	if filter.Visibility != "" {
+		query = query.Where("visibility = ?", filter.Visibility)
+	}
+	if !filter.StartFrom.IsZero() {
+		query = query.Where("start_time >= ?", filter.StartFrom)
+	}
+	if !filter.StartTo.IsZero() {
+		query = query.Where("start_time < ?", filter.StartTo)
 	}
 	query = utils.TrigramMatch(query, tournamentNameTrigramExpr, filter.Term)
 

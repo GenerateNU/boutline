@@ -376,6 +376,114 @@ func TestListTournaments(t *testing.T) {
 	}
 }
 
+func TestListTournamentsFilters(t *testing.T) {
+	t.Parallel()
+
+	base := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	at := func(name string, start *time.Time, visibility tournament.TournamentVisibility) tournament.Tournament {
+		row := seeded(name, tournament.TournamentStatusPending)
+		row.StartTime = start
+		row.Visibility = visibility
+
+		return row
+	}
+	private, public := tournament.TournamentVisibilityPrivate, tournament.TournamentVisibilityPublic
+
+	seed := []tournament.Tournament{
+		at("early", ptr(base.Add(-48*time.Hour)), public),
+		at("at from", ptr(base), private),
+		at("middle", ptr(base.Add(time.Hour)), public),
+		at("at to", ptr(base.Add(2*time.Hour)), public),
+		at("late", ptr(base.Add(48*time.Hour)), private),
+		at("unscheduled", nil, public),
+	}
+
+	tests := []struct {
+		name      string
+		input     *tournament.TournamentListInput
+		wantNames []string
+		wantTotal int64
+		wantCode  int
+	}{
+		{
+			name:      "only a lower bound",
+			input:     &tournament.TournamentListInput{StartFrom: base.Add(time.Hour)},
+			wantNames: []string{"at to", "late", "middle"},
+			wantTotal: 3,
+		},
+		{
+			name:      "only an upper bound",
+			input:     &tournament.TournamentListInput{StartTo: base},
+			wantNames: []string{"early"},
+			wantTotal: 1,
+		},
+		{
+			name:      "includes the lower bound and excludes the upper bound",
+			input:     &tournament.TournamentListInput{StartFrom: base, StartTo: base.Add(2 * time.Hour)},
+			wantNames: []string{"at from", "middle"},
+			wantTotal: 2,
+		},
+		{
+			name:      "no bounds keeps rows without a start time",
+			input:     &tournament.TournamentListInput{},
+			wantNames: []string{"at from", "at to", "early", "late", "middle", "unscheduled"},
+			wantTotal: 6,
+		},
+		{
+			name:      "total reflects the filter, not the page",
+			input:     &tournament.TournamentListInput{StartFrom: base, Limit: 1},
+			wantNames: []string{"at from"},
+			wantTotal: 4,
+		},
+		{
+			name:     "rejects an upper bound equal to the lower bound",
+			input:    &tournament.TournamentListInput{StartFrom: base, StartTo: base},
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:     "rejects an upper bound before the lower bound",
+			input:    &tournament.TournamentListInput{StartFrom: base, StartTo: base.Add(-time.Hour)},
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:      "visibility public excludes private rows",
+			input:     &tournament.TournamentListInput{Visibility: tournament.TournamentVisibilityPublic},
+			wantNames: []string{"at to", "early", "middle", "unscheduled"},
+			wantTotal: 4,
+		},
+		{
+			name:      "visibility combines with the date range",
+			input:     &tournament.TournamentListInput{Visibility: tournament.TournamentVisibilityPrivate, StartTo: base.Add(time.Hour)},
+			wantNames: []string{"at from"},
+			wantTotal: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			out, err := tournament.NewTournamentService(NewFakeTournamentRepository(seed...), NewFakeTournamentUserRepository()).
+				ListTournaments(t.Context(), tt.input)
+
+			if tt.wantCode != 0 {
+				code, _ := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+
+				return
+			}
+
+			require.NoError(t, err)
+			names := make([]string, 0, len(out.Body.Data))
+			for _, listed := range out.Body.Data {
+				names = append(names, listed.Name)
+			}
+			assert.Equal(t, tt.wantNames, names)
+			assert.Equal(t, tt.wantTotal, out.Body.Total)
+		})
+	}
+}
+
 func TestListTournamentsWithQuery(t *testing.T) {
 	t.Parallel()
 
@@ -520,7 +628,7 @@ func TestUpdateTournamentByID(t *testing.T) {
 		},
 		{
 			name:       "refuses to edit a tournament that has ended",
-			seedStatus: tournament.TournamentStatusEnd,
+			seedStatus: tournament.TournamentStatusEnded,
 			body:       tournament.TournamentUpdateBody{Name: ptr("too late")},
 			wantCode:   http.StatusConflict,
 			wantDetail: "tournament has ended and can no longer be edited",
@@ -590,7 +698,7 @@ func TestStartTournament(t *testing.T) {
 		},
 		{
 			name:       "refuses a tournament that has ended",
-			seedStatus: tournament.TournamentStatusEnd,
+			seedStatus: tournament.TournamentStatusEnded,
 			wantCode:   http.StatusConflict,
 			wantDetail: "only a pending tournament can be started",
 		},
@@ -644,7 +752,7 @@ func TestCompleteTournament(t *testing.T) {
 		},
 		{
 			name:       "refuses a tournament that has already ended",
-			seedStatus: tournament.TournamentStatusEnd,
+			seedStatus: tournament.TournamentStatusEnded,
 			wantCode:   http.StatusConflict,
 			wantDetail: "only an active tournament can be completed",
 		},
@@ -670,7 +778,7 @@ func TestCompleteTournament(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, tournament.TournamentStatusEnd, out.Body.Status)
+			assert.Equal(t, tournament.TournamentStatusEnded, out.Body.Status)
 			require.NotNil(t, out.Body.CompletedAt)
 			assert.NotNil(t, repo.Tournaments[stored.ID].CompletedAt)
 		})

@@ -3,15 +3,24 @@ package competitor
 import (
 	"net/http"
 
+	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
 )
 
-const competitorBasePath = "/api/v1/competitors"
+const (
+	competitorBasePath  = "/api/v1/competitors"
+	tournamentTeamsPath = "/api/v1/tournaments/{id}/teams"
+)
 
 func RegisterCompetitorRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterCompetitorService(api, NewCompetitorService(NewCompetitorRepository(params.DB)))
+	RegisterCompetitorService(api, NewCompetitorService(
+		NewCompetitorRepository(params.DB),
+		tournament.NewTournamentRepository(params.DB),
+		tournamentuser.NewTournamentUserRepository(params.DB),
+	))
 }
 
 func RegisterCompetitorService(api huma.API, service CompetitorService) {
@@ -33,14 +42,14 @@ func RegisterCompetitorService(api huma.API, service CompetitorService) {
 	}, service.ListCompetitors)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "listCompetitorTeams",
+		OperationID: "listTournamentTeams",
 		Method:      http.MethodGet,
-		Path:        competitorBasePath + "/search/teams",
-		Summary:     "List distinct teams, optionally fuzzy-matched by name",
-		Description: "Returns one row per matching team with its competitor count, " +
-			"rather than one row per competitor.",
-		Tags: []string{"Competitors"},
-	}, service.ListCompetitorTeams)
+		Path:        tournamentTeamsPath,
+		Summary:     "List the clubs competing in a tournament, optionally fuzzy-matched by name",
+		Description: "Clubs are the distinct teams of the tournament's competitors, each with its competitor count; " +
+			"unaffiliated competitors are left out.",
+		Tags: []string{"Tournaments"},
+	}, service.ListTeamsByTournament)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getCompetitorByID",
@@ -60,10 +69,12 @@ func RegisterCompetitorService(api huma.API, service CompetitorService) {
 	}, service.UpdateCompetitorByID)
 
 	huma.Register(api, huma.Operation{
-		OperationID:   "deleteCompetitor",
-		Method:        http.MethodDelete,
-		Path:          competitorBasePath + "/{id}",
-		Summary:       "Delete a competitor",
+		OperationID: "deleteCompetitor",
+		Method:      http.MethodDelete,
+		Path:        competitorBasePath + "/{id}",
+		Summary:     "Delete a competitor",
+		Description: "Only the competitor's owner or the tournament's creator or admins can delete a competitor. " +
+			"A competitor who has fenced a bout cannot be deleted.",
 		Tags:          []string{"Competitors"},
 		DefaultStatus: http.StatusNoContent,
 	}, service.DeleteCompetitor)

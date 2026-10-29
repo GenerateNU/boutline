@@ -2,11 +2,15 @@ package test
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
+	"boutline/internal/errs"
 	"boutline/internal/features/competitor"
+	"boutline/internal/features/user"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -19,15 +23,16 @@ var testEventID = uuid.MustParse("11111111-1111-1111-1111-111111111111")
 
 func seeded(firstName, lastName string, rating competitor.Rating, team string) competitor.Competitor {
 	return competitor.Competitor{
-		ID:        uuid.New(),
-		EventID:   testEventID,
-		FirstName: firstName,
-		LastName:  lastName,
-		Gender:    competitor.GenderF,
-		Birthdate: time.Date(1994, time.June, 15, 0, 0, 0, 0, time.UTC),
-		Division:  "New Jersey",
-		Rating:    rating,
-		Team:      team,
+		ID:           uuid.New(),
+		EventID:      testEventID,
+		TournamentID: ptr(TestTournamentID),
+		FirstName:    firstName,
+		LastName:     lastName,
+		Gender:       competitor.GenderF,
+		Birthdate:    time.Date(1994, time.June, 15, 0, 0, 0, 0, time.UTC),
+		Division:     "New Jersey",
+		Rating:       rating,
+		Team:         team,
 	}
 }
 
@@ -148,7 +153,7 @@ func TestCreateCompetitor(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			repo := NewFakeCompetitorRepository()
-			out, err := competitor.NewCompetitorService(repo).
+			out, err := NewTestService(repo).
 				CreateCompetitor(t.Context(), &competitor.CompetitorCreateInput{Body: tt.body})
 
 			if tt.wantCode != 0 {
@@ -178,7 +183,7 @@ func TestCreateCompetitorStoresNewFields(t *testing.T) {
 		b.MemberNumber = "100123"
 	})
 
-	out, err := competitor.NewCompetitorService(NewFakeCompetitorRepository()).
+	out, err := NewTestService(NewFakeCompetitorRepository()).
 		CreateCompetitor(t.Context(), &competitor.CompetitorCreateInput{Body: body})
 	require.NoError(t, err)
 
@@ -200,7 +205,7 @@ func TestCreateCompetitorMemberNumber(t *testing.T) {
 	t.Run("rejects a duplicate member number in the same event", func(t *testing.T) {
 		t.Parallel()
 		repo := NewFakeCompetitorRepository(existing)
-		_, err := competitor.NewCompetitorService(repo).CreateCompetitor(t.Context(),
+		_, err := NewTestService(repo).CreateCompetitor(t.Context(),
 			&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
 				b.MemberNumber = "100123"
 			})})
@@ -213,7 +218,7 @@ func TestCreateCompetitorMemberNumber(t *testing.T) {
 	t.Run("allows the same member number in a different event", func(t *testing.T) {
 		t.Parallel()
 		repo := NewFakeCompetitorRepository(existing)
-		_, err := competitor.NewCompetitorService(repo).CreateCompetitor(t.Context(),
+		_, err := NewTestService(repo).CreateCompetitor(t.Context(),
 			&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
 				b.EventID = uuid.New().String()
 				b.MemberNumber = "100123"
@@ -225,7 +230,7 @@ func TestCreateCompetitorMemberNumber(t *testing.T) {
 	t.Run("allows several competitors without a member number", func(t *testing.T) {
 		t.Parallel()
 		repo := NewFakeCompetitorRepository()
-		service := competitor.NewCompetitorService(repo)
+		service := NewTestService(repo)
 		for range 2 {
 			_, err := service.CreateCompetitor(t.Context(),
 				&competitor.CompetitorCreateInput{Body: validCreateBody()})
@@ -238,7 +243,7 @@ func TestCreateCompetitorMemberNumber(t *testing.T) {
 func TestGetCompetitorByID(t *testing.T) {
 	t.Parallel()
 	stored := seeded("Lee", "Kiefer", competitor.RatingA, "")
-	service := competitor.NewCompetitorService(NewFakeCompetitorRepository(stored))
+	service := NewTestService(NewFakeCompetitorRepository(stored))
 
 	t.Run("returns the stored competitor", func(t *testing.T) {
 		t.Parallel()
@@ -302,7 +307,7 @@ func TestListCompetitors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			out, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
+			out, err := NewTestService(NewFakeCompetitorRepository(seed...)).
 				ListCompetitors(t.Context(), tt.input)
 			require.NoError(t, err)
 			assert.Equal(t, int64(3), out.Body.Total)
@@ -365,12 +370,37 @@ func TestListCompetitorsFilters(t *testing.T) {
 			input:    &competitor.CompetitorListInput{Rating: "E"},
 			wantLast: []string{},
 		},
+		{
+			name:     "matches the name case-insensitively",
+			input:    &competitor.CompetitorListInput{Query: "adam"},
+			wantLast: []string{"Adams"},
+		},
+		{
+			name:     "matches across the first and last name boundary",
+			input:    &competitor.CompetitorListInput{Query: "a Ada"},
+			wantLast: []string{"Adams"},
+		},
+		{
+			name:     "filters by ids",
+			input:    &competitor.CompetitorListInput{IDs: seed[0].ID.String() + "," + seed[2].ID.String()},
+			wantLast: []string{"Adams", "Clark"},
+		},
+		{
+			name:     "combines ids and rating",
+			input:    &competitor.CompetitorListInput{IDs: seed[0].ID.String() + "," + seed[2].ID.String(), Rating: "A"},
+			wantLast: []string{"Adams"},
+		},
+		{
+			name:     "an empty ids string returns everything",
+			input:    &competitor.CompetitorListInput{IDs: ""},
+			wantLast: []string{"Adams", "Baker", "Clark", "Davis"},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			out, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
+			out, err := NewTestService(NewFakeCompetitorRepository(seed...)).
 				ListCompetitors(t.Context(), tt.input)
 			require.NoError(t, err)
 
@@ -386,7 +416,7 @@ func TestListCompetitorsFilters(t *testing.T) {
 
 	t.Run("rejects an invalid rating", func(t *testing.T) {
 		t.Parallel()
-		_, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
+		_, err := NewTestService(NewFakeCompetitorRepository(seed...)).
 			ListCompetitors(t.Context(), &competitor.CompetitorListInput{Rating: "Z"})
 		code, _ := apiError(t, err)
 		assert.Equal(t, http.StatusBadRequest, code)
@@ -394,8 +424,28 @@ func TestListCompetitorsFilters(t *testing.T) {
 
 	t.Run("rejects an event id that is not a uuid", func(t *testing.T) {
 		t.Parallel()
-		_, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
+		_, err := NewTestService(NewFakeCompetitorRepository(seed...)).
 			ListCompetitors(t.Context(), &competitor.CompetitorListInput{EventID: "not-a-uuid"})
+		code, _ := apiError(t, err)
+		assert.Equal(t, http.StatusBadRequest, code)
+	})
+
+	t.Run("rejects an invalid id in the ids filter", func(t *testing.T) {
+		t.Parallel()
+		_, err := NewTestService(NewFakeCompetitorRepository(seed...)).
+			ListCompetitors(t.Context(), &competitor.CompetitorListInput{IDs: "not-a-uuid"})
+		code, _ := apiError(t, err)
+		assert.Equal(t, http.StatusBadRequest, code)
+	})
+
+	t.Run("rejects more ids than the limit", func(t *testing.T) {
+		t.Parallel()
+		ids := make([]string, competitor.CompetitorMaxIDs+1)
+		for i := range ids {
+			ids[i] = uuid.New().String()
+		}
+		_, err := NewTestService(NewFakeCompetitorRepository(seed...)).
+			ListCompetitors(t.Context(), &competitor.CompetitorListInput{IDs: strings.Join(ids, ",")})
 		code, _ := apiError(t, err)
 		assert.Equal(t, http.StatusBadRequest, code)
 	})
@@ -458,7 +508,7 @@ func TestUpdateCompetitorByID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			repo := NewFakeCompetitorRepository(tt.seed...)
-			out, err := competitor.NewCompetitorService(repo).UpdateCompetitorByID(
+			out, err := NewTestService(repo).UpdateCompetitorByID(
 				t.Context(), &competitor.CompetitorUpdateInput{ID: tt.id, Body: tt.body})
 
 			if tt.wantCode != 0 {
@@ -489,7 +539,7 @@ func TestUpdateCompetitorNewFields(t *testing.T) {
 		*competitor.CompetitorOutput, error,
 	) {
 		t.Helper()
-		return competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).UpdateCompetitorByID(
+		return NewTestService(NewFakeCompetitorRepository(seed...)).UpdateCompetitorByID(
 			t.Context(), &competitor.CompetitorUpdateInput{ID: stored.ID.String(), Body: body})
 	}
 
@@ -608,7 +658,7 @@ func TestListCompetitorsWithQuery(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			out, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
+			out, err := NewTestService(NewFakeCompetitorRepository(seed...)).
 				ListCompetitors(t.Context(), tt.input)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantTotal, out.Body.Total)
@@ -624,148 +674,136 @@ func TestListCompetitorsWithQuery(t *testing.T) {
 	}
 }
 
-func TestListCompetitorTeams(t *testing.T) {
+func TestDeleteCompetitor(t *testing.T) {
 	t.Parallel()
-	seed := []competitor.Competitor{
-		seeded("Lee", "Kiefer", competitor.RatingA, "NU Fencing"),
-		seeded("Jon", "Doe", competitor.RatingA, "NU Fencing"),
-		seeded("Race", "Imboden", competitor.RatingA, "St. John's Fencing"),
+
+	const forbidden = "only the competitor's owner or the tournament's creator or admins can delete this competitor"
+	const fenced = "a competitor who has fenced a bout cannot be deleted"
+
+	owned := func(owner uuid.UUID) competitor.Competitor {
+		c := seeded("Lee", "Kiefer", competitor.RatingU, "")
+		c.UserID = &owner
+		return c
 	}
+	unowned := seeded("Lee", "Kiefer", competitor.RatingU, "")
+	noTournament := competitor.Competitor{
+		ID: uuid.New(), FirstName: "Lee", LastName: "Kiefer", Rating: competitor.RatingU,
+	}
+	ownedNoTournament := noTournament
+	ownedNoTournament.UserID = ptr(TestRefereeID)
 
 	tests := []struct {
 		name       string
-		input      *competitor.CompetitorTeamListInput
-		wantTeams  []string
-		wantCounts []int64
-		wantTotal  int64
-		wantLimit  int
-		wantOffset int
-		wantCode   int
+		caller     *uuid.UUID
+		stored     competitor.Competitor
+		id         string
+		deleteErr  error
+		wantStatus int
 		wantDetail string
 	}{
+		{name: "owner deletes their own competitor", caller: ptr(TestRefereeID), stored: owned(TestRefereeID)},
 		{
-			name:       "matches a team and counts its competitors",
-			input:      &competitor.CompetitorTeamListInput{Query: "john"},
-			wantTeams:  []string{"St. John's Fencing"},
-			wantCounts: []int64{1},
-			wantTotal:  1,
-			wantLimit:  competitor.CompetitorDefaultPageSize,
+			name: "tournament creator deletes an owned competitor", caller: ptr(TestCreatorID),
+			stored: owned(TestRefereeID),
+		},
+		{name: "tournament admin deletes an unowned competitor", caller: ptr(TestAdminID), stored: unowned},
+		{
+			name: "owner deletes a competitor with no tournament", caller: ptr(TestRefereeID),
+			stored: ownedNoTournament,
 		},
 		{
-			name:       "collapses to one row per team regardless of roster size",
-			input:      &competitor.CompetitorTeamListInput{Query: "fencing"},
-			wantTeams:  []string{"NU Fencing", "St. John's Fencing"},
-			wantCounts: []int64{2, 1},
-			wantTotal:  2,
-			wantLimit:  competitor.CompetitorDefaultPageSize,
+			name: "referee is refused", caller: ptr(TestRefereeID), stored: unowned,
+			wantStatus: http.StatusForbidden, wantDetail: forbidden,
 		},
 		{
-			name:       "a blank term lists every team",
-			input:      &competitor.CompetitorTeamListInput{Query: "   "},
-			wantTeams:  []string{"NU Fencing", "St. John's Fencing"},
-			wantCounts: []int64{2, 1},
-			wantTotal:  2,
-			wantLimit:  competitor.CompetitorDefaultPageSize,
+			name: "unrelated user is refused", caller: ptr(uuid.New()), stored: unowned,
+			wantStatus: http.StatusForbidden, wantDetail: forbidden,
 		},
 		{
-			name:       "applies limit and offset",
-			input:      &competitor.CompetitorTeamListInput{Query: "fencing", Limit: 1, Offset: 1},
-			wantTeams:  []string{"St. John's Fencing"},
-			wantCounts: []int64{1},
-			wantTotal:  2,
-			wantLimit:  1,
-			wantOffset: 1,
+			name: "admin of another tournament is refused", caller: ptr(TestOtherAdminID), stored: unowned,
+			wantStatus: http.StatusForbidden, wantDetail: forbidden,
+		},
+		{
+			name: "unauthenticated caller is refused", stored: unowned,
+			wantStatus: http.StatusForbidden, wantDetail: forbidden,
+		},
+		{
+			name: "nobody can delete an unowned competitor with no tournament", caller: ptr(TestAdminID),
+			stored: noTournament, wantStatus: http.StatusForbidden, wantDetail: forbidden,
+		},
+		{
+			name: "reports an unknown id as not found", caller: ptr(TestAdminID), stored: unowned,
+			id: uuid.New().String(), wantStatus: http.StatusNotFound, wantDetail: "not found",
+		},
+		{
+			name: "refuses a competitor who has fenced a bout", caller: ptr(TestRefereeID),
+			stored:     owned(TestRefereeID),
+			deleteErr:  fmt.Errorf("delete competitor: %w", errs.ErrConflict),
+			wantStatus: http.StatusConflict, wantDetail: fenced,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			out, err := competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)).
-				ListCompetitorTeams(t.Context(), tt.input)
+			repo := NewFakeCompetitorRepository(tt.stored)
+			repo.DeleteErr = tt.deleteErr
+			id := tt.id
+			if id == "" {
+				id = tt.stored.ID.String()
+			}
+			ctx := t.Context()
+			if tt.caller != nil {
+				ctx = user.WithUserID(ctx, *tt.caller)
+			}
 
-			if tt.wantCode != 0 {
-				code, detail := apiError(t, err)
-				assert.Equal(t, tt.wantCode, code)
-				assert.Equal(t, tt.wantDetail, detail)
-				assert.Nil(t, out)
+			_, err := NewTestService(repo).DeleteCompetitor(ctx, &competitor.CompetitorIDInput{ID: id})
+
+			if tt.wantStatus == 0 {
+				require.NoError(t, err)
+				assert.NotContains(t, repo.Competitors, tt.stored.ID)
 				return
 			}
-
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantTotal, out.Body.Total)
-			assert.Equal(t, tt.wantLimit, out.Body.Limit)
-			assert.Equal(t, tt.wantOffset, out.Body.Offset)
-
-			teams := make([]string, 0, len(out.Body.Data))
-			counts := make([]int64, 0, len(out.Body.Data))
-			for _, listed := range out.Body.Data {
-				teams = append(teams, listed.Team)
-				counts = append(counts, listed.CompetitorCount)
-			}
-			assert.Equal(t, tt.wantTeams, teams)
-			assert.Equal(t, tt.wantCounts, counts)
+			code, detail := apiError(t, err)
+			assert.Equal(t, tt.wantStatus, code)
+			assert.Equal(t, tt.wantDetail, detail)
+			assert.Contains(t, repo.Competitors, tt.stored.ID)
 		})
 	}
 }
 
-func TestListCompetitorTeamsByTournament(t *testing.T) {
-	t.Parallel()
-	tournamentA := uuid.New()
-	tournamentB := uuid.New()
-	inTournament := func(id uuid.UUID, firstName, lastName, team string) competitor.Competitor {
-		c := seeded(firstName, lastName, competitor.RatingA, team)
-		c.TournamentID = &id
-		return c
-	}
-	seed := []competitor.Competitor{
-		inTournament(tournamentA, "Lee", "Kiefer", "NU Fencing"),
-		inTournament(tournamentA, "Jon", "Doe", "NU Fencing"),
-		inTournament(tournamentB, "Race", "Imboden", "NU Fencing"),
-		seeded("No", "Tournament", competitor.RatingA, "NU Fencing"),
-	}
-
-	repo := NewFakeCompetitorRepository(seed...)
-
-	t.Run("scopes the roster count to the given tournament", func(t *testing.T) {
-		t.Parallel()
-		out, err := competitor.NewCompetitorService(repo).ListCompetitorTeams(t.Context(),
-			&competitor.CompetitorTeamListInput{Query: "fencing", TournamentID: tournamentA.String()})
-		require.NoError(t, err)
-		require.Len(t, out.Body.Data, 1)
-		assert.Equal(t, "NU Fencing", out.Body.Data[0].Team)
-		assert.Equal(t, int64(2), out.Body.Data[0].CompetitorCount)
-	})
-
-	t.Run("rejects a tournament id that is not a uuid", func(t *testing.T) {
-		t.Parallel()
-		_, err := competitor.NewCompetitorService(repo).ListCompetitorTeams(t.Context(),
-			&competitor.CompetitorTeamListInput{Query: "fencing", TournamentID: "not-a-uuid"})
-		code, _ := apiError(t, err)
-		assert.Equal(t, http.StatusBadRequest, code)
-	})
-}
-
-func TestDeleteCompetitor(t *testing.T) {
+func TestCreateCompetitorRecordsOwner(t *testing.T) {
 	t.Parallel()
 
-	t.Run("removes the stored competitor", func(t *testing.T) {
-		t.Parallel()
-		stored := seeded("Lee", "Kiefer", competitor.RatingU, "")
-		repo := NewFakeCompetitorRepository(stored)
-		_, err := competitor.NewCompetitorService(repo).
-			DeleteCompetitor(t.Context(), &competitor.CompetitorIDInput{ID: stored.ID.String()})
-		require.NoError(t, err)
-		assert.Empty(t, repo.Competitors)
-	})
+	tests := []struct {
+		name      string
+		caller    *uuid.UUID
+		wantOwner *uuid.UUID
+	}{
+		{name: "the caller becomes the owner", caller: ptr(TestRefereeID), wantOwner: ptr(TestRefereeID)},
+		{name: "no caller leaves it unowned"},
+	}
 
-	t.Run("reports an unknown id as not found", func(t *testing.T) {
-		t.Parallel()
-		_, err := competitor.NewCompetitorService(NewFakeCompetitorRepository()).
-			DeleteCompetitor(t.Context(), &competitor.CompetitorIDInput{ID: uuid.New().String()})
-		code, _ := apiError(t, err)
-		assert.Equal(t, http.StatusNotFound, code)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			repo := NewFakeCompetitorRepository()
+			ctx := t.Context()
+			if tt.caller != nil {
+				ctx = user.WithUserID(ctx, *tt.caller)
+			}
+
+			_, err := NewTestService(repo).CreateCompetitor(ctx, &competitor.CompetitorCreateInput{
+				Body: validCreateBody(),
+			})
+
+			require.NoError(t, err)
+			require.Len(t, repo.Competitors, 1)
+			for _, stored := range repo.Competitors {
+				assert.Equal(t, tt.wantOwner, stored.UserID)
+			}
+		})
+	}
 }
 
 func TestRepositoryFailureIsNotAClientError(t *testing.T) {
@@ -773,8 +811,104 @@ func TestRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo := NewFakeCompetitorRepository()
 	repo.Err = errors.New("connection refused")
 
-	_, err := competitor.NewCompetitorService(repo).ListCompetitors(t.Context(), &competitor.CompetitorListInput{})
+	_, err := NewTestService(repo).ListCompetitors(t.Context(), &competitor.CompetitorListInput{})
 	code, detail := apiError(t, err)
 	assert.Equal(t, http.StatusInternalServerError, code)
 	assert.Equal(t, "internal server error", detail)
+}
+
+func TestListCompetitorsByTournament(t *testing.T) {
+	t.Parallel()
+	other := uuid.New()
+	entered := seeded("A", "Adams", competitor.RatingU, "NU Fencing")
+	elsewhere := seeded("B", "Baker", competitor.RatingU, "BU Fencing")
+	elsewhere.TournamentID = &other
+	service := NewTestService(NewFakeCompetitorRepository(entered, elsewhere))
+
+	t.Run("returns only the tournament's competitors", func(t *testing.T) {
+		t.Parallel()
+		out, err := service.ListCompetitors(t.Context(), &competitor.CompetitorListInput{
+			TournamentID: TestTournamentID.String(),
+		})
+		require.NoError(t, err)
+		require.Len(t, out.Body.Data, 1)
+		assert.Equal(t, "Adams", out.Body.Data[0].LastName)
+		assert.Equal(t, TestTournamentID.String(), out.Body.Data[0].TournamentID)
+		assert.Equal(t, int64(1), out.Body.Total)
+	})
+
+	t.Run("rejects a tournament id that is not a uuid", func(t *testing.T) {
+		t.Parallel()
+		_, err := service.ListCompetitors(t.Context(), &competitor.CompetitorListInput{
+			TournamentID: "not-a-uuid",
+		})
+		code, detail := apiError(t, err)
+		assert.Equal(t, http.StatusBadRequest, code)
+		assert.Equal(t, "tournament_id must be a valid uuid", detail)
+	})
+}
+
+func TestListTeamsByTournament(t *testing.T) {
+	t.Parallel()
+	other := uuid.New()
+	elsewhere := seeded("E", "Evans", competitor.RatingU, "Elsewhere FC")
+	elsewhere.TournamentID = &other
+	seed := []competitor.Competitor{
+		seeded("A", "Adams", competitor.RatingU, "NU Fencing"),
+		seeded("B", "Baker", competitor.RatingU, "BU Fencing"),
+		seeded("C", "Clark", competitor.RatingU, "NU Fencing"),
+		seeded("D", "Diaz", competitor.RatingU, ""),
+		elsewhere,
+	}
+	service := NewTestService(NewFakeCompetitorRepository(seed...))
+
+	tests := []struct {
+		name      string
+		input     competitor.TeamListInput
+		want      []competitor.TeamResponse
+		wantTotal int64
+	}{
+		{
+			name:  "dedupes teams and counts their competitors",
+			input: competitor.TeamListInput{},
+			want: []competitor.TeamResponse{
+				{Name: "BU Fencing", CompetitorCount: 1},
+				{Name: "NU Fencing", CompetitorCount: 2},
+			},
+			wantTotal: 2,
+		},
+		{
+			name:      "filters by club name",
+			input:     competitor.TeamListInput{Query: "nu "},
+			want:      []competitor.TeamResponse{{Name: "NU Fencing", CompetitorCount: 2}},
+			wantTotal: 1,
+		},
+		{
+			name:      "paginates",
+			input:     competitor.TeamListInput{Limit: 1, Offset: 1},
+			want:      []competitor.TeamResponse{{Name: "NU Fencing", CompetitorCount: 2}},
+			wantTotal: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			input := tt.input
+			input.TournamentID = TestTournamentID.String()
+			out, err := service.ListTeamsByTournament(t.Context(), &input)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, out.Body.Data)
+			assert.Equal(t, tt.wantTotal, out.Body.Total)
+		})
+	}
+
+	t.Run("404s for a tournament that does not exist", func(t *testing.T) {
+		t.Parallel()
+		_, err := service.ListTeamsByTournament(t.Context(), &competitor.TeamListInput{
+			TournamentID: uuid.New().String(),
+		})
+		code, _ := apiError(t, err)
+		assert.Equal(t, http.StatusNotFound, code)
+	})
 }

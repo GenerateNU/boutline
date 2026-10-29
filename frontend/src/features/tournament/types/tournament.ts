@@ -1,7 +1,7 @@
 export type TournamentVisibility = "private" | "public";
-export type TournamentStatus = "pending" | "active" | "end";
+export type TournamentStatus = "pending" | "active" | "ended";
 
-export type Tournament = {
+export interface Tournament {
   id: string;
   name: string;
   visibility: TournamentVisibility;
@@ -13,11 +13,19 @@ export type Tournament = {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
-};
+}
 
-export type TournamentListResult = {
+export interface TournamentListFilters {
+  query?: string;
+  status?: TournamentStatus;
+  visibility?: TournamentVisibility;
+  date?: string;
+  timeZone?: string;
+}
+
+export interface TournamentListResult {
   data: Tournament[];
   total: number;
   limit: number;
   offset: number;
-};
+}

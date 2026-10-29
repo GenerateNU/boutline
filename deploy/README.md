@@ -3,9 +3,9 @@
 boutline's backend runs on the DigitalOcean droplet that Generate projects
 share, next to the other projects' backends. That droplet's shared stack
 (Caddy, plus a Postgres holding only preview databases) and how to provision
-it from scratch are documented once, in
-[inspirate-consulting's `deploy/README.md`](https://github.com/GenerateNU/inspirate-consulting/blob/main/deploy/README.md).
-This directory is only what boutline adds on top.
+it from scratch live in [GenerateNU/droplet](https://github.com/GenerateNU/droplet),
+along with the rules every project's deploy scripts follow there. This
+directory is only what boutline adds on top.
 
 ```
 droplet

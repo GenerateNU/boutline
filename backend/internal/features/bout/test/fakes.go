@@ -71,6 +71,9 @@ func (f *FakeBoutRepository) ListBouts(
 		if filter.PoolID != nil && (candidate.PoolID == nil || *candidate.PoolID != *filter.PoolID) {
 			continue
 		}
+		if len(filter.IDs) > 0 && !slices.Contains(filter.IDs, candidate.ID) {
+			continue
+		}
 		if filter.Status != "" && candidate.Status != filter.Status {
 			continue
 		}

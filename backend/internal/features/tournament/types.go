@@ -11,7 +11,7 @@ type TournamentResponse struct {
 	Name        string               `json:"name"`
 	Visibility  TournamentVisibility `json:"visibility" enum:"private,public"`
 	Code        string               `json:"code" doc:"Join code, always uppercase"`
-	Status      TournamentStatus     `json:"status" enum:"pending,active,end"`
+	Status      TournamentStatus     `json:"status" enum:"pending,active,ended"`
 	CreatedBy   string               `json:"created_by" format:"uuid"`
 	StartTime   *time.Time           `json:"start_time" doc:"Scheduled start, if one was set"`
 	StartedAt   *time.Time           `json:"started_at" doc:"When the tournament actually went active"`
@@ -67,10 +67,14 @@ type TournamentUpdateInput struct {
 }
 
 type TournamentListInput struct {
-	Status TournamentStatus `query:"status" enum:"pending,active,end" doc:"Filter by status"`
+	Status TournamentStatus `query:"status" enum:"pending,active,ended" doc:"Filter by status"`
 	Query  string           `query:"q" maxLength:"120" doc:"Fuzzy match against the tournament name; omit to return every tournament"`
 	Limit  int              `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset int              `query:"offset" default:"0" minimum:"0"`
+
+	StartFrom  time.Time            `query:"start_from" doc:"Inclusive lower bound on start_time (RFC3339); rows without a start_time are excluded when a bound is set"`
+	StartTo    time.Time            `query:"start_to" doc:"Exclusive upper bound on start_time (RFC3339); rows without a start_time are excluded when a bound is set"`
+	Visibility TournamentVisibility `query:"visibility" enum:"public,private" doc:"Filter by visibility; omit for all"`
 }
 
 type TournamentOutput struct {

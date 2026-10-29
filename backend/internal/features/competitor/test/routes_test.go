@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"boutline/internal/features/competitor"
+	"boutline/internal/features/user"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
@@ -16,7 +17,7 @@ import (
 func newTestAPI(t *testing.T, seed ...competitor.Competitor) humatest.TestAPI {
 	t.Helper()
 	_, api := humatest.New(t)
-	competitor.RegisterCompetitorService(api, competitor.NewCompetitorService(NewFakeCompetitorRepository(seed...)))
+	competitor.RegisterCompetitorService(api, NewTestService(NewFakeCompetitorRepository(seed...)))
 	return api
 }
 
@@ -203,10 +204,42 @@ func TestListEndpoint(t *testing.T) {
 		assert.InDelta(t, 1, body["total"], 0)
 	})
 
+	t.Run("filters by tournament", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).
+			Get("/api/v1/competitors?tournament_id=" + TestTournamentID.String())
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 2)
+	})
+
+	// tournament_id carries no format:"uuid" tag, so a bad value reaches the
+	// service and comes back as a 400 rather than Huma's 422.
+	t.Run("rejects a tournament id that is not a uuid with a 400", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?tournament_id=not-a-uuid")
+		assert.Equal(t, http.StatusBadRequest, resp.Code, "body: %s", resp.Body)
+	})
+
 	t.Run("rejects a rating outside the enum", func(t *testing.T) {
 		t.Parallel()
 		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?rating=Z")
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+
+	t.Run("filters by ids from the query string", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?ids=" + seed[0].ID.String() + "," + seed[1].ID.String())
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 2)
+		assert.InDelta(t, 2, body["total"], 0)
+	})
+
+	t.Run("rejects a malformed ids value", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?ids=not-a-uuid")
+		assert.Equal(t, http.StatusBadRequest, resp.Code)
 	})
 
 	t.Run("matches by name when a query is given", func(t *testing.T) {
@@ -233,7 +266,8 @@ func TestListTeamsEndpoint(t *testing.T) {
 
 	t.Run("returns one row per matching team with its competitor count", func(t *testing.T) {
 		t.Parallel()
-		resp := newTestAPI(t, seed...).Get("/api/v1/competitors/search/teams?q=fencing")
+		resp := newTestAPI(t, seed...).
+			Get("/api/v1/tournaments/" + TestTournamentID.String() + "/teams?q=fencing")
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 		body := decodeBody(t, resp.Body.Bytes())
 		assert.Len(t, body["data"], 2)
@@ -242,16 +276,25 @@ func TestListTeamsEndpoint(t *testing.T) {
 
 	t.Run("a missing query lists every team", func(t *testing.T) {
 		t.Parallel()
-		resp := newTestAPI(t, seed...).Get("/api/v1/competitors/search/teams")
+		resp := newTestAPI(t, seed...).
+			Get("/api/v1/tournaments/" + TestTournamentID.String() + "/teams")
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 		body := decodeBody(t, resp.Body.Bytes())
 		assert.Len(t, body["data"], 2)
 	})
 
+	// The tournament is a path parameter tagged format:"uuid", so Huma
+	// rejects a malformed one before the service runs.
 	t.Run("rejects a tournament id that is not a uuid", func(t *testing.T) {
 		t.Parallel()
-		resp := newTestAPI(t, seed...).Get("/api/v1/competitors/search/teams?q=fencing&tournament_id=not-a-uuid")
+		resp := newTestAPI(t, seed...).Get("/api/v1/tournaments/not-a-uuid/teams")
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+
+	t.Run("404s for a tournament that does not exist", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/tournaments/" + uuid.New().String() + "/teams")
+		assert.Equal(t, http.StatusNotFound, resp.Code, "body: %s", resp.Body)
 	})
 }
 
@@ -301,14 +344,64 @@ func TestUpdateEndpoint(t *testing.T) {
 
 func TestDeleteEndpoint(t *testing.T) {
 	t.Parallel()
+	owner := uuid.New()
 	stored := seeded("Lee", "Kiefer", competitor.RatingU, "")
+	stored.UserID = &owner
 
 	t.Run("deletes once and then reports not found", func(t *testing.T) {
 		t.Parallel()
 		api := newTestAPI(t, stored)
 		path := "/api/v1/competitors/" + stored.ID.String()
-		require.Equal(t, http.StatusNoContent, api.Delete(path).Code)
+		ctx := user.WithUserID(t.Context(), owner)
+		require.Equal(t, http.StatusNoContent, api.DeleteCtx(ctx, path).Code)
 		assert.Equal(t, http.StatusNotFound, api.Get(path).Code)
-		assert.Equal(t, http.StatusNotFound, api.Delete(path).Code)
+		assert.Equal(t, http.StatusNotFound, api.DeleteCtx(ctx, path).Code)
+	})
+
+	t.Run("refuses an unauthenticated delete and keeps the competitor", func(t *testing.T) {
+		t.Parallel()
+		api := newTestAPI(t, stored)
+		path := "/api/v1/competitors/" + stored.ID.String()
+		assert.Equal(t, http.StatusForbidden, api.Delete(path).Code)
+		assert.Equal(t, http.StatusOK, api.Get(path).Code)
+	})
+}
+
+func TestListTournamentTeamsEndpoint(t *testing.T) {
+	t.Parallel()
+	seed := []competitor.Competitor{
+		seeded("A", "Adams", competitor.RatingU, "NU Fencing"),
+		seeded("B", "Baker", competitor.RatingU, "NU Fencing"),
+		seeded("C", "Clark", competitor.RatingU, ""),
+	}
+
+	t.Run("returns the paginated envelope", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).
+			Get("/api/v1/tournaments/" + TestTournamentID.String() + "/teams")
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Equal(t, float64(1), body["total"])
+		assert.Equal(t, float64(20), body["limit"])
+		assert.Equal(t, float64(0), body["offset"])
+
+		data, ok := body["data"].([]any)
+		require.True(t, ok)
+		require.Len(t, data, 1)
+		assert.Equal(t, map[string]any{"name": "NU Fencing", "competitorCount": float64(2)}, data[0])
+	})
+
+	// The path param does carry format:"uuid", so Huma rejects it before the handler.
+	t.Run("rejects a path id that is not a uuid with a 422", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/tournaments/not-a-uuid/teams")
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code, "body: %s", resp.Body)
+	})
+
+	t.Run("404s for a tournament that does not exist", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/tournaments/" + uuid.New().String() + "/teams")
+		assert.Equal(t, http.StatusNotFound, resp.Code, "body: %s", resp.Body)
 	})
 }

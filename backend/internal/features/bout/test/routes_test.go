@@ -159,6 +159,27 @@ func TestListEndpoint(t *testing.T) {
 
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
+
+	t.Run("filters by ids", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, NewFakeTournamentLookup(), seed...).
+			Get("/api/v1/bouts?ids=" + seed[0].ID.String() + "," + seed[1].ID.String())
+
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 2)
+		assert.InDelta(t, 2, body["total"], 0)
+	})
+
+	t.Run("rejects a malformed ids filter", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, NewFakeTournamentLookup(), seed...).Get("/api/v1/bouts?ids=not-a-uuid")
+
+		assert.Equal(t, http.StatusBadRequest, resp.Code)
+	})
 }
 
 func TestGetAndUpdateEndpoint(t *testing.T) {
@@ -211,7 +232,7 @@ func TestLifecycleEndpoints(t *testing.T) {
 
 	ended := api.Post(base + "/end")
 	require.Equal(t, http.StatusOK, ended.Code, "body: %s", ended.Body)
-	assert.Equal(t, "end", decodeBody(t, ended.Body.Bytes())["status"])
+	assert.Equal(t, "ended", decodeBody(t, ended.Body.Bytes())["status"])
 
 	assert.Equal(t, http.StatusConflict, api.Post(base+"/end").Code)
 	assert.Equal(t, http.StatusConflict, api.Post(base+"/start").Code)

@@ -7,6 +7,7 @@ const birthdateLayout = time.DateOnly
 type CompetitorResponse struct {
 	ID            string    `json:"id" format:"uuid"`
 	EventID       string    `json:"eventId" format:"uuid"`
+	TournamentID  string    `json:"tournamentId,omitempty" format:"uuid"`
 	FirstName     string    `json:"firstName"`
 	LastName      string    `json:"lastName"`
 	Gender        string    `json:"gender" enum:"F,M,O"`
@@ -23,9 +24,16 @@ type CompetitorResponse struct {
 }
 
 func newCompetitorResponse(competitor Competitor) CompetitorResponse {
+	// Not every competitor is entered in a tournament yet, so the column is
+	// nullable and an untagged competitor reports an empty id.
+	tournamentID := ""
+	if competitor.TournamentID != nil {
+		tournamentID = competitor.TournamentID.String()
+	}
 	return CompetitorResponse{
 		ID:            competitor.ID.String(),
 		EventID:       competitor.EventID.String(),
+		TournamentID:  tournamentID,
 		FirstName:     competitor.FirstName,
 		LastName:      competitor.LastName,
 		Gender:        string(competitor.Gender),
@@ -94,13 +102,18 @@ type CompetitorUpdateInput struct {
 	Body CompetitorUpdateBody
 }
 
+// IDs has no format:"uuid" tag because Huma rejects an empty optional query
+// string against that format; an empty value is validated by
+// utils.ParseUUIDList only when it is actually set.
 type CompetitorListInput struct {
-	Query   string `query:"q" maxLength:"120" doc:"Fuzzy match term; omit to return every competitor"`
-	Limit   int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
-	Offset  int    `query:"offset" default:"0" minimum:"0"`
-	EventID string `query:"eventId" format:"uuid" doc:"Only competitors in this event"`
-	Rating  string `query:"rating" enum:"A,B,C,D,E,U" doc:"Only competitors with this rating"`
-	Team    string `query:"team" maxLength:"120" doc:"Only competitors on this team (exact match)"`
+	IDs          string `query:"ids" doc:"Comma-separated competitor IDs; omit to return every competitor"`
+	Query        string `query:"q" maxLength:"120" doc:"Fuzzy match term; omit to return every competitor"`
+	Limit        int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset       int    `query:"offset" default:"0" minimum:"0"`
+	EventID      string `query:"eventId" format:"uuid" doc:"Only competitors in this event"`
+	TournamentID string `query:"tournament_id" doc:"Only competitors entered in this tournament"`
+	Rating       string `query:"rating" enum:"A,B,C,D,E,U" doc:"Only competitors with this rating"`
+	Team         string `query:"team" maxLength:"120" doc:"Only competitors on this team (exact match)"`
 }
 
 type CompetitorListBody struct {
@@ -114,25 +127,25 @@ type CompetitorListOutput struct {
 	Body CompetitorListBody
 }
 
-type TeamListResult struct {
-	Team            string `json:"team"`
-	CompetitorCount int64  `json:"competitorCount" doc:"Competitors on this team"`
+type TeamResponse struct {
+	Name            string `json:"name"`
+	CompetitorCount int64  `json:"competitorCount"`
 }
 
-type CompetitorTeamListInput struct {
-	Query        string `query:"q" maxLength:"120" doc:"Fuzzy match term; omit to return every team"`
-	TournamentID string `query:"tournament_id" format:"uuid" doc:"Only teams with a competitor in this tournament"`
+type TeamListInput struct {
+	TournamentID string `path:"id" format:"uuid" doc:"Tournament ID"`
+	Query        string `query:"q" maxLength:"120" doc:"Fuzzy match term; omit to return every club"`
 	Limit        int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset       int    `query:"offset" default:"0" minimum:"0"`
 }
 
-type CompetitorTeamListBody struct {
-	Data   []TeamListResult `json:"data"`
-	Total  int64            `json:"total" doc:"Distinct teams matching the term, ignoring the page"`
-	Limit  int              `json:"limit"`
-	Offset int              `json:"offset"`
+type TeamListBody struct {
+	Data   []TeamResponse `json:"data"`
+	Total  int64          `json:"total" doc:"Clubs matching the filter, ignoring the page"`
+	Limit  int            `json:"limit"`
+	Offset int            `json:"offset"`
 }
 
-type CompetitorTeamListOutput struct {
-	Body CompetitorTeamListBody
+type TeamListOutput struct {
+	Body TeamListBody
 }

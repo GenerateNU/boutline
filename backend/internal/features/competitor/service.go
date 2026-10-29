@@ -2,17 +2,36 @@ package competitor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
+	"boutline/internal/features/user"
 	"boutline/internal/utils"
+
+	"github.com/google/uuid"
 )
+
+type TournamentLookup interface {
+	GetTournamentByID(ctx context.Context, id uuid.UUID) (*tournament.Tournament, error)
+}
+
+// TournamentMembershipLookup is the subset of the tournament-user repository needed here.
+type TournamentMembershipLookup interface {
+	GetTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) (*tournamentuser.TournamentUser, error)
+}
+
+var errCompetitorDeleteForbidden = errs.Public(
+	"only the competitor's owner or the tournament's creator or admins can delete this competitor", errs.ErrForbidden)
 
 const (
 	CompetitorDefaultPageSize = 20
 	CompetitorMinPageSize     = 1
 	CompetitorMaxPageSize     = 100
+	CompetitorMaxIDs          = 100
 )
 
 type CompetitorService interface {
@@ -21,15 +40,21 @@ type CompetitorService interface {
 	ListCompetitors(ctx context.Context, input *CompetitorListInput) (*CompetitorListOutput, error)
 	UpdateCompetitorByID(ctx context.Context, input *CompetitorUpdateInput) (*CompetitorOutput, error)
 	DeleteCompetitor(ctx context.Context, input *CompetitorIDInput) (*struct{}, error)
-	ListCompetitorTeams(ctx context.Context, input *CompetitorTeamListInput) (*CompetitorTeamListOutput, error)
+	ListTeamsByTournament(ctx context.Context, input *TeamListInput) (*TeamListOutput, error)
 }
 
 type competitorService struct {
-	repo CompetitorRepository
+	repo        CompetitorRepository
+	tournaments TournamentLookup
+	memberships TournamentMembershipLookup
 }
 
-func NewCompetitorService(repo CompetitorRepository) CompetitorService {
-	return &competitorService{repo: repo}
+func NewCompetitorService(
+	repo CompetitorRepository,
+	tournaments TournamentLookup,
+	memberships TournamentMembershipLookup,
+) CompetitorService {
+	return &competitorService{repo: repo, tournaments: tournaments, memberships: memberships}
 }
 
 func (s *competitorService) CreateCompetitor(
@@ -39,6 +64,9 @@ func (s *competitorService) CreateCompetitor(
 	competitor, err := competitorFromCreate(input.Body)
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+	if callerID, ok := user.UserIDFrom(ctx); ok {
+		competitor.UserID = &callerID
 	}
 	if err := s.repo.CreateCompetitor(ctx, competitor); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("create competitor: %w", err))
@@ -206,12 +234,7 @@ func (s *competitorService) ListCompetitors(
 	ctx context.Context,
 	input *CompetitorListInput,
 ) (*CompetitorListOutput, error) {
-	limit := input.Limit
-	if limit <= 0 {
-		limit = CompetitorDefaultPageSize
-	}
-	limit = utils.Clamp(limit, CompetitorMinPageSize, CompetitorMaxPageSize)
-	offset := max(input.Offset, 0)
+	limit, offset := page(input.Limit, input.Offset)
 
 	filter := CompetitorListFilter{
 		Term:   strings.TrimSpace(input.Query),
@@ -225,6 +248,13 @@ func (s *competitorService) ListCompetitors(
 		}
 		filter.EventID = &eventID
 	}
+	if input.TournamentID != "" {
+		tournamentID, err := utils.ParseUUID(input.TournamentID, "tournament_id")
+		if err != nil {
+			return nil, errs.HumaError(err)
+		}
+		filter.TournamentID = &tournamentID
+	}
 	if input.Rating != "" {
 		rating, err := parseRating(input.Rating)
 		if err != nil {
@@ -235,6 +265,15 @@ func (s *competitorService) ListCompetitors(
 	if team := strings.TrimSpace(input.Team); team != "" {
 		filter.Team = &team
 	}
+	ids, err := utils.ParseUUIDList(input.IDs, "ids")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+	if len(ids) > CompetitorMaxIDs {
+		return nil, errs.HumaError(errs.Public(
+			fmt.Sprintf("ids must not contain more than %d values", CompetitorMaxIDs), errs.ErrInvalidInput))
+	}
+	filter.IDs = ids
 
 	competitors, total, err := s.repo.ListCompetitors(ctx, filter)
 	if err != nil {
@@ -261,51 +300,96 @@ func (s *competitorService) DeleteCompetitor(
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
+	stored, err := s.repo.GetCompetitorByID(ctx, id)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get competitor: %w", err))
+	}
+	if err := s.authorizeCompetitorDelete(ctx, stored); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("delete competitor: %w", err))
+	}
 	if err := s.repo.DeleteCompetitor(ctx, id); err != nil {
+		if errors.Is(err, errs.ErrConflict) {
+			return nil, errs.HumaError(fmt.Errorf("delete competitor: %w",
+				errs.Public("a competitor who has fenced a bout cannot be deleted", err)))
+		}
 		return nil, errs.HumaError(fmt.Errorf("delete competitor: %w", err))
 	}
 	return nil, nil
 }
 
-func (s *competitorService) ListCompetitorTeams(
-	ctx context.Context,
-	input *CompetitorTeamListInput,
-) (*CompetitorTeamListOutput, error) {
-	term := strings.TrimSpace(input.Query)
-
-	limit := input.Limit
-	if limit <= 0 {
-		limit = CompetitorDefaultPageSize
+func (s *competitorService) authorizeCompetitorDelete(ctx context.Context, stored *Competitor) error {
+	caller, ok := user.UserIDFrom(ctx)
+	if !ok {
+		return errCompetitorDeleteForbidden
 	}
-	limit = utils.Clamp(limit, CompetitorMinPageSize, CompetitorMaxPageSize)
-	offset := max(input.Offset, 0)
-
-	filter := CompetitorTeamListFilter{
-		Term:   term,
-		Limit:  limit,
-		Offset: offset,
+	if stored.UserID != nil && *stored.UserID == caller {
+		return nil
 	}
-	if input.TournamentID != "" {
-		tournamentID, err := utils.ParseUUID(input.TournamentID, "tournament id")
-		if err != nil {
-			return nil, errs.HumaError(err)
-		}
-		filter.TournamentID = &tournamentID
+	if stored.TournamentID == nil {
+		return errCompetitorDeleteForbidden
 	}
 
-	teams, total, err := s.repo.ListCompetitorTeams(ctx, filter)
+	owningTournament, err := s.tournaments.GetTournamentByID(ctx, *stored.TournamentID)
 	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("list competitor teams: %w", err))
+		return fmt.Errorf("get tournament: %w", err)
+	}
+	if owningTournament.CreatedBy == caller {
+		return nil
 	}
 
-	data := make([]TeamListResult, 0, len(teams))
-	for _, team := range teams {
-		data = append(data, TeamListResult{Team: team.Team, CompetitorCount: team.Count})
+	membership, err := s.memberships.GetTournamentUser(ctx, *stored.TournamentID, caller)
+	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			return errCompetitorDeleteForbidden
+		}
+		return fmt.Errorf("get tournament user: %w", err)
 	}
-	return &CompetitorTeamListOutput{Body: CompetitorTeamListBody{
+	if membership.Role != tournamentuser.TournamentUserRoleAdmin {
+		return errCompetitorDeleteForbidden
+	}
+	return nil
+}
+
+func (s *competitorService) ListTeamsByTournament(
+	ctx context.Context,
+	input *TeamListInput,
+) (*TeamListOutput, error) {
+	tournamentID, err := utils.ParseUUID(input.TournamentID, "tournament id")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+	if _, err := s.tournaments.GetTournamentByID(ctx, tournamentID); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get tournament: %w", err))
+	}
+
+	limit, offset := page(input.Limit, input.Offset)
+
+	teams, total, err := s.repo.ListCompetitorTeams(ctx, CompetitorTeamListFilter{
+		Term:         strings.TrimSpace(input.Query),
+		TournamentID: &tournamentID,
+		Limit:        limit,
+		Offset:       offset,
+	})
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("list teams: %w", err))
+	}
+
+	data := make([]TeamResponse, 0, len(teams))
+	for _, team := range teams {
+		data = append(data, TeamResponse{Name: team.Team, CompetitorCount: team.Count})
+	}
+	return &TeamListOutput{Body: TeamListBody{
 		Data:   data,
 		Total:  total,
 		Limit:  limit,
 		Offset: offset,
 	}}, nil
+}
+
+func page(limit, offset int) (int, int) {
+	if limit <= 0 {
+		limit = CompetitorDefaultPageSize
+	}
+
+	return utils.Clamp(limit, CompetitorMinPageSize, CompetitorMaxPageSize), max(offset, 0)
 }

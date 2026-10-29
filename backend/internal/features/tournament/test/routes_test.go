@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
@@ -213,6 +214,42 @@ func TestListEndpoint(t *testing.T) {
 		assert.Len(t, body["data"], 1)
 		assert.InDelta(t, 1, body["total"], 0)
 	})
+
+	t.Run("accepts a URL-encoded offset", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, datedSeed()...).Get("/api/v1/tournaments?start_from=2026-06-01T05:30:00%2B05:30")
+
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		assert.InDelta(t, 2, decodeBody(t, resp.Body.Bytes())["total"], 0)
+	})
+
+	t.Run("rejects a malformed start_from", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, seed...).Get("/api/v1/tournaments?start_from=not-a-time")
+
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+
+	t.Run("rejects a visibility outside the enum", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newTestAPI(t, seed...).Get("/api/v1/tournaments?visibility=secret")
+
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+}
+
+func datedSeed() []tournament.Tournament {
+	day := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+	first := seeded("first", tournament.TournamentStatusPending)
+	first.StartTime = &day
+	next := day.Add(24 * time.Hour)
+	second := seeded("second", tournament.TournamentStatusPending)
+	second.StartTime = &next
+
+	return []tournament.Tournament{first, second}
 }
 
 func TestUpdateEndpoint(t *testing.T) {
@@ -288,7 +325,7 @@ func TestLifecycleEndpoints(t *testing.T) {
 	require.Equal(t, http.StatusOK, completed.Code, "body: %s", completed.Body)
 
 	completedBody := decodeBody(t, completed.Body.Bytes())
-	assert.Equal(t, "end", completedBody["status"])
+	assert.Equal(t, "ended", completedBody["status"])
 	assert.NotNil(t, completedBody["completed_at"])
 
 	assert.Equal(t, http.StatusConflict, api.Post(base+"/complete").Code)

@@ -1,45 +1,113 @@
 import Link from "next/link";
 
+import {
+  Card,
+  CardAction,
+  CardHeader,
+  CardTitle,
+} from "@/components/primitives/card";
 import { Chip } from "@/components/primitives/chip";
 import { Section } from "@/components/primitives/section";
+import { getEvents } from "@/features/event/services/getEvents";
+import { SearchForm } from "@/features/tournament/components/search-form";
+import {
+  eventDay,
+  eventDays,
+  eventStatusLabel,
+  formatDayLabel,
+  formatTimeLabel,
+  scheduleForDay,
+  selectEventDay,
+} from "@/lib/event-schedule";
+import { readStringParam } from "@/lib/search-params";
 
-const events = [
-  { id: "1", name: "Y14 Men's Foil", time: "Sat 8:00 AM", status: "Past" },
-  { id: "2", name: "Cadet Women's Épée", time: "Sat 10:30 AM", status: "Live" },
-  { id: "3", name: "Junior Mixed Sabre", time: "Sat 1:00 PM", status: "Upcoming" },
-  { id: "4", name: "Senior Men's Épée Team", time: "Sun 9:00 AM", status: "Upcoming" },
-];
+import { EventDateStrip } from "./_components/event-date-strip";
 
-interface EventsTabProps extends PageProps<"/tournaments/[tournamentId]/events"> {}
+export default async function EventsTab({
+  params,
+  searchParams,
+}: PageProps<"/tournaments/[tournamentId]/events">) {
+  // params and searchParams are both Promises in Next 15+. Promise.all awaits
+  // them in parallel, and the array destructuring unpacks the two results.
+  const [{ tournamentId }, query] = await Promise.all([params, searchParams]);
 
-export default async function EventsTab({ params }: EventsTabProps) {
-  const { tournamentId } = await params;
+  const search = readStringParam(query, "q");
+  const requestedDay = readStringParam(query, "date") || undefined;
+  const basePath = `/tournaments/${tournamentId}/events`;
+
+  const events = await getEvents(tournamentId);
+
+  const days = eventDays(events);
+  const selectedDay = selectEventDay(
+    days,
+    requestedDay,
+    eventDay(new Date().toISOString()),
+  );
+  const groups = scheduleForDay(events, selectedDay, search);
+
+  function emptyMessage() {
+    if (!search) {
+      return "No events have been added to this tournament yet.";
+    }
+    return selectedDay
+      ? `No events match “${search}” on ${formatDayLabel(selectedDay)}.`
+      : `No events match “${search}”.`;
+  }
 
   return (
-    <Section title="Events Tab" className="flex flex-col gap-4">
-      <p>This is the events tab.</p>
-      <p>lists of events in this tournament</p>
-      <p>
-        they should also be able to search / filter for events here, and see
-        which events are past, live, and upcoming. We should also be able to support
-        calendar view
-      </p>
-      <ul className="flex flex-col gap-3">
-        {events.map(({ id, name, time, status }) => (
-          <li key={id}>
-            <Link
-              href={`/tournaments/${tournamentId}/events/${id}`}
-              className="flex items-center justify-between gap-4 rounded-md border border-foreground px-4 py-3 transition-colors hover:bg-muted"
-            >
-              <p className="flex flex-col gap-1">
-                <span className="text-sm font-medium">{name}</span>
-                <span className="text-xs text-muted-foreground">{time}</span>
-              </p>
-              <Chip className="rounded-full text-xs">{status}</Chip>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </Section>
+    <section className="flex flex-col gap-4">
+      <h2 className="text-sm font-medium underline underline-offset-4">
+        All Events
+      </h2>
+      <SearchForm
+        action={basePath}
+        label="Search events"
+        placeholder="Enter Search Text"
+        defaultValue={search}
+      />
+
+      {selectedDay && (
+        <EventDateStrip
+          basePath={basePath}
+          days={days}
+          selected={selectedDay}
+          search={search}
+        />
+      )}
+
+      {groups.length === 0 && (
+        <p className="text-sm text-muted-foreground">{emptyMessage()}</p>
+      )}
+      {groups.map(({ startTime, events: grouped }) => (
+        <Section
+          key={startTime ?? "tbc"}
+          title={startTime ? formatTimeLabel(startTime) : "Time TBC"}
+        >
+          <ul className="flex flex-col gap-3">
+            {grouped.map((event) => (
+              <li key={event.id}>
+                <Link href={`${basePath}/${event.id}`} className="block">
+                  <Card
+                    orientation="horizontal"
+                    className="transition-colors hover:bg-muted"
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium">
+                        {event.name}
+                      </CardTitle>
+                      <CardAction>
+                        <Chip className="text-xs">
+                          {eventStatusLabel[event.status]}
+                        </Chip>
+                      </CardAction>
+                    </CardHeader>
+                  </Card>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      ))}
+    </section>
   );
 }

@@ -9,15 +9,38 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/competitor"
+	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 
 	"github.com/google/uuid"
 )
+
+var (
+	TestTournamentID = uuid.MustParse("b0000000-0000-4000-8000-000000000001")
+	TestCreatorID    = uuid.MustParse("c0000000-0000-4000-8000-000000000001")
+	TestAdminID      = uuid.MustParse("c0000000-0000-4000-8000-000000000002")
+	TestRefereeID    = uuid.MustParse("c0000000-0000-4000-8000-000000000003")
+	TestOtherAdminID = uuid.MustParse("c0000000-0000-4000-8000-000000000004")
+)
+
+func NewTestService(repo competitor.CompetitorRepository) competitor.CompetitorService {
+	return competitor.NewCompetitorService(repo,
+		FakeTournamentLookup{
+			TestTournamentID: {ID: TestTournamentID, CreatedBy: TestCreatorID},
+		},
+		FakeTournamentMembershipLookup{
+			{UserID: TestAdminID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleAdmin},
+			{UserID: TestRefereeID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleReferee},
+			{UserID: TestOtherAdminID, TournamentID: uuid.New(), Role: tournamentuser.TournamentUserRoleAdmin},
+		})
+}
 
 var _ competitor.CompetitorRepository = (*FakeCompetitorRepository)(nil)
 
 type FakeCompetitorRepository struct {
 	Competitors map[uuid.UUID]competitor.Competitor
 	Err         error // when set, every method fails with it
+	DeleteErr   error // when set, only DeleteCompetitor fails with it, after Err is checked
 }
 
 func NewFakeCompetitorRepository(seed ...competitor.Competitor) *FakeCompetitorRepository {
@@ -87,10 +110,17 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 		if filter.EventID != nil && candidate.EventID != *filter.EventID {
 			continue
 		}
+		if filter.TournamentID != nil &&
+			(candidate.TournamentID == nil || *candidate.TournamentID != *filter.TournamentID) {
+			continue
+		}
 		if filter.Rating != nil && candidate.Rating != *filter.Rating {
 			continue
 		}
 		if filter.Team != nil && candidate.Team != *filter.Team {
+			continue
+		}
+		if len(filter.IDs) > 0 && !slices.Contains(filter.IDs, candidate.ID) {
 			continue
 		}
 		haystack := candidate.FirstName + " " + candidate.LastName
@@ -129,6 +159,9 @@ func (f *FakeCompetitorRepository) ListCompetitorTeams(
 	for _, candidate := range f.Competitors {
 		if filter.TournamentID != nil &&
 			(candidate.TournamentID == nil || *candidate.TournamentID != *filter.TournamentID) {
+			continue
+		}
+		if candidate.Team == "" {
 			continue
 		}
 		if strings.Contains(strings.ToLower(candidate.Team), term) {
@@ -217,11 +250,45 @@ func (f *FakeCompetitorRepository) DeleteCompetitor(_ context.Context, id uuid.U
 	if f.Err != nil {
 		return f.Err
 	}
+	if f.DeleteErr != nil {
+		return f.DeleteErr
+	}
 	if _, ok := f.Competitors[id]; !ok {
 		return fmt.Errorf("delete competitor %s: %w", id, errs.ErrNotFound)
 	}
 	delete(f.Competitors, id)
 	return nil
+}
+
+var _ competitor.TournamentLookup = FakeTournamentLookup(nil)
+
+type FakeTournamentLookup map[uuid.UUID]tournament.Tournament
+
+func (f FakeTournamentLookup) GetTournamentByID(
+	_ context.Context,
+	id uuid.UUID,
+) (*tournament.Tournament, error) {
+	found, ok := f[id]
+	if !ok {
+		return nil, fmt.Errorf("select tournament %s: %w", id, errs.ErrNotFound)
+	}
+	return &found, nil
+}
+
+var _ competitor.TournamentMembershipLookup = FakeTournamentMembershipLookup(nil)
+
+type FakeTournamentMembershipLookup []tournamentuser.TournamentUser
+
+func (f FakeTournamentMembershipLookup) GetTournamentUser(
+	_ context.Context,
+	tournamentID, userID uuid.UUID,
+) (*tournamentuser.TournamentUser, error) {
+	for _, member := range f {
+		if member.TournamentID == tournamentID && member.UserID == userID {
+			return &member, nil
+		}
+	}
+	return nil, fmt.Errorf("select tournament user %s/%s: %w", tournamentID, userID, errs.ErrNotFound)
 }
 
 // emptyToNil mirrors real repository; stores NULL for a cleared field.

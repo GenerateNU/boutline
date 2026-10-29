@@ -51,6 +51,24 @@ func RegisterPoolStageService(api huma.API, service PoolStageService) {
 	}, service.UpdatePoolStageByID)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "startPoolStage",
+		Method:      http.MethodPost,
+		Path:        poolStageBasePath + "/{id}/start",
+		Summary:     "Start a pool stage",
+		Description: "Moves an upcoming pool stage to active and records started_at. The stage needs at least one pool.",
+		Tags:        []string{"Pool Stages"},
+	}, service.StartPoolStage)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "endPoolStage",
+		Method:      http.MethodPost,
+		Path:        poolStageBasePath + "/{id}/end",
+		Summary:     "End a pool stage",
+		Description: "Moves an active pool stage to ended and records completed_at. Every pool in the stage must have ended.",
+		Tags:        []string{"Pool Stages"},
+	}, service.EndPoolStage)
+
+	huma.Register(api, huma.Operation{
 		OperationID:   "deletePoolStageByID",
 		Method:        http.MethodDelete,
 		Path:          poolStageBasePath + "/{id}",

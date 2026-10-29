@@ -7,7 +7,7 @@ build:
 	go build -o $(BINARY_NAME) $(MAIN_FILE)
 
 run:
-	go run $(MAIN_FILE)
+	APP_ENVIRONMENT=$${APP_ENVIRONMENT:-dev} go run $(MAIN_FILE)
 
 clean:
 	rm -f $(BINARY_NAME) $(COVERAGE_FILE)
@@ -56,6 +56,21 @@ migrate-apply:
 migrate-status:
 	$(COMPOSE) run --rm migrate 'atlas migrate status --dir file:///migrations --url "$$ATLAS_URL"'
 
+# Rewrite the Mermaid ER diagram between the schema-diagram markers in the root
+# README from ./migrations rather than the models, so column order matches the
+# deployed tables. The README is only replaced if a start marker was closed by
+# an end marker, so a missing or misordered marker can't truncate it.
+schema-diagram:
+	@command -v atlas >/dev/null || { echo "atlas CLI not found: brew install ariga/tap/atlas"; exit 1; }
+	docker build --tag postgres:17-trgm atlas/dev-db
+	@diagram=$$(atlas schema inspect --env local --url file://migrations --format '{{ mermaid . }}') && \
+	DIAGRAM="$$diagram" awk ' \
+		/<!-- schema-diagram:end -->/ { if (skip) replaced = 1; skip = 0 } \
+		!skip { print } \
+		/<!-- schema-diagram:start -->/ { d = ENVIRON["DIAGRAM"]; sub(/[[:space:]]+$$/, "", d); print "```mermaid"; print d; print "```"; skip = 1 } \
+		END { exit skip || !replaced } \
+	' ../README.md > ../README.md.tmp && mv ../README.md.tmp ../README.md || { rm -f ../README.md.tmp; exit 1; }
+
 # Build the image from ./Dockerfile and run it against a Postgres container.
 dev-up:
 	$(COMPOSE) up --build --detach
@@ -101,6 +116,6 @@ vuln:
 	go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
 
 .PHONY: build run clean test test-cover test-pkg test-unit test-integration \
-	migrate-new migrate-apply migrate-status \
+	migrate-new migrate-apply migrate-status schema-diagram \
 	dev-up dev-down dev-reset dev-logs dev-psql dev-seed vet lint format format-check \
 	tidy-check tidy vuln

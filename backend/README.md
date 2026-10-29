@@ -63,6 +63,7 @@ missing from `./migrations` as the next versioned file.
 make migrate-new NAME=create_examples  # write the next migration
 make migrate-status                    # what the dev database has applied
 make migrate-apply                     # apply out of band; dev-up already does
+make schema-diagram                    # redraw the root README's ER diagram
 ```
 
 Adding or changing a model goes:
@@ -73,7 +74,8 @@ Adding or changing a model goes:
 2. `make migrate-new NAME=what_changed`
 3. read the generated SQL; it is an ordinary file, so correct it if the diff is
    not what you meant
-4. `make dev-up`
+4. `make schema-diagram` to redraw the README's ER diagram; CI fails without it
+5. `make dev-up`
 
 `make migrate-new` needs the Atlas CLI (`brew install ariga/tap/atlas`) and
 Docker: Atlas starts a throwaway Postgres to normalise the schema before
@@ -110,8 +112,10 @@ run inserts anything.
 
 ## Configuration
 
-Every value has a default, so the server runs with no environment set. Override
-by exporting these variables:
+Every value except `JWT_SECRET` has a default, and with `APP_ENVIRONMENT=dev`
+(which `make run` and `make dev-up` set) that one falls back to a built-in
+secret, so the server runs locally with nothing else set. Override by exporting
+these variables:
 
 | Variable              | Default    | Purpose                             |
 | --------------------- | ---------- | ----------------------------------- |
@@ -140,8 +144,35 @@ by exporting these variables:
 | `REDIS_PASSWORD` | (empty)     | Password, if the server requires one  |
 | `REDIS_DB`       | `0`         | Logical database index                |
 
+| Variable     | Default                | Purpose                              |
+| ------------ | ---------------------- | ------------------------------------ |
+| `JWT_SECRET` | built-in in `dev` only | Signs auth tokens, at least 32 bytes |
+
+Unless `APP_ENVIRONMENT` is explicitly `dev`, the server refuses to start
+without its own `JWT_SECRET` (unset does not count as dev, and the built-in
+secret is rejected). Generate one per environment with `openssl rand -hex 32`.
+
 Config is loaded and validated once at startup in `internal/config`; nothing
 below `main` reads the environment directly.
+
+## Auth
+
+`POST /api/v1/auth/signup` and `POST /api/v1/auth/login` return
+`{token, user}`. The token is an HS256 JWT signed with `JWT_SECRET`, valid for
+24 hours, and is sent back as `Authorization: Bearer <token>`. A wrong password
+and an unknown email get the same 401, `email or password is incorrect`.
+
+The auth middleware (`internal/server/middlewares/auth.go`) decides per
+operation:
+
+- `GET` and `HEAD` are public; every other method needs a token, so a new write
+  route is protected even if nobody marks it.
+- An operation's `Security` overrides that: `user.UserBearerSecurity()` protects
+  a read (`listUsers`, `getUserByID`, which return emails), and an empty
+  `[]map[string][]string{}` opens a write (`signup`, `login`).
+
+A handler behind a token reads the caller with `user.UserIDFrom(ctx)`. Nothing
+checks ownership yet, so any signed-in user can change any resource.
 
 ## Layout
 

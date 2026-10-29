@@ -5,7 +5,7 @@ interface ProblemDetails {
 
 // Huma's top-level detail for a 422 is just "validation failed"; the field that
 // failed and why are only in `errors`.
-function problemMessage(body: unknown, status: number) {
+export function problemMessage(body: unknown, status: number) {
   const problem: ProblemDetails = body !== null && typeof body === "object" ? body : {};
   const reasons = (problem.errors ?? [])
     .map(({ location, message }) => [location, message].filter(Boolean).join(": "))
