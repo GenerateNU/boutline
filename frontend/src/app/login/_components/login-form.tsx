@@ -52,8 +52,6 @@ function LoginForm({ redirectTo, signupHref }: LoginFormProps) {
             autoComplete="current-password"
             required
           />
-          {/* TODO: Change this to an actual link once password reset is implemented. */}
-          <span className="px-3 text-sm">Forgot Password?</span>
         </div>
         {error && (
           <p role="alert" className="text-sm text-destructive">
