@@ -1,100 +1,54 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/primitives/button";
-import { Dropzone } from "@/components/primitives/dropzone";
-import { Input } from "@/components/primitives/input";
 import { Select } from "@/components/primitives/select";
-import { Textarea } from "@/components/primitives/textarea";
-
-import { EventFields } from "./event-fields";
+import { TextField } from "@/components/primitives/text-field";
+import { ImportDropzone } from "@/features/tournament/components/import-dropzone";
+import { restoreTournamentDraft, saveTournamentDraft } from "@/features/tournament/lib/tournament-draft";
 
 const authorities = ["askFRED", "USA Fencing", "FIE", "Other"];
 
-const csv = { "text/csv": [".csv"] };
-const xml = { "application/xml": [".xml"], "text/xml": [".xml"] };
-
-const importSources = [
-  { label: "askFRED", accept: { ...csv, ...xml } },
-  { label: "USA Fencing", accept: { ...csv, ...xml } },
-  { label: "XML", accept: xml },
-  { label: "CSV", accept: csv },
-];
-
 function NewTournamentForm() {
   const router = useRouter();
-  const [eventCount, setEventCount] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  // No backend yet: submitting discards the form and returns to the tournament list.
+  useEffect(() => {
+    if (formRef.current) {
+      restoreTournamentDraft(formRef.current);
+    }
+  }, []);
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    router.push("/admin/tournaments");
+    saveTournamentDraft(event.currentTarget);
+    router.push("/admin/tournament/new/event");
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2 text-sm">
-        Autofill from a file
-        <div className="grid grid-cols-2 gap-3">
-          {importSources.map(({ label, accept }) => (
-            <Dropzone key={label} label={label} accept={accept} />
-          ))}
-        </div>
-      </div>
+    <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <ImportDropzone />
 
-      <label className="flex flex-col gap-2 text-sm">
-        Name
-        <Input name="name" />
-      </label>
-      <label className="flex flex-col gap-2 text-sm">
-        Location
-        <Input name="location" placeholder="City, State" />
-      </label>
-      <label className="flex flex-col gap-2 text-sm">
-        Venue
-        <Input name="venue" />
-      </label>
-      <label className="flex flex-col gap-2 text-sm">
-        Date
-        <Input name="date" type="date" />
-      </label>
-      <label className="flex flex-col gap-2 text-sm">
-        Fees
-        <Input name="fees" type="number" min="0" step="0.01" placeholder="0.00" />
-      </label>
-      <label className="flex flex-col gap-2 text-sm">
+      <TextField variant="filled" label="Name of event" className="mt-3" name="name" required />
+      <TextField variant="filled" label="Location" name="location" placeholder="City, State" required />
+      <TextField variant="filled" label="Venue" name="venue" required />
+      <div className="grid grid-cols-2 gap-3">
+        <TextField variant="filled" label="Date" name="date" type="date" required />
+        <TextField variant="filled" label="Time" name="time" type="time" required />
+      </div>
+      <label className="flex flex-col gap-1 text-sm">
         Authority
-        <Select name="authority" defaultValue={authorities[0]}>
+        <Select variant="filled" name="authority" placeholder="" required>
           {authorities.map((authority) => (
             <option key={authority}>{authority}</option>
           ))}
         </Select>
       </label>
-      <label className="flex flex-col gap-2 text-sm">
-        Description
-        <Textarea name="description" />
-      </label>
-      <label className="flex flex-col gap-2 text-sm">
-        Admins
-        <Input name="admins" placeholder="Add admins by email, separated by commas" />
-      </label>
 
-      {Array.from({ length: eventCount }, (_, index) => (
-        <EventFields key={index} index={index} />
-      ))}
-      <Button
-        type="button"
-        variant="outline"
-        className="rounded-full"
-        onClick={() => setEventCount((count) => count + 1)}
-      >
-        New event
-      </Button>
-
-      <Button type="submit" className="mt-2 rounded-full">
-        Create tournament
+      <Button type="submit" variant="brand" className="mt-6 h-12 rounded-full">
+        Continue
       </Button>
     </form>
   );
