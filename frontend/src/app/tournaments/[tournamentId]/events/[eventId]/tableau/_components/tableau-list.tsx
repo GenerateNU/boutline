@@ -27,16 +27,19 @@ function TableauList({ rounds, selectedRoundId, query, boutBasePath }: TableauLi
 
   return (
     <ul className="flex flex-col gap-4">
-      {bouts.map((bout) => (
-        <li key={bout.id}>
-          <BoutCard
-            bout={bout}
-            title={boutTitle(round, bout.number)}
-            nextLabel={nextRound && boutTitle(nextRound, Math.ceil(bout.number / 2))}
-            href={`${boutBasePath}/${bout.id}`}
-          />
-        </li>
-      ))}
+      {bouts.map((bout) => {
+        const nextLabel = nextRound && boutTitle(nextRound, Math.ceil(bout.number / 2));
+        return (
+          <li key={bout.id}>
+            <BoutCard
+              bout={bout}
+              title={boutTitle(round, bout.number)}
+              nextLabel={nextLabel}
+              href={`${boutBasePath}/${bout.id}`}
+            />
+          </li>
+        );
+      })}
     </ul>
   );
 }
