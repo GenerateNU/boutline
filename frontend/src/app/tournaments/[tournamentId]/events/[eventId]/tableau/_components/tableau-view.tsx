@@ -4,6 +4,7 @@ import * as React from "react";
 import { List, Network, Search } from "lucide-react";
 
 import { Button } from "@/components/primitives/button";
+import { Input } from "@/components/primitives/input";
 import type { Tableau } from "../../_types/tableau";
 import { TableauBracket } from "./tableau-bracket";
 import { TableauList } from "./tableau-list";
@@ -29,12 +30,12 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
       <div className="flex items-center gap-3">
         <label className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-md border border-foreground px-4">
           <p className="sr-only">Search fencers or clubs</p>
-          <input
+          <Input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Enter search text"
-            className="min-w-0 flex-1 bg-transparent outline-none"
+            className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 focus-visible:ring-0"
           />
           <Search aria-hidden className="size-5" />
         </label>
