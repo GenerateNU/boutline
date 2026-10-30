@@ -20,6 +20,7 @@ import (
 	"boutline/internal/features/pool"
 	"boutline/internal/features/poolstage"
 	"boutline/internal/features/scoring"
+	"boutline/internal/features/tableau"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
 	"boutline/internal/features/user"
@@ -54,6 +55,7 @@ func run() error {
 		&pool.Pool{},
 		&directelimination.DirectElimination{},
 		&scoring.Scoring{},
+		&tableau.TableauEntry{},
 	)
 	if err != nil {
 		return fmt.Errorf("load gorm schema: %w", err)
