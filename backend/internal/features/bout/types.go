@@ -93,12 +93,13 @@ type BoutUpdateInput struct {
 	Body BoutUpdateBody
 }
 
-// TournamentID and PoolID have no format:"uuid" tag because Huma rejects an empty
-// optional query string against that format; an empty value is validated by
-// utils.ParseUUID only when it is actually set.
+// TournamentID, PoolID, and IDs have no format:"uuid" tag because Huma rejects an
+// empty optional query string against that format; an empty value is validated by
+// utils.ParseUUID or utils.ParseUUIDList only when it is actually set.
 type BoutListInput struct {
 	TournamentID string     `query:"tournament_id" doc:"Filter by tournament"`
 	PoolID       string     `query:"pool_id" doc:"Filter by pool"`
+	IDs          string     `query:"ids" doc:"Comma-separated bout IDs; omit to return every bout"`
 	Status       BoutStatus `query:"status" enum:"upcoming,active,ended" doc:"Filter by status"`
 	Limit        int        `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset       int        `query:"offset" default:"0" minimum:"0"`

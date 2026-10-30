@@ -61,24 +61,24 @@ describe("Pagination", () => {
     }
   });
 
-  it("keeps the search term on both links", () => {
+  it("keeps the filters on both links and drops empty ones", () => {
     render(
       <Pagination
         total={50}
         limit={20}
         offset={20}
         basePath="/tournaments"
-        search="epee"
+        params={{ q: "epee", status: "active", date: undefined }}
       />,
     );
 
     expect(screen.getByRole("link", { name: "Previous" })).toHaveAttribute(
       "href",
-      "/tournaments?q=epee",
+      "/tournaments?q=epee&status=active",
     );
     expect(screen.getByRole("link", { name: "Next" })).toHaveAttribute(
       "href",
-      "/tournaments?q=epee&offset=40",
+      "/tournaments?q=epee&status=active&offset=40",
     );
   });
 

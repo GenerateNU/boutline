@@ -104,6 +104,30 @@ jobs:
             exit 1
           }
 
+          # Old <sha> tags are not dangling, so `docker image prune` alone keeps
+          # every release's images forever -- that filled the shared disk once.
+          # This removes boutline's release images by name instead of with
+          # `prune -a`, which acts on every project's images on the droplet.
+          # Images any container uses are skipped by ID: when several tags share
+          # one image (a preview and a release built from the same commit),
+          # `docker rmi` of one tag only untags it, even while a container runs
+          # it. `prune -f` takes dangling images, such as a postgres or redis
+          # image that `--pull always` replaced. PR previews' pr-* tags are
+          # theirs to clean up. Run before the pulls as well, so a nearly full
+          # disk cannot fail a pull before cleanup is reached.
+          remove_unused_images() {
+            ssh "$DROPLET" bash -s -- "$IMAGE" "$MIGRATE_IMAGE" <<'EOF'
+          docker images --no-trunc --format '{{.ID}} {{.Repository}}:{{.Tag}}' \
+            | grep -E " (${1%:*}|${2%:*}):" \
+            | grep -v ':pr-' \
+            | grep -vFf <(docker ps -aq | xargs -r docker inspect -f '{{.Image}}') \
+            | cut -d' ' -f2 \
+            | xargs -r docker rmi >/dev/null 2>&1 || true
+          docker image prune -f >/dev/null
+          EOF
+          }
+          remove_unused_images
+
           # Ship the compose file too, so the droplet runs what this commit
           # describes rather than drifting from a hand-edited copy.
           scp deploy/app/docker-compose.yml "$DROPLET:/opt/boutline/docker-compose.yml"
@@ -114,8 +138,9 @@ jobs:
              && export BACKEND_IMAGE='$IMAGE' MIGRATE_IMAGE='$MIGRATE_IMAGE' APP_VERSION='$DEPLOY_SHA' API_DOMAIN='$API_DOMAIN' \
              && docker pull --quiet '$MIGRATE_IMAGE' \
              && docker compose --env-file backend.env run --rm migrate \
-             && docker compose --env-file backend.env up -d --pull always \
-             && docker image prune -f"
+             && docker compose --env-file backend.env up -d --pull always"
+
+          remove_unused_images
 
           # `up -d` succeeds as soon as the container starts, and with
           # `restart: unless-stopped` a crash-looping backend still reads as

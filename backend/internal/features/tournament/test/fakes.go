@@ -90,6 +90,17 @@ func (f *FakeTournamentRepository) ListTournaments(
 		if filter.Status != "" && candidate.Status != filter.Status {
 			continue
 		}
+		if filter.Visibility != "" && candidate.Visibility != filter.Visibility {
+			continue
+		}
+		if !filter.StartFrom.IsZero() || !filter.StartTo.IsZero() {
+			start := candidate.StartTime
+			if start == nil ||
+				(!filter.StartFrom.IsZero() && start.Before(filter.StartFrom)) ||
+				(!filter.StartTo.IsZero() && !start.Before(filter.StartTo)) {
+				continue
+			}
+		}
 		if !strings.Contains(strings.ToLower(candidate.Name), term) {
 			continue
 		}

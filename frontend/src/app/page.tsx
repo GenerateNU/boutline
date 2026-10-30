@@ -111,6 +111,11 @@ export default function Home() {
                 Tournaments
               </Link>
             </li>
+            <li>
+              <Link href="/pinned" className="text-primary underline">
+                Pinned
+              </Link>
+            </li>
           </ul>
         </div>
       </Section>

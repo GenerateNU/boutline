@@ -170,14 +170,20 @@ func (s *tournamentService) ListTournaments(
 		return nil, errs.HumaError(errs.Public(
 			fmt.Sprintf("unknown status %q", input.Status), errs.ErrInvalidInput))
 	}
+	if !input.StartFrom.IsZero() && !input.StartTo.IsZero() && !input.StartTo.After(input.StartFrom) {
+		return nil, errs.HumaError(errs.Public("start_to must be after start_from", errs.ErrInvalidInput))
+	}
 	term := strings.TrimSpace(input.Query)
 	limit, offset := page(input.Limit, input.Offset)
 
 	tournaments, total, err := s.repo.ListTournaments(ctx, TournamentListFilter{
-		Status: input.Status,
-		Term:   term,
-		Limit:  limit,
-		Offset: offset,
+		Status:     input.Status,
+		Term:       term,
+		StartFrom:  input.StartFrom,
+		StartTo:    input.StartTo,
+		Visibility: input.Visibility,
+		Limit:      limit,
+		Offset:     offset,
 	})
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list tournaments: %w", err))
