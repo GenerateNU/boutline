@@ -31,6 +31,17 @@ describe("getCompetitors", () => {
     expect(url.searchParams.get("q")).toBe(wantQuery);
   });
 
+  it.each([
+    { name: "no team", team: undefined, wantTeam: null },
+    { name: "an empty team", team: "", wantTeam: null },
+    { name: "a team", team: "Boston Blade Club", wantTeam: "Boston Blade Club" },
+  ])("requests the page with $name", async ({ team, wantTeam }) => {
+    await getCompetitors("t-1", 20, 0, undefined, team);
+
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get("team")).toBe(wantTeam);
+  });
+
   it("throws when the backend responds with an error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 
