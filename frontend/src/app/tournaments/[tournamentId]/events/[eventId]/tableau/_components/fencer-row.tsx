@@ -12,10 +12,8 @@ function FencerRow({ fencer, score, showSeed = false }: FencerRowProps) {
       {showSeed && <p className="w-5 text-center">{fencer.seed}</p>}
       <div className="min-w-0 flex-1">
         <p className="truncate">{fencer.name}</p>
-        {(fencer.club || fencer.flag) && (
-          <p className="truncate text-xs text-muted-foreground">
-            {fencer.flag} {fencer.club}
-          </p>
+        {fencer.club && (
+          <p className="truncate text-xs text-muted-foreground">{fencer.club}</p>
         )}
       </div>
       {score !== undefined && (
