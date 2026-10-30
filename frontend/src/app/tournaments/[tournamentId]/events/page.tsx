@@ -1,7 +1,9 @@
 import Link from "next/link";
 
+import { Button } from "@/components/primitives/button";
 import { Chip } from "@/components/primitives/chip";
 import { Section } from "@/components/primitives/section";
+import { getSessionToken } from "@/features/auth/services/session";
 
 const events = [
   { id: "1", name: "Y14 Men's Foil", time: "Sat 8:00 AM", status: "Past" },
@@ -13,17 +15,17 @@ const events = [
 interface EventsTabProps extends PageProps<"/tournaments/[tournamentId]/events"> {}
 
 export default async function EventsTab({ params }: EventsTabProps) {
-  const { tournamentId } = await params;
+  const [{ tournamentId }, sessionToken] = await Promise.all([params, getSessionToken()]);
 
   return (
     <Section title="Events Tab" className="flex flex-col gap-4">
-      <p>This is the events tab.</p>
-      <p>lists of events in this tournament</p>
-      <p>
-        they should also be able to search / filter for events here, and see
-        which events are past, live, and upcoming. We should also be able to support
-        calendar view
-      </p>
+      {sessionToken && (
+        <Button asChild className="self-start rounded-2xl">
+          <Link href={`/admin/tournament/new/event?tournamentId=${tournamentId}`}>
+            Add event
+          </Link>
+        </Button>
+      )}
       <ul className="flex flex-col gap-3">
         {events.map(({ id, name, time, status }) => (
           <li key={id}>
