@@ -28,6 +28,8 @@
   --color-ring: var(--ring);
   --color-brand: var(--brand);
   --color-chip: var(--chip);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -67,6 +69,8 @@
   --ring: oklch(0.708 0 0);
   --brand: oklch(0.274 0.097 269.29);
   --chip: oklch(0.885 0 0);
+  --success: oklch(0.52 0.12 160);
+  --warning: oklch(0.8 0.16 75);
   --radius: 0.625rem;
 }
 

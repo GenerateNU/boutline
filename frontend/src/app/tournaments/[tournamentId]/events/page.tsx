@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { buttonVariants } from "@/components/primitives/button";
 import {
   Card,
   CardAction,
@@ -65,6 +66,12 @@ export default async function EventsTab({
         placeholder="Enter Search Text"
         defaultValue={search}
       />
+      <Link
+        href="/admin/tournament/new/event"
+        className={buttonVariants({ className: "self-start rounded-2xl" })}
+      >
+        Add event
+      </Link>
 
       {selectedDay && (
         <EventDateStrip
