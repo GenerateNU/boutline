@@ -10,6 +10,14 @@
 # up: `docker compose down --volumes` deletes it.
 name: boutline
 
+# Docker keeps container logs forever by default; a crash loop can fill the
+# shared disk with them.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
 x-database: &database
   DB_HOST: db
   DB_PORT: "5432"
@@ -24,6 +32,7 @@ services:
     image: ${BACKEND_IMAGE:?set BACKEND_IMAGE}
     container_name: boutline-backend
     restart: unless-stopped
+    logging: *logging
     env_file:
       - backend.env
     environment:
@@ -55,6 +64,7 @@ services:
   migrate:
     image: ${MIGRATE_IMAGE:?set MIGRATE_IMAGE}
     profiles: [migrate]
+    logging: *logging
     environment:
       DATABASE_URL: postgres://postgres:${DB_PASSWORD:?set DB_PASSWORD in backend.env}@db:5432/boutline?sslmode=disable
     networks:
@@ -69,6 +79,7 @@ services:
     image: postgres:17.11-alpine
     container_name: boutline-db
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_DB: boutline
       POSTGRES_USER: postgres
@@ -89,6 +100,7 @@ services:
     image: redis:7.4.2-alpine
     container_name: boutline-redis
     restart: unless-stopped
+    logging: *logging
     networks:
       - internal
     healthcheck:

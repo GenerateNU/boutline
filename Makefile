@@ -12,7 +12,7 @@ endif
 .PHONY: help setup dev test check docker-up \
 	fe-install fe-dev fe-build fe-lint fe-typecheck fe-test fe-check \
 	be-deps be-up be-down be-logs be-build be-test be-lint be-check \
-	db-shell db-seed db-reset migrate-new migrate-status
+	db-shell db-seed db-reset db-diagram migrate-new migrate-status
 
 help: ## List available commands
 	@awk 'BEGIN {FS = ":.*## "} \
@@ -94,6 +94,9 @@ migrate-new: docker-up ## Write the next migration from the models: make migrate
 
 migrate-status: docker-up ## Show which migrations the database has applied
 	@$(BE) migrate-status
+
+db-diagram: docker-up ## Regenerate the README's schema diagram from the migrations
+	@$(BE) schema-diagram
 
 fe-install:
 	cd $(FRONTEND) && bun install

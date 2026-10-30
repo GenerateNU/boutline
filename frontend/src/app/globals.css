@@ -26,6 +26,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-chip: var(--chip);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -34,6 +36,7 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-satoshi: var(--font-satoshi-face);
 
   --container-mobile: 440px;
 }
@@ -62,6 +65,8 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
+  --brand: oklch(0.274 0.097 269.29);
+  --chip: oklch(0.885 0 0);
   --radius: 0.625rem;
 }
 

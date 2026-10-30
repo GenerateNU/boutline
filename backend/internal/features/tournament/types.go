@@ -71,6 +71,10 @@ type TournamentListInput struct {
 	Query  string           `query:"q" maxLength:"120" doc:"Fuzzy match against the tournament name; omit to return every tournament"`
 	Limit  int              `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset int              `query:"offset" default:"0" minimum:"0"`
+
+	StartFrom  time.Time            `query:"start_from" doc:"Inclusive lower bound on start_time (RFC3339); rows without a start_time are excluded when a bound is set"`
+	StartTo    time.Time            `query:"start_to" doc:"Exclusive upper bound on start_time (RFC3339); rows without a start_time are excluded when a bound is set"`
+	Visibility TournamentVisibility `query:"visibility" enum:"public,private" doc:"Filter by visibility; omit for all"`
 }
 
 type TournamentOutput struct {
