@@ -64,6 +64,11 @@ the stack starts.
 `/opt/shared/.env`. Preview containers connect to that Postgres as superuser,
 and `preview-up.sh` reads the password from this file.
 
+`JWT_SECRET` in `backend.env` is production's token signing key
+(`openssl rand -hex 32`); the backend refuses to start without one. Previews
+need none in `preview.env`: `preview-up.sh` generates one per PR in
+`preview-secrets/pr-<n>.env`, and `preview-down.sh` deletes it with the preview.
+
 The deploy workflow copies `docker-compose.yml` up on every run, so it never
 needs placing by hand.
 
