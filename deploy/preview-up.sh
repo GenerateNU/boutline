@@ -29,6 +29,7 @@ CONTAINER="${PROJECT}-pr-${PR_NUMBER}"
 REDIS_CONTAINER="${CONTAINER}-redis"
 PREVIEW_NETWORK="${CONTAINER}"
 HOST="${PROJECT}-pr-${PR_NUMBER}.${PREVIEW_DOMAIN}"
+JWT_SECRET_FILE="/opt/${PROJECT}/preview-secrets/pr-${PR_NUMBER}.env"
 
 PGPASSWORD=$(grep -E '^DB_PASSWORD=' "$ENV_FILE" | head -1 | cut -d= -f2-)
 [ -n "$PGPASSWORD" ] || { echo "DB_PASSWORD is empty in $ENV_FILE" >&2; exit 1; }
@@ -94,6 +95,15 @@ for _ in $(seq 1 15); do
   sleep 1
 done
 
+# Generated here rather than set in preview.env, so a preview never depends on
+# someone hand-editing the droplet. One per PR, kept across pushes so reviewers
+# stay logged in, and never shared with production or other previews.
+if [ ! -s "$JWT_SECRET_FILE" ]; then
+  echo "    generating JWT secret for PR #${PR_NUMBER}"
+  install -m 700 -d "$(dirname "$JWT_SECRET_FILE")"
+  (umask 077; echo "JWT_SECRET=$(openssl rand -hex 32)" > "$JWT_SECRET_FILE")
+fi
+
 # Replacing the container is how an update happens; Caddy notices the new one
 # through the Docker socket and reroutes automatically. Created, connected, then
 # started, so it is on both networks before its startup Redis ping; two
@@ -106,6 +116,7 @@ docker create \
   --network edge \
   --restart unless-stopped \
   --env-file "$ENV_FILE" \
+  --env-file "$JWT_SECRET_FILE" \
   -e DB_NAME="$DB_NAME" \
   -e APP_VERSION="$SHA" \
   -e REDIS_HOST="$REDIS_CONTAINER" \
