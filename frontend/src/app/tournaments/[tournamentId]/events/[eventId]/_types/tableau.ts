@@ -1,6 +1,7 @@
 export interface TableauFencer {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   club: string;
   seed: number;
 }

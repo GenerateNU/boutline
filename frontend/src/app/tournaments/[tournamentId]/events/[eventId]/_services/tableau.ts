@@ -20,8 +20,10 @@ function toTableauFencer(fencer: { name: string; club: string }): TableauFencer 
   if (seed === undefined) {
     throw new Error(`No placeholder seed for ${fencer.name}`);
   }
-  // Name stands in for the fencer's ID, since the seed data has no IDs
-  return { id: fencer.name, name: fencer.name, club: fencer.club, seed };
+  // The seed data has one name string and no IDs, so it's split on the first space and
+  // the name stands in for the ID.
+  const [firstName, ...rest] = fencer.name.split(" ");
+  return { id: fencer.name, firstName, lastName: rest.join(" "), club: fencer.club, seed };
 }
 
 // TODO: replace with a request to the actual tableau endpoint once it's implemented
