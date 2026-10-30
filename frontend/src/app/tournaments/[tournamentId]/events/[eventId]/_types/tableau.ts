@@ -2,7 +2,6 @@ export interface TableauFencer {
   id: string;
   name: string;
   club: string;
-  flag?: string; // left this optional for now, since the seed data has no flags
   seed: number;
 }
 
