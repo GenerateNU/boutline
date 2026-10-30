@@ -26,6 +26,8 @@ PREVIEW_DOMAIN_FILE="/opt/${PROJECT}/preview-domain"
 PREVIEW_DOMAIN=$(cat "$PREVIEW_DOMAIN_FILE")
 DB_NAME="${PROJECT}_pr_${PR_NUMBER}"
 CONTAINER="${PROJECT}-pr-${PR_NUMBER}"
+REDIS_CONTAINER="${CONTAINER}-redis"
+PREVIEW_NETWORK="${CONTAINER}"
 HOST="${PROJECT}-pr-${PR_NUMBER}.${PREVIEW_DOMAIN}"
 
 PGPASSWORD=$(grep -E '^DB_PASSWORD=' "$ENV_FILE" | head -1 | cut -d= -f2-)
@@ -69,28 +71,56 @@ docker run --rm --network edge \
   -e DATABASE_URL="postgres://postgres:${PGPASSWORD}@preview-db:5432/${DB_NAME}?sslmode=disable" \
   "$MIGRATE_IMAGE"
 
+# The backend exits at startup without Redis. Each preview gets its own on a
+# private network rather than `edge`, so other projects' previews cannot reach
+# it, matching production's internal-only Redis. Kept across pushes, like the
+# database.
+docker network inspect "$PREVIEW_NETWORK" >/dev/null 2>&1 \
+  || docker network create "$PREVIEW_NETWORK" >/dev/null
+if [ "$(docker inspect -f '{{.State.Running}}' "$REDIS_CONTAINER" 2>/dev/null)" != "true" ]; then
+  echo "    starting ${REDIS_CONTAINER}"
+  docker rm -f "$REDIS_CONTAINER" >/dev/null 2>&1 || true
+  docker run -d \
+    --name "$REDIS_CONTAINER" \
+    --network "$PREVIEW_NETWORK" \
+    --restart unless-stopped \
+    --log-opt max-size=10m --log-opt max-file=3 \
+    redis:7.4.2-alpine >/dev/null
+fi
+# A restart counts against the health check below, so the backend must not
+# start before Redis answers.
+for _ in $(seq 1 15); do
+  docker exec "$REDIS_CONTAINER" redis-cli ping >/dev/null 2>&1 && break
+  sleep 1
+done
+
 # Replacing the container is how an update happens; Caddy notices the new one
-# through the Docker socket and reroutes automatically.
+# through the Docker socket and reroutes automatically. Created, connected, then
+# started, so it is on both networks before its startup Redis ping; two
+# --network flags on `docker run` need Docker 25+.
 echo "    starting ${CONTAINER}"
 docker pull --quiet "$BACKEND_IMAGE"
 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
-docker run -d \
+docker create \
   --name "$CONTAINER" \
   --network edge \
   --restart unless-stopped \
   --env-file "$ENV_FILE" \
   -e DB_NAME="$DB_NAME" \
   -e APP_VERSION="$SHA" \
+  -e REDIS_HOST="$REDIS_CONTAINER" \
   --log-opt max-size=10m --log-opt max-file=3 \
   --label "caddy=${HOST}" \
   --label "caddy.reverse_proxy={{upstreams 8000}}" \
   "$BACKEND_IMAGE" >/dev/null
+docker network connect "$PREVIEW_NETWORK" "$CONTAINER"
+docker start "$CONTAINER" >/dev/null
 
 # The old container is gone now, so its image can go too. Before the health
 # check, so a failing deploy still cleans up.
 remove_unused_pr_images
 
-# `docker run -d` succeeds as soon as the container exists, so without this a
+# `docker start` succeeds as soon as the container runs, so without this a
 # backend that exits on bad config would report a healthy preview. The restart
 # count matters as much as Running: --restart brings a crashing container back
 # within a second, so sampling Running alone mostly catches it while it is up.

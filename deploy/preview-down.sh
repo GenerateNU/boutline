@@ -13,12 +13,23 @@ PROJECT=boutline
 ENV_FILE="/opt/${PROJECT}/preview.env"
 DB_NAME="${PROJECT}_pr_${PR_NUMBER}"
 CONTAINER="${PROJECT}-pr-${PR_NUMBER}"
+REDIS_CONTAINER="${CONTAINER}-redis"
+PREVIEW_NETWORK="${CONTAINER}"
 
 echo "==> tearing down preview for PR #${PR_NUMBER}"
 
 docker rm -f "$CONTAINER" >/dev/null 2>&1 \
   && echo "    removed ${CONTAINER}" \
   || echo "    no container ${CONTAINER}"
+
+docker rm -f "$REDIS_CONTAINER" >/dev/null 2>&1 \
+  && echo "    removed ${REDIS_CONTAINER}" \
+  || echo "    no container ${REDIS_CONTAINER}"
+
+# Only removable once both containers on it are gone.
+docker network rm "$PREVIEW_NETWORK" >/dev/null 2>&1 \
+  && echo "    removed network ${PREVIEW_NETWORK}" \
+  || echo "    no network ${PREVIEW_NETWORK}"
 
 if [ -r "$ENV_FILE" ]; then
   PGPASSWORD=$(grep -E '^DB_PASSWORD=' "$ENV_FILE" | head -1 | cut -d= -f2-)
