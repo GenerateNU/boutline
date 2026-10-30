@@ -1,5 +1,4 @@
 import type { TableauFencer } from "../../_types/tableau";
-import { fullName } from "./tableau-utils";
 
 interface FencerRowProps {
   fencer: TableauFencer;
@@ -12,7 +11,7 @@ function FencerRow({ fencer, score, showSeed = false }: FencerRowProps) {
     <div className="flex items-center gap-3 py-2">
       {showSeed && <p className="w-5 text-center">{fencer.seed}</p>}
       <div className="min-w-0 flex-1">
-        <p className="truncate">{fullName(fencer)}</p>
+        <p className="truncate">{fencer.firstName} {fencer.lastName}</p>
         {fencer.club && (
           <p className="truncate text-xs text-muted-foreground">{fencer.club}</p>
         )}
