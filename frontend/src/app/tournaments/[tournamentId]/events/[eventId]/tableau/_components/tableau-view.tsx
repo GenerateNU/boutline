@@ -28,7 +28,7 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <label className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-md border border-foreground px-4">
-          <span className="sr-only">Search fencers or clubs</span>
+          <p className="sr-only">Search fencers or clubs</p>
           <input
             type="search"
             value={query}
