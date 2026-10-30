@@ -4,6 +4,7 @@ import * as React from "react";
 import { List, Network, Search } from "lucide-react";
 
 import { Button } from "@/components/primitives/button";
+import { ButtonGroup } from "@/components/primitives/button-group";
 import { Input } from "@/components/primitives/input";
 import type { Tableau } from "../../_types/tableau";
 import { TableauBracket } from "./tableau-bracket";
@@ -50,22 +51,12 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
         </Button>
       </div>
 
-      <div className="flex gap-2" role="group" aria-label="Rounds">
-        {tableau.rounds.map((round) => {
-          const selected = round.id === selectedRoundId;
-          return (
-            <Button
-              key={round.id}
-              variant={selected ? "filled" : "outline"}
-              aria-pressed={selected}
-              className="flex-1 rounded-md px-2"
-              onClick={() => setSelectedRoundId(round.id)}
-            >
-              {round.name}
-            </Button>
-          );
-        })}
-      </div>
+      <ButtonGroup
+        aria-label="Rounds"
+        options={tableau.rounds.map((round) => ({ value: round.id, label: round.name }))}
+        value={selectedRoundId}
+        onValueChange={setSelectedRoundId}
+      />
 
       {view === "bracket" ? (
         <TableauBracket
