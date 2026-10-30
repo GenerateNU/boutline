@@ -3,9 +3,7 @@
 import * as React from "react";
 
 import type { TableauRound } from "../../_types/tableau";
-import { BracketMatch } from "./bracket-match";
-import { matchesQuery } from "./tableau-utils";
-import { TbaBout } from "./tba-bout";
+import { BracketRound } from "./bracket-round";
 
 const SLOT_HEIGHT = 140;
 
@@ -16,6 +14,8 @@ interface TableauBracketProps {
   boutBasePath: string;
 }
 
+// The entire tableau bracket: every bracket-round side by side in a horizontal row.
+// Each column is a BracketRound.
 function TableauBracket({ rounds, focusedRoundId, query, boutBasePath }: TableauBracketProps) {
   const columnRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const hasMounted = React.useRef(false);
@@ -38,69 +38,22 @@ function TableauBracket({ rounds, focusedRoundId, query, boutBasePath }: Tableau
   return (
     <div className="overflow-x-auto pb-2">
       <div className="flex gap-8" style={{ height }}>
-        {rounds.map((round, roundIndex) => {
-          const isLast = roundIndex === rounds.length - 1;
-          // A bout goes in the slot matching its number; a slot is empty until its bout exists.
-          const slotCount = Math.max(1, firstRoundCount / 2 ** roundIndex);
-          const slots = Array.from({ length: slotCount }, (_, index) =>
-            round.bouts.find((bout) => bout.number === index + 1),
-          );
-          const groups = isLast ? slots.map((slot) => [slot]) : pairUp(slots);
-
-          return (
-            <div
-              key={round.id}
-              ref={(element) => {
-                columnRefs.current[round.id] = element;
-              }}
-              aria-label={round.name}
-              className="flex w-56 shrink-0 flex-col"
-            >
-              {groups.map((group, groupIndex) => (
-                <div key={groupIndex} className="relative flex flex-1 flex-col">
-                  {group.map((bout, slotIndex) => (
-                    <div key={slotIndex} className="flex flex-1 items-center">
-                      {bout ? (
-                        <BracketMatch
-                          bout={bout}
-                          href={`${boutBasePath}/${bout.id}`}
-                          dimmed={!matchesQuery(bout, query)}
-                        />
-                      ) : (
-                        <TbaBout dimmed={query.trim() !== ""} />
-                      )}
-                    </div>
-                  ))}
-                  {group.length === 2 && (
-                    <>
-                      {/* ⊐ shape joining the centers of the two bouts */}
-                      <span
-                        aria-hidden
-                        className="absolute top-1/4 -right-4 h-1/2 w-4 border-y border-r border-foreground"
-                      />
-                      {/* line from the middle of ⊐ to the next round */}
-                      <span
-                        aria-hidden
-                        className="absolute top-1/2 -right-8 w-4 border-t border-foreground"
-                      />
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          );
-        })}
+        {rounds.map((round, roundIndex) => (
+          <BracketRound
+            key={round.id}
+            ref={(element) => {
+              columnRefs.current[round.id] = element;
+            }}
+            round={round}
+            slotCount={Math.max(1, firstRoundCount / 2 ** roundIndex)}
+            isLast={roundIndex === rounds.length - 1}
+            query={query}
+            boutBasePath={boutBasePath}
+          />
+        ))}
       </div>
     </div>
   );
-}
-
-function pairUp<T>(items: T[]): T[][] {
-  const pairs: T[][] = [];
-  for (let index = 0; index < items.length; index += 2) {
-    pairs.push(items.slice(index, index + 2));
-  }
-  return pairs;
 }
 
 export { TableauBracket };
