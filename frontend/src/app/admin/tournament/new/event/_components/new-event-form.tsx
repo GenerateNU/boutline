@@ -28,13 +28,13 @@ function SelectField({ label, name, options }: { label: string; name: string; op
   );
 }
 
-function NewEventForm() {
+function NewEventForm({ doneHref }: { doneHref: string }) {
   const router = useRouter();
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearTournamentDraft();
-    router.push("/admin/tournaments");
+    router.push(doneHref);
   }
 
   return (

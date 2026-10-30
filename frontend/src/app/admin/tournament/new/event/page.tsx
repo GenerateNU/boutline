@@ -7,10 +7,13 @@ export default async function NewEventPage({
   searchParams,
 }: PageProps<"/admin/tournament/new/event">) {
   const { tournamentId } = await searchParams;
-  const back =
+  const eventsHref =
     typeof tournamentId === "string"
-      ? { href: `/tournaments/${encodeURIComponent(tournamentId)}/events`, label: "Events" }
-      : { href: "/admin/tournament/new", label: "Tournament" };
+      ? `/tournaments/${encodeURIComponent(tournamentId)}/events`
+      : undefined;
+  const back = eventsHref
+    ? { href: eventsHref, label: "Events" }
+    : { href: "/admin/tournament/new", label: "Tournament" };
 
   return (
     <main className="mx-auto flex w-full max-w-mobile flex-col gap-6 px-7 py-5">
@@ -19,7 +22,7 @@ export default async function NewEventPage({
         {back.label}
       </Link>
       <h1 className="text-xl font-medium text-brand">Create Event</h1>
-      <NewEventForm />
+      <NewEventForm doneHref={eventsHref ?? "/admin/tournaments"} />
     </main>
   );
 }
