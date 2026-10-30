@@ -16,7 +16,7 @@ function BracketMatch({ bout, href, dimmed = false }: BracketMatchProps) {
       href={href}
       className={cn(
         "block w-full rounded-md border border-foreground px-3 py-1 transition-colors hover:bg-muted",
-        dimmed && "opacity-40",
+        {"opacity-40": dimmed}
       )}
     >
       <div className="border-b border-muted-foreground/40">

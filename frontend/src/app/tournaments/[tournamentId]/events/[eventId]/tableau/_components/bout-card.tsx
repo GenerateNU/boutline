@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import type { TableauBout } from "../../_types/tableau";
@@ -22,8 +23,8 @@ function BoutCard({ bout, title, nextLabel, href }: BoutCardProps) {
       </div>
       <FencerRow fencer={bout.bottom} score={bout.bottomScore} showSeed />
       {nextLabel && (
-        <p className="border-t border-muted-foreground/40 pt-2 text-sm">
-          Winner ➡️ {nextLabel}
+        <p className="flex items-center gap-1 border-t border-muted-foreground/40 pt-2 text-sm">
+          Winner <ArrowRight aria-hidden className="size-4" /> {nextLabel}
         </p>
       )}
     </Link>
