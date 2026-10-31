@@ -35,8 +35,12 @@ func TestScoringHistoryCacheAgainstRealRedis(t *testing.T) {
 
 	require.NoError(t, redisClient.Del(ctx, cacheKey).Err())
 	t.Cleanup(func() {
-		_ = db.Exec("DELETE FROM scorings WHERE bout_id = ?", scoringCacheTestBoutID).Error
-		_ = redisClient.Del(ctx, cacheKey).Err()
+		if err := db.Exec("DELETE FROM scorings WHERE bout_id = ?", scoringCacheTestBoutID).Error; err != nil {
+			t.Errorf("cleanup: delete scorings for bout %s: %v", scoringCacheTestBoutID, err)
+		}
+		if err := redisClient.Del(ctx, cacheKey).Err(); err != nil {
+			t.Errorf("cleanup: delete cache key %s: %v", cacheKey, err)
+		}
 	})
 
 	testkit.New(t).

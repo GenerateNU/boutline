@@ -16,7 +16,7 @@ type Cache interface {
 	// Get reports false, with no error, on a cache miss.
 	Get(ctx context.Context, key string, dest any) (bool, error)
 	Set(ctx context.Context, key string, value any, ttl time.Duration) error
-	Del(ctx context.Context, keys ...string) error
+	Del(ctx context.Context, key string) error
 	// Incr atomically increments key (starting from 0) and returns the new value.
 	Incr(ctx context.Context, key string) (int64, error)
 	// SetIfUnchanged sets key only if versionKey still holds wantVersion, so a
@@ -62,13 +62,9 @@ func (c *redisCache) Set(ctx context.Context, key string, value any, ttl time.Du
 	return nil
 }
 
-func (c *redisCache) Del(ctx context.Context, keys ...string) error {
-	if len(keys) == 0 {
-		return nil
-	}
-
-	if err := c.client.Del(ctx, keys...).Err(); err != nil {
-		return fmt.Errorf("delete cache keys %v: %w", keys, err)
+func (c *redisCache) Del(ctx context.Context, key string) error {
+	if err := c.client.Del(ctx, key).Err(); err != nil {
+		return fmt.Errorf("delete cache key %s: %w", key, err)
 	}
 
 	return nil
