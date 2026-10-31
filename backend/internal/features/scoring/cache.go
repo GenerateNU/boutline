@@ -31,9 +31,9 @@ func historyCacheKey(boutID uuid.UUID) string {
 	return fmt.Sprintf("scoring:bout:%s:history", boutID)
 }
 
-// historyGenKey backs a version check: a write bumps it before invalidating,
-// so a read that started before the write can't re-cache its now-stale
-// result afterward. See cachedScoringRepository.invalidateHistory.
+// historyGenKey backs a version check: a write bumps it before clearing the
+// cache, so a read that started before the write can't re-cache its now-stale
+// result afterward. See cachedScoringRepository.clearHistoryCache.
 func historyGenKey(boutID uuid.UUID) string {
 	return fmt.Sprintf("scoring:bout:%s:history:gen", boutID)
 }
@@ -67,13 +67,13 @@ func (r *cachedScoringRepository) ListScoringHistory(ctx context.Context, boutID
 	return scores, nil
 }
 
-func (r *cachedScoringRepository) invalidateHistory(ctx context.Context, boutID uuid.UUID) {
+func (r *cachedScoringRepository) clearHistoryCache(ctx context.Context, boutID uuid.UUID) {
 	if _, err := r.cache.Incr(ctx, historyGenKey(boutID)); err != nil {
 		slog.Error("bump scoring history cache generation", "bout_id", boutID, "err", err)
 	}
 
 	if err := r.cache.Del(ctx, historyCacheKey(boutID)); err != nil {
-		slog.Error("invalidate scoring history cache", "bout_id", boutID, "err", err)
+		slog.Error("delete scoring history cache", "bout_id", boutID, "err", err)
 	}
 }
 
@@ -82,7 +82,7 @@ func (r *cachedScoringRepository) CreateScoring(ctx context.Context, scoring *Sc
 		return err
 	}
 
-	r.invalidateHistory(ctx, scoring.BoutID)
+	r.clearHistoryCache(ctx, scoring.BoutID)
 
 	return nil
 }
@@ -92,7 +92,7 @@ func (r *cachedScoringRepository) UpdateScoring(ctx context.Context, scoring *Sc
 		return err
 	}
 
-	r.invalidateHistory(ctx, scoring.BoutID)
+	r.clearHistoryCache(ctx, scoring.BoutID)
 
 	return nil
 }
@@ -102,7 +102,7 @@ func (r *cachedScoringRepository) RevokeScoring(ctx context.Context, scoring *Sc
 		return err
 	}
 
-	r.invalidateHistory(ctx, scoring.BoutID)
+	r.clearHistoryCache(ctx, scoring.BoutID)
 
 	return nil
 }

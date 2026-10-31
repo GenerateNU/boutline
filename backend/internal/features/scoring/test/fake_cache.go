@@ -50,14 +50,12 @@ func (f *FakeCache) Set(_ context.Context, key string, value any, _ time.Duratio
 	return nil
 }
 
-func (f *FakeCache) Del(_ context.Context, keys ...string) error {
+func (f *FakeCache) Del(_ context.Context, key string) error {
 	if f.Err != nil {
 		return f.Err
 	}
 
-	for _, key := range keys {
-		delete(f.entries, key)
-	}
+	delete(f.entries, key)
 
 	return nil
 }
