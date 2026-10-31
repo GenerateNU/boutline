@@ -35,15 +35,29 @@ global superuser. A user can hold different roles in different tournaments.
 
 ## 2. Domain model
 
+```mermaid
+erDiagram
+    users ||--o{ tournament_users : "has roles"
+    tournaments ||--o{ tournament_users : staff
+    users ||--o{ tournaments : created_by
+    tournaments ||--o{ events : ""
+    tournaments |o--o{ competitors : ""
+    tournaments ||--o{ bouts : ""
+    events ||--o{ pool_stages : ""
+    pool_stages ||--o{ pools : ""
+    events ||--o{ direct_eliminations : "event_id (no FK yet)"
+    direct_eliminations ||--o{ direct_elimination_entries : "planned"
+    competitors ||--o{ direct_elimination_entries : "planned"
+    pools |o--o{ bouts : pool_id
+    direct_eliminations |o--o{ bouts : "planned"
+    users |o--o{ pools : referee_id
+    users |o--o{ bouts : referee_id
+    competitors ||--o{ bouts : competitor_1_id
+    competitors ||--o{ bouts : competitor_2_id
+    bouts ||--o{ scorings : "one row per touch"
 ```
-users ──< tournament_users >── tournaments ──< events ──< pool_stages ──< pools
-  │                                │              │                         │
-  │ created_by                     │              └──< direct_eliminations   │
-  │                                │                                         │
-  └── referee_id ──────────────── bouts >──────────── pool_id ──────────────┘
-                                   │  competitor_1_id, competitor_2_id ──> competitors
-                                   └──< scorings (one row per touch)
-```
+
+Links labelled "planned" come from the bracket plan (§10).
 
 | Entity | Meaning |
 | --- | --- |
@@ -55,6 +69,7 @@ users ──< tournament_users >── tournaments ──< events ──< pool_s
 | **PoolStage** | the round-robin round of an event |
 | **Pool** | one group of fencers within a pool stage, with a referee |
 | **DirectElimination** | the knockout round of an event |
+| **DirectEliminationEntry** | a fencer who made the cut into a tableau, with their seed (planned) |
 | **Bout** | one match between two competitors |
 | **Scoring** | one touch awarded in a bout. Undo marks it revoked, never deletes it |
 
@@ -375,7 +390,10 @@ CRUD plus `POST /{id}/start` (`upcoming → active`) and `/complete` (`active �
 - `direct_elimination_entries(direct_elimination_id, competitor_id, seed)`: the
   fencers who made the cut, with `seed` unique within a tableau. They are written
   once at the draw and never recomputed, so a pool score corrected afterwards
-  cannot move anyone, and they are the only record of who has a bye.
+  cannot move anyone, and they are the only record of who has a bye. They are
+  stored rather than recomputed from the pool ranking so an organizer can leave
+  out a fencer who withdraws after pools, or correct a seed, without touching
+  pool results.
 - Add `bouts.direct_elimination_id` and `bouts.round_size` (fencers in the round:
   64, 32, …, 2 is the final). A DE bout reuses `bouts.slot` (§9) as its 1-based
   position in the round, top to bottom, with `competitor_1` as the top fencer. The
