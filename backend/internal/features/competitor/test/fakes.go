@@ -51,9 +51,30 @@ func NewFakeCompetitorRepository(seed ...competitor.Competitor) *FakeCompetitorR
 	return &FakeCompetitorRepository{Competitors: competitors}
 }
 
+func (f *FakeCompetitorRepository) memberNumberTaken(eventID uuid.UUID, number *string, except uuid.UUID) bool {
+	if number == nil {
+		return false
+	}
+	for id, existing := range f.Competitors {
+		if id != except && existing.EventID == eventID &&
+			existing.MemberNumber != nil && *existing.MemberNumber == *number {
+			return true
+		}
+	}
+	return false
+}
+
+func duplicateMemberNumber(op string) error {
+	return fmt.Errorf("%s: %w", op,
+		errs.Public(competitor.DuplicateMemberNumberMessage, errs.ErrDuplicate))
+}
+
 func (f *FakeCompetitorRepository) CreateCompetitor(_ context.Context, toCreate *competitor.Competitor) error {
 	if f.Err != nil {
 		return f.Err
+	}
+	if f.memberNumberTaken(toCreate.EventID, toCreate.MemberNumber, uuid.Nil) {
+		return duplicateMemberNumber("create competitor")
 	}
 	toCreate.ID = uuid.New()
 	toCreate.CreatedAt = time.Now()
@@ -86,6 +107,9 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 	term := strings.ToLower(filter.Term)
 	matched := make([]competitor.Competitor, 0, len(f.Competitors))
 	for _, candidate := range f.Competitors {
+		if filter.EventID != nil && candidate.EventID != *filter.EventID {
+			continue
+		}
 		if filter.TournamentID != nil &&
 			(candidate.TournamentID == nil || *candidate.TournamentID != *filter.TournamentID) {
 			continue
@@ -179,14 +203,40 @@ func (f *FakeCompetitorRepository) UpdateCompetitorByID(
 	if !ok {
 		return fmt.Errorf("update competitor %s: %w", id, errs.ErrNotFound)
 	}
+	if update.MemberNumber != nil &&
+		f.memberNumberTaken(stored.EventID, emptyToNil(*update.MemberNumber), id) {
+		return duplicateMemberNumber(fmt.Sprintf("update competitor %s", id))
+	}
+
 	if update.FirstName != nil {
 		stored.FirstName = *update.FirstName
 	}
 	if update.LastName != nil {
 		stored.LastName = *update.LastName
 	}
+	if update.Gender != nil {
+		stored.Gender = *update.Gender
+	}
+	if update.Birthdate != nil {
+		stored.Birthdate = *update.Birthdate
+	}
+	if update.Division != nil {
+		stored.Division = *update.Division
+	}
 	if update.Rating != nil {
 		stored.Rating = *update.Rating
+	}
+	if update.RatingYear != nil {
+		stored.RatingYear = update.RatingYear
+	}
+	if update.PrimaryClub != nil {
+		stored.PrimaryClub = emptyToNil(*update.PrimaryClub)
+	}
+	if update.SecondaryClub != nil {
+		stored.SecondaryClub = emptyToNil(*update.SecondaryClub)
+	}
+	if update.MemberNumber != nil {
+		stored.MemberNumber = emptyToNil(*update.MemberNumber)
 	}
 	if update.Team != nil {
 		stored.Team = *update.Team
@@ -239,4 +289,12 @@ func (f FakeTournamentMembershipLookup) GetTournamentUser(
 		}
 	}
 	return nil, fmt.Errorf("select tournament user %s/%s: %w", tournamentID, userID, errs.ErrNotFound)
+}
+
+// emptyToNil mirrors real repository; stores NULL for a cleared field.
+func emptyToNil(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }
