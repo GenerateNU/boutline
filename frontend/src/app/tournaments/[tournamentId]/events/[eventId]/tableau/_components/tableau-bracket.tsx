@@ -19,18 +19,22 @@ interface TableauBracketProps {
 function TableauBracket({ rounds, focusedRoundId, query, boutBasePath }: TableauBracketProps) {
   const columnRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const hasMounted = React.useRef(false);
+  const firstRoundId = rounds[0]?.id;
 
   React.useEffect(() => {
+    // The first round is already in view on mount; any other selected round needs scrolling to.
     if (!hasMounted.current) {
       hasMounted.current = true;
-      return;
+      if (focusedRoundId === firstRoundId) {
+        return;
+      }
     }
     columnRefs.current[focusedRoundId]?.scrollIntoView({
       behavior: "smooth",
       block: "nearest",
       inline: "start",
     });
-  }, [focusedRoundId]);
+  }, [focusedRoundId, firstRoundId]);
 
   const firstRoundCount = rounds[0]?.bouts.length || 1;
   const height = firstRoundCount * SLOT_HEIGHT;
