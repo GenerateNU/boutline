@@ -13,12 +13,13 @@ var _ cache.Cache = (*FakeCache)(nil)
 // FakeCache round-trips values through JSON, same as the real redis-backed
 // cache, so a test catches a type that fails to marshal or unmarshal.
 type FakeCache struct {
-	entries map[string][]byte
-	Err     error // when set, every method fails with it
+	entries  map[string][]byte
+	versions map[string]int64
+	Err      error // when set, every method fails with it
 }
 
 func NewFakeCache() *FakeCache {
-	return &FakeCache{entries: make(map[string][]byte)}
+	return &FakeCache{entries: make(map[string][]byte), versions: make(map[string]int64)}
 }
 
 func (f *FakeCache) Get(_ context.Context, key string, dest any) (bool, error) {
@@ -57,6 +58,35 @@ func (f *FakeCache) Del(_ context.Context, keys ...string) error {
 	for _, key := range keys {
 		delete(f.entries, key)
 	}
+
+	return nil
+}
+
+func (f *FakeCache) Incr(_ context.Context, key string) (int64, error) {
+	if f.Err != nil {
+		return 0, f.Err
+	}
+
+	f.versions[key]++
+
+	return f.versions[key], nil
+}
+
+func (f *FakeCache) SetIfUnchanged(_ context.Context, key, versionKey string, wantVersion int64, value any, _ time.Duration) error {
+	if f.Err != nil {
+		return f.Err
+	}
+
+	if f.versions[versionKey] != wantVersion {
+		return nil
+	}
+
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	f.entries[key] = raw
 
 	return nil
 }
