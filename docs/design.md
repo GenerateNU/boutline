@@ -29,7 +29,8 @@ When code and this document disagree, fix one of them in the same PR.
 Roles are per tournament (`tournament_users.role`: `admin` | `referee`). There is no
 global superuser. A user can hold different roles in different tournaments.
 
-**Status:** roles are stored, but **nothing enforces them yet** (see §15).
+**Status:** roles are stored, but only competitor delete checks them. Every other
+mutating route accepts any logged-in user (see §15).
 
 ---
 
@@ -45,6 +46,7 @@ erDiagram
     tournaments ||--o{ bouts : ""
     events ||--o{ pool_stages : ""
     pool_stages ||--o{ pools : ""
+    events ||--o{ competitors : "planned"
     events ||--o{ direct_eliminations : "event_id (no FK yet)"
     direct_eliminations ||--o{ direct_elimination_entries : "planned"
     competitors ||--o{ direct_elimination_entries : "planned"
@@ -57,7 +59,8 @@ erDiagram
     bouts ||--o{ scorings : "one row per touch"
 ```
 
-Links labelled "planned" come from the bracket plan (§10).
+Links labelled "planned" come from one competitor per event (§8) and the bracket
+plan (§10).
 
 | Entity | Meaning |
 | --- | --- |
@@ -65,7 +68,7 @@ Links labelled "planned" come from the bracket plan (§10).
 | **Tournament** | a dated competition with a join code, e.g. "Boston Fall Open" |
 | **TournamentUser** | a user's staff role in one tournament |
 | **Event** | one competition inside a tournament, e.g. "Y14 Men's Foil" |
-| **Competitor** | a fencer entered in a tournament, with rating and club |
+| **Competitor** | a fencer entered in one event, with that weapon's rating, club, seed, check-in and withdrawal (one row per event is planned; today rows belong to a tournament) |
 | **PoolStage** | the round-robin round of an event |
 | **Pool** | one group of fencers within a pool stage, with a referee |
 | **DirectElimination** | the knockout round of an event |
@@ -86,7 +89,7 @@ loser gets `409`.
 | Entity | States | Transitions | Built? |
 | --- | --- | --- | --- |
 | Tournament | `pending → active → end` | `POST /tournaments/{id}/start`, `/complete` | Built |
-| Event | `upcoming → active → ended` | none yet | **Planned**: start when its pool stage starts, end when its DE ends |
+| Event | `upcoming → active → ended`, or `upcoming → cancelled` | none yet | **Planned**: start when its first stage starts, end when its DE ends; an admin can cancel it while `upcoming` |
 | PoolStage | `upcoming → active → ended` | none yet | **Planned**: start when the first pool bout starts, end when all pool bouts end |
 | Pool | no status column | none | **Planned**: derive from its bouts; `started_at` / `completed_at` exist but are never written |
 | DirectElimination | `upcoming → active → ended` | `POST /direct-eliminations/{id}/start`, `/complete` | Built |
@@ -101,6 +104,20 @@ What each state allows:
 - **DirectElimination**: editable while `upcoming` or `active`.
 - **Bout**: editable only while `upcoming`; deletable while `upcoming` or `end`.
   Starting a bout requires an active tournament and an assigned referee.
+  **Planned:** a bout that belongs to a pool or a tableau is never deletable. Its
+  parent creates and removes it, and deleting an ended one would change pool
+  results or strand the bracket. Only a free-standing bout stays deletable, and
+  only while `upcoming`.
+
+Derived transitions (a pool stage ending when its last bout ends, a DE round
+advancing, an event ending with its DE) are checks of the form "are all the
+siblings done?". Two bouts ending at once can each see the other still active and
+both skip the transition, which stalls the parent for good. So ending a bout locks
+its parent row (`SELECT … FOR UPDATE` on the pool stage or DE) in the same
+transaction, and runs the derived transition before committing.
+
+The one exception to forward-only is correcting a result (§11.4): an admin can
+amend an ended bout. That does not move any status backwards.
 
 > Vocabulary is inconsistent: tournaments and bouts end in `end`, everything else in
 > `ended`. Unify to `ended` in one migration before more code depends on it.
@@ -109,32 +126,37 @@ What each state allows:
 
 ## 4. Accounts and authentication
 
-**Status:** Partial. Users can be created, but there is no login.
+**Status:** authentication Built; authorization Planned.
 
 ### Built
 - `users`: `id`, `email` (unique, lowercased, validated with `net/mail`), `password`
   (bcrypt, 1–72 bytes), `first_name`, `last_name`, timestamps.
-- `POST /api/v1/users` (409 on duplicate email), `GET /users?q=` (trigram search on
-  full name), `GET /users/{id}`, `PATCH /users/{id}` (names only), `DELETE /users/{id}`
-  (409 if the user created a tournament, referees a bout or pool, or recorded a
-  touch; memberships cascade).
-- `GET /users/{id}/tournaments`: tournaments the user is staff on.
+- `POST /api/v1/auth/signup` (409 on duplicate email) and `POST /auth/login` both
+  return `{token, user}`. The token is a JWT carrying the user ID, valid 24 hours
+  (`user.UserTokenTTL`).
+- The auth middleware makes reads public and every other method require
+  `Authorization: Bearer <token>`. An operation can override this; `GET /users` and
+  `GET /users/{id}` require a token. The verified ID is read with `user.UserIDFrom`.
+- `GET /users?q=` (trigram search on full name), `GET /users/{id}`,
+  `PATCH /users/{id}` (names only), `DELETE /users/{id}` (409 if the user created a
+  tournament, referees a bout or pool, or recorded a touch; memberships cascade),
+  `GET /users/{id}/tournaments` (tournaments the user is staff on).
 - The password is never returned.
 
-### Login screen (`/login`)
-A login / sign-up toggle with Name (sign-up only), Email and Password fields.
-**Placeholder:** submitting always navigates to `/admin` and makes no request.
+### Session in the frontend
+The `login` and `signup` Server Actions call the backend and store the token in an
+httpOnly, `sameSite=lax` cookie with the token's lifetime, so page scripts never see
+it. `src/proxy.ts` moves the cookie into the `Authorization` header on `/api/*`, and
+redirects `/admin/*` and `/…/referee` to `/login?next=…` when there is no cookie.
 
 ### Planned
-- `POST /auth/login` checks the bcrypt hash and issues a session (an httpOnly cookie,
-  so Server Components can read it). Also `POST /auth/logout` and `GET /auth/me`.
-- Sign-up calls `POST /users`, then logs in.
-- Auth middleware resolves the session to a user. `created_by`, `revoked_by` and the
-  acting referee then come from the session, not the request body.
+- `created_by` (tournament, scoring), `revoked_by` and the acting referee come from
+  `UserIDFrom`, not the request body. Today all three are client-supplied.
 - Authorization helper `requireRole(tournamentID, admin|referee)` on every mutating
   route (§15 lists the open routes).
-- Next.js middleware redirects `/admin/*` and `/…/referee` to `/login` when there is
-  no session.
+- `PATCH` and `DELETE /users/{id}` only for the caller's own ID. Today any logged-in
+  user can rename or delete any other user.
+- Rate-limit login and the join-code lookup (§5) in Redis.
 - Email and password change (TODO in `user/types.go`).
 
 ---
@@ -185,10 +207,16 @@ Tournaments cannot be deleted (on purpose; soft delete is under consideration).
   (city/state), venue, fees, sanctioning authority (askFRED, USA Fencing, FIE,
   Other), description. Add them to `tournaments`.
 - Enforce visibility: private tournaments are hidden from the public list and
-  readable only by staff or by someone holding the code.
+  readable only by staff or by someone holding the code. The check has to cover
+  every read that returns tournament data, not just the tournament routes.
+  `/events`, `/competitors`, `/bouts`, `/scoring/…` and the pool and DE routes are
+  top level and don't require a tournament filter. Today `GET /competitors?q=`
+  searches every tournament at once. Holding the code needs to be remembered
+  (a cookie listing the tournament IDs the viewer unlocked), and the code lookup
+  is rate-limited: there are about 887M codes, few enough to enumerate.
 - The creator becomes an `admin` member automatically on create (today they don't).
 - Starting a tournament requires at least one event. Completing it requires every
-  event to be `ended`.
+  event to be `ended` or `cancelled`, so an event that never ran doesn't block it.
 
 ---
 
@@ -248,13 +276,21 @@ Event attributes the creation form already collects, to add as columns:
 | format | `direct_elimination` (new), `pool_then_direct_elimination` |
 | qualifier | boolean |
 | fees, referees | money; list of referee users |
+| pool touches, pool time | default 5 touches, 180 s |
+| DE touches, DE periods | default 15 touches, three 180 s periods; youth and veteran events often fence DE to 10 |
 
 Rules:
 - An event is created together with its stages: a `pool_then_direct_elimination`
   event gets one `pool_stage` and one `direct_elimination`; a `direct_elimination`
   event gets only the DE.
 - Event status follows its stages: `active` when the first stage starts, `ended`
-  when the DE completes.
+  when the DE completes. `cancelled` is set by an admin while `upcoming`.
+- Generated bouts copy their touches and time limit from the event, so §9 and §10
+  never hardcode them.
+- Deleting an event removes its pool stage, pools, their bouts and its DE in one
+  transaction. Today the cascade stops at `bouts.pool_id` (`ON DELETE RESTRICT`),
+  so deleting an upcoming event that already has pools fails with a 500. The DE
+  row is left behind because `direct_eliminations.event_id` has no foreign key.
 - The events list gains search and a weapon/gender/age filter, and shows
   Past / Live / Upcoming from `status`.
 
@@ -280,17 +316,34 @@ Tournament **Fencers** and **Clubs** tabs and the event **Fencers** tab are stat
 text.
 
 ### Planned
-- **Event entry**: fencers enter events, not tournaments. Add
-  `event_entries(event_id, competitor_id, seed, checked_in_at)`, so one person can
-  fence several events.
-- Set `tournament_id` on create, and filter lists by tournament and event (neither
-  is possible today).
+- **One competitor per event** (#77): a competitor row belongs to exactly one event
+  (`event_id`, required). A person fencing foil and épée has two rows, one per
+  event. Because ratings are per weapon (`B24` in foil, `U` in épée), each row
+  carries its own rating, seed and check-in. There is no entries table.
+- New columns: `event_id`, `gender`, `birthdate`, `primary_club` and
+  `secondary_club` (both nullable), `division` (home state), `member_number`
+  (optional, unique within an event; its authority comes from the tournament),
+  `rating_year` (e.g. 24 in `C24`), `seed`, `checked_in_at`, `withdrawn_at`.
+  `team` is deprecated in favour of `primary_club`.
+- **Withdrawal**: `withdrawn_at` marks a fencer who leaves the event (injury,
+  exclusion, no-show after check-in). §9 and §10 say what it does to their bouts.
+- Club names are free text, so "NYAC" and "New York AC" count as two clubs. Club
+  separation (§9) and the Clubs tab compare a normalised key (case, whitespace and
+  punctuation folded) until there is a clubs table.
+- Filter lists by tournament and event (neither is possible today).
+  `tournament_id` stays on the row so tournament-wide lists don't need a join.
+- The tournament Fencers tab lists people, not rows, so it groups a person's rows
+  across events by `member_number`, falling back to name and primary club when it
+  is missing.
 - **Import** (the dropzones on the creation form): askFRED and USA Fencing CSV/XML
-  exports create competitors with name, club and rating, and enter them into
-  events.
+  exports create one competitor row per event entered, with name, club and
+  rating.
 - **Check-in**: admins mark fencers present. Only checked-in fencers are placed into
   pools.
 - Rating includes the year (e.g. `B24`); this matters for seeding.
+- Competitors are not linked to users. A `competitors.user_id` (nullable) would let
+  a fencer follow their own bouts, and would let the referee check refuse a user
+  who is fencing in the bout.
 - Fencers tab: searchable list with rating and club. Clubs tab: clubs with counts,
   which drill down to their fencers.
 
@@ -331,21 +384,27 @@ The data is a hardcoded fixture shared by every event.
 ### Planned: pool generation
 Generation is three steps, all admin only and only while the pool stage is
 `upcoming`. The admin reviews and adjusts the proposal before anything is saved.
+Creating pools creates bouts, which requires an `active` tournament (§11.1), so
+pools are generated after the tournament starts.
 1. **Propose:** `POST /pool-stages/{id}/proposed-pools` takes the event's
    checked-in fencers (an optional `competitor_ids` overrides the list, and every
-   id must be entered in the event) and returns pools without saving:
+   id must belong to the event) and returns pools without saving:
    - Seed by the event's `seeding` rule (rating, then rating year, then random
      tiebreak).
    - Pool count = `ceil(n / max_competitor_per_pool)`, with sizes as equal as
      possible (e.g. 20 fencers, max 7: pools of 7-7-6).
+   - `n < 2` is a 400: a pool needs two fencers. `max_competitor_per_pool` is capped
+     at 12, the largest size with a standard bout order.
    - Snake the seeds across the pools (1→A, 2→B, 3→C, 4→C, 5→B, …).
    - **Club separation:** move fencers between pools at the same seeding level to
-     minimise same-club pairs within a pool.
+     minimise same-club pairs within a pool, comparing normalised club names (§8).
 2. **Create:** `POST /pools` takes the adjusted pools and creates each one with
    every round-robin bout, in the standard bout order for its size so no one
-   fences back-to-back. Pool bouts are to 5 touches with a 3-minute limit.
+   fences back-to-back. Pool bouts use the event's pool touches and time (§7).
 3. **Re-seat:** `PATCH /pools/{id}` with `fencers` replaces a pool's fencers and
-   regenerates its bouts, while none of them has started.
+   regenerates its bouts, while none of them has started. This depends on the
+   server-side scoring rules (§11.4): today an `upcoming` bout can hold touches, and
+   deleting it then fails on the scorings FK.
 
 Create and re-seat lock the pool stage row (`SELECT … FOR UPDATE`) and run every
 check inside that transaction. Without the lock, two requests can seat the same
@@ -368,6 +427,18 @@ Overall ranking: V/M desc, then Ind desc, then TS desc, otherwise tied. That
 ranking seeds the DE, so the results endpoint and the DE draw (§10) share one
 standings function. Each pool screen shows the classic grid (fencer × fencer,
 `V5` / `D3` cells) plus the summary columns.
+
+V comes from `bouts.winner_id` (§11.1), not from comparing scores. A bout won at
+time can be `V3`–`D2`, and a priority win can be `V2`–`D2`.
+
+**Withdrawal during pools.** When a fencer withdraws or is excluded (§8), every
+bout of theirs is annulled, fenced or not: `bouts.annulled_at` is set, the bout is
+left out of everyone's V, M, TS and TR, and the fencer leaves the overall ranking.
+An annulled bout keeps its status, and counts as finished so the stage can still
+end.
+
+**Pool stage end.** The stage ends when every bout in it is `end` or annulled, and
+it has at least one pool. That check runs under the stage row lock (§3).
 
 ---
 
@@ -402,19 +473,31 @@ CRUD plus `POST /{id}/start` (`upcoming → active`) and `/complete` (`active �
 - `POST /direct-eliminations/{id}/generate`, admin only, while `upcoming`, and only
   once the event's pool stage has ended (which already requires every pool to have
   ended). It takes the pool ranking, applies an optional cut (e.g. advance the top
-  80%), breaks remaining ranking ties at random, and writes the entries. The
-  bracket size is the next power of two ≥ n. Seeds are placed in standard bracket
-  order (1 v 64, 32 v 33, …), and the top seeds receive byes for the empty
-  positions.
+  80%), breaks remaining ranking ties at random, and writes the entries. Fencers
+  tied at the cut line all advance, so the cut can let in more than its
+  percentage; the random tiebreak runs only after the cut. The bracket size is the
+  next power of two ≥ n. Seeds are placed in standard bracket order (1 v 64,
+  32 v 33, …), and the top seeds receive byes for the empty positions.
+- `n < 2` after the cut is a 400. One fencer has no final to fence, so the DE
+  would never complete.
 - The draw creates only first-round bouts, one per position with two fencers; a
   bye has no bout. A DE bout is only ever created with both fencers known, so
   `competitor_1_id` and `competitor_2_id` stay required.
-- When the last bout of a round ends, the next round is created from its winners,
-  joined in the second round by the fencers with byes. Two bouts can end at once,
-  so creating a round must be idempotent: an insert that hits the unique slot
-  index means the round already exists, not an error. The final ending completes
-  the DE and the event.
-- DE bouts are to 15 touches: three 3-minute periods with a 1-minute break.
+- A next-round bout is created as soon as both of its feeders are known: the
+  winners of the bouts at slots 2k−1 and 2k, or a bye fencer and one winner in the
+  second round. Waiting for the whole round would hold up every fencer behind the
+  slowest bout.
+- Advancement runs in the transaction that ends the bout, under the DE row lock
+  (§3), so a crash cannot end a bout without advancing its winner, and two
+  neighbouring bouts ending at once cannot both miss the other's result. The
+  insert uses `ON CONFLICT DO NOTHING` on the unique slot index. A bare unique
+  violation would abort the whole transaction, bout end included.
+- The final ending completes the DE and the event. `POST /{id}/complete` is
+  refused (409) while the final has not ended.
+- A DE bout can only start while its DE is `active`.
+- A fencer who withdraws during the DE (§8) loses their current bout by forfeit
+  (§11.4), and their opponent advances.
+- DE bouts use the event's DE touches and periods (§7), with a 1-minute break.
 - Final placings: 1, 2, 3 and 3 (no bronze bout), then by round of elimination,
   ties within a round broken by seed.
 - `GET /events/{id}/tableau` (public) returns every round from the bracket size
@@ -444,6 +527,26 @@ CRUD plus `POST /{id}/start` (`upcoming → active`) and `/complete` (`active �
 | POST | `/bouts/{id}/start` | tournament active, referee assigned, `upcoming → active` |
 | POST | `/bouts/{id}/end` | `active → end` |
 | DELETE | `/bouts/{id}` | only while `upcoming` or `end` |
+
+**Planned: bout result.** The winner can't always be read off the touches: a bout
+can end at time with no one at `points_to_win`, on a priority minute with the
+score tied, or by forfeit with no touches at all. So `/end` stores the result on
+the bout:
+
+| Column | Meaning |
+| --- | --- |
+| `winner_id` | one of the two competitors; required once `end` |
+| `competitor_1_score`, `competitor_2_score` | the live touch totals at the moment it ended |
+| `end_reason` | `touches`, `time`, `priority`, `forfeit` |
+| `annulled_at` | set when a withdrawal annuls the bout (§9) |
+
+Pool results, DE advancement and placings read these columns, never a fresh sum of
+touches.
+
+**Planned: bout integrity.**
+- A CHECK makes `pool_id` and `direct_elimination_id` mutually exclusive.
+- Both competitors must belong to the bout's event, and the referee must be a
+  staff member of its tournament.
 
 The **bout page** (`…/bout/[boutId]`) shows two score tiles, a "Referee view" button
 and a touch log. It is fed by the placeholder fixture, but its referee link goes to
@@ -497,23 +600,40 @@ the backend.
   (fencer 1 – fencer 2), with revoked touches kept and labelled "Revoked".
 - Start assigns a referee if none is set, then starts the bout.
 
-**Temporary bypass:** with no login, a fixed seeded user
-(`FALLBACK_SCORER_ID`, Alex Morgan) is used as scorer and referee. The real
-referee checks are commented out with TODOs. **Anyone with the URL can score any
-bout** until §4 ships.
+**Temporary bypass:** the page sits behind the login gate, but it still sends a
+fixed seeded user (`FALLBACK_SCORER_ID`, Alex Morgan) as scorer and referee
+instead of the logged-in user. The real referee checks are commented out with
+TODOs. **Any logged-in user can score any bout** until scoring takes the actor from
+the session and checks the referee role (§4).
 
 ### 11.4 Planned scoring features
-- Server-side scoring rules: reject touches on bouts that are not `active` or for
-  competitors outside the bout, and end the bout automatically, or refuse further
-  touches, at `points_to_win`. Today only the client enforces this.
+- Server-side scoring rules: reject touches, edits and revokes on bouts that are not
+  `active`, and touches for competitors outside the bout. Refuse a touch, or a
+  points edit, that would take a side past `points_to_win`. Today only the client
+  enforces this, and a touch revoked after the bout ends silently changes its
+  result.
+- Server-side end rules: `/end` takes the winner and reason, and checks them
+  against the live tally, under the bout row lock. `touches` needs the winner at
+  `points_to_win`; `time` needs the winner ahead; `priority` allows a tie;
+  `forfeit` checks nothing. The client's two-party confirmation stays as UX, but the
+  server makes the decision.
+- **Result correction.** `POST /bouts/{id}/correct` (admin only) replaces an ended
+  bout's scores and winner and records who changed it, from what, and why. A pool
+  bout can be corrected until the DE is drawn, since the draw freezes the
+  ranking (§10). A DE bout can be corrected while its next-round bout is still
+  `upcoming`; that bout is then rebuilt with the corrected winner.
 - Idempotency: a client-generated `request_id` on `POST /scoring` (unique per bout),
   so a retried touch is not double-counted.
 - Bout clock: start/stop, `time_limit_seconds` countdown, periods and the break for
   DE. At time with a tied score, priority is assigned at random and the bout goes
   one more minute.
 - Cards: yellow (warning), red (penalty touch to the opponent), black (exclusion),
-  recorded as scoring rows with a `kind`.
-- Double touches (épée): one action awarding both fencers.
+  recorded as scoring rows with a `kind`. A yellow card is worth no touches, so
+  the `points ≥ 1` check applies only to `touch` and `red`, and the score sums only
+  those kinds. A black card withdraws the fencer from the event (§8).
+- Double touches (épée): one action awarding both fencers. A double at one touch
+  from the end (4–4, 14–14) cannot produce a winner the "first to
+  `points_to_win`" rule understands (§17).
 - Live updates for spectators (SSE or polling against `/history`). Redis is
   already connected and is the obvious pub/sub channel.
 - Withdrawal / forfeit / abandonment as bout results.
@@ -546,8 +666,9 @@ shows the table, and the tournament overview links each ended event's podium.
 
 **Planned flow:** submit creates the tournament, then its events, then imports
 competitors and adds staff. It shows per-row errors and lands on the new
-tournament. After that the admin runs check-in, generates pools, assigns referees,
-starts the tournament, and generates the DE once pools end.
+tournament. On the day, the admin runs check-in, starts the tournament, generates
+pools (which creates bouts, so it needs the tournament `active`), assigns
+referees, and generates the DE once pools end.
 
 ---
 
@@ -568,6 +689,12 @@ starts the tournament, and generates the DE once pools end.
 - The frontend talks to the API through `apiRequest` (`/api/v1` is proxied by
   `next.config.ts`). Server Components fetch with `no-store`.
 
+### Pinning
+A viewer can pin fencers and bouts to follow them. Pins live in the browser's
+`sessionStorage`, never in the database. The pinned view fetches each entity type
+in one request with the `ids` filter on `/competitors` and `/bouts`. The
+`/pinned` page is a scaffold.
+
 ### Concurrency
 Network code must survive retries and races:
 - State transitions are conditional updates, as described in §3.
@@ -575,6 +702,11 @@ Network code must survive retries and races:
 - No version columns, idempotency keys or transactions exist yet. Multi-step
   operations such as pool generation and DE advancement **must** run in one
   transaction.
+- "Is every sibling done?" checks (stage end, DE advancement, event end) lock the
+  parent row first. A conditional update can't protect them, because each request
+  only writes its own bout (§3).
+- Inside a transaction, an expected duplicate uses `ON CONFLICT DO NOTHING`. A
+  raised unique violation aborts everything before it in the transaction.
 
 ### Infrastructure
 Postgres (schema owned by Atlas migrations generated from the GORM models), Redis
@@ -592,7 +724,9 @@ features they touch.
    delete checks the caller's tournament role. Any logged-in user can start, end,
    edit or delete pools and pool stages. The planned pool create, re-seat and
    propose endpoints (§9) must not ship before the `requireRole` helper (§4).
-   `created_by` on tournament create is still taken from the request body.
+   `created_by` on tournament create and on scoring, and `revoked_by`, are still
+   taken from the request body. `PATCH` and `DELETE /users/{id}` accept any
+   logged-in user, for any ID.
 2. **Scoring has no server-side rules:** it accepts touches on upcoming or ended
    bouts and for competitors outside the bout (`scorings.competitor_id` has no FK).
 3. Status words differ: `end` (tournament, bout) vs `ended` (event, stages).
@@ -608,6 +742,13 @@ features they touch.
 9. Ending a tournament doesn't freeze its events, staff or competitors.
 10. `max_competitor_per_pool` is stored but nothing reads it.
 11. With `points_to_win = 1`, both fencers show as on match point at 0–0.
+12. Deleting an upcoming event whose pools have bouts fails with a 500: the cascade
+    from events stops at `bouts.pool_id` (`ON DELETE RESTRICT`).
+13. Bouts store no winner or final score, and `/end` checks nothing, so it accepts
+    a tied or unfinished bout (§11.1).
+14. Ended bouts can be deleted, which silently rewrites pool results.
+15. Private tournament data is readable through the top-level read routes, e.g.
+    `GET /competitors?q=` across every tournament (§5).
 
 ---
 
@@ -667,3 +808,10 @@ stays in that route's `_components/` until a second route needs it.
 - Should ratings and rankings come from a USA Fencing lookup instead of import?
 - Does the Pools tab show a start time per pool? If not, pools need no
   `start_time` of their own.
+- Épée double touch at one touch from the end (4–4, 14–14): annul it, or allow
+  5–5? The current rules give a bout no winner in that case, so the scoring
+  rules and the `confirming` phase have to pick one.
+- May a tournament admin referee and score bouts, or only users with the
+  `referee` role?
+- Does withdrawing a fencer after the DE draw but before their first bout give
+  the opponent a walkover bout, or a bye?
