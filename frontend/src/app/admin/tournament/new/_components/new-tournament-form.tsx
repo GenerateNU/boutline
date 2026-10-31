@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/primitives/button";
-import { Select } from "@/components/primitives/select";
+import { SelectField } from "@/components/primitives/select-field";
 import { TextField } from "@/components/primitives/text-field";
 import { ImportDropzone } from "@/features/tournament/components/import-dropzone";
 import { restoreTournamentDraft, saveTournamentDraft } from "@/features/tournament/lib/tournament-draft";
@@ -38,14 +38,7 @@ function NewTournamentForm() {
         <TextField variant="filled" label="Date" name="date" type="date" required />
         <TextField variant="filled" label="Time" name="time" type="time" required />
       </div>
-      <label className="flex flex-col gap-1 text-sm">
-        Authority
-        <Select variant="filled" name="authority" placeholder="" required>
-          {authorities.map((authority) => (
-            <option key={authority}>{authority}</option>
-          ))}
-        </Select>
-      </label>
+      <SelectField variant="filled" label="Authority" name="authority" options={authorities} placeholder="" required />
 
       <Button type="submit" variant="brand" className="mt-6 h-12 rounded-full">
         Continue
