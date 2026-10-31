@@ -60,20 +60,19 @@ func (r *cachedScoringRepository) ListScoringHistory(ctx context.Context, boutID
 		return nil, err
 	}
 
-	if err := r.cache.SetIfUnchanged(ctx, key, genKey, version, scores, historyCacheTTL); err != nil {
+	if _, err := r.cache.SetIfUnchanged(ctx, key, genKey, version, scores, historyCacheTTL); err != nil {
 		slog.Error("write scoring history cache", "bout_id", boutID, "err", err)
 	}
 
 	return scores, nil
 }
 
+// clearHistoryCache bumps the generation and deletes the cache entry in one
+// atomic step, so a read racing between the two can never observe the
+// now-stale entry as a hit.
 func (r *cachedScoringRepository) clearHistoryCache(ctx context.Context, boutID uuid.UUID) {
-	if _, err := r.cache.Incr(ctx, historyGenKey(boutID)); err != nil {
-		slog.Error("bump scoring history cache generation", "bout_id", boutID, "err", err)
-	}
-
-	if err := r.cache.Del(ctx, historyCacheKey(boutID)); err != nil {
-		slog.Error("delete scoring history cache", "bout_id", boutID, "err", err)
+	if err := r.cache.IncrAndDel(ctx, historyGenKey(boutID), historyCacheKey(boutID)); err != nil {
+		slog.Error("clear scoring history cache", "bout_id", boutID, "err", err)
 	}
 }
 
