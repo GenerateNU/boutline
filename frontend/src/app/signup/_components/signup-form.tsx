@@ -8,7 +8,11 @@ import { Button } from "@/components/primitives/button";
 import { TextField } from "@/components/primitives/text-field";
 import { signup } from "@/features/auth/services/auth-actions";
 
-const passwordRequirements = ["At least 1 character", "At most 72 characters"];
+const MAX_PASSWORD_BYTES = 72;
+const passwordRequirements = [
+  "At least 1 character",
+  `At most ${MAX_PASSWORD_BYTES} bytes (accented and non-Latin characters take 2 to 4)`,
+];
 
 interface SignupFormProps {
   redirectTo: string;
@@ -25,8 +29,14 @@ function SignupForm({ redirectTo, loginHref }: SignupFormProps) {
     setError(null);
     const form = new FormData(event.currentTarget);
 
-    if (form.get("password") !== form.get("confirmPassword")) {
+    const password = String(form.get("password"));
+    if (password !== form.get("confirmPassword")) {
       setError("Passwords don't match.");
+      return;
+    }
+    // The backend hashes with bcrypt, which caps the password at bytes, not characters.
+    if (new Blob([password]).size > MAX_PASSWORD_BYTES) {
+      setError(`Password must be at most ${MAX_PASSWORD_BYTES} bytes.`);
       return;
     }
 
@@ -58,7 +68,6 @@ function SignupForm({ redirectTo, loginHref }: SignupFormProps) {
           name="password"
           type="password"
           autoComplete="new-password"
-          maxLength={72}
           required
         />
         <div className="flex flex-col gap-2">
@@ -67,7 +76,6 @@ function SignupForm({ redirectTo, loginHref }: SignupFormProps) {
             name="confirmPassword"
             type="password"
             autoComplete="new-password"
-            maxLength={72}
             required
           />
           <div className="px-3 text-sm">

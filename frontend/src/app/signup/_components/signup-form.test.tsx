@@ -9,12 +9,12 @@ jest.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 // next/jest rewrites the @/ alias in imports but not in jest.mock paths.
 jest.mock("../../../features/auth/services/auth-actions", () => ({ signup: jest.fn() }));
 
-function fillAndSubmit(confirm: string) {
+function fillAndSubmit(confirm: string, password = "secret") {
   const values = {
     "First name": "Ada",
     "Last name": "Lovelace",
     "New Email": "ada@example.com",
-    "New Password": "secret",
+    "New Password": password,
     "Confirm password": confirm,
   };
   for (const [label, value] of Object.entries(values)) {
@@ -27,6 +27,15 @@ describe("SignupForm", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it.each([
+    {
+      name: "rejects a password over 72 bytes even when it is under 72 characters",
+      password: "é".repeat(40),
+      confirm: "é".repeat(40),
+      result: { ok: true },
+      alert: "at most 72 bytes",
+      redirected: false,
+      calls: 0,
+    },
     {
       name: "rejects mismatched passwords without calling the server",
       confirm: "other",
@@ -51,11 +60,11 @@ describe("SignupForm", () => {
       redirected: true,
       calls: 1,
     },
-  ])("$name", async ({ confirm, result, alert, redirected, calls }) => {
+  ])("$name", async ({ password, confirm, result, alert, redirected, calls }) => {
     jest.mocked(signup).mockResolvedValue(result as never);
     render(<SignupForm redirectTo="/admin" loginHref="/login" />);
 
-    fillAndSubmit(confirm);
+    fillAndSubmit(confirm, password);
 
     if (alert) {
       expect(await screen.findByRole("alert")).toHaveTextContent(alert);
