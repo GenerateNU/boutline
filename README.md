@@ -157,9 +157,13 @@ erDiagram
       timestamptz created_at
       timestamptz updated_at
       uuid pool_id FK
+      uuid direct_elimination_id FK
+      bigint round_size
+      bigint slot
     }
     bouts }o--o| competitors : fk_bouts_competitor1
     bouts }o--o| competitors : fk_bouts_competitor2
+    bouts }o--o| direct_eliminations : fk_bouts_direct_elimination
     bouts }o--o| pools : fk_bouts_pool
     bouts }o--o| users : fk_bouts_referee
     bouts }o--o| tournaments : fk_bouts_tournament
@@ -176,6 +180,15 @@ erDiagram
     }
     competitors }o--o| tournaments : fk_competitors_tournament
     competitors }o--o| users : fk_competitors_user
+    direct_elimination_entries {
+      uuid direct_elimination_id PK,FK
+      uuid competitor_id PK,FK
+      bigint seed
+      timestamptz created_at
+      timestamptz updated_at
+    }
+    direct_elimination_entries }o--o| competitors : fk_direct_elimination_entries_competitor
+    direct_elimination_entries }o--o| direct_eliminations : fk_direct_elimination_entries_direct_elimination
     direct_eliminations {
       uuid id PK
       text status
