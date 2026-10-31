@@ -7,9 +7,9 @@ const importAccept = {
   "text/xml": [".xml"],
 };
 
-type ImportDropzoneProps = {
+interface ImportDropzoneProps {
   onFile?: (file: File) => void;
-};
+}
 
 function ImportDropzone({ onFile }: ImportDropzoneProps) {
   return (

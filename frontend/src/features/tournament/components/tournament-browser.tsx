@@ -14,12 +14,12 @@ import type { TournamentVisibility } from "@/features/tournament/types/tournamen
 
 const PAGE_SIZE = 20;
 
-type TournamentBrowserProps = {
+interface TournamentBrowserProps {
   basePath: string;
   query: Record<string, string | string[] | undefined>;
   canCreate?: boolean;
   visibility?: TournamentVisibility;
-};
+}
 
 async function TournamentBrowser({
   basePath,
