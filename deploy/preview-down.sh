@@ -13,12 +13,15 @@ PROJECT=boutline
 ENV_FILE="/opt/${PROJECT}/preview.env"
 DB_NAME="${PROJECT}_pr_${PR_NUMBER}"
 CONTAINER="${PROJECT}-pr-${PR_NUMBER}"
+JWT_SECRET_FILE="/opt/${PROJECT}/preview-secrets/pr-${PR_NUMBER}.env"
 
 echo "==> tearing down preview for PR #${PR_NUMBER}"
 
 docker rm -f "$CONTAINER" >/dev/null 2>&1 \
   && echo "    removed ${CONTAINER}" \
   || echo "    no container ${CONTAINER}"
+
+rm -f "$JWT_SECRET_FILE"
 
 if [ -r "$ENV_FILE" ]; then
   PGPASSWORD=$(grep -E '^DB_PASSWORD=' "$ENV_FILE" | head -1 | cut -d= -f2-)
