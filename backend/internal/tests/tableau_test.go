@@ -54,13 +54,13 @@ func TestGetTableau(t *testing.T) {
 		assert.EqualValues(t, 4, bottom["seed"])
 	})
 
-	t.Run("finished final reports both scores", func(t *testing.T) {
+	t.Run("finished final reports the seeded score", func(t *testing.T) {
 		rounds := tableauRounds(t, getTableau(t, openEpeeEventID, http.StatusOK).GetBody())
 		final := tableauBouts(t, rounds[1])
 		require.Len(t, final, 1)
 
-		assert.NotNil(t, final[0]["top_score"])
-		assert.NotNil(t, final[0]["bottom_score"])
+		assert.EqualValues(t, 15, final[0]["top_score"])
+		assert.EqualValues(t, 12, final[0]["bottom_score"])
 	})
 
 	t.Run("event without a drawn tableau returns no rounds", func(t *testing.T) {
