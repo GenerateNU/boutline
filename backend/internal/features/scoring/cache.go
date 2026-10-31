@@ -11,8 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// historyCacheTTL is a backstop: writes invalidate the cached history
-// immediately, this just bounds staleness if an invalidation is ever missed.
+// Cache is automatically invalidated on write, but this TTL is an extra guarantee against stale data
 const historyCacheTTL = 30 * time.Second
 
 // cachedScoringRepository caches GetScoringHistory, the endpoint a live bout's
@@ -27,13 +26,12 @@ func NewCachedScoringRepository(inner ScoringRepository, c cache.Cache) ScoringR
 	return &cachedScoringRepository{inner: inner, cache: c}
 }
 
+// Cache key for a bout's scoring history
 func historyCacheKey(boutID uuid.UUID) string {
 	return fmt.Sprintf("scoring:bout:%s:history", boutID)
 }
 
-// historyGenKey backs a version check: a write bumps it before clearing the
-// cache, so a read that started before the write can't re-cache its now-stale
-// result afterward. See cachedScoringRepository.clearHistoryCache.
+// Cache key for version number on a bout's scoring history, used to gate race conditions
 func historyGenKey(boutID uuid.UUID) string {
 	return fmt.Sprintf("scoring:bout:%s:history:gen", boutID)
 }

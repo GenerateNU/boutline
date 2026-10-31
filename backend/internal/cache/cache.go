@@ -10,21 +10,19 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Cache is the seam features depend on instead of *redis.Client directly, so a
-// feature's cache-aside logic can be tested against a fake with no real Redis.
+// Cache interface, currently only implemented for Redis and as a mock
 type Cache interface {
 	// Get reports false, with no error, on a cache miss.
 	Get(ctx context.Context, key string, dest any) (bool, error)
 	Set(ctx context.Context, key string, value any, ttl time.Duration) error
+	// Could add plain `Del` later if `IncrAndDel` doesn't fit
 	// Incr atomically increments key (starting from 0) and returns the new value.
 	Incr(ctx context.Context, key string) (int64, error)
-	// IncrAndDel atomically increments versionKey and deletes key, so a read
-	// racing between the two can never observe key's now-stale value as a hit.
+	// Atomically increment versionKey and deletes key, to avoid races
 	IncrAndDel(ctx context.Context, versionKey, key string) error
-	// SetIfUnchanged sets key only if versionKey still holds wantVersion, so a
-	// value fetched before a concurrent invalidation can't overwrite it after
-	// the fact. It reports whether the set happened; a version mismatch is a
-	// lost race, not an error.
+	// Atomically update key only if versionKey is as expected. Returns false
+	// but does not error for a versionKey mismatch (assumed to be a lost race
+	// but not an error)
 	SetIfUnchanged(ctx context.Context, key, versionKey string, wantVersion int64, value any, ttl time.Duration) (bool, error)
 }
 
