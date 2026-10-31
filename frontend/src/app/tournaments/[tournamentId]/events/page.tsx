@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Button } from "@/components/primitives/button";
 import {
   Card,
   CardAction,
@@ -8,6 +9,7 @@ import {
 } from "@/components/primitives/card";
 import { Chip } from "@/components/primitives/chip";
 import { Section } from "@/components/primitives/section";
+import { getSessionToken } from "@/features/auth/services/session";
 import { getEvents } from "@/features/event/services/getEvents";
 import { SearchForm } from "@/features/tournament/components/search-form";
 import {
@@ -35,7 +37,10 @@ export default async function EventsTab({
   const requestedDay = readStringParam(query, "date") || undefined;
   const basePath = `/tournaments/${tournamentId}/events`;
 
-  const events = await getEvents(tournamentId);
+  const [events, sessionToken] = await Promise.all([
+    getEvents(tournamentId),
+    getSessionToken(),
+  ]);
 
   const days = eventDays(events);
   const selectedDay = selectEventDay(
@@ -65,6 +70,13 @@ export default async function EventsTab({
         placeholder="Enter Search Text"
         defaultValue={search}
       />
+      {sessionToken && (
+        <Button asChild className="self-start rounded-2xl">
+          <Link href={`/admin/tournament/new/event?tournamentId=${tournamentId}`}>
+            Add event
+          </Link>
+        </Button>
+      )}
 
       {selectedDay && (
         <EventDateStrip

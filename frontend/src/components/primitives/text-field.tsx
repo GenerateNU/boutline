@@ -5,6 +5,7 @@ import { Input } from "@/components/primitives/input";
 
 interface TextFieldProps extends React.ComponentProps<"input"> {
   label: React.ReactNode;
+  variant?: "outline" | "filled";
   supportingText?: React.ReactNode;
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
@@ -14,6 +15,7 @@ function TextField({
   className,
   id,
   label,
+  variant = "outline",
   supportingText,
   leading,
   trailing,
@@ -38,7 +40,11 @@ function TextField({
       </label>
       <div
         role="group"
-        className="flex h-12 items-center gap-3 border border-foreground bg-background px-4 focus-within:ring-2 focus-within:ring-ring has-disabled:opacity-50 [&_svg]:size-5 [&_svg]:shrink-0"
+        className={cn(
+          "flex h-12 items-center gap-3 px-4 focus-within:ring-2 focus-within:ring-ring has-disabled:opacity-50 [&_svg]:size-5 [&_svg]:shrink-0",
+          variant === "filled" && "h-10 rounded-full bg-chip",
+          variant !== "filled" && "border border-foreground bg-background",
+        )}
       >
         {leading}
         <Input
