@@ -3,6 +3,7 @@ import { TabNav } from "@/components/primitives/tab-nav";
 const tabs = [
   { label: "Overview", segment: null },
   { label: "Fencers", segment: "fencers" },
+  { label: "Referees", segment: "referees" },
   { label: "Clubs", segment: "clubs" },
   { label: "Events", segment: "events" },
 ];

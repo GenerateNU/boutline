@@ -5,14 +5,15 @@ import { Upload } from "lucide-react";
 import { type Accept, useDropzone } from "react-dropzone";
 
 type DropzoneProps = {
-  label: string;
+  label?: string;
   accept: Accept;
   onFile?: (file: File) => void;
   onReject?: (message: string) => void;
   className?: string;
+  children?: React.ReactNode;
 };
 
-function Dropzone({ label, accept, onFile, onReject, className }: DropzoneProps) {
+function Dropzone({ label, accept, onFile, onReject, className, children }: DropzoneProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept,
     multiple: false,
@@ -32,8 +33,12 @@ function Dropzone({ label, accept, onFile, onReject, className }: DropzoneProps)
       data-slot="dropzone"
     >
       <input {...getInputProps()} />
-      <Upload aria-hidden className="size-5" />
-      <span>{label}</span>
+      {children ?? (
+        <>
+          <Upload aria-hidden className="size-5" />
+          <span>{label}</span>
+        </>
+      )}
     </div>
   );
 }
