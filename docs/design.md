@@ -300,21 +300,46 @@ text.
 **Pooling tab:** a list of pool bouts (round, names, score) linking to each bout.
 The data is a hardcoded fixture shared by every event.
 
+### Planned: pool data
+- `pools.number` (≥ 1, unique per pool stage) labels the pool, and `pools.strip`
+  is its strip assignment.
+- `bouts.slot` (≥ 1, unique per pool) is a pool bout's place in the pool's bout
+  order. Bouts created in one batch share a `created_at`, so the order needs a
+  column. The same column holds a DE bout's bracket position (§10); a bout is in a
+  pool or a tableau, never both.
+- A pool's fencers are the competitors in its bouts. There is no pool-fencers
+  table.
+- A pool's bouts copy its strip (`location`), referee and number (`group_number`).
+  Editing any of those on the pool updates its upcoming bouts in the same
+  transaction, so they never go stale.
+
 ### Planned: pool generation
-`POST /pool-stages/{id}/generate`, admin only, while `upcoming`:
-1. Take the event's checked-in fencers and seed them by the event's `seeding` rule
-   (rating, then rating year, then random tiebreak).
-2. Pool count = `ceil(n / max_competitor_per_pool)`, with sizes as equal as
-   possible (e.g. 20 fencers, max 7: pools of 7-7-6).
-3. Snake the seeds across the pools (1→A, 2→B, 3→C, 4→C, 5→B, …).
-4. **Club separation:** swap fencers between pools at the same seeding level to
-   minimise same-club pairs within a pool.
-5. Create every round-robin bout using the standard bout order for that pool size,
-   so no one fences back-to-back. Pool bouts are to 5 touches with a 3-minute limit.
-6. Regenerating deletes and recreates the pools while no bout has started.
+Generation is three steps, all admin only and only while the pool stage is
+`upcoming`. The admin reviews and adjusts the proposal before anything is saved.
+1. **Propose:** `POST /pool-stages/{id}/proposed-pools` takes the event's
+   checked-in fencers (an optional `competitor_ids` overrides the list, and every
+   id must be entered in the event) and returns pools without saving:
+   - Seed by the event's `seeding` rule (rating, then rating year, then random
+     tiebreak).
+   - Pool count = `ceil(n / max_competitor_per_pool)`, with sizes as equal as
+     possible (e.g. 20 fencers, max 7: pools of 7-7-6).
+   - Snake the seeds across the pools (1→A, 2→B, 3→C, 4→C, 5→B, …).
+   - **Club separation:** move fencers between pools at the same seeding level to
+     minimise same-club pairs within a pool.
+2. **Create:** `POST /pools` takes the adjusted pools and creates each one with
+   every round-robin bout, in the standard bout order for its size so no one
+   fences back-to-back. Pool bouts are to 5 touches with a 3-minute limit.
+3. **Re-seat:** `PATCH /pools/{id}` with `fencers` replaces a pool's fencers and
+   regenerates its bouts, while none of them has started.
+
+Create and re-seat lock the pool stage row (`SELECT … FOR UPDATE`) and run every
+check inside that transaction. Without the lock, two requests can seat the same
+fencer in two pools, or re-seat a pool that has just started.
 
 ### Planned: pool results
-`GET /pool-stages/{id}/results`, computed from ended bouts:
+`GET /pool-stages/{id}/results` returns each pool's grid and standings plus the
+overall ranking, computed from ended bouts. It is also the read the Pools tab
+uses, so there is no separate pool-board resource.
 
 | Column | Meaning |
 | --- | --- |
@@ -325,7 +350,8 @@ The data is a hardcoded fixture shared by every event.
 | Ind | indicator = TS − TR, the second sort key |
 
 Overall ranking: V/M desc, then Ind desc, then TS desc, otherwise tied. That
-ranking seeds the DE. Each pool screen shows the classic grid (fencer × fencer,
+ranking seeds the DE, so the results endpoint and the DE draw (§10) share one
+standings function. Each pool screen shows the classic grid (fencer × fencer,
 `V5` / `D3` cells) plus the summary columns.
 
 ---
@@ -350,11 +376,11 @@ CRUD plus `POST /{id}/start` (`upcoming → active`) and `/complete` (`active �
   fencers who made the cut, with `seed` unique within a tableau. They are written
   once at the draw and never recomputed, so a pool score corrected afterwards
   cannot move anyone, and they are the only record of who has a bye.
-- Add `bouts.direct_elimination_id`, `bouts.round_size` (fencers in the round: 64,
-  32, …, 2 is the final) and `bouts.slot` (1-based position in the round, top to
-  bottom, with `competitor_1` as the top fencer). The bouts at slots 2k−1 and 2k
-  feed slot k of the next round. `(direct_elimination_id, round_size, slot)` is
-  unique.
+- Add `bouts.direct_elimination_id` and `bouts.round_size` (fencers in the round:
+  64, 32, …, 2 is the final). A DE bout reuses `bouts.slot` (§9) as its 1-based
+  position in the round, top to bottom, with `competitor_1` as the top fencer. The
+  bouts at slots 2k−1 and 2k feed slot k of the next round.
+  `(direct_elimination_id, round_size, slot)` is unique.
 - `POST /direct-eliminations/{id}/generate`, admin only, while `upcoming`, and only
   once the event's pool stage has ended (which already requires every pool to have
   ended). It takes the pool ranking, applies an optional cut (e.g. advance the top
@@ -516,7 +542,9 @@ starts the tournament, and generates the DE once pools end.
   schema validation from Huma, `404` not found, `409` conflict or duplicate, and
   `500` with a generic message for anything else.
 - Lists return `{data, total, limit, offset}`; `limit` defaults to 20 (max 100).
-  The scoring history is the exception: always complete, never paginated.
+  The scoring history is the exception: always complete, never paginated. An
+  `ids` filter (up to 100, e.g. a viewer's pinned items) returns every listed row,
+  so its `limit` defaults to the number of ids rather than 20.
 - Fuzzy search uses `pg_trgm` `word_similarity` on names and clubs. Terms shorter
   than 2 characters fall back to a prefix `ILIKE`.
 - The frontend talks to the API through `apiRequest` (`/api/v1` is proxied by
@@ -542,8 +570,11 @@ Postgres (schema owned by Atlas migrations generated from the GORM models), Redi
 Found by reading the code, not by running it. Fix these before building on the
 features they touch.
 
-1. **No auth or authorization.** Every route is open; `created_by`, `revoked_by`
-   and `referee_id` are trusted from the client.
+1. **No authorization.** Mutating routes require a login, but only competitor
+   delete checks the caller's tournament role. Any logged-in user can start, end,
+   edit or delete pools and pool stages. The planned pool create, re-seat and
+   propose endpoints (§9) must not ship before the `requireRole` helper (§4).
+   `created_by` on tournament create is still taken from the request body.
 2. **Scoring has no server-side rules:** it accepts touches on upcoming or ended
    bouts and for competitors outside the bout (`scorings.competitor_id` has no FK).
 3. Status words differ: `end` (tournament, bout) vs `ended` (event, stages).
@@ -616,3 +647,5 @@ stays in that route's `_components/` until a second route needs it.
 - Team events (relay scoring to 45) are in the form but have no model.
 - Do spectators need accounts (to follow fencers) or stay anonymous?
 - Should ratings and rankings come from a USA Fencing lookup instead of import?
+- Does the Pools tab show a start time per pool? If not, pools need no
+  `start_time` of their own.
