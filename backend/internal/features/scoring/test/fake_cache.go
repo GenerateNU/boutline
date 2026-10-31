@@ -50,16 +50,6 @@ func (f *FakeCache) Set(_ context.Context, key string, value any, _ time.Duratio
 	return nil
 }
 
-func (f *FakeCache) Del(_ context.Context, key string) error {
-	if f.Err != nil {
-		return f.Err
-	}
-
-	delete(f.entries, key)
-
-	return nil
-}
-
 func (f *FakeCache) Incr(_ context.Context, key string) (int64, error) {
 	if f.Err != nil {
 		return 0, f.Err
@@ -70,23 +60,34 @@ func (f *FakeCache) Incr(_ context.Context, key string) (int64, error) {
 	return f.versions[key], nil
 }
 
-func (f *FakeCache) SetIfUnchanged(_ context.Context, key, versionKey string, wantVersion int64, value any, _ time.Duration) error {
+func (f *FakeCache) IncrAndDel(_ context.Context, versionKey, key string) error {
 	if f.Err != nil {
 		return f.Err
 	}
 
+	f.versions[versionKey]++
+	delete(f.entries, key)
+
+	return nil
+}
+
+func (f *FakeCache) SetIfUnchanged(_ context.Context, key, versionKey string, wantVersion int64, value any, _ time.Duration) (bool, error) {
+	if f.Err != nil {
+		return false, f.Err
+	}
+
 	if f.versions[versionKey] != wantVersion {
-		return nil
+		return false, nil
 	}
 
 	raw, err := json.Marshal(value)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	f.entries[key] = raw
 
-	return nil
+	return true, nil
 }
 
 func (f *FakeCache) Has(key string) bool {

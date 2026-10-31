@@ -16,13 +16,16 @@ type Cache interface {
 	// Get reports false, with no error, on a cache miss.
 	Get(ctx context.Context, key string, dest any) (bool, error)
 	Set(ctx context.Context, key string, value any, ttl time.Duration) error
-	Del(ctx context.Context, key string) error
 	// Incr atomically increments key (starting from 0) and returns the new value.
 	Incr(ctx context.Context, key string) (int64, error)
+	// IncrAndDel atomically increments versionKey and deletes key, so a read
+	// racing between the two can never observe key's now-stale value as a hit.
+	IncrAndDel(ctx context.Context, versionKey, key string) error
 	// SetIfUnchanged sets key only if versionKey still holds wantVersion, so a
 	// value fetched before a concurrent invalidation can't overwrite it after
-	// the fact. A version mismatch is a lost race, not an error.
-	SetIfUnchanged(ctx context.Context, key, versionKey string, wantVersion int64, value any, ttl time.Duration) error
+	// the fact. It reports whether the set happened; a version mismatch is a
+	// lost race, not an error.
+	SetIfUnchanged(ctx context.Context, key, versionKey string, wantVersion int64, value any, ttl time.Duration) (bool, error)
 }
 
 type redisCache struct {
@@ -62,14 +65,6 @@ func (c *redisCache) Set(ctx context.Context, key string, value any, ttl time.Du
 	return nil
 }
 
-func (c *redisCache) Del(ctx context.Context, key string) error {
-	if err := c.client.Del(ctx, key).Err(); err != nil {
-		return fmt.Errorf("delete cache key %s: %w", key, err)
-	}
-
-	return nil
-}
-
 func (c *redisCache) Incr(ctx context.Context, key string) (int64, error) {
 	n, err := c.client.Incr(ctx, key).Result()
 	if err != nil {
@@ -79,18 +74,32 @@ func (c *redisCache) Incr(ctx context.Context, key string) (int64, error) {
 	return n, nil
 }
 
+func (c *redisCache) IncrAndDel(ctx context.Context, versionKey, key string) error {
+	_, err := c.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.Incr(ctx, versionKey)
+		pipe.Del(ctx, key)
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("increment version key %s and delete cache key %s: %w", versionKey, key, err)
+	}
+
+	return nil
+}
+
 func (c *redisCache) SetIfUnchanged(
 	ctx context.Context,
 	key, versionKey string,
 	wantVersion int64,
 	value any,
 	ttl time.Duration,
-) error {
+) (bool, error) {
 	raw, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("marshal cache key %s: %w", key, err)
+		return false, fmt.Errorf("marshal cache key %s: %w", key, err)
 	}
 
+	set := false
 	err = c.client.Watch(ctx, func(tx *redis.Tx) error {
 		version, err := tx.Get(ctx, versionKey).Int64()
 		if err != nil && !errors.Is(err, redis.Nil) {
@@ -100,20 +109,24 @@ func (c *redisCache) SetIfUnchanged(
 			return nil
 		}
 
-		_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		if _, err := tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
 			pipe.Set(ctx, key, raw, ttl)
 			return nil
-		})
+		}); err != nil {
+			return err
+		}
 
-		return err
+		set = true
+
+		return nil
 	}, versionKey)
 
 	if errors.Is(err, redis.TxFailedErr) {
-		return nil
+		return false, nil
 	}
 	if err != nil {
-		return fmt.Errorf("set cache key %s if version key %s is still %d: %w", key, versionKey, wantVersion, err)
+		return false, fmt.Errorf("set cache key %s if version key %s is still %d: %w", key, versionKey, wantVersion, err)
 	}
 
-	return nil
+	return set, nil
 }
