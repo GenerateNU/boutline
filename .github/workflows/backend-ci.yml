@@ -127,9 +127,6 @@ jobs:
           --health-interval 2s
           --health-timeout 3s
           --health-retries 15
-      # internal/tests/testkit/cache.go assumes a reachable database implies
-      # a reachable Redis, since both come from the same docker-compose
-      # `test` profile locally — this service keeps that true in CI too.
       redis:
         image: redis:7-alpine
         ports:

@@ -25,16 +25,9 @@ var (
 	dbCacheOnce   sync.Once
 )
 
-// GetDBAndCacheTestApp returns the real application wiring against both a
-// real Postgres connection and a real Redis connection, for tests that need
-// to observe the cache layer itself rather than just the database underneath
-// it. It also returns the raw db and redis handles, so a test can mutate the
-// database directly (bypassing the API, and so the cache) or inspect cache
-// keys directly.
-//
-// Same skip-unless-reachable/REQUIRE_DB-fails-hard behavior as GetDBTestApp:
-// both services come from the same docker-compose `test` profile, so a
-// reachable database implies a reachable Redis.
+// Creates an application with Postgres and Redis, for testing
+// If REQUIRE_DB is true, fails when Postgres and/or Redis are unreachable,
+// otherwise skips silently
 func GetDBAndCacheTestApp(t *testing.T) (*fiber.App, *redis.Client, *gorm.DB) {
 	t.Helper()
 
