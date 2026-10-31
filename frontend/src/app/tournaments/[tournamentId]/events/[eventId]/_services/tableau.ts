@@ -1,58 +1,40 @@
-import type { Tableau, TableauFencer, TableauRound } from "../_types/tableau";
-import { bouts } from "./bouts";
+import { tableauRoundName } from "@/lib/tableau-round-name";
+import type { Tableau, TableauFencer } from "../_types/tableau";
+import type { TableauFencerResponse, TableauResponse } from "../_types/tableau-response";
 
-// The tableau rounds in the seed data, in bracket order. `round` matches Bout.round.
-const roundOrder = [
-  { round: "Semifinal", name: "Semi-finals", boutName: "Semi-final" },
-  { round: "Final", name: "Finals", boutName: "Final" },
-];
+const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 
-// The seed data has no seeds; these follow its semifinal pairings (1 v 4, 2 v 3).
-const placeholderSeeds: Record<string, number> = {
-  "Maya Chen": 1,
-  "Hana Sato": 2,
-  "Sofia Rossi": 3,
-  "Kenji Tanaka": 4,
-};
-
-function toTableauFencer(fencer: { name: string; club: string }): TableauFencer {
-  const seed = placeholderSeeds[fencer.name];
-  if (seed === undefined) {
-    throw new Error(`No placeholder seed for ${fencer.name}`);
-  }
-  // The seed data has one name string and no IDs, so it's split on the first space and
-  // the name stands in for the ID.
-  const [firstName, ...rest] = fencer.name.split(" ");
-  return { id: fencer.name, firstName, lastName: rest.join(" "), club: fencer.club, seed };
+function toTableauFencer(fencer: TableauFencerResponse): TableauFencer {
+  return {
+    id: fencer.id,
+    firstName: fencer.first_name,
+    lastName: fencer.last_name,
+    club: fencer.club,
+    seed: fencer.seed,
+  };
 }
 
-// TODO: replace with a request to the actual tableau endpoint once it's implemented
 export async function getTableau(eventId: string): Promise<Tableau> {
-  void eventId;
-
-  const tableauBouts = bouts.filter((bout) => bout.stage === "tableau");
-  if (tableauBouts.length === 0) {
-    return { rounds: [] };
+  // Fetched directly rather than via apiRequest: a Server Component can't resolve a relative /api/v1 path.
+  const url = new URL(`/api/v1/events/${encodeURIComponent(eventId)}/tableau`, apiProxyTarget);
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`get tableau: ${response.status}`);
   }
 
-  const rounds: TableauRound[] = roundOrder.map(({ round, name, boutName }) => ({
-    id: round,
-    name,
-    boutName,
-    bouts: tableauBouts
-      .filter((bout) => bout.round === round)
-      .map((bout, index) => {
-        const fenced = bout.audit.length > 0;
-        return {
-          id: bout.id,
-          number: index + 1,
-          top: toTableauFencer(bout.left),
-          bottom: toTableauFencer(bout.right),
-          topScore: fenced ? bout.left.score : undefined,
-          bottomScore: fenced ? bout.right.score : undefined,
-        };
-      }),
-  }));
-
-  return { rounds };
+  const body: TableauResponse = await response.json();
+  return {
+    rounds: body.rounds.map((round) => ({
+      id: String(round.size),
+      ...tableauRoundName(round.size),
+      bouts: round.bouts.map((bout) => ({
+        id: bout.id,
+        number: bout.slot,
+        top: toTableauFencer(bout.top),
+        bottom: toTableauFencer(bout.bottom),
+        topScore: bout.top_score ?? undefined,
+        bottomScore: bout.bottom_score ?? undefined,
+      })),
+    })),
+  };
 }
