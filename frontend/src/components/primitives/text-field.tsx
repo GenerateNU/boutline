@@ -42,9 +42,8 @@ function TextField({
         role="group"
         className={cn(
           "flex h-12 items-center gap-3 px-4 focus-within:ring-2 focus-within:ring-ring has-disabled:opacity-50 [&_svg]:size-5 [&_svg]:shrink-0",
-          variant === "filled"
-            ? "h-10 rounded-full bg-chip"
-            : "border border-foreground bg-background",
+          variant === "filled" && "h-10 rounded-full bg-chip",
+          variant !== "filled" && "border border-foreground bg-background",
         )}
       >
         {leading}
