@@ -22,7 +22,10 @@ export default async function NewEventPage({
         {back.label}
       </Link>
       <h1 className="text-xl font-medium text-brand">Create Event</h1>
-      <NewEventForm doneHref={eventsHref ?? "/admin/tournaments"} />
+      <NewEventForm
+        doneHref={eventsHref ?? "/admin/tournaments"}
+        completesTournamentDraft={eventsHref === undefined}
+      />
     </main>
   );
 }

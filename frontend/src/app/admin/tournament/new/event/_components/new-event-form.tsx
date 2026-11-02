@@ -15,12 +15,19 @@ const ratingLevels = ["Open", "B and under", "C and under", "D and under", "E an
 const formats = ["Direct Elimination", "Pool to Elimination"];
 const qualifierOptions = ["No", "Yes"];
 
-function NewEventForm({ doneHref }: { doneHref: string }) {
+interface NewEventFormProps {
+  doneHref: string;
+  completesTournamentDraft: boolean;
+}
+
+function NewEventForm({ doneHref, completesTournamentDraft }: NewEventFormProps) {
   const router = useRouter();
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    clearTournamentDraft();
+    if (completesTournamentDraft) {
+      clearTournamentDraft();
+    }
     router.push(doneHref);
   }
 
