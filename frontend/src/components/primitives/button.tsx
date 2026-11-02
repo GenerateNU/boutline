@@ -10,6 +10,8 @@ const buttonVariants = cva(
         filled: "bg-selected text-selected-foreground hover:bg-selected/90",
         text: "text-foreground hover:bg-muted",
         outline: "border border-foreground text-foreground hover:bg-muted",
+        tonal: "bg-chip text-brand hover:bg-chip/80",
+        brand: "bg-brand text-background hover:bg-brand/90",
       },
       size: {
         default: "h-10 px-5",
