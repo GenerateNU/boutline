@@ -14,8 +14,9 @@ droplet
 ├── boutline-backend         →  api.<boutline-domain>      (deploy/app/)
 ├── boutline-db              production Postgres, boutline's network only
 ├── boutline-redis           production Redis, boutline's network only
-└── boutline-pr-<n>          →  boutline-pr-<n>.<preview-domain>
-                                database boutline_pr_<n>
+├── boutline-pr-<n>          →  boutline-pr-<n>.<preview-domain>
+│                               database boutline_pr_<n>
+└── boutline-pr-<n>-redis    that preview's Redis, its network only
 ```
 
 **Production data lives here and nothing backs it up.** That is a deliberate
@@ -27,6 +28,12 @@ DigitalOcean Spaces) or move to Managed PostgreSQL.
 `boutline-db` is only on boutline's own `internal` network, never on the shared
 `edge` network. Preview containers join `edge`, and none of them should be able
 to reach production data.
+
+Each preview gets its own Redis the same way: `boutline-pr-<n>-redis` sits only
+on a private `boutline-pr-<n>` network that the preview backend also joins.
+It has no password, so it must stay off `edge`. `preview-up.sh` creates both
+on a PR's first deploy and keeps them across pushes; `preview-down.sh` removes
+them.
 
 Preview container, database, and hostname are all prefixed with `boutline`
 because every project shares one `preview-db` and one preview wildcard. A bare
@@ -56,6 +63,11 @@ the stack starts.
 `DB_PASSWORD` in `preview.env` must match `PREVIEW_DB_PASSWORD` in
 `/opt/shared/.env`. Preview containers connect to that Postgres as superuser,
 and `preview-up.sh` reads the password from this file.
+
+`JWT_SECRET` in `backend.env` is production's token signing key
+(`openssl rand -hex 32`); the backend refuses to start without one. Previews
+need none in `preview.env`: `preview-up.sh` generates one per PR in
+`preview-secrets/pr-<n>.env`, and `preview-down.sh` deletes it with the preview.
 
 The deploy workflow copies `docker-compose.yml` up on every run, so it never
 needs placing by hand.

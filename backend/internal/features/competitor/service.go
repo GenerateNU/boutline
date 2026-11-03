@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/event"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
 	"boutline/internal/features/user"
@@ -17,6 +18,10 @@ import (
 
 type TournamentLookup interface {
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*tournament.Tournament, error)
+}
+
+type EventLookup interface {
+	GetEventByID(ctx context.Context, id uuid.UUID) (*event.Event, error)
 }
 
 // TournamentMembershipLookup is the subset of the tournament-user repository needed here.
@@ -45,69 +50,95 @@ type CompetitorService interface {
 
 type competitorService struct {
 	repo        CompetitorRepository
+	events      EventLookup
 	tournaments TournamentLookup
 	memberships TournamentMembershipLookup
 }
 
 func NewCompetitorService(
 	repo CompetitorRepository,
+	events EventLookup,
 	tournaments TournamentLookup,
 	memberships TournamentMembershipLookup,
 ) CompetitorService {
-	return &competitorService{repo: repo, tournaments: tournaments, memberships: memberships}
+	return &competitorService{repo: repo, events: events, tournaments: tournaments, memberships: memberships}
 }
 
 func (s *competitorService) CreateCompetitor(
 	ctx context.Context,
 	input *CompetitorCreateInput,
 ) (*CompetitorOutput, error) {
-	tournamentID, err := utils.ParseUUID(input.Body.TournamentID, "tournamentId")
+	competitor, err := competitorFromCreate(input.Body)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
-	if _, err := s.tournaments.GetTournamentByID(ctx, tournamentID); err != nil {
-		if errors.Is(err, errs.ErrNotFound) {
-			return nil, errs.HumaError(errs.Public(
-				"tournamentId must reference an existing tournament", errs.ErrInvalidInput))
-		}
-		return nil, errs.HumaError(fmt.Errorf("get tournament: %w", err))
+	owningEvent, err := s.events.GetEventByID(ctx, competitor.EventID)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get event: %w", err))
 	}
-
-	firstName := strings.TrimSpace(input.Body.FirstName)
-	lastName := strings.TrimSpace(input.Body.LastName)
-	if firstName == "" {
-		return nil, errs.HumaError(errs.Public("first name must not be blank", errs.ErrInvalidInput))
-	}
-	if lastName == "" {
-		return nil, errs.HumaError(errs.Public("last name must not be blank", errs.ErrInvalidInput))
-	}
-
-	rating := RatingU
-	if input.Body.Rating != "" {
-		parsed, err := parseRating(input.Body.Rating)
-		if err != nil {
-			return nil, errs.HumaError(err)
-		}
-		rating = parsed
-	}
-
-	// tournamentId is required on create and already validated above, so a
-	// created competitor is always tagged even though the column is nullable.
-	competitor := &Competitor{
-		TournamentID: &tournamentID,
-		FirstName:    firstName,
-		LastName:     lastName,
-		Rating:       rating,
-		Team:         strings.TrimSpace(input.Body.Team),
-	}
+	competitor.TournamentID = &owningEvent.TournamentID
 	if callerID, ok := user.UserIDFrom(ctx); ok {
 		competitor.UserID = &callerID
 	}
-
 	if err := s.repo.CreateCompetitor(ctx, competitor); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("create competitor: %w", err))
 	}
 	return &CompetitorOutput{Body: newCompetitorResponse(*competitor)}, nil
+}
+
+func competitorFromCreate(body CompetitorCreateBody) (*Competitor, error) {
+	eventID, err := utils.ParseUUID(body.EventID, "event id")
+	if err != nil {
+		return nil, err
+	}
+
+	firstName := strings.TrimSpace(body.FirstName)
+	if firstName == "" {
+		return nil, errs.Public("first name must not be blank", errs.ErrInvalidInput)
+	}
+	lastName := strings.TrimSpace(body.LastName)
+	if lastName == "" {
+		return nil, errs.Public("last name must not be blank", errs.ErrInvalidInput)
+	}
+
+	gender := Gender(body.Gender)
+	if !gender.IsValid() {
+		return nil, errs.Public("gender must be either F, M, or O", errs.ErrInvalidInput)
+	}
+	birthdate, err := parseBirthdate(body.Birthdate)
+	if err != nil {
+		return nil, err
+	}
+	division := strings.TrimSpace(body.Division)
+	if division == "" {
+		return nil, errs.Public("division must not be blank", errs.ErrInvalidInput)
+	}
+
+	rating := RatingU
+	if body.Rating != "" {
+		rating, err = parseRating(body.Rating)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err := validateRatingYear(body.RatingYear); err != nil {
+		return nil, err
+	}
+
+	return &Competitor{
+		EventID:       eventID,
+		FirstName:     firstName,
+		LastName:      lastName,
+		Gender:        gender,
+		Birthdate:     birthdate,
+		Division:      division,
+		Rating:        rating,
+		RatingYear:    body.RatingYear,
+		PrimaryClub:   optionalText(body.PrimaryClub),
+		SecondaryClub: optionalText(body.SecondaryClub),
+		MemberNumber:  optionalText(body.MemberNumber),
+		Team:          strings.TrimSpace(body.Team),
+	}, nil
 }
 
 func (s *competitorService) GetCompetitorByID(
@@ -165,6 +196,27 @@ func competitorUpdateFrom(body CompetitorUpdateBody) (*CompetitorUpdate, error) 
 		}
 		update.LastName = &lastName
 	}
+	if body.Gender != nil {
+		gender := Gender(*body.Gender)
+		if !gender.IsValid() {
+			return nil, errs.Public("gender must be either F, M, or O", errs.ErrInvalidInput)
+		}
+		update.Gender = &gender
+	}
+	if body.Birthdate != nil {
+		birthdate, err := parseBirthdate(*body.Birthdate)
+		if err != nil {
+			return nil, err
+		}
+		update.Birthdate = &birthdate
+	}
+	if body.Division != nil {
+		division := strings.TrimSpace(*body.Division)
+		if division == "" {
+			return nil, errs.Public("division must not be blank", errs.ErrInvalidInput)
+		}
+		update.Division = &division
+	}
 	if body.Rating != nil {
 		rating, err := parseRating(*body.Rating)
 		if err != nil {
@@ -172,11 +224,18 @@ func competitorUpdateFrom(body CompetitorUpdateBody) (*CompetitorUpdate, error) 
 		}
 		update.Rating = &rating
 	}
-	if body.Team != nil {
-		// An empty team is allowed: it clears the team.
-		team := strings.TrimSpace(*body.Team)
-		update.Team = &team
+	if body.RatingYear != nil {
+		if err := validateRatingYear(body.RatingYear); err != nil {
+			return nil, err
+		}
+		update.RatingYear = body.RatingYear
 	}
+	// For these, an empty string is allowed: it clears the value.
+	update.PrimaryClub = trimmed(body.PrimaryClub)
+	update.SecondaryClub = trimmed(body.SecondaryClub)
+	update.MemberNumber = trimmed(body.MemberNumber)
+	update.Team = trimmed(body.Team)
+
 	if update == (CompetitorUpdate{}) {
 		return nil, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
 	}
@@ -194,7 +253,13 @@ func (s *competitorService) ListCompetitors(
 		Limit:  limit,
 		Offset: offset,
 	}
-
+	if input.EventID != "" {
+		eventID, err := utils.ParseUUID(input.EventID, "event id")
+		if err != nil {
+			return nil, errs.HumaError(err)
+		}
+		filter.EventID = &eventID
+	}
 	if input.TournamentID != "" {
 		tournamentID, err := utils.ParseUUID(input.TournamentID, "tournament_id")
 		if err != nil {
@@ -223,7 +288,6 @@ func (s *competitorService) ListCompetitors(
 	filter.IDs = ids
 
 	competitors, total, err := s.repo.ListCompetitors(ctx, filter)
-
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list competitors: %w", err))
 	}
@@ -340,12 +404,4 @@ func page(limit, offset int) (int, int) {
 	}
 
 	return utils.Clamp(limit, CompetitorMinPageSize, CompetitorMaxPageSize), max(offset, 0)
-}
-
-func parseRating(raw string) (Rating, error) {
-	rating := Rating(strings.TrimSpace(raw))
-	if !rating.IsValid() {
-		return "", errs.Public("rating must be one of A, B, C, D, E, or U", errs.ErrInvalidInput)
-	}
-	return rating, nil
 }
