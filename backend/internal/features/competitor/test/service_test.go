@@ -21,6 +21,9 @@ import (
 // testEventID is the event every seeded competitor belongs to unless a test changes it.
 var testEventID = uuid.MustParse("11111111-1111-1111-1111-111111111111")
 
+// otherTestEventID is a second event of the test tournament, for tests that need competitors in different events.
+var otherTestEventID = uuid.MustParse("22222222-2222-2222-2222-222222222222")
+
 func seeded(firstName, lastName string, rating competitor.Rating, team string) competitor.Competitor {
 	return competitor.Competitor{
 		ID:           uuid.New(),
@@ -197,6 +200,32 @@ func TestCreateCompetitorStoresNewFields(t *testing.T) {
 	assert.Equal(t, ptr("100123"), out.Body.MemberNumber)
 }
 
+func TestCreateCompetitorTagsTheEventsTournament(t *testing.T) {
+	t.Parallel()
+	repo := NewFakeCompetitorRepository()
+	out, err := NewTestService(repo).
+		CreateCompetitor(t.Context(), &competitor.CompetitorCreateInput{Body: validCreateBody()})
+	require.NoError(t, err)
+
+	require.Equal(t, TestTournamentID.String(), out.Body.TournamentID)
+	for _, stored := range repo.Competitors {
+		assert.Equal(t, ptr(TestTournamentID), stored.TournamentID)
+	}
+}
+
+func TestCreateCompetitorRejectsAnUnknownEvent(t *testing.T) {
+	t.Parallel()
+	repo := NewFakeCompetitorRepository()
+	_, err := NewTestService(repo).CreateCompetitor(t.Context(),
+		&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
+			b.EventID = uuid.New().String()
+		})})
+
+	code, _ := apiError(t, err)
+	assert.Equal(t, http.StatusNotFound, code)
+	assert.Empty(t, repo.Competitors)
+}
+
 func TestCreateCompetitorMemberNumber(t *testing.T) {
 	t.Parallel()
 	existing := seeded("Grace", "Hopper", competitor.RatingU, "")
@@ -220,7 +249,7 @@ func TestCreateCompetitorMemberNumber(t *testing.T) {
 		repo := NewFakeCompetitorRepository(existing)
 		_, err := NewTestService(repo).CreateCompetitor(t.Context(),
 			&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
-				b.EventID = uuid.New().String()
+				b.EventID = otherTestEventID.String()
 				b.MemberNumber = "100123"
 			})})
 		require.NoError(t, err)

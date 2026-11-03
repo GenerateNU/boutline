@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/event"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
 	"boutline/internal/features/user"
@@ -17,6 +18,10 @@ import (
 
 type TournamentLookup interface {
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*tournament.Tournament, error)
+}
+
+type EventLookup interface {
+	GetEventByID(ctx context.Context, id uuid.UUID) (*event.Event, error)
 }
 
 // TournamentMembershipLookup is the subset of the tournament-user repository needed here.
@@ -45,16 +50,18 @@ type CompetitorService interface {
 
 type competitorService struct {
 	repo        CompetitorRepository
+	events      EventLookup
 	tournaments TournamentLookup
 	memberships TournamentMembershipLookup
 }
 
 func NewCompetitorService(
 	repo CompetitorRepository,
+	events EventLookup,
 	tournaments TournamentLookup,
 	memberships TournamentMembershipLookup,
 ) CompetitorService {
-	return &competitorService{repo: repo, tournaments: tournaments, memberships: memberships}
+	return &competitorService{repo: repo, events: events, tournaments: tournaments, memberships: memberships}
 }
 
 func (s *competitorService) CreateCompetitor(
@@ -65,6 +72,11 @@ func (s *competitorService) CreateCompetitor(
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
+	owningEvent, err := s.events.GetEventByID(ctx, competitor.EventID)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get event: %w", err))
+	}
+	competitor.TournamentID = &owningEvent.TournamentID
 	if callerID, ok := user.UserIDFrom(ctx); ok {
 		competitor.UserID = &callerID
 	}

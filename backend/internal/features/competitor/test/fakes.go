@@ -9,6 +9,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/competitor"
+	"boutline/internal/features/event"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
 
@@ -25,6 +26,10 @@ var (
 
 func NewTestService(repo competitor.CompetitorRepository) competitor.CompetitorService {
 	return competitor.NewCompetitorService(repo,
+		FakeEventLookup{
+			testEventID:      {ID: testEventID, TournamentID: TestTournamentID},
+			otherTestEventID: {ID: otherTestEventID, TournamentID: TestTournamentID},
+		},
 		FakeTournamentLookup{
 			TestTournamentID: {ID: TestTournamentID, CreatedBy: TestCreatorID},
 		},
@@ -258,6 +263,18 @@ func (f *FakeCompetitorRepository) DeleteCompetitor(_ context.Context, id uuid.U
 	}
 	delete(f.Competitors, id)
 	return nil
+}
+
+var _ competitor.EventLookup = FakeEventLookup(nil)
+
+type FakeEventLookup map[uuid.UUID]event.Event
+
+func (f FakeEventLookup) GetEventByID(_ context.Context, id uuid.UUID) (*event.Event, error) {
+	found, ok := f[id]
+	if !ok {
+		return nil, fmt.Errorf("select event %s: %w", id, errs.ErrNotFound)
+	}
+	return &found, nil
 }
 
 var _ competitor.TournamentLookup = FakeTournamentLookup(nil)
