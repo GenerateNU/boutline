@@ -173,7 +173,16 @@ erDiagram
       timestamptz updated_at
       uuid tournament_id FK
       uuid user_id FK
+      uuid event_id FK
+      text gender
+      date birthdate
+      text division
+      smallint rating_year
+      text primary_club
+      text secondary_club
+      text member_number
     }
+    competitors }o--o| events : fk_competitors_event
     competitors }o--o| tournaments : fk_competitors_tournament
     competitors }o--o| users : fk_competitors_user
     direct_eliminations {
