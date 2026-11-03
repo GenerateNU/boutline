@@ -34,6 +34,8 @@ is Completed only once its screens use the real API.
 
 When code and this document disagree, fix one of them in the same PR.
 
+Fencing terms (tableau, seed, cut, bye, priority, and so on) are defined in §A.3.
+
 ## The tournament day
 
 The whole product, in the order an organizer meets it:
@@ -823,7 +825,7 @@ it, from what, and why. This is the one exception to forward-only lifecycles
 (§A.2); no status moves backwards.
 
 - A pool bout can be corrected until the DE is drawn, since the draw freezes the
-  ranking (§12.2).
+  ranking into the DE entries (§12.1).
 - A DE bout can be corrected while its next-round bout is still `upcoming`. That
   bout is rebuilt with the corrected winner in the same transaction.
 
@@ -1045,8 +1047,10 @@ mid-pool leaves their remaining bouts `upcoming`, and the stage cannot end.
 
 **Status:** Planned.
 
-The seed from §11.2 is written to `competitors.seed` (§8.4) when the pools are
-created, so the Pools tab and later stages can show it.
+The seed from §11.2, the fencer's pool seed, is written to `competitors.seed` (§8.4)
+when the pools are created, so the Pools tab and later stages can show it. It ranks
+fencers by rating going into pools. The tableau uses a separate seed, from the pool
+results, stored on the DE entry (§12.1).
 
 ### 11.6 Pooling tab and pool screen
 
@@ -1078,13 +1082,33 @@ until one fencer is left. Spectators watch the bracket fill in live.
 
 **Status:** Planned.
 
-- `direct_elimination_entries(direct_elimination_id, competitor_id, seed)` holds
-  the fencers who made the cut, with `seed` unique within a tableau.
-  - The entries are written once at the draw and never recomputed, so a pool score
-    corrected afterwards cannot move anyone. They are also the only record of who
-    has a bye.
-  - They are stored rather than recomputed from the pool ranking, so an organizer
-    can correct a seed without touching pool results.
+**Entries.** `direct_elimination_entries(direct_elimination_id, competitor_id, seed)`
+is the tableau's seed list: one row for each fencer who made the cut, written by
+the draw (§12.2).
+
+- `seed` is the fencer's tableau seed: their place in the pool ranking, 1 being
+  the top. It is not `competitors.seed`, which is the pool seed from before pools
+  (§11.5). Both `seed` and `competitor_id` are unique within a tableau.
+- A fencer cut after pools has no entry, and neither does one who withdrew and left
+  the ranking (chapter 17). Their placing comes from the pool ranking (§13.1).
+- The number of entries sets the bracket size, and so which top seeds get a bye. A
+  bye has no bout, so a bye fencer appears only in the entries until the second
+  round, when advancement (§12.3) reads their entry to seat them.
+- The tableau (§12.5) and the placings (§12.4) read seeds from here.
+
+For example, if 12 fencers make the cut, the bracket is 16 and seeds 1–4 have byes.
+The draw writes 12 entries and 4 bouts (8 v 9, 5 v 12, 6 v 11, 7 v 10). Seeds 1–4
+are in no bout until the round of 8.
+
+The draw writes the entries once and nothing recomputes them. Pool corrections stop
+at the draw (§9.4), so the entries are a frozen copy of the final ranking. From then
+on they, not the pool results, are what the tableau trusts, so an organizer can
+correct a seed without touching pool results (how is an open question in §D). They
+are rows of the DE rather than a column on competitors, so the unique seed, the
+draw's single write and the cleanup when the DE is deleted all belong to the DE.
+
+**Bouts.**
+
 - `bouts.direct_elimination_id` and `bouts.round_size` record a DE bout's round
   (the number of fencers in it: 64, 32, …, 2 is the final).
   - A DE bout reuses `bouts.slot` (§11.1) as its 1-based position in the round,
@@ -1133,8 +1157,9 @@ once the event's pool stage has ended:
 
 - The final ending completes the DE and the event. `POST /{id}/complete` is refused
   (409) while the final has not ended.
-- Final placings: 1, 2, 3 and 3 (no bronze bout), then by round of elimination,
-  ties within a round broken by seed.
+- Final placings: 1, 2, 3 and 3 (no bronze bout, so both losing semifinalists
+  place third), then by round of elimination, ties within a round broken by
+  tableau seed.
 
 ### 12.5 Tableau endpoint and tab
 
@@ -1303,12 +1328,12 @@ Links labelled "planned" come from one competitor per event (§8.4) and the brac
 | **Tournament** | a dated competition with a join code, e.g. "Boston Fall Open" |
 | **TournamentUser** | a user's staff role in one tournament |
 | **Event** | one competition inside a tournament, e.g. "Y14 Men's Foil" |
-| **Competitor** | a fencer entered in one event, with that weapon's rating, club, seed and check-in (one row per event is planned; today rows belong to a tournament) |
-| **PoolStage** | the round-robin round of an event |
-| **Pool** | one group of fencers within a pool stage, with a referee |
-| **DirectElimination** | the knockout round of an event |
-| **DirectEliminationEntry** | a fencer who made the cut into a tableau, with their seed (planned) |
-| **Bout** | one match between two competitors |
+| **Competitor** | a fencer entered in one event, with that weapon's rating, club, pool seed and check-in (one row per event is planned; today rows belong to a tournament) |
+| **PoolStage** | the round-robin round of an event, one per event, with the maximum pool size |
+| **Pool** | one group of fencers within a pool stage, with a referee and a strip. Its fencers are the competitors in its bouts |
+| **DirectElimination** | the knockout round of an event, one per event. Its bouts form the tableau |
+| **DirectEliminationEntry** | one fencer's place in a tableau, holding their tableau seed. The draw writes one for each fencer who made the cut and never recomputes them, and they are the only record of a bye (planned, §12.1) |
+| **Bout** | one match between two competitors, in a pool, in a tableau, or free-standing |
 | **Scoring** | one touch awarded in a bout. Undo marks it revoked, never deletes it |
 
 All IDs are UUIDs except `scorings.id` (bigserial, so touches sort by insert order).
@@ -1338,6 +1363,29 @@ What each state allows:
 - **DirectElimination**: `event_id` is editable until `ended`.
 - **Bout**: editable only while `upcoming`. Starting a bout requires an active
   tournament and an assigned referee. Deletion rules are §8.3.
+
+### A.3 Fencing terms
+
+| Term | Meaning |
+| --- | --- |
+| Touch | a hit that scores one point |
+| Strip | the fencing area (also called a piste). A pool fences on one strip, and each bout stores its strip in `location` |
+| Pool | a group of about six or seven fencers who each fence everyone else once (a round robin), by default to 5 touches in 3 minutes |
+| Pool bout order | the published bout sequence for each pool size, which keeps anyone from fencing twice in a row |
+| V / D | a pool grid cell: `V5` is a victory with 5 touches scored, `D3` a defeat with 3 |
+| Indicator | touches scored minus touches received; the pool tiebreak after win ratio |
+| Direct elimination (DE) | the knockout round after pools, where the loser of each bout is out. By default bouts go to 15 touches |
+| Tableau | the DE bracket. Rounds are named by the number of fencers in them: the table of 64, of 32, down to the final |
+| Seed | a ranking position, 1 being the strongest. Boutline has two: the **pool seed** ranks by rating and deals fencers into pools (§11.2); the **tableau seed** ranks by pool results and places fencers in the bracket (§12.1) |
+| Cut | the share of fencers eliminated after pools, e.g. only the top 80% advance |
+| Bye | an empty bracket position. The fencer drawn against it advances without fencing. Byes go to the top seeds when the field isn't a power of two |
+| Period | DE bouts are fenced in three 3-minute periods with a 1-minute break between them |
+| Priority | at time with the score tied, one fencer is given priority at random and one more minute is fenced. The first touch wins; with no touch, the fencer with priority wins |
+| Double touch | in épée only, both fencers hit at the same moment and both score |
+| Rating | the USA Fencing classification per weapon: A (highest) to E, or U for unrated, followed by the year it was earned (`C24`) |
+| Clubmates | fencers from the same club. Pool seeding keeps them apart where it can |
+| Cards | penalties: yellow warns, red gives the opponent a touch, black excludes the fencer (chapter 16) |
+| askFRED, USA Fencing, FIE | askFRED is the US site for tournament registration and results. USA Fencing is the US governing body and issues ratings. The FIE is the international federation, whose rules (e.g. o.68.2) Boutline follows |
 
 ---
 
@@ -1448,3 +1496,6 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   `referee` role?
 - Does withdrawing a fencer after the DE draw but before their first bout give
   the opponent a walkover bout, or a bye? (Chapter 17.)
+- How is a tableau seed corrected after the draw? Either re-run the draw while no
+  DE bout has started, or edit an entry and rebuild the first-round bouts it
+  touches. (§12.1.)
