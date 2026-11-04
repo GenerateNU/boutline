@@ -14,7 +14,7 @@ import (
 // Cache is automatically invalidated on write, but this TTL is an extra guarantee against stale data
 const historyCacheTTL = 30 * time.Second
 
-// cachedScoringRepository caches GetScoringHistory, the endpoint a live bout's
+// cachedScoringRepository caches ListScoringHistory, the endpoint a live bout's
 // scoreboard polls repeatedly, and invalidates it on every write to that bout.
 // Every other method passes straight through to inner.
 type cachedScoringRepository struct {
