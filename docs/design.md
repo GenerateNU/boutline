@@ -1502,6 +1502,11 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   rules and the `confirming` phase have to pick one.
 - May a tournament admin referee and score bouts, or only users with the
   `referee` role?
+- What happens when a referee has to step away from a pool mid-way? Reassigning
+  the pool's referee moves its upcoming bouts to the new one (§11.1), but an
+  active bout keeps its referee, and only the assigned referee can score it
+  (§7.2). Does the replacement take over the active bout too, and is a short
+  break a temporary hand-off rather than a reassignment?
 - Does withdrawing a fencer after the DE draw but before their first bout give
   the opponent a walkover bout, or a bye? (Chapter 17.)
 - How is a tableau seed corrected after the draw? Either re-run the draw while no
