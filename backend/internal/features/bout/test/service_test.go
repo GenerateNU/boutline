@@ -517,6 +517,48 @@ func TestUpdateBoutByID(t *testing.T) {
 		assert.Equal(t, "competitor_1_id and competitor_2_id must be different", detail)
 	})
 
+	t.Run("competitor changes on a tableau bout", func(t *testing.T) {
+		t.Parallel()
+
+		replacement := uuid.NewString()
+		tests := []struct {
+			name       string
+			tableau    bool
+			body       bout.BoutUpdateBody
+			wantStatus int
+		}{
+			{"first competitor is refused", true, bout.BoutUpdateBody{Competitor1ID: &replacement}, http.StatusConflict},
+			{"second competitor is refused", true, bout.BoutUpdateBody{Competitor2ID: &replacement}, http.StatusConflict},
+			{"both competitors are refused", true, bout.BoutUpdateBody{Competitor1ID: &replacement, Competitor2ID: ptr(uuid.NewString())}, http.StatusConflict},
+			{"other fields are still editable", true, bout.BoutUpdateBody{PointsToWin: ptr(21)}, http.StatusOK},
+			{"a non-tableau bout can change competitors", false, bout.BoutUpdateBody{Competitor1ID: &replacement}, http.StatusOK},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
+				if tt.tableau {
+					stored.DirectEliminationID = ptr(uuid.New())
+				}
+				repo := NewFakeBoutRepository(stored)
+
+				_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).UpdateBoutByID(t.Context(),
+					&bout.BoutUpdateInput{ID: stored.ID.String(), Body: tt.body})
+
+				if tt.wantStatus == http.StatusOK {
+					require.NoError(t, err)
+					return
+				}
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantStatus, code)
+				assert.Equal(t, "competitors of a tableau bout cannot be changed", detail)
+				assert.Equal(t, stored.Competitor1ID, repo.Bouts[stored.ID].Competitor1ID)
+			})
+		}
+	})
+
 	t.Run("reports an unknown id as not found", func(t *testing.T) {
 		t.Parallel()
 

@@ -47,8 +47,8 @@ func ptr[T any](v T) *T { return &v }
 func boutRow(roundSize, slot int, status bout.BoutStatus) tableau.BoutRow {
 	return tableau.BoutRow{
 		ID: uuid.New(), RoundSize: roundSize, Slot: slot, Status: status,
-		TopID: uuid.New(), TopFirst: "Maya", TopLast: "Chen", TopClub: "Boston Fencing Club", TopSeed: ptr(1),
-		BottomID: uuid.New(), BottomFirst: "Kenji", BottomLast: "Tanaka", BottomClub: "Northeastern Fencing", BottomSeed: ptr(4),
+		TopID: uuid.New(), TopFirst: "Maya", TopLast: "Chen", TopClub: ptr("Boston Fencing Club"), TopSeed: ptr(1),
+		BottomID: uuid.New(), BottomFirst: "Kenji", BottomLast: "Tanaka", BottomClub: nil, BottomSeed: ptr(4),
 	}
 }
 
@@ -120,6 +120,7 @@ func TestGetTableauRounds(t *testing.T) {
 		{name: "zero entries returns no rounds", fx: noEntries, wantSizes: []int{}},
 		{name: "two entries is just the final", fx: newFixture(2), wantSizes: []int{2}},
 		{name: "four entries returns semis and final", fx: newFixture(4), wantSizes: []int{4, 2}},
+		{name: "five entries rounds up to a table of eight", fx: newFixture(5), wantSizes: []int{8, 4, 2}},
 		{name: "six entries rounds up to a table of eight", fx: newFixture(6), wantSizes: []int{8, 4, 2}},
 	}
 
@@ -168,13 +169,18 @@ func TestGetTableauBouts(t *testing.T) {
 	assert.Equal(t, ended.ID.String(), semis[0].ID)
 	assert.Equal(t, ptr(15), semis[0].TopScore, "revoked points are excluded")
 	assert.Equal(t, ptr(9), semis[0].BottomScore)
-	assert.Equal(t, "Boston Fencing Club", semis[0].Top.Club)
+	assert.Equal(t, ptr("Boston Fencing Club"), semis[0].Top.Club)
+	assert.Nil(t, semis[0].Bottom.Club, "a fencer with no primary club has a null club")
 	assert.Equal(t, 4, semis[0].Bottom.Seed)
+
+	assert.Equal(t, "ended", semis[0].Status)
+	assert.Equal(t, "upcoming", semis[1].Status)
 
 	assert.Nil(t, semis[1].TopScore, "upcoming bouts have no score")
 	assert.Nil(t, semis[1].BottomScore)
 
 	require.Len(t, finals, 1)
+	assert.Equal(t, "active", finals[0].Status)
 	assert.Equal(t, ptr(0), finals[0].TopScore, "a started bout with no scorings is 0")
 	assert.Equal(t, ptr(0), finals[0].BottomScore)
 }

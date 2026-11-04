@@ -1172,6 +1172,16 @@ once the event's pool stage has ended:
 - `GET /events/{id}/tableau` (public) returns every round from the bracket size
   down to the final, each with its bouts in slot order and each fencer's seed.
   Rounds not yet created come back with no bouts.
+- Response shape: `{ "rounds": [{ "size": 8, "bouts": [...] }] }`, largest round
+  first, `size: 2` being the final. Each bout carries `id`, `slot` (1-based, top
+  to bottom), `status` (`upcoming`, `active` or `ended`), `top` and `bottom`
+  fencers (`id`, `first_name`, `last_name`, `club`, `seed`), and `top_score` and
+  `bottom_score`. `club` is the fencer's primary club and is `null` when they
+  have none.
+- Scores are `null` while the bout is `upcoming`; once it has started they are
+  the sum of the fencer's unrevoked scorings, `0` if there are none yet.
+- `rounds` is `[]` when the event has no direct elimination or no entries.
+  A bout whose fencer has no entry row is corrupt data and returns a 500.
 - The Tableau tab shows the bracket by round, with live scores on active bouts.
   Positions without a bout (byes, rounds not yet created) are drawn empty. On a
   phone it snaps to one round at a time, with round tabs kept in sync (#168).

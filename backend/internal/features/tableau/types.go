@@ -5,16 +5,17 @@ type TableauInput struct {
 }
 
 type FencerResponse struct {
-	ID        string `json:"id" format:"uuid"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Club      string `json:"club"`
-	Seed      int    `json:"seed"`
+	ID        string  `json:"id" format:"uuid"`
+	FirstName string  `json:"first_name"`
+	LastName  string  `json:"last_name"`
+	Club      *string `json:"club" nullable:"true" doc:"Primary club; null when the fencer has none"`
+	Seed      int     `json:"seed"`
 }
 
 type TableauBoutResponse struct {
 	ID          string         `json:"id" format:"uuid"`
 	Slot        int            `json:"slot" doc:"1-based position in the round, top to bottom"`
+	Status      string         `json:"status" enum:"upcoming,active,ended"`
 	Top         FencerResponse `json:"top"`
 	Bottom      FencerResponse `json:"bottom"`
 	TopScore    *int           `json:"top_score" nullable:"true" doc:"Null until the bout has started"`

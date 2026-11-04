@@ -32,12 +32,12 @@ type BoutRow struct {
 	TopID       uuid.UUID       `gorm:"column:top_id"`
 	TopFirst    string          `gorm:"column:top_first_name"`
 	TopLast     string          `gorm:"column:top_last_name"`
-	TopClub     string          `gorm:"column:top_club"`
+	TopClub     *string         `gorm:"column:top_club"`
 	TopSeed     *int            `gorm:"column:top_seed"`
 	BottomID    uuid.UUID       `gorm:"column:bottom_id"`
 	BottomFirst string          `gorm:"column:bottom_first_name"`
 	BottomLast  string          `gorm:"column:bottom_last_name"`
-	BottomClub  string          `gorm:"column:bottom_club"`
+	BottomClub  *string         `gorm:"column:bottom_club"`
 	BottomSeed  *int            `gorm:"column:bottom_seed"`
 }
 
@@ -83,8 +83,8 @@ func (r *tableauRepository) ListTableauBouts(ctx context.Context, directEliminat
 	err := r.db.WithContext(ctx).
 		Table("bouts AS b").
 		Select(`b.id, b.round_size, b.slot, b.status,
-			c1.id AS top_id, c1.first_name AS top_first_name, c1.last_name AS top_last_name, c1.team AS top_club, e1.seed AS top_seed,
-			c2.id AS bottom_id, c2.first_name AS bottom_first_name, c2.last_name AS bottom_last_name, c2.team AS bottom_club, e2.seed AS bottom_seed`).
+			c1.id AS top_id, c1.first_name AS top_first_name, c1.last_name AS top_last_name, c1.primary_club AS top_club, e1.seed AS top_seed,
+			c2.id AS bottom_id, c2.first_name AS bottom_first_name, c2.last_name AS bottom_last_name, c2.primary_club AS bottom_club, e2.seed AS bottom_seed`).
 		Joins("JOIN competitors c1 ON c1.id = b.competitor_1_id").
 		Joins("JOIN competitors c2 ON c2.id = b.competitor_2_id").
 		Joins("LEFT JOIN direct_elimination_entries e1 ON e1.direct_elimination_id = b.direct_elimination_id AND e1.competitor_id = b.competitor_1_id").

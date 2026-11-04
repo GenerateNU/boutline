@@ -329,23 +329,26 @@ func (s *boutService) validateUpdatedPool(ctx context.Context, boutID uuid.UUID,
 	return s.validatePool(ctx, poolID, stored.TournamentID)
 }
 
-// When only one competitor is supplied, the other side of the pair comes from
-// the stored row, so the distinctness check needs a read the plain field
-// validation above cannot see.
+// A tableau bout's fencers must match its entry rows, or the event's tableau
+// cannot be built. When only one competitor is supplied, the other side of the
+// pair comes from the stored row, so the distinctness check needs that read too.
 func (s *boutService) validateCompetitorPair(ctx context.Context, id uuid.UUID, competitor1ID, competitor2ID *uuid.UUID) error {
-	if competitor1ID != nil && competitor2ID != nil {
-		if *competitor1ID == *competitor2ID {
-			return errs.Public("competitor_1_id and competitor_2_id must be different", errs.ErrInvalidInput)
-		}
-		return nil
-	}
 	if competitor1ID == nil && competitor2ID == nil {
 		return nil
+	}
+	if competitor1ID != nil && competitor2ID != nil && *competitor1ID == *competitor2ID {
+		return errs.Public("competitor_1_id and competitor_2_id must be different", errs.ErrInvalidInput)
 	}
 
 	stored, err := s.repo.GetBoutByID(ctx, id)
 	if err != nil {
 		return err
+	}
+	if stored.DirectEliminationID != nil {
+		return errs.Public("competitors of a tableau bout cannot be changed", errs.ErrConflict)
+	}
+	if competitor1ID != nil && competitor2ID != nil {
+		return nil
 	}
 
 	other := stored.Competitor2ID
