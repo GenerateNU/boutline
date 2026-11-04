@@ -2,6 +2,7 @@ import { Pagination } from "@/components/primitives/pagination";
 import { Section } from "@/components/primitives/section";
 import { getTeams } from "@/features/competitor/services/getTeams";
 import { SearchForm } from "@/features/tournament/components/search-form";
+import { readOffsetParam, readStringParam } from "@/lib/search-params";
 
 import { MockCountry } from "../_components/mock-country";
 
@@ -13,8 +14,8 @@ export default async function ClubsTab({
 }: PageProps<"/tournaments/[tournamentId]/clubs">) {
   const [{ tournamentId }, query] = await Promise.all([params, searchParams]);
 
-  const search = typeof query.q === "string" ? query.q.trim() : "";
-  const offset = Math.max(0, Number(query.offset) || 0);
+  const search = readStringParam(query, "q");
+  const offset = readOffsetParam(query);
   const basePath = `/tournaments/${tournamentId}/clubs`;
 
   const { data, total, limit } = await getTeams(
