@@ -311,7 +311,7 @@ timed, on a strip.
 
 | Method | Path | Rules |
 | --- | --- | --- |
-| POST | `/bouts` | tournament must be active; the pool must belong to the same tournament; a pool bout takes the pool's next `group_slot` under the pool stage lock (§11.2) until pool create makes pool bouts |
+| POST | `/bouts` | tournament must be active; the pool must belong to the same tournament; a pool bout copies the pool's referee, strip and number and takes its next `group_slot`, under the pool stage lock (§11.2), until pool create makes pool bouts |
 | GET | `/bouts?tournament_id&pool_id&status&ids` | newest first |
 | GET | `/bouts/{id}` | |
 | PATCH | `/bouts/{id}` | only while `upcoming`; `pool_id` can't change |
@@ -957,8 +957,9 @@ ranking seeds the tableau.
 
 ### 11.1 Pool data
 
-**Status:** Partial. The columns and edit propagation are built; bouts copy the
-pool's strip, referee and number at creation once pool create (§11.2) lands.
+**Status:** Partial. The columns are built, and so is copying from the pool: on
+`POST /bouts` and on pool edits, both under the pool stage lock. Pool create
+(§11.2) will copy the same way.
 
 - `pools.number` (≥ 1, unique per pool stage) labels the pool, and `pools.strip`
   is its strip assignment.

@@ -93,6 +93,57 @@ func TestConcurrentPoolBoutsTakeDistinctSlots(t *testing.T) {
 	assert.ElementsMatch(t, []any{float64(1), float64(2), float64(3), float64(4), float64(5)}, slots)
 }
 
+func TestPoolBoutCopiesItsPool(t *testing.T) {
+	app := testkit.GetDBTestApp(t)
+	poolID := createPool(t, app, 93)
+
+	body := poolBoutBody(poolID)
+	body["referee_id"], body["location"], body["group_number"] = samRivera, "Strip 1", 1
+	created := send(t, app, testkit.POST, "/api/v1/bouts", body, http.StatusCreated)
+	route := "/api/v1/bouts/" + createdID(t, created)
+	t.Cleanup(func() { send(t, app, testkit.DELETE, route, nil, http.StatusNoContent) })
+
+	assert.Equal(t, jordanLee, created["referee_id"])
+	assert.Equal(t, "Strip 9", created["location"])
+	assert.Equal(t, float64(93), created["group_number"])
+}
+
+// Creates race a pool edit; whichever order they land in, every upcoming bout
+// must end up with the pool's final strip, number and referee.
+func TestPoolBoutsCreatedDuringAnEditMatchThePool(t *testing.T) {
+	app := testkit.GetDBTestApp(t)
+	poolID := createPool(t, app, 94)
+
+	const creates = 5
+	bodies := make([]map[string]any, creates)
+	var wg sync.WaitGroup
+	for i := range creates {
+		wg.Go(func() {
+			bodies[i] = send(t, app, testkit.POST, "/api/v1/bouts", poolBoutBody(poolID), http.StatusCreated)
+		})
+	}
+	wg.Go(func() {
+		send(t, app, testkit.PATCH, "/api/v1/pools/"+poolID, map[string]any{
+			"number": 95, "strip": "Strip 11", "referee_id": samRivera,
+		}, http.StatusOK)
+	})
+	wg.Wait()
+
+	for _, body := range bodies {
+		id, ok := body["id"].(string)
+		if !ok {
+			continue
+		}
+		route := "/api/v1/bouts/" + id
+		t.Cleanup(func() { send(t, app, testkit.DELETE, route, nil, http.StatusNoContent) })
+
+		stored := send(t, app, testkit.GET, route, nil, http.StatusOK)
+		assert.Equal(t, "Strip 11", stored["location"], id)
+		assert.Equal(t, float64(95), stored["group_number"], id)
+		assert.Equal(t, samRivera, stored["referee_id"], id)
+	}
+}
+
 func createPool(t *testing.T, app *fiber.App, number int) string {
 	t.Helper()
 

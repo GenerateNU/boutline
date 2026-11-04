@@ -99,10 +99,11 @@ func NewBoutRepository(db *gorm.DB) BoutRepository {
 	return &boutRepository{db: db}
 }
 
-// A pool bout takes the next slot in its pool. It locks the pool stage row, the
-// same lock pool create and re-seat take (design §11.2), so it can't race them
-// or another create for the pool; the unique index on (pool_id, group_slot)
-// backs that up.
+// A pool bout copies its pool's referee, strip and number (design §11.1) and
+// takes the pool's next slot. It holds the pool stage row lock that pool edits,
+// create and re-seat take (§11.2), so it never copies values an edit is about
+// to replace, and two creates can't take the same slot; the unique index on
+// (pool_id, group_slot) backs that up.
 func (r *boutRepository) CreateBout(ctx context.Context, bout *Bout) error {
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if bout.PoolID != nil {
@@ -111,6 +112,17 @@ func (r *boutRepository) CreateBout(ctx context.Context, bout *Bout) error {
 			if err != nil {
 				return fmt.Errorf("lock pool stage of pool %s: %w", *bout.PoolID, err)
 			}
+
+			var pool struct {
+				RefereeID *uuid.UUID
+				Number    int
+				Strip     *string
+			}
+			err = tx.Table("pools").Select("referee_id, number, strip").Where("id = ?", *bout.PoolID).Scan(&pool).Error
+			if err != nil {
+				return fmt.Errorf("select pool %s: %w", *bout.PoolID, err)
+			}
+			bout.RefereeID, bout.GroupNumber, bout.Location = pool.RefereeID, pool.Number, pool.Strip
 
 			var slot int
 			err = tx.Table("bouts").Where("pool_id = ?", *bout.PoolID).

@@ -158,9 +158,15 @@ func (r *poolRepository) ListPools(ctx context.Context, filter PoolListFilter) (
 
 // The pool and its upcoming bouts change in one transaction so the bouts never
 // show a strip, number or referee the pool no longer has. Bouts that already
-// started keep what they were fenced with.
+// started keep what they were fenced with. It holds the pool stage row lock
+// that bout create takes, so a bout created mid-edit copies the new values.
 func (r *poolRepository) UpdatePoolByID(ctx context.Context, id uuid.UUID, update PoolUpdate) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		lock := "SELECT 1 FROM pool_stages WHERE id = (SELECT pool_stage_id FROM pools WHERE id = ?) FOR UPDATE"
+		if err := tx.Exec(lock, id).Error; err != nil {
+			return fmt.Errorf("lock pool stage of pool %s: %w", id, err)
+		}
+
 		result := tx.Model(&Pool{}).Where("id = ?", id).Updates(update.columns())
 		if result.Error != nil {
 			return translatePoolWriteError(fmt.Sprintf("update pool %s", id), result.Error)
