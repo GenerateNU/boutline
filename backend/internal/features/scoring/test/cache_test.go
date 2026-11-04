@@ -52,6 +52,34 @@ func TestCachedScoringRepository_ListScoringHistory(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, got, 1)
 	})
+
+	t.Run("a write landing between the db fetch and the cache fill is not overwritten", func(t *testing.T) {
+		t.Parallel()
+
+		inner := NewFakeScoringRepository(seeded)
+		fakeCache := NewFakeCache()
+		repo := scoring.NewCachedScoringRepository(inner, fakeCache)
+		cacheKey := "scoring:bout:" + boutID.String() + ":history"
+
+		// Simulates a concurrent write landing after this read has already
+		// fetched its (now stale) snapshot from the db, but before it reaches
+		// the cache fill — the race the generation check guards against.
+		inner.BeforeListScoringHistoryReturn = func() {
+			require.NoError(t, repo.CreateScoring(context.Background(), &scoring.Scoring{BoutID: boutID, Points: 2}))
+		}
+
+		stale, err := repo.ListScoringHistory(context.Background(), boutID)
+		require.NoError(t, err)
+		require.Len(t, stale, 1, "the read already had this snapshot in hand before the write landed")
+		assert.False(t, fakeCache.Has(cacheKey), "the read must not re-cache data a concurrent write already invalidated")
+
+		inner.BeforeListScoringHistoryReturn = nil
+
+		fresh, err := repo.ListScoringHistory(context.Background(), boutID)
+		require.NoError(t, err)
+		assert.Len(t, fresh, 2, "a read with no race in flight should see and cache the write")
+		assert.True(t, fakeCache.Has(cacheKey))
+	})
 }
 
 func TestCachedScoringRepository_InvalidatesOnWrite(t *testing.T) {
