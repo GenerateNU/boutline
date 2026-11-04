@@ -5,17 +5,21 @@ import { Upload } from "lucide-react";
 import { type Accept, useDropzone } from "react-dropzone";
 
 type DropzoneProps = {
-  label: string;
+  label?: string;
   accept: Accept;
   onFile?: (file: File) => void;
   onReject?: (message: string) => void;
   className?: string;
+  children?: React.ReactNode | ((open: () => void) => React.ReactNode);
 };
 
-function Dropzone({ label, accept, onFile, onReject, className }: DropzoneProps) {
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+function Dropzone({ label, accept, onFile, onReject, className, children }: DropzoneProps) {
+  const triggered = typeof children === "function";
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     accept,
     multiple: false,
+    noClick: triggered,
+    noKeyboard: triggered,
     onDropAccepted: ([file]) => onFile?.(file),
     onDropRejected: ([rejection]) => onReject?.(rejection.errors[0].message),
   });
@@ -24,7 +28,8 @@ function Dropzone({ label, accept, onFile, onReject, className }: DropzoneProps)
     <div
       {...getRootProps({
         className: cn(
-          "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed border-foreground px-4 py-6 text-center text-sm outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
+          "flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-foreground px-4 py-6 text-center text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+          !triggered && "cursor-pointer hover:bg-muted",
           isDragActive && "bg-muted",
           className,
         ),
@@ -32,8 +37,12 @@ function Dropzone({ label, accept, onFile, onReject, className }: DropzoneProps)
       data-slot="dropzone"
     >
       <input {...getInputProps()} />
-      <Upload aria-hidden className="size-5" />
-      <span>{label}</span>
+      {typeof children === "function" ? children(open) : (children ?? (
+        <>
+          <Upload aria-hidden className="size-5" />
+          <span>{label}</span>
+        </>
+      ))}
     </div>
   );
 }

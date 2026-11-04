@@ -1,16 +1,18 @@
-import { Section } from "@/components/primitives/section";
+import { AuthScreen } from "@/features/auth/components/auth-screen";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 
-import { AuthForm } from "./_components/auth-form";
+import { LoginForm } from "./_components/login-form";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { next } = await searchParams;
+  const redirectTo = safeRedirectPath(next, "/admin");
 
   return (
-    <main className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 py-10">
-      <Section title="Account">
-        <AuthForm redirectTo={safeRedirectPath(next, "/admin")} />
-      </Section>
-    </main>
+    <AuthScreen title="Admin Account Login">
+      <LoginForm
+        redirectTo={redirectTo}
+        signupHref={next ? `/signup?next=${encodeURIComponent(redirectTo)}` : "/signup"}
+      />
+    </AuthScreen>
   );
 }
