@@ -99,8 +99,31 @@ func NewBoutRepository(db *gorm.DB) BoutRepository {
 	return &boutRepository{db: db}
 }
 
+// A pool bout takes the next slot in its pool. It locks the pool stage row, the
+// same lock pool create and re-seat take (design §11.2), so it can't race them
+// or another create for the pool; the unique index on (pool_id, group_slot)
+// backs that up.
 func (r *boutRepository) CreateBout(ctx context.Context, bout *Bout) error {
-	if err := r.db.WithContext(ctx).Create(bout).Error; err != nil {
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if bout.PoolID != nil {
+			err := tx.Exec("SELECT 1 FROM pool_stages WHERE id = (SELECT pool_stage_id FROM pools WHERE id = ?) FOR UPDATE",
+				*bout.PoolID).Error
+			if err != nil {
+				return fmt.Errorf("lock pool stage of pool %s: %w", *bout.PoolID, err)
+			}
+
+			var slot int
+			err = tx.Table("bouts").Where("pool_id = ?", *bout.PoolID).
+				Select("COALESCE(MAX(group_slot), 0) + 1").Scan(&slot).Error
+			if err != nil {
+				return fmt.Errorf("next group slot in pool %s: %w", *bout.PoolID, err)
+			}
+			bout.GroupSlot = &slot
+		}
+
+		return tx.Create(bout).Error
+	})
+	if err != nil {
 		return translateBoutWriteError("create bout", err)
 	}
 

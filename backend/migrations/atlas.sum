@@ -1,4 +1,4 @@
-h1:UCDcp+BJyhq9Pcbp8CztcIM86/sTuk5FtD3Jq8fqZjU=
+h1:K3HZG4RVFqfI3odE2LHu6ySVhzPluUydK4ZcM6AOlvw=
 20260912065155_create_examples.sql h1:0KjoBLsLY6UbTg23Ctie16NbsSEZPGfFV/QxvOV7NHE=
 20260919030549_create_tournaments.sql h1:x/6bQNnr7O+E76TEIpBmjwvZeZDH9AYV8c6v8SEB0w4=
 20260921045710_create_users.sql h1:sYJ+YDgRgLEeCsWY1twv4IioM7e9VT5NQwjkT99CngM=
@@ -18,4 +18,4 @@ h1:UCDcp+BJyhq9Pcbp8CztcIM86/sTuk5FtD3Jq8fqZjU=
 20261015013823_add_competitors_tournament_id.sql h1:fm+kJRkeDqYhBdxktukFCw1AlVmJyDQUMKQS6zEjbaQ=
 20261021002426_standardize_ended_status.sql h1:gYmxv88O81jRO36b3rN7gQhztajsGst1Da3l4QkMFzk=
 20261024043137_add_competitor_owner.sql h1:S/OthfD1KOxsnPlFlCWkhocnQIHIZ1GKMdgSmnDM/rU=
-20261104170516_add_pool_number_strip_and_group_slot.sql h1:eL2dVYdyIZ5HQWqCBqNTDh60yfHmxqpcJZqZAwL8GBk=
+20261104170516_add_pool_number_strip_and_group_slot.sql h1:3gWdSyhERVhT8BQBarh4D5IOAqccgEZCHNFQ67LEZ4Y=
