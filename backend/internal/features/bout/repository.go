@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/pool"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -99,38 +100,14 @@ func NewBoutRepository(db *gorm.DB) BoutRepository {
 	return &boutRepository{db: db}
 }
 
-// A pool bout copies its pool's referee, strip and number (design §11.1) and
-// takes the pool's next slot. It holds the pool stage row lock that pool edits,
-// create and re-seat take (§11.2), so it never copies values an edit is about
-// to replace, and two creates can't take the same slot; the unique index on
-// (pool_id, group_slot) backs that up.
 func (r *boutRepository) CreateBout(ctx context.Context, bout *Bout) error {
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Pool bouts copy their pool (§11.1). Stopgap until pool create (§11.2)
+		// makes them.
 		if bout.PoolID != nil {
-			err := tx.Exec("SELECT 1 FROM pool_stages WHERE id = (SELECT pool_stage_id FROM pools WHERE id = ?) FOR UPDATE",
-				*bout.PoolID).Error
-			if err != nil {
-				return fmt.Errorf("lock pool stage of pool %s: %w", *bout.PoolID, err)
+			if err := fillBoutFromPool(tx, bout); err != nil {
+				return err
 			}
-
-			var pool struct {
-				RefereeID *uuid.UUID
-				Number    int
-				Strip     *string
-			}
-			err = tx.Table("pools").Select("referee_id, number, strip").Where("id = ?", *bout.PoolID).Scan(&pool).Error
-			if err != nil {
-				return fmt.Errorf("select pool %s: %w", *bout.PoolID, err)
-			}
-			bout.RefereeID, bout.GroupNumber, bout.Location = pool.RefereeID, pool.Number, pool.Strip
-
-			var slot int
-			err = tx.Table("bouts").Where("pool_id = ?", *bout.PoolID).
-				Select("COALESCE(MAX(group_slot), 0) + 1").Scan(&slot).Error
-			if err != nil {
-				return fmt.Errorf("next group slot in pool %s: %w", *bout.PoolID, err)
-			}
-			bout.GroupSlot = &slot
 		}
 
 		return tx.Create(bout).Error
@@ -138,6 +115,41 @@ func (r *boutRepository) CreateBout(ctx context.Context, bout *Bout) error {
 	if err != nil {
 		return translateBoutWriteError("create bout", err)
 	}
+
+	return nil
+}
+
+// fillBoutFromPool copies the pool's referee, strip and number onto the bout and gives it the pool's next slot.
+func fillBoutFromPool(tx *gorm.DB, bout *Bout) error {
+	poolID := *bout.PoolID
+
+	// Serializes with pool edits and other pool-bout creates.
+	if err := pool.LockPoolStage(tx, poolID); err != nil {
+		return err
+	}
+
+	// Copy the pool's referee, strip and number onto the bout.
+	var p pool.Pool
+	err := tx.Select("referee_id", "number", "strip").Take(&p, "id = ?", poolID).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return errs.Public("pool_id does not reference an existing pool", errs.ErrInvalidInput)
+	}
+	if err != nil {
+		return fmt.Errorf("select pool %s: %w", poolID, err)
+	}
+	bout.RefereeID = p.RefereeID
+	bout.GroupNumber = p.Number
+	bout.Location = p.Strip
+
+	// Append the bout to the end of the pool's bout order: group_slot is what
+	// orders a pool's bouts, since bouts made together share a created_at. The
+	// lock keeps MAX + 1 unique; the unique index is a backstop.
+	var slot int
+	err = tx.Table("bouts").Where("pool_id = ?", poolID).Select("COALESCE(MAX(group_slot), 0) + 1").Scan(&slot).Error
+	if err != nil {
+		return fmt.Errorf("next group slot in pool %s: %w", poolID, err)
+	}
+	bout.GroupSlot = &slot
 
 	return nil
 }

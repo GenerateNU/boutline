@@ -25,7 +25,7 @@ type PoolRepository interface {
 	DeletePoolByID(ctx context.Context, id uuid.UUID) error
 }
 
-// Mirror bout.BoutStatusEnded and bout.BoutStatusUpcoming; the bout package imports this one, so they cannot be referenced here.
+// Mirror bout's statuses; bout imports this package, so they can't be referenced here.
 const (
 	endedBoutStatus    = "ended"
 	upcomingBoutStatus = "upcoming"
@@ -57,8 +57,7 @@ func (p PoolUpdate) columns() map[string]any {
 	return columns
 }
 
-// boutColumns are the fields a pool's upcoming bouts copy from it, so editing
-// the pool keeps them in step.
+// boutColumns maps a pool update onto the bout columns copied from the pool (§11.1).
 func (p PoolUpdate) boutColumns() map[string]any {
 	columns := make(map[string]any, 3)
 
@@ -156,17 +155,14 @@ func (r *poolRepository) ListPools(ctx context.Context, filter PoolListFilter) (
 	return pools, total, nil
 }
 
-// The pool and its upcoming bouts change in one transaction so the bouts never
-// show a strip, number or referee the pool no longer has. Bouts that already
-// started keep what they were fenced with. It holds the pool stage row lock
-// that bout create takes, so a bout created mid-edit copies the new values.
 func (r *poolRepository) UpdatePoolByID(ctx context.Context, id uuid.UUID, update PoolUpdate) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		lock := "SELECT 1 FROM pool_stages WHERE id = (SELECT pool_stage_id FROM pools WHERE id = ?) FOR UPDATE"
-		if err := tx.Exec(lock, id).Error; err != nil {
-			return fmt.Errorf("lock pool stage of pool %s: %w", id, err)
+		// Serializes with pool-bout creates, so one made mid-edit copies the new values.
+		if err := LockPoolStage(tx, id); err != nil {
+			return err
 		}
 
+		// Update the pool.
 		result := tx.Model(&Pool{}).Where("id = ?", id).Updates(update.columns())
 		if result.Error != nil {
 			return translatePoolWriteError(fmt.Sprintf("update pool %s", id), result.Error)
@@ -179,12 +175,14 @@ func (r *poolRepository) UpdatePoolByID(ctx context.Context, id uuid.UUID, updat
 			return fmt.Errorf("update pool %s: no row updated", id)
 		}
 
+		// Nothing to sync unless a copied field changed.
 		boutColumns := update.boutColumns()
 		if len(boutColumns) == 0 {
 			return nil
 		}
 		boutColumns["updated_at"] = time.Now()
 
+		// Sync upcoming bouts; started ones keep their values.
 		err := tx.Table("bouts").
 			Where("pool_id = ? AND status = ?", id, upcomingBoutStatus).
 			Updates(boutColumns).Error
@@ -194,6 +192,17 @@ func (r *poolRepository) UpdatePoolByID(ctx context.Context, id uuid.UUID, updat
 
 		return nil
 	})
+}
+
+// LockPoolStage locks a pool's stage row until tx ends. Pool edits and pool-bout creates share it.
+func LockPoolStage(tx *gorm.DB, poolID uuid.UUID) error {
+	err := tx.Exec("SELECT 1 FROM pool_stages WHERE id = (SELECT pool_stage_id FROM pools WHERE id = ?) FOR UPDATE",
+		poolID).Error
+	if err != nil {
+		return fmt.Errorf("lock pool stage of pool %s: %w", poolID, err)
+	}
+
+	return nil
 }
 
 func (r *poolRepository) StartPoolByID(ctx context.Context, id uuid.UUID, startedAt time.Time) error {
