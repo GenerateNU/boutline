@@ -25,8 +25,11 @@ type PoolRepository interface {
 	DeletePoolByID(ctx context.Context, id uuid.UUID) error
 }
 
-// Mirrors bout.BoutStatusEnded; the bout package imports this one, so it cannot be referenced here.
-const endedBoutStatus = "ended"
+// Mirror bout.BoutStatusEnded and bout.BoutStatusUpcoming; the bout package imports this one, so they cannot be referenced here.
+const (
+	endedBoutStatus    = "ended"
+	upcomingBoutStatus = "upcoming"
+)
 
 type PoolUpdate struct {
 	RefereeID *uuid.UUID
@@ -49,6 +52,24 @@ func (p PoolUpdate) columns() map[string]any {
 	}
 	if p.StartTime != nil {
 		columns["start_time"] = *p.StartTime
+	}
+
+	return columns
+}
+
+// boutColumns are the fields a pool's upcoming bouts copy from it, so editing
+// the pool keeps them in step.
+func (p PoolUpdate) boutColumns() map[string]any {
+	columns := make(map[string]any, 3)
+
+	if p.RefereeID != nil {
+		columns["referee_id"] = *p.RefereeID
+	}
+	if p.Number != nil {
+		columns["group_number"] = *p.Number
+	}
+	if p.Strip != nil {
+		columns["location"] = *p.Strip
 	}
 
 	return columns
@@ -135,20 +156,38 @@ func (r *poolRepository) ListPools(ctx context.Context, filter PoolListFilter) (
 	return pools, total, nil
 }
 
+// The pool and its upcoming bouts change in one transaction so the bouts never
+// show a strip, number or referee the pool no longer has. Bouts that already
+// started keep what they were fenced with.
 func (r *poolRepository) UpdatePoolByID(ctx context.Context, id uuid.UUID, update PoolUpdate) error {
-	result := r.db.WithContext(ctx).Model(&Pool{}).Where("id = ?", id).Updates(update.columns())
-	if result.Error != nil {
-		return translatePoolWriteError(fmt.Sprintf("update pool %s", id), result.Error)
-	}
-
-	if result.RowsAffected == 0 {
-		if _, err := r.GetPoolByID(ctx, id); err != nil {
-			return err
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&Pool{}).Where("id = ?", id).Updates(update.columns())
+		if result.Error != nil {
+			return translatePoolWriteError(fmt.Sprintf("update pool %s", id), result.Error)
 		}
-		return fmt.Errorf("update pool %s: no row updated", id)
-	}
 
-	return nil
+		if result.RowsAffected == 0 {
+			if _, err := r.GetPoolByID(ctx, id); err != nil {
+				return err
+			}
+			return fmt.Errorf("update pool %s: no row updated", id)
+		}
+
+		boutColumns := update.boutColumns()
+		if len(boutColumns) == 0 {
+			return nil
+		}
+		boutColumns["updated_at"] = time.Now()
+
+		err := tx.Table("bouts").
+			Where("pool_id = ? AND status = ?", id, upcomingBoutStatus).
+			Updates(boutColumns).Error
+		if err != nil {
+			return fmt.Errorf("update upcoming bouts of pool %s: %w", id, err)
+		}
+
+		return nil
+	})
 }
 
 func (r *poolRepository) StartPoolByID(ctx context.Context, id uuid.UUID, startedAt time.Time) error {
