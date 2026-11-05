@@ -104,6 +104,29 @@ func (f *FakePoolRepository) ListPoolEntrants(_ context.Context, competitorIDs [
 	return entrants, nil
 }
 
+func (f *FakePoolRepository) ListEnteredCompetitorIDs(
+	_ context.Context,
+	poolStageID uuid.UUID,
+	competitorIDs []uuid.UUID,
+) ([]uuid.UUID, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	var entered []uuid.UUID
+	for _, id := range competitorIDs {
+		for _, bout := range f.Bouts {
+			if f.Pools[bout.PoolID].PoolStageID == poolStageID && (bout.Competitor1ID == id || bout.Competitor2ID == id) {
+				entered = append(entered, id)
+
+				break
+			}
+		}
+	}
+
+	return entered, nil
+}
+
 // numberTaken mirrors the unique index on (pool_stage_id, number); except is the
 // pool being updated, which may keep its own number.
 func (f *FakePoolRepository) numberTaken(poolStageID uuid.UUID, number int, except uuid.UUID) bool {
