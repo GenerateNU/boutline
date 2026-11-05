@@ -1,10 +1,11 @@
 -- Modify "bouts" table
-ALTER TABLE "bouts" ADD CONSTRAINT "chk_bouts_slot" CHECK (slot >= 1), ADD COLUMN "slot" bigint NULL;
+ALTER TABLE "bouts" DROP CONSTRAINT "chk_bouts_tableau_placement", DROP CONSTRAINT "chk_bouts_slot", ADD CONSTRAINT "chk_bouts_slot" CHECK ((slot >= 1) AND ((round_size IS NULL) OR (slot <= (round_size / 2))));
 -- Existing pool bouts have no slot, so each pool's bouts are slotted in creation
--- order before the unique index is built.
+-- order before the placement check and the unique index are added.
 UPDATE "bouts" SET "slot" = slotted.slot
 FROM (SELECT "id", row_number() OVER (PARTITION BY "pool_id" ORDER BY "created_at", "id") AS slot FROM "bouts" WHERE "pool_id" IS NOT NULL) AS slotted
 WHERE "bouts"."id" = slotted.id;
+ALTER TABLE "bouts" ADD CONSTRAINT "chk_bouts_placement" CHECK (((direct_elimination_id IS NULL) = (round_size IS NULL)) AND ((slot IS NULL) = ((pool_id IS NULL) AND (direct_elimination_id IS NULL))));
 -- Create index "idx_bouts_pool_id_slot" to table: "bouts"
 CREATE UNIQUE INDEX "idx_bouts_pool_id_slot" ON "bouts" ("pool_id", "slot");
 -- Modify "pools" table
