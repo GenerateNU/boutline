@@ -6,6 +6,9 @@ type PoolResponse struct {
 	ID          string     `json:"id" format:"uuid"`
 	PoolStageID string     `json:"pool_stage_id" format:"uuid"`
 	RefereeID   *string    `json:"referee_id" format:"uuid" doc:"Null until a referee is assigned"`
+	Number      int        `json:"number"`
+	Strip       *string    `json:"strip"`
+	StartTime   *time.Time `json:"start_time" doc:"Scheduled start, if one was set"`
 	StartedAt   *time.Time `json:"started_at" doc:"When the pool actually started"`
 	CompletedAt *time.Time `json:"completed_at"`
 	CreatedAt   time.Time  `json:"created_at"`
@@ -23,6 +26,9 @@ func newPoolResponse(pool Pool) PoolResponse {
 		ID:          pool.ID.String(),
 		PoolStageID: pool.PoolStageID.String(),
 		RefereeID:   refereeID,
+		Number:      pool.Number,
+		Strip:       pool.Strip,
+		StartTime:   pool.StartTime,
 		StartedAt:   pool.StartedAt,
 		CompletedAt: pool.CompletedAt,
 		CreatedAt:   pool.CreatedAt,
@@ -31,8 +37,11 @@ func newPoolResponse(pool Pool) PoolResponse {
 }
 
 type PoolCreateBody struct {
-	PoolStageID string  `json:"pool_stage_id" format:"uuid" doc:"Pool stage this pool belongs to"`
-	RefereeID   *string `json:"referee_id,omitempty" format:"uuid" doc:"Can be assigned later"`
+	PoolStageID string     `json:"pool_stage_id" format:"uuid" doc:"Pool stage this pool belongs to"`
+	RefereeID   *string    `json:"referee_id,omitempty" format:"uuid" doc:"Can be assigned later"`
+	Number      int        `json:"number" minimum:"1" doc:"Pool number, unique within its pool stage"`
+	Strip       *string    `json:"strip,omitempty" maxLength:"200"`
+	StartTime   *time.Time `json:"start_time,omitempty" doc:"Scheduled start"`
 }
 
 type PoolCreateInput struct {
@@ -44,7 +53,10 @@ type PoolIDInput struct {
 }
 
 type PoolUpdateBody struct {
-	RefereeID *string `json:"referee_id,omitempty" format:"uuid" doc:"Referee to assign to the pool"`
+	RefereeID *string    `json:"referee_id,omitempty" format:"uuid" doc:"Referee to assign to the pool"`
+	Number    *int       `json:"number,omitempty" minimum:"1"`
+	Strip     *string    `json:"strip,omitempty" maxLength:"200"`
+	StartTime *time.Time `json:"start_time,omitempty" doc:"New scheduled start"`
 }
 
 type PoolUpdateInput struct {

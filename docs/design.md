@@ -99,6 +99,9 @@ manage it, and the Next dev server runs on the host.
 - The GORM models are the desired state. `cmd/atlasloader` loads every model, plus
   the trigram indexes in `fuzzy_search.sql`, and `atlas migrate diff` generates
   the migration from them. Every new model is registered in the atlasloader.
+- A generated migration that makes a column required, or unique, on a table that
+  may already hold rows gets a hand-written backfill between adding the column and
+  enforcing it, so a populated database upgrades. `atlas migrate hash` re-signs it.
 - `make schema-diagram` regenerates the ER diagram in the root README from the
   migrations. CI fails if it is stale, so the diagram is never edited by hand.
 - `backend/seeds/seed.sql` is idempotent (fixed UUIDs, `ON CONFLICT DO NOTHING`).
@@ -262,16 +265,18 @@ A pool stage is an event's round-robin round. A pool is one group of fencers in 
 each with a referee.
 
 - `pool_stages`: `event_id`, `max_competitor_per_pool` (≥ 2), `status`,
-  `start_time`. `pools`: `pool_stage_id`, `referee_id`, `started_at`,
-  `completed_at`. `bouts.pool_id` links a pool's bouts to it.
+  `start_time`. `pools`: `pool_stage_id`, `referee_id`, `number`, `strip`,
+  `start_time` (scheduled), `started_at`, `completed_at` (§11.1). `bouts.pool_id`
+  links a pool's bouts to it.
 - Pool stage routes: CRUD (edit and delete only while `upcoming`; delete is a 409
   once a pool has bouts), plus:
   - `POST /pool-stages/{id}/start`: `upcoming → active`, and only with at least
     one pool.
   - `POST /pool-stages/{id}/end`: `active → ended`, and only when every pool has
     completed.
-- Pool routes: CRUD (`PATCH` changes only the referee; delete is a 409 when the pool
-  has bouts), plus:
+- Pool routes: CRUD (`POST` needs a `number`, and a duplicate in the stage is a 409;
+  `PATCH` changes the referee, number, strip and start time, and the pool's
+  upcoming bouts follow (§11.1); delete is a 409 when the pool has bouts), plus:
   - `POST /pools/{id}/start`: needs an assigned referee and an `active` stage;
     writes `started_at`.
   - `POST /pools/{id}/end`: needs every bout in the pool ended; writes
@@ -298,17 +303,18 @@ editable, and not once ended.
 A bout is one match between two competitors, to a number of touches, optionally
 timed, on a strip.
 
-`bouts`: `tournament_id`, `pool_id?`, `referee_id?`, `competitor_1_id`,
-`competitor_2_id` (must differ), `points_to_win` (> 0), `time_limit_seconds?`,
-`location?` (strip, max 200 chars), `group_number`, `start_time`, `status`
-(`upcoming` | `active` | `ended`), `started_at`, `completed_at`.
+`bouts`: `tournament_id`, `pool_id?`, `slot?` (§11.1), `referee_id?`,
+`competitor_1_id`, `competitor_2_id` (must differ), `points_to_win` (> 0),
+`time_limit_seconds?`, `location?` (strip, max 200 chars), `group_number`,
+`start_time`, `status` (`upcoming` | `active` | `ended`), `started_at`,
+`completed_at`.
 
 | Method | Path | Rules |
 | --- | --- | --- |
-| POST | `/bouts` | tournament must be active; the pool must belong to the same tournament |
+| POST | `/bouts` | tournament must be active; the pool must belong to the same tournament; a pool bout copies the pool's referee, strip and number and takes its next `slot`, under the pool stage lock (§11.2), until pool create makes pool bouts |
 | GET | `/bouts?tournament_id&pool_id&status&ids` | newest first |
 | GET | `/bouts/{id}` | |
-| PATCH | `/bouts/{id}` | only while `upcoming` |
+| PATCH | `/bouts/{id}` | only while `upcoming`; `pool_id` can't change |
 | POST | `/bouts/{id}/start` | tournament active, referee assigned, `upcoming → active` |
 | POST | `/bouts/{id}/end` | `active → ended` |
 | DELETE | `/bouts/{id}` | only while `upcoming` or `ended` (narrowed in §8.3) |
@@ -951,14 +957,17 @@ ranking seeds the tableau.
 
 ### 11.1 Pool data
 
-**Status:** Planned.
+**Status:** Partial. The columns are built, and so is copying from the pool: on
+`POST /bouts` and on pool edits, both under the pool stage lock. Pool create
+(§11.2) will copy the same way.
 
 - `pools.number` (≥ 1, unique per pool stage) labels the pool, and `pools.strip`
   is its strip assignment.
-- `bouts.group_slot` (≥ 1, unique per pool) is a pool bout's place in the pool's
-  bout order. Bouts created in one batch share a `created_at`, so the order needs
-  a column. A DE bout's bracket position is a separate column, `bouts.slot`
-  (§12.1).
+- `bouts.slot` (≥ 1, unique per pool) is a pool bout's place in the pool's bout
+  order. Bouts created in one batch share a `created_at`, so the order needs a
+  column. The same column holds a DE bout's bracket position (§12.1): which of
+  `pool_id` and `direct_elimination_id` is set says what the slot is a position
+  in.
 - A pool's fencers are the competitors in its bouts. There is no pool-fencers
   table.
 - A pool's bouts copy its strip (`location`), referee and number (`group_number`).
@@ -1112,13 +1121,14 @@ draw's single write and the cleanup when the DE is deleted all belong to the DE.
 
 - `bouts.direct_elimination_id` and `bouts.round_size` record a DE bout's round
   (the number of fencers in it: 64, 32, …, 2 is the final).
-  - `bouts.slot` is a DE bout's 1-based position in the round, top to bottom,
-    with `competitor_1` as the top fencer. It is separate from a pool bout's
-    `bouts.group_slot` (§11.1).
-  - `direct_elimination_id`, `round_size` and `slot` are all set or all null, and
-    a bout belongs to a pool or a DE, never both.
+  - A DE bout uses `bouts.slot` (§11.1) as its 1-based position in the round,
+    top to bottom, with `competitor_1` as the top fencer.
+  - `direct_elimination_id` and `round_size` are both set or both null.
   - The bouts at slots 2k−1 and 2k feed slot k of the next round.
-  - `(direct_elimination_id, round_size, slot)` is unique.
+  - `(direct_elimination_id, round_size, slot)` is unique. Postgres treats nulls
+    as distinct, so this index and the pool's `(pool_id, slot)` never collide.
+  - A bout belongs to a pool or a DE, never both, and has a `slot` exactly when
+    it belongs to one.
 
 ### 12.2 Draw
 
@@ -1508,6 +1518,11 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   rules and the `confirming` phase have to pick one.
 - May a tournament admin referee and score bouts, or only users with the
   `referee` role?
+- What happens when a referee has to step away from a pool mid-way? Reassigning
+  the pool's referee moves its upcoming bouts to the new one (§11.1), but an
+  active bout keeps its referee, and only the assigned referee can score it
+  (§7.2). Does the replacement take over the active bout too, and is a short
+  break a temporary hand-off rather than a reassignment?
 - Does withdrawing a fencer after the DE draw but before their first bout give
   the opponent a walkover bout, or a bye? (Chapter 17.)
 - How is a tableau seed corrected after the draw? Either re-run the draw while no

@@ -38,16 +38,16 @@ type Bout struct {
 	CompletedAt  *time.Time
 	RefereeID    *uuid.UUID `gorm:"type:uuid;index"`
 	Referee      *user.User `gorm:"foreignKey:RefereeID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
-	PoolID       *uuid.UUID `gorm:"type:uuid;index;check:chk_bouts_single_stage,pool_id IS NULL OR direct_elimination_id IS NULL"`
+	PoolID       *uuid.UUID `gorm:"type:uuid;index;uniqueIndex:idx_bouts_pool_id_slot,priority:1;check:chk_bouts_single_stage,pool_id IS NULL OR direct_elimination_id IS NULL"`
 	Pool         *pool.Pool `gorm:"foreignKey:PoolID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
-	// A tableau bout sets all three of DirectEliminationID, RoundSize and Slot;
-	// any other bout leaves them null. RoundSize is the number of fencers in the
-	// round (2 is the final, 4 the semis) and Slot is the 1-based position in it,
-	// top to bottom, with Competitor1 as the top fencer.
-	DirectEliminationID *uuid.UUID                           `gorm:"type:uuid;index;uniqueIndex:idx_bouts_tableau_slot;check:chk_bouts_tableau_placement,(direct_elimination_id IS NULL) = (round_size IS NULL) AND (round_size IS NULL) = (slot IS NULL)"`
+	// Slot is a bout's 1-based position in whatever it belongs to: its pool's
+	// bout order, or its tableau round, top to bottom with Competitor1 as the top
+	// fencer. A tableau bout also sets DirectEliminationID and RoundSize, the
+	// number of fencers in the round (2 is the final, 4 the semis).
+	DirectEliminationID *uuid.UUID                           `gorm:"type:uuid;index;uniqueIndex:idx_bouts_tableau_slot;check:chk_bouts_placement,(direct_elimination_id IS NULL) = (round_size IS NULL) AND (slot IS NULL) = (pool_id IS NULL AND direct_elimination_id IS NULL)"`
 	DirectElimination   *directelimination.DirectElimination `gorm:"foreignKey:DirectEliminationID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
 	RoundSize           *int                                 `gorm:"uniqueIndex:idx_bouts_tableau_slot;check:chk_bouts_round_size,round_size >= 2 AND (round_size & (round_size - 1)) = 0"`
-	Slot                *int                                 `gorm:"uniqueIndex:idx_bouts_tableau_slot;check:chk_bouts_slot,slot >= 1 AND slot <= round_size / 2"`
+	Slot                *int                                 `gorm:"uniqueIndex:idx_bouts_pool_id_slot,priority:2;uniqueIndex:idx_bouts_tableau_slot;check:chk_bouts_slot,slot >= 1 AND (round_size IS NULL OR slot <= round_size / 2)"`
 	TimeLimitSeconds    *int                                 `gorm:"check:chk_bouts_time_limit_seconds,time_limit_seconds > 0"`
 	PointsToWin         int                                  `gorm:"not null;check:chk_bouts_points_to_win,points_to_win > 0"`
 	GroupNumber         int                                  `gorm:"not null;default:0;check:chk_bouts_group_number,group_number >= 0"`

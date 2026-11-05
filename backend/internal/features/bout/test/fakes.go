@@ -112,9 +112,6 @@ func (f *FakeBoutRepository) UpdateBoutByID(_ context.Context, id uuid.UUID, upd
 	if update.RefereeID != nil {
 		stored.RefereeID = update.RefereeID
 	}
-	if update.PoolID != nil {
-		stored.PoolID = update.PoolID
-	}
 	if update.TimeLimitSeconds != nil {
 		stored.TimeLimitSeconds = update.TimeLimitSeconds
 	}

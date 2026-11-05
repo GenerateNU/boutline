@@ -240,6 +240,9 @@ erDiagram
       timestamptz completed_at
       timestamptz created_at
       timestamptz updated_at
+      bigint number
+      text strip
+      timestamptz start_time
     }
     pools }o--o| pool_stages : fk_pools_pool_stage
     pools }o--o| users : fk_pools_referee
