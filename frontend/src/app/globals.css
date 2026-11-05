@@ -28,6 +28,31 @@
   --color-ring: var(--ring);
   --color-brand: var(--brand);
   --color-chip: var(--chip);
+  --color-blue: var(--blue);
+  --color-blue-dark: var(--blue-dark);
+  --color-blue-light: var(--blue-light);
+  --color-blue-lighter: var(--blue-lighter);
+  --color-surface: var(--surface);
+  --color-outline: var(--outline);
+  --color-disabled: var(--disabled);
+  --color-disabled-subtle: var(--disabled-subtle);
+  --color-disabled-border: var(--disabled-border);
+  --color-disabled-foreground: var(--disabled-foreground);
+  --color-obsidian: var(--obsidian);
+  --color-blue-lightest: var(--blue-lightest);
+  --color-neutral-secondary: var(--neutral-secondary);
+  --color-neutral-muted: var(--neutral-muted);
+  --color-accent-green: var(--accent-green);
+  --color-status-amber: var(--status-amber);
+  --color-status-amber-foreground: var(--status-amber-foreground);
+  --color-status-lavender: var(--status-lavender);
+  --color-status-lavender-foreground: var(--status-lavender-foreground);
+  --color-status-green: var(--status-green);
+  --color-status-green-foreground: var(--status-green-foreground);
+  --color-status-mint: var(--status-mint);
+  --color-status-mint-foreground: var(--status-mint-foreground);
+  --color-status-red: var(--status-red);
+  --color-status-red-foreground: var(--status-red-foreground);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -68,6 +93,31 @@
   --brand: oklch(0.274 0.097 269.29);
   --chip: oklch(0.885 0 0);
   --radius: 0.625rem;
+  --blue: #21358b;
+  --blue-dark: #152156;
+  --blue-light: #c0cff6;
+  --blue-lighter: #ebf0fc;
+  --surface: #ececeb;
+  --outline: #d5d7d8;
+  --disabled: #e8ebf0;
+  --disabled-subtle: #f7f7fa;
+  --disabled-border: #ccd1d9;
+  --disabled-foreground: #6e7582;
+  --obsidian: #010d21;
+  --blue-lightest: #f2f6fe;
+  --neutral-secondary: #586472;
+  --neutral-muted: #969da5;
+  --accent-green: #00c597;
+  --status-amber: #ffe8cb;
+  --status-amber-foreground: #764c00;
+  --status-lavender: #e9e8f3;
+  --status-lavender-foreground: #65647b;
+  --status-green: #ddf0df;
+  --status-green-foreground: #076127;
+  --status-mint: #d5f7e1;
+  --status-mint-foreground: #046e41;
+  --status-red: #fee5e4;
+  --status-red-foreground: #ad032a;
 }
 
 @layer base {
