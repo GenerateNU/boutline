@@ -8,6 +8,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -46,10 +47,16 @@ type boutService struct {
 	repo        BoutRepository
 	tournaments TournamentLookup
 	pools       PoolLookup
+	memberships tournamentuser.MembershipLookup
 }
 
-func NewBoutService(repo BoutRepository, tournaments TournamentLookup, pools PoolLookup) BoutService {
-	return &boutService{repo: repo, tournaments: tournaments, pools: pools}
+func NewBoutService(
+	repo BoutRepository,
+	tournaments TournamentLookup,
+	pools PoolLookup,
+	memberships tournamentuser.MembershipLookup,
+) BoutService {
+	return &boutService{repo: repo, tournaments: tournaments, pools: pools, memberships: memberships}
 }
 
 func (s *boutService) CreateBout(ctx context.Context, input *BoutCreateInput) (*BoutOutput, error) {
@@ -94,6 +101,9 @@ func (s *boutService) CreateBout(ctx context.Context, input *BoutCreateInput) (*
 			"bouts can only be created in an active tournament", errs.ErrConflict))
 	}
 	if err := s.validatePool(ctx, poolID, tournamentID); err != nil {
+		return nil, errs.HumaError(err)
+	}
+	if err := tournamentuser.ValidateReferee(ctx, s.memberships, tournamentID, refereeID); err != nil {
 		return nil, errs.HumaError(err)
 	}
 
@@ -271,7 +281,7 @@ func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body Bou
 	if update.PoolID, err = parseOptionalUUID(body.PoolID, "pool_id"); err != nil {
 		return update, err
 	}
-	if err := s.validateUpdatedPool(ctx, id, update.PoolID); err != nil {
+	if err := s.validateTournamentLinks(ctx, id, update.PoolID, update.RefereeID); err != nil {
 		return update, err
 	}
 
@@ -316,8 +326,9 @@ func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body Bou
 	return update, nil
 }
 
-func (s *boutService) validateUpdatedPool(ctx context.Context, boutID uuid.UUID, poolID *uuid.UUID) error {
-	if poolID == nil {
+// The pool and the referee must both belong to the stored bout's tournament.
+func (s *boutService) validateTournamentLinks(ctx context.Context, boutID uuid.UUID, poolID, refereeID *uuid.UUID) error {
+	if poolID == nil && refereeID == nil {
 		return nil
 	}
 
@@ -325,8 +336,11 @@ func (s *boutService) validateUpdatedPool(ctx context.Context, boutID uuid.UUID,
 	if err != nil {
 		return err
 	}
+	if err := s.validatePool(ctx, poolID, stored.TournamentID); err != nil {
+		return err
+	}
 
-	return s.validatePool(ctx, poolID, stored.TournamentID)
+	return tournamentuser.ValidateReferee(ctx, s.memberships, stored.TournamentID, refereeID)
 }
 
 // A tableau bout's fencers must match its entry rows, or the event's tableau

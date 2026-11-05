@@ -7,6 +7,7 @@ import (
 
 	"boutline/internal/features/pool"
 	"boutline/internal/features/poolstage"
+	tournamentusertest "boutline/internal/features/tournamentuser/test"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
@@ -14,11 +15,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestAPI(t *testing.T, repo *FakePoolRepository, stages *FakePoolStageLookup) humatest.TestAPI {
+func newTestAPI(
+	t *testing.T,
+	repo *FakePoolRepository,
+	stages *FakePoolStageLookup,
+	members *tournamentusertest.FakeMembershipLookup,
+) humatest.TestAPI {
 	t.Helper()
 
 	_, api := humatest.New(t)
-	pool.RegisterPoolService(api, pool.NewPoolService(repo, stages))
+	pool.RegisterPoolService(api, pool.NewPoolService(repo, stages, members))
 
 	return api
 }
@@ -36,7 +42,8 @@ func TestCreateEndpoint(t *testing.T) {
 	t.Parallel()
 
 	stage := seededPoolStage()
-	referee := uuid.New().String()
+	staff := tournamentusertest.NewStaff()
+	referee := staff.Referee.String()
 
 	tests := []struct {
 		name       string
@@ -57,6 +64,12 @@ func TestCreateEndpoint(t *testing.T) {
 			wantFields: map[string]any{"pool_stage_id": stage.ID.String(), "referee_id": nil},
 		},
 		{
+			name:       "rejects a referee who is not on the tournament's staff",
+			body:       map[string]any{"pool_stage_id": stage.ID.String(), "referee_id": staff.Outsider.String()},
+			wantStatus: http.StatusBadRequest,
+			wantFields: map[string]any{"detail": "referee_id must reference a staff member of the tournament"},
+		},
+		{
 			name:       "rejects a missing pool_stage_id before the handler runs",
 			body:       map[string]any{},
 			wantStatus: http.StatusUnprocessableEntity,
@@ -67,7 +80,9 @@ func TestCreateEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t, NewFakePoolRepository(), NewFakePoolStageLookup(stage)).Post("/api/v1/pools", tt.body)
+			repo := NewFakePoolRepository()
+			repo.StageTournaments[stage.ID] = staff.TournamentID
+			resp := newTestAPI(t, repo, NewFakePoolStageLookup(stage), staff.Lookup()).Post("/api/v1/pools", tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 
@@ -88,7 +103,7 @@ func TestListEndpoint(t *testing.T) {
 	t.Run("returns a page and the unpaged total", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakePoolRepository(seed...), NewFakePoolStageLookup()).Get("/api/v1/pools?limit=1")
+		resp := newTestAPI(t, NewFakePoolRepository(seed...), NewFakePoolStageLookup(), tournamentusertest.NewFakeMembershipLookup()).Get("/api/v1/pools?limit=1")
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 
@@ -101,7 +116,7 @@ func TestListEndpoint(t *testing.T) {
 	t.Run("filters by pool_stage_id", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakePoolRepository(seed...), NewFakePoolStageLookup()).
+		resp := newTestAPI(t, NewFakePoolRepository(seed...), NewFakePoolStageLookup(), tournamentusertest.NewFakeMembershipLookup()).
 			Get("/api/v1/pools?pool_stage_id=" + stageID.String())
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
@@ -113,7 +128,7 @@ func TestListEndpoint(t *testing.T) {
 	t.Run("rejects a limit above the maximum", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakePoolRepository(seed...), NewFakePoolStageLookup()).Get("/api/v1/pools?limit=500")
+		resp := newTestAPI(t, NewFakePoolRepository(seed...), NewFakePoolStageLookup(), tournamentusertest.NewFakeMembershipLookup()).Get("/api/v1/pools?limit=500")
 
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
@@ -123,12 +138,13 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 	t.Parallel()
 
 	stored := seededPool(uuid.New())
-	referee := uuid.New().String()
+	staff := tournamentusertest.NewStaff()
+	referee := staff.Referee.String()
 
 	t.Run("returns the stored pool", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup()).
+		resp := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup(), tournamentusertest.NewFakeMembershipLookup()).
 			Get("/api/v1/pools/" + stored.ID.String())
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
@@ -137,7 +153,10 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 	t.Run("assigns a referee", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup()).
+		repo := NewFakePoolRepository(stored)
+		repo.Tournaments[stored.ID] = staff.TournamentID
+
+		resp := newTestAPI(t, repo, NewFakePoolStageLookup(), staff.Lookup()).
 			Patch("/api/v1/pools/"+stored.ID.String(), map[string]any{"referee_id": referee})
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
@@ -151,7 +170,7 @@ func TestDeleteEndpoint(t *testing.T) {
 	t.Parallel()
 
 	stored := seededPool(uuid.New())
-	api := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup())
+	api := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup(), tournamentusertest.NewFakeMembershipLookup())
 	base := "/api/v1/pools/" + stored.ID.String()
 
 	deleted := api.Delete(base)
@@ -168,7 +187,7 @@ func TestLifecycleEndpoints(t *testing.T) {
 	stage.Status = poolstage.PoolStageStatusActive
 	stored := seededPool(stage.ID)
 	stored.RefereeID = ptr(uuid.New())
-	api := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup(stage))
+	api := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup(stage), tournamentusertest.NewFakeMembershipLookup())
 	base := "/api/v1/pools/" + stored.ID.String()
 
 	started := api.Post(base + "/start")

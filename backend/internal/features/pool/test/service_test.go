@@ -8,6 +8,7 @@ import (
 
 	"boutline/internal/features/pool"
 	"boutline/internal/features/poolstage"
+	tournamentusertest "boutline/internal/features/tournamentuser/test"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -43,11 +44,13 @@ func TestCreatePool(t *testing.T) {
 	t.Parallel()
 
 	stage := seededPoolStage()
-	referee := uuid.New()
+	staff := tournamentusertest.NewStaff()
+	referee := staff.Referee
 
 	tests := []struct {
 		name        string
 		lookup      *FakePoolStageLookup
+		membersErr  error
 		body        pool.PoolCreateBody
 		wantCode    int
 		wantDetail  string
@@ -63,6 +66,27 @@ func TestCreatePool(t *testing.T) {
 			lookup:      NewFakePoolStageLookup(stage),
 			body:        pool.PoolCreateBody{PoolStageID: stage.ID.String(), RefereeID: ptr(referee.String())},
 			wantReferee: ptr(referee.String()),
+		},
+		{
+			name:        "lets a tournament admin referee",
+			lookup:      NewFakePoolStageLookup(stage),
+			body:        pool.PoolCreateBody{PoolStageID: stage.ID.String(), RefereeID: ptr(staff.Admin.String())},
+			wantReferee: ptr(staff.Admin.String()),
+		},
+		{
+			name:       "rejects a referee who is not on the tournament's staff",
+			lookup:     NewFakePoolStageLookup(stage),
+			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String(), RefereeID: ptr(staff.Outsider.String())},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "referee_id must reference a staff member of the tournament",
+		},
+		{
+			name:       "reports a staff lookup failure as a server error",
+			lookup:     NewFakePoolStageLookup(stage),
+			membersErr: errors.New("connection refused"),
+			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String(), RefereeID: ptr(referee.String())},
+			wantCode:   http.StatusInternalServerError,
+			wantDetail: "internal server error",
 		},
 		{
 			name:       "rejects a pool_stage_id that does not exist",
@@ -99,7 +123,11 @@ func TestCreatePool(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakePoolRepository()
-			out, err := pool.NewPoolService(repo, tt.lookup).
+			repo.StageTournaments[stage.ID] = staff.TournamentID
+			members := staff.Lookup()
+			members.Err = tt.membersErr
+
+			out, err := pool.NewPoolService(repo, tt.lookup, members).
 				CreatePool(t.Context(), &pool.PoolCreateInput{Body: tt.body})
 
 			if tt.wantCode != 0 {
@@ -160,7 +188,7 @@ func TestListPools(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := pool.NewPoolService(NewFakePoolRepository(mixed...), NewFakePoolStageLookup()).
+			out, err := pool.NewPoolService(NewFakePoolRepository(mixed...), NewFakePoolStageLookup(), tournamentusertest.NewFakeMembershipLookup()).
 				ListPools(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
@@ -181,7 +209,8 @@ func TestListPools(t *testing.T) {
 func TestUpdatePoolByID(t *testing.T) {
 	t.Parallel()
 
-	referee := uuid.New()
+	staff := tournamentusertest.NewStaff()
+	referee := staff.Referee
 	stored := seededPool(uuid.New())
 
 	tests := []struct {
@@ -195,6 +224,13 @@ func TestUpdatePoolByID(t *testing.T) {
 			name: "assigns a referee",
 			id:   stored.ID.String(),
 			body: pool.PoolUpdateBody{RefereeID: ptr(referee.String())},
+		},
+		{
+			name:       "rejects a referee who is not on the tournament's staff",
+			id:         stored.ID.String(),
+			body:       pool.PoolUpdateBody{RefereeID: ptr(staff.Outsider.String())},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "referee_id must reference a staff member of the tournament",
 		},
 		{
 			name:       "refuses an empty patch",
@@ -230,7 +266,8 @@ func TestUpdatePoolByID(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakePoolRepository(stored)
-			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
+			repo.Tournaments[stored.ID] = staff.TournamentID
+			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup(), staff.Lookup()).
 				UpdatePoolByID(t.Context(), &pool.PoolUpdateInput{ID: tt.id, Body: tt.body})
 
 			if tt.wantCode != 0 {
@@ -299,7 +336,7 @@ func TestDeletePoolByID(t *testing.T) {
 				id = "not-a-uuid"
 			}
 
-			_, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
+			_, err := pool.NewPoolService(repo, NewFakePoolStageLookup(), tournamentusertest.NewFakeMembershipLookup()).
 				DeletePoolByID(t.Context(), &pool.PoolIDInput{ID: id})
 
 			if tt.wantCode == 0 {
@@ -325,7 +362,7 @@ func TestPoolRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo := NewFakePoolRepository()
 	repo.Err = errors.New("connection refused")
 
-	_, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
+	_, err := pool.NewPoolService(repo, NewFakePoolStageLookup(), tournamentusertest.NewFakeMembershipLookup()).
 		ListPools(t.Context(), &pool.PoolListInput{})
 
 	code, detail := apiError(t, err)
@@ -419,7 +456,7 @@ func TestStartPool(t *testing.T) {
 				id = tt.id
 			}
 
-			out, err := pool.NewPoolService(repo, lookup).StartPool(t.Context(), &pool.PoolIDInput{ID: id})
+			out, err := pool.NewPoolService(repo, lookup, tournamentusertest.NewFakeMembershipLookup()).StartPool(t.Context(), &pool.PoolIDInput{ID: id})
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -512,7 +549,7 @@ func TestEndPool(t *testing.T) {
 				id = tt.id
 			}
 
-			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
+			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup(), tournamentusertest.NewFakeMembershipLookup()).
 				EndPool(t.Context(), &pool.PoolIDInput{ID: id})
 
 			if tt.wantCode != 0 {

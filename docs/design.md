@@ -270,8 +270,8 @@ each with a referee.
     one pool.
   - `POST /pool-stages/{id}/end`: `active → ended`, and only when every pool has
     completed.
-- Pool routes: CRUD (`PATCH` changes only the referee; delete is a 409 when the pool
-  has bouts), plus:
+- Pool routes: CRUD (`PATCH` changes only the referee, who must be tournament staff
+  (§9.3); delete is a 409 when the pool has bouts), plus:
   - `POST /pools/{id}/start`: needs an assigned referee and an `active` stage;
     writes `started_at`.
   - `POST /pools/{id}/end`: needs every bout in the pool ended; writes
@@ -305,7 +305,7 @@ timed, on a strip.
 
 | Method | Path | Rules |
 | --- | --- | --- |
-| POST | `/bouts` | tournament must be active; the pool must belong to the same tournament |
+| POST | `/bouts` | tournament must be active; the pool must belong to the same tournament; the referee must be its staff (§9.3) |
 | GET | `/bouts?tournament_id&pool_id&status&ids` | newest first |
 | GET | `/bouts/{id}` | |
 | PATCH | `/bouts/{id}` | only while `upcoming` |
@@ -809,11 +809,14 @@ time separately and picks the reason by hand.
 
 ### 9.3 Bout constraints
 
-**Status:** Planned.
+**Status:** Partial. Issue: #193. The referee check is built; the rest is planned.
 
 - A CHECK makes `pool_id` and `direct_elimination_id` mutually exclusive.
-- Both competitors must belong to the bout's event (§8.4), and the referee must be a
-  staff member of its tournament.
+- Both competitors must belong to the bout's event (§8.4).
+- Built: a referee must be staff of the tournament, in either role, so an admin can
+  referee. Creating or patching a bout or pool with anyone else is a 400. The check
+  runs in the service, so removing someone from the staff later leaves the bouts and
+  pools they already referee as they were.
 
 ### 9.4 Result correction
 

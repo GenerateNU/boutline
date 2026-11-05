@@ -7,6 +7,7 @@ import (
 
 	"boutline/internal/features/bout"
 	"boutline/internal/features/tournament"
+	tournamentusertest "boutline/internal/features/tournamentuser/test"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
@@ -14,11 +15,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestAPI(t *testing.T, tournaments *FakeTournamentLookup, seed ...bout.Bout) humatest.TestAPI {
+func newTestAPI(
+	t *testing.T,
+	members *tournamentusertest.FakeMembershipLookup,
+	tournaments *FakeTournamentLookup,
+	seed ...bout.Bout,
+) humatest.TestAPI {
 	t.Helper()
 
 	_, api := humatest.New(t)
-	bout.RegisterBoutService(api, bout.NewBoutService(NewFakeBoutRepository(seed...), tournaments, NewFakePoolLookup(nil)))
+	bout.RegisterBoutService(api, bout.NewBoutService(
+		NewFakeBoutRepository(seed...), tournaments, NewFakePoolLookup(nil), members,
+	))
 
 	return api
 }
@@ -35,8 +43,10 @@ func decodeBody(t *testing.T, raw []byte) map[string]any {
 func TestCreateEndpoint(t *testing.T) {
 	t.Parallel()
 
+	staff := tournamentusertest.NewStaff()
 	activeTournament := seededTournament(tournament.TournamentStatusActive)
-	referee := uuid.New().String()
+	activeTournament.ID = staff.TournamentID
+	referee := staff.Referee.String()
 	competitor1 := uuid.New().String()
 	competitor2 := uuid.New().String()
 
@@ -80,6 +90,18 @@ func TestCreateEndpoint(t *testing.T) {
 			},
 		},
 		{
+			name: "rejects a referee who is not on the tournament's staff",
+			body: map[string]any{
+				"tournament_id":   activeTournament.ID.String(),
+				"referee_id":      staff.Outsider.String(),
+				"competitor_1_id": competitor1,
+				"competitor_2_id": competitor2,
+				"points_to_win":   11,
+			},
+			wantStatus: http.StatusBadRequest,
+			wantFields: map[string]any{"detail": "referee_id must reference a staff member of the tournament"},
+		},
+		{
 			name: "rejects a missing competitor before the handler runs",
 			body: map[string]any{
 				"tournament_id":   activeTournament.ID.String(),
@@ -106,7 +128,7 @@ func TestCreateEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t, NewFakeTournamentLookup(activeTournament)).Post("/api/v1/bouts", tt.body)
+			resp := newTestAPI(t, staff.Lookup(), NewFakeTournamentLookup(activeTournament)).Post("/api/v1/bouts", tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 
@@ -130,7 +152,7 @@ func TestListEndpoint(t *testing.T) {
 	t.Run("returns a page and the unpaged total", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakeTournamentLookup(), seed...).Get("/api/v1/bouts?limit=1")
+		resp := newTestAPI(t, tournamentusertest.NewFakeMembershipLookup(), NewFakeTournamentLookup(), seed...).Get("/api/v1/bouts?limit=1")
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 
@@ -143,7 +165,7 @@ func TestListEndpoint(t *testing.T) {
 	t.Run("filters by tournament_id and status", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakeTournamentLookup(), seed...).
+		resp := newTestAPI(t, tournamentusertest.NewFakeMembershipLookup(), NewFakeTournamentLookup(), seed...).
 			Get("/api/v1/bouts?tournament_id=" + tournamentID.String() + "&status=active")
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
@@ -155,7 +177,7 @@ func TestListEndpoint(t *testing.T) {
 	t.Run("rejects a status outside the enum", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakeTournamentLookup(), seed...).Get("/api/v1/bouts?status=nope")
+		resp := newTestAPI(t, tournamentusertest.NewFakeMembershipLookup(), NewFakeTournamentLookup(), seed...).Get("/api/v1/bouts?status=nope")
 
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
@@ -163,7 +185,7 @@ func TestListEndpoint(t *testing.T) {
 	t.Run("filters by ids", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakeTournamentLookup(), seed...).
+		resp := newTestAPI(t, tournamentusertest.NewFakeMembershipLookup(), NewFakeTournamentLookup(), seed...).
 			Get("/api/v1/bouts?ids=" + seed[0].ID.String() + "," + seed[1].ID.String())
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
@@ -176,7 +198,7 @@ func TestListEndpoint(t *testing.T) {
 	t.Run("rejects a malformed ids filter", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakeTournamentLookup(), seed...).Get("/api/v1/bouts?ids=not-a-uuid")
+		resp := newTestAPI(t, tournamentusertest.NewFakeMembershipLookup(), NewFakeTournamentLookup(), seed...).Get("/api/v1/bouts?ids=not-a-uuid")
 
 		assert.Equal(t, http.StatusBadRequest, resp.Code)
 	})
@@ -190,7 +212,7 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 	t.Run("returns the stored bout", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakeTournamentLookup(), stored).Get("/api/v1/bouts/" + stored.ID.String())
+		resp := newTestAPI(t, tournamentusertest.NewFakeMembershipLookup(), NewFakeTournamentLookup(), stored).Get("/api/v1/bouts/" + stored.ID.String())
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 	})
@@ -198,7 +220,7 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 	t.Run("reports an unknown id as not found", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakeTournamentLookup(), stored).Get("/api/v1/bouts/" + uuid.New().String())
+		resp := newTestAPI(t, tournamentusertest.NewFakeMembershipLookup(), NewFakeTournamentLookup(), stored).Get("/api/v1/bouts/" + uuid.New().String())
 
 		assert.Equal(t, http.StatusNotFound, resp.Code)
 	})
@@ -206,7 +228,7 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 	t.Run("patches only the fields present in the body", func(t *testing.T) {
 		t.Parallel()
 
-		resp := newTestAPI(t, NewFakeTournamentLookup(), stored).
+		resp := newTestAPI(t, tournamentusertest.NewFakeMembershipLookup(), NewFakeTournamentLookup(), stored).
 			Patch("/api/v1/bouts/"+stored.ID.String(), map[string]any{"points_to_win": 21})
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
@@ -221,7 +243,7 @@ func TestLifecycleEndpoints(t *testing.T) {
 
 	activeTournament := seededTournament(tournament.TournamentStatusActive)
 	stored := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
-	api := newTestAPI(t, NewFakeTournamentLookup(activeTournament), stored)
+	api := newTestAPI(t, tournamentusertest.NewFakeMembershipLookup(), NewFakeTournamentLookup(activeTournament), stored)
 	base := "/api/v1/bouts/" + stored.ID.String()
 
 	started := api.Post(base + "/start")
@@ -243,7 +265,7 @@ func TestDeleteEndpoint(t *testing.T) {
 
 	activeTournament := seededTournament(tournament.TournamentStatusActive)
 	stored := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
-	api := newTestAPI(t, NewFakeTournamentLookup(activeTournament), stored)
+	api := newTestAPI(t, tournamentusertest.NewFakeMembershipLookup(), NewFakeTournamentLookup(activeTournament), stored)
 	base := "/api/v1/bouts/" + stored.ID.String()
 
 	require.Equal(t, http.StatusOK, api.Post(base+"/start").Code)
