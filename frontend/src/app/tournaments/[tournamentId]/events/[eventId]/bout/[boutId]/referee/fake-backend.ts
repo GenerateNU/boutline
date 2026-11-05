@@ -21,6 +21,8 @@ export interface FakeBackend {
   scores: StoredScore[];
   status: BoutStatus;
   refereeId: string | null;
+  // The logged-in user the server attributes requests to.
+  callerId: string;
   failNextCreate: boolean;
   failNextEnd: boolean;
   // While set, history responses wait for it, to mimic a slow history fetch.
@@ -30,6 +32,7 @@ export interface FakeBackend {
 export interface BackendOptions {
   refereeId?: string | null;
   status?: BoutStatus;
+  callerId?: string;
 }
 
 export function reply(status: number, body: unknown) {
@@ -40,12 +43,13 @@ export function reply(status: number, body: unknown) {
 // against what the server ended up storing.
 export function installBackend(
   initial: Pick<StoredScore, "id" | "competitor_id" | "points">[],
-  { refereeId = REFEREE_ID, status = "active" }: BackendOptions = {},
+  { refereeId = REFEREE_ID, status = "active", callerId = REFEREE_ID }: BackendOptions = {},
 ) {
   const backend: FakeBackend = {
     scores: initial.map((score) => ({ ...score, revoked: false, created_at: RECORDED_AT })),
     status,
     refereeId,
+    callerId,
     failNextCreate: false,
     failNextEnd: false,
     historyGate: null,
@@ -64,10 +68,6 @@ export function installBackend(
     const url = String(input);
     const body = init?.body ? JSON.parse(String(init.body)) : null;
 
-    if (url === `/api/v1/bouts/${BOUT_ID}` && init?.method === "PATCH") {
-      backend.refereeId = body.referee_id ?? backend.refereeId;
-      return reply(200, boutBody());
-    }
     if (url === `/api/v1/bouts/${BOUT_ID}`) {
       return reply(200, boutBody());
     }
@@ -75,9 +75,10 @@ export function installBackend(
       if (backend.status !== "upcoming") {
         return reply(409, { detail: "only an upcoming bout can be started" });
       }
-      if (!backend.refereeId) {
-        return reply(409, { detail: "a bout needs a referee to start" });
+      if (backend.refereeId && backend.refereeId !== backend.callerId) {
+        return reply(403, { detail: "only the bout's assigned referee can do this" });
       }
+      backend.refereeId = backend.callerId;
       backend.status = "active";
       return reply(200, boutBody());
     }
@@ -85,6 +86,9 @@ export function installBackend(
       if (backend.failNextEnd) {
         backend.failNextEnd = false;
         return reply(500, { detail: "could not end bout" });
+      }
+      if (backend.refereeId !== backend.callerId) {
+        return reply(403, { detail: "only the bout's assigned referee can do this" });
       }
       if (backend.status !== "active") {
         return reply(409, { detail: "only an active bout can be ended" });
@@ -135,10 +139,13 @@ export function installBackend(
         backend.failNextCreate = false;
         return reply(500, { detail: "database unavailable" });
       }
+      if ("created_by" in body) {
+        return reply(422, { detail: "validation failed" });
+      }
       const created = {
         id: Math.max(0, ...backend.scores.map((score) => score.id)) + 1,
         competitor_id: body.competitor_id,
-        created_by: body.created_by,
+        created_by: backend.callerId,
         points: 1,
         revoked: false,
         created_at: RECORDED_AT,
@@ -148,6 +155,9 @@ export function installBackend(
     }
     const revoke = url.match(/^\/api\/v1\/scoring\/(\d+)\/revoke$/);
     if (revoke) {
+      if (init?.body) {
+        return reply(422, { detail: "validation failed" });
+      }
       const target = backend.scores.find((score) => score.id === Number(revoke[1]));
       if (!target || target.revoked) {
         return reply(409, { detail: "score has already been revoked" });

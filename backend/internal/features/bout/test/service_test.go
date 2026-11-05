@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"boutline/internal/features/bout"
 	"boutline/internal/features/tournament"
 	tournamentusertest "boutline/internal/features/tournamentuser/test"
+	"boutline/internal/features/user"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -639,142 +641,225 @@ func TestUpdateBoutByID(t *testing.T) {
 func TestStartBout(t *testing.T) {
 	t.Parallel()
 
-	t.Run("moves an upcoming bout to active and records the start time", func(t *testing.T) {
-		t.Parallel()
+	staff := tournamentusertest.NewStaff()
+	activeTournament := seededTournament(tournament.TournamentStatusActive)
+	activeTournament.ID = staff.TournamentID
+	pendingTournament := seededTournament(tournament.TournamentStatusPending)
+	endedTournament := seededTournament(tournament.TournamentStatusEnded)
+	scheduled := time.Date(2026, 10, 1, 14, 0, 0, 0, time.UTC)
 
-		activeTournament := seededTournament(tournament.TournamentStatusActive)
-		stored := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
-		stored.StartTime = ptr(time.Date(2026, 10, 1, 14, 0, 0, 0, time.UTC))
-		repo := NewFakeBoutRepository(stored)
+	tests := []struct {
+		name        string
+		tourney     tournament.Tournament
+		status      bout.BoutStatus
+		referee     *uuid.UUID
+		caller      *uuid.UUID
+		unknownID   bool
+		wantCode    int
+		wantDetail  string
+		wantReferee *uuid.UUID
+	}{
+		{
+			name:        "the assigned referee starts the bout",
+			tourney:     activeTournament,
+			referee:     &staff.Referee,
+			caller:      &staff.Referee,
+			wantReferee: &staff.Referee,
+		},
+		{
+			name:        "a staff member who starts an unassigned bout becomes its referee",
+			tourney:     activeTournament,
+			caller:      &staff.Admin,
+			wantReferee: &staff.Admin,
+		},
+		{
+			name:       "refuses anyone but the assigned referee",
+			tourney:    activeTournament,
+			referee:    &staff.Referee,
+			caller:     &staff.Admin,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "only the bout's assigned referee can do this",
+		},
+		{
+			name:       "refuses an unassigned bout to someone outside the staff",
+			tourney:    activeTournament,
+			caller:     &staff.Outsider,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "only the tournament's staff can referee this bout",
+		},
+		{
+			name:       "refuses a request with no caller",
+			tourney:    activeTournament,
+			referee:    &staff.Referee,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "only the bout's assigned referee can do this",
+		},
+		{
+			name:       "refuses to start a bout in a pending tournament",
+			tourney:    pendingTournament,
+			referee:    &staff.Referee,
+			caller:     &staff.Referee,
+			wantCode:   http.StatusConflict,
+			wantDetail: "bouts can only be started in an active tournament",
+		},
+		{
+			name:       "refuses to start a bout in an ended tournament",
+			tourney:    endedTournament,
+			referee:    &staff.Referee,
+			caller:     &staff.Referee,
+			wantCode:   http.StatusConflict,
+			wantDetail: "bouts can only be started in an active tournament",
+		},
+		{
+			name:       "refuses to start a bout that is already active",
+			tourney:    activeTournament,
+			status:     bout.BoutStatusActive,
+			referee:    &staff.Referee,
+			caller:     &staff.Referee,
+			wantCode:   http.StatusConflict,
+			wantDetail: "only an upcoming bout can be started",
+		},
+		{
+			name:      "reports an unknown id as not found",
+			tourney:   activeTournament,
+			caller:    &staff.Referee,
+			unknownID: true,
+			wantCode:  http.StatusNotFound,
+		},
+	}
 
-		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
-			StartBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-		require.NoError(t, err)
-		assert.Equal(t, bout.BoutStatusActive, out.Body.Status)
-		require.NotNil(t, out.Body.StartedAt)
-		assert.WithinDuration(t, time.Now().UTC(), *out.Body.StartedAt, time.Minute)
-		assert.Equal(t, stored.StartTime, out.Body.StartTime, "the scheduled start is kept")
-	})
+			status := tt.status
+			if status == "" {
+				status = bout.BoutStatusUpcoming
+			}
+			stored := seededBout(status, tt.tourney.ID)
+			stored.RefereeID = tt.referee
+			stored.StartTime = &scheduled
+			repo := NewFakeBoutRepository(stored)
 
-	t.Run("refuses to start a bout with no referee assigned", func(t *testing.T) {
-		t.Parallel()
+			id := stored.ID.String()
+			if tt.unknownID {
+				id = uuid.New().String()
+			}
 
-		activeTournament := seededTournament(tournament.TournamentStatusActive)
-		stored := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
-		stored.RefereeID = nil
-		repo := NewFakeBoutRepository(stored)
+			out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(tt.tourney), NewFakePoolLookup(nil), staff.Lookup()).
+				StartBout(callerContext(t, tt.caller), &bout.BoutIDInput{ID: id})
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
-			StartBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
+			if tt.wantCode != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+				if tt.wantDetail != "" {
+					assert.Equal(t, tt.wantDetail, detail)
+				}
+				assert.Equal(t, status, repo.Bouts[stored.ID].Status)
+				assert.Equal(t, tt.referee, repo.Bouts[stored.ID].RefereeID)
 
-		code, detail := apiError(t, err)
-		assert.Equal(t, http.StatusConflict, code)
-		assert.Equal(t, "a referee must be assigned before the bout can start", detail)
-		assert.Equal(t, bout.BoutStatusUpcoming, repo.Bouts[stored.ID].Status)
-	})
+				return
+			}
 
-	t.Run("refuses to start a bout in a pending tournament", func(t *testing.T) {
-		t.Parallel()
-
-		pendingTournament := seededTournament(tournament.TournamentStatusPending)
-		stored := seededBout(bout.BoutStatusUpcoming, pendingTournament.ID)
-		repo := NewFakeBoutRepository(stored)
-
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(pendingTournament), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
-			StartBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
-
-		code, detail := apiError(t, err)
-		assert.Equal(t, http.StatusConflict, code)
-		assert.Equal(t, "bouts can only be started in an active tournament", detail)
-	})
-
-	t.Run("refuses to start a bout in an ended tournament", func(t *testing.T) {
-		t.Parallel()
-
-		endedTournament := seededTournament(tournament.TournamentStatusEnded)
-		stored := seededBout(bout.BoutStatusUpcoming, endedTournament.ID)
-		repo := NewFakeBoutRepository(stored)
-
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(endedTournament), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
-			StartBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
-
-		code, detail := apiError(t, err)
-		assert.Equal(t, http.StatusConflict, code)
-		assert.Equal(t, "bouts can only be started in an active tournament", detail)
-	})
-
-	t.Run("refuses to start a bout that is already active", func(t *testing.T) {
-		t.Parallel()
-
-		activeTournament := seededTournament(tournament.TournamentStatusActive)
-		stored := seededBout(bout.BoutStatusActive, activeTournament.ID)
-		repo := NewFakeBoutRepository(stored)
-
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
-			StartBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
-
-		code, detail := apiError(t, err)
-		assert.Equal(t, http.StatusConflict, code)
-		assert.Equal(t, "only an upcoming bout can be started", detail)
-	})
-
-	t.Run("reports an unknown id as not found", func(t *testing.T) {
-		t.Parallel()
-
-		repo := NewFakeBoutRepository()
-
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
-			StartBout(t.Context(), &bout.BoutIDInput{ID: uuid.New().String()})
-
-		code, _ := apiError(t, err)
-		assert.Equal(t, http.StatusNotFound, code)
-	})
+			require.NoError(t, err)
+			assert.Equal(t, bout.BoutStatusActive, out.Body.Status)
+			require.NotNil(t, out.Body.StartedAt)
+			assert.WithinDuration(t, time.Now().UTC(), *out.Body.StartedAt, time.Minute)
+			assert.Equal(t, &scheduled, out.Body.StartTime, "the scheduled start is kept")
+			assert.Equal(t, tt.wantReferee, repo.Bouts[stored.ID].RefereeID)
+		})
+	}
 }
 
 func TestEndBout(t *testing.T) {
 	t.Parallel()
 
-	t.Run("moves an active bout to end", func(t *testing.T) {
-		t.Parallel()
+	referee := uuid.New()
+	other := uuid.New()
 
-		stored := seededBout(bout.BoutStatusActive, uuid.New())
-		repo := NewFakeBoutRepository(stored)
+	tests := []struct {
+		name       string
+		status     bout.BoutStatus
+		caller     *uuid.UUID
+		unknownID  bool
+		wantCode   int
+		wantDetail string
+	}{
+		{name: "the assigned referee ends the bout", status: bout.BoutStatusActive, caller: &referee},
+		{
+			name:       "refuses anyone but the assigned referee",
+			status:     bout.BoutStatusActive,
+			caller:     &other,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "only the bout's assigned referee can do this",
+		},
+		{
+			name:       "refuses a request with no caller",
+			status:     bout.BoutStatusActive,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "only the bout's assigned referee can do this",
+		},
+		{
+			name:       "refuses to end an upcoming bout",
+			status:     bout.BoutStatusUpcoming,
+			caller:     &referee,
+			wantCode:   http.StatusConflict,
+			wantDetail: "only an active bout can be ended",
+		},
+		{
+			name:      "reports an unknown id as not found",
+			status:    bout.BoutStatusActive,
+			caller:    &referee,
+			unknownID: true,
+			wantCode:  http.StatusNotFound,
+		},
+	}
 
-		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
-			EndBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-		require.NoError(t, err)
-		assert.Equal(t, bout.BoutStatusEnded, out.Body.Status)
-		require.NotNil(t, out.Body.CompletedAt)
-		assert.WithinDuration(t, time.Now().UTC(), *out.Body.CompletedAt, time.Minute)
-	})
+			stored := seededBout(tt.status, uuid.New())
+			stored.RefereeID = &referee
+			repo := NewFakeBoutRepository(stored)
 
-	t.Run("refuses to end an upcoming bout", func(t *testing.T) {
-		t.Parallel()
+			id := stored.ID.String()
+			if tt.unknownID {
+				id = uuid.New().String()
+			}
 
-		stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
-		repo := NewFakeBoutRepository(stored)
+			out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
+				EndBout(callerContext(t, tt.caller), &bout.BoutIDInput{ID: id})
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
-			EndBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
+			if tt.wantCode != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+				if tt.wantDetail != "" {
+					assert.Equal(t, tt.wantDetail, detail)
+				}
+				assert.Equal(t, tt.status, repo.Bouts[stored.ID].Status)
 
-		code, detail := apiError(t, err)
-		assert.Equal(t, http.StatusConflict, code)
-		assert.Equal(t, "only an active bout can be ended", detail)
-	})
+				return
+			}
 
-	t.Run("reports an unknown id as not found", func(t *testing.T) {
-		t.Parallel()
+			require.NoError(t, err)
+			assert.Equal(t, bout.BoutStatusEnded, out.Body.Status)
+			require.NotNil(t, out.Body.CompletedAt)
+			assert.WithinDuration(t, time.Now().UTC(), *out.Body.CompletedAt, time.Minute)
+		})
+	}
+}
 
-		repo := NewFakeBoutRepository()
+// callerContext stands in for the auth middleware, which puts the verified
+// caller on every write request.
+func callerContext(t *testing.T, caller *uuid.UUID) context.Context {
+	t.Helper()
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
-			EndBout(t.Context(), &bout.BoutIDInput{ID: uuid.New().String()})
+	if caller == nil {
+		return t.Context()
+	}
 
-		code, _ := apiError(t, err)
-		assert.Equal(t, http.StatusNotFound, code)
-	})
+	return user.WithUserID(t.Context(), *caller)
 }
 
 func TestDeleteBoutByID(t *testing.T) {

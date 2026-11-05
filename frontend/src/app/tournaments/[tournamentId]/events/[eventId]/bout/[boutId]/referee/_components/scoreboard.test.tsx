@@ -163,11 +163,8 @@ describe("Scoreboard", () => {
     );
   });
 
-  it.each([
-    { name: "the assigned referee", refereeId: REFEREE_ID, expected: REFEREE_ID },
-    { name: "the seeded fallback user when no referee is assigned", refereeId: null, expected: "a0000000-0000-4000-8000-000000000001" },
-  ])("records touches as $name", async ({ refereeId, expected }) => {
-    const { live } = installBackend([], { refereeId });
+  it("records touches for the logged-in user", async () => {
+    const { live } = installBackend([]);
     render(<Scoreboard boutId={BOUT_ID} />);
     await screen.findByLabelText("Alice Chen score");
 
@@ -175,7 +172,7 @@ describe("Scoreboard", () => {
     await settle();
 
     expect(scoreOf("Alice Chen")).toBe("1");
-    expect(live().map((score) => score.created_by)).toEqual([expected]);
+    expect(live().map((score) => score.created_by)).toEqual([REFEREE_ID]);
   });
 
   const aliceOnMatchPoint = [1, 2, 3, 4].map((id) => ({ id, competitor_id: ALICE.id, points: 1 }));
@@ -313,9 +310,9 @@ describe("Scoreboard", () => {
   });
 
   it.each([
-    { name: "the assigned referee", refereeId: REFEREE_ID, expected: REFEREE_ID },
-    { name: "the seeded fallback user when no referee is assigned", refereeId: null, expected: "a0000000-0000-4000-8000-000000000001" },
-  ])("starts an upcoming bout refereed by $name", async ({ refereeId, expected }) => {
+    { name: "the assigned referee", refereeId: REFEREE_ID },
+    { name: "the caller when no referee is assigned", refereeId: null },
+  ])("starts an upcoming bout refereed by $name", async ({ refereeId }) => {
     const { backend } = installBackend([], { status: "upcoming", refereeId });
     render(<Scoreboard boutId={BOUT_ID} />);
     await screen.findByLabelText("Alice Chen score");
@@ -324,7 +321,7 @@ describe("Scoreboard", () => {
     await settle();
 
     expect(backend.status).toBe("active");
-    expect(backend.refereeId).toBe(expected);
+    expect(backend.refereeId).toBe(REFEREE_ID);
     expect(screen.getByRole("button", { name: "Touch Alice Chen" })).toBeInTheDocument();
   });
 

@@ -1,8 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 
-import { BoutStatus } from "@/types/bout";
-
-import { ALICE, BEN, BOUT_ID, installBackend, settle } from "../fake-backend";
+import { ALICE, BEN, BOUT_ID, BackendOptions, REFEREE_ID, installBackend, settle } from "../fake-backend";
 
 import { useMatchup } from "./use-matchup";
 import { useScoreHistory } from "./use-score-history";
@@ -11,12 +9,12 @@ import { useScoringActions } from "./use-scoring-actions";
 function useHarness() {
   const { history, refreshHistory } = useScoreHistory(BOUT_ID);
   const { matchup, scores, confirmed, setConfirmed, setBout } = useMatchup(BOUT_ID, refreshHistory);
-  const queue = useScoringActions({ boutId: BOUT_ID, matchup, confirmed, setConfirmed, setBout, refreshHistory });
+  const queue = useScoringActions({ boutId: BOUT_ID, confirmed, setConfirmed, setBout, refreshHistory });
   return { history, matchup, scores, ...queue };
 }
 
-async function load(initial: Parameters<typeof installBackend>[0], status: BoutStatus = "active") {
-  const installed = installBackend(initial, { status });
+async function load(initial: Parameters<typeof installBackend>[0], options: BackendOptions = {}) {
+  const installed = installBackend(initial, options);
   const hook = renderHook(useHarness);
   await waitFor(() => expect(hook.result.current.matchup).not.toBeNull());
   return { ...installed, ...hook };
@@ -34,6 +32,7 @@ describe("useScoringActions", () => {
     await settle();
 
     expect(live().map((score) => score.competitor_id)).toEqual([BEN.id]);
+    expect(live().map((score) => score.created_by)).toEqual([REFEREE_ID]);
     expect(result.current.scores.map((score) => score.competitor_id)).toEqual([BEN.id]);
     expect(result.current.history.map((entry) => entry.competitor_id)).toEqual([BEN.id]);
     expect(result.current.pending).toEqual([]);
@@ -78,13 +77,37 @@ describe("useScoringActions", () => {
   });
 
   it("starts an upcoming bout", async () => {
-    const { result, backend } = await load([], "upcoming");
+    const { result, backend } = await load([], { status: "upcoming" });
 
     act(() => result.current.submit({ kind: "start" }));
     await settle();
 
     expect(backend.status).toBe("active");
     expect(result.current.matchup?.bout.status).toBe("active");
+  });
+
+  it("starts a bout with no referee in one request, leaving the server to assign the caller", async () => {
+    const { result, backend } = await load([], { status: "upcoming", refereeId: null });
+
+    act(() => result.current.submit({ kind: "start" }));
+    await settle();
+
+    const posts = jest.mocked(global.fetch).mock.calls.filter(([, init]) => init?.method === "POST");
+    expect(posts.map(([url]) => String(url))).toEqual([`/api/v1/bouts/${BOUT_ID}/start`]);
+    expect(backend.refereeId).toBe(REFEREE_ID);
+    expect(result.current.error).toBeNull();
+    expect(result.current.matchup?.bout.status).toBe("active");
+  });
+
+  it("shows the server's reason when someone other than the referee tries to start", async () => {
+    const { result, backend } = await load([], { status: "upcoming", callerId: "someone-else" });
+
+    act(() => result.current.submit({ kind: "start" }));
+    await settle();
+
+    expect(result.current.error).toBe("only the bout's assigned referee can do this");
+    expect(backend.status).toBe("upcoming");
+    expect(backend.refereeId).toBe(REFEREE_ID);
   });
 
   it("ends an active bout whose score is unchanged", async () => {

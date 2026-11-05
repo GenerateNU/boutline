@@ -46,10 +46,6 @@ func (s *scoringService) CreateScoring(
 	ctx context.Context,
 	input *ScoringCreateInput,
 ) (*ScoringOutput, error) {
-	createdBy, err := utils.ParseUUID(input.Body.CreatedBy, "created_by")
-	if err != nil {
-		return nil, errs.HumaError(err)
-	}
 	competitorID, err := utils.ParseUUID(input.Body.CompetitorID, "competitor_id")
 	if err != nil {
 		return nil, errs.HumaError(err)
@@ -59,8 +55,21 @@ func (s *scoringService) CreateScoring(
 		return nil, errs.HumaError(err)
 	}
 
+	match, err := s.bouts.GetBoutByID(ctx, BoutID)
+	if errors.Is(err, errs.ErrNotFound) {
+		return nil, errs.HumaError(errs.Public("bout_id must reference an existing bout", errs.ErrInvalidInput))
+	}
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get bout: %w", err))
+	}
+
+	caller, err := bout.AuthorizeReferee(ctx, match)
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
 	scoring := &Scoring{
-		CreatedBy:    createdBy,
+		CreatedBy:    caller,
 		Points:       input.Body.Points,
 		CompetitorID: competitorID,
 		BoutID:       BoutID,
@@ -128,9 +137,9 @@ func (s *scoringService) UpdateScoringByID(
 	ctx context.Context,
 	input *ScoringUpdateInput,
 ) (*ScoringOutput, error) {
-	scoring, err := s.repo.GetScoringByID(ctx, input.ID)
+	scoring, _, err := s.loadForReferee(ctx, input.ID)
 	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("get scoring: %w", err))
+		return nil, err
 	}
 
 	if scoring.RevokedAt != nil {
@@ -165,14 +174,9 @@ func (s *scoringService) RevokeScoring(
 	ctx context.Context,
 	input *ScoringRevokeInput,
 ) (*ScoringOutput, error) {
-	revokedBy, err := utils.ParseUUID(input.Body.RevokedBy, "revoked_by")
+	scoring, caller, err := s.loadForReferee(ctx, input.ID)
 	if err != nil {
-		return nil, errs.HumaError(err)
-	}
-
-	scoring, err := s.repo.GetScoringByID(ctx, input.ID)
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("get scoring: %w", err))
+		return nil, err
 	}
 
 	if scoring.RevokedAt != nil {
@@ -181,7 +185,7 @@ func (s *scoringService) RevokeScoring(
 
 	now := time.Now()
 	scoring.RevokedAt = &now
-	scoring.RevokedBy = &revokedBy
+	scoring.RevokedBy = &caller
 
 	if err := s.repo.RevokeScoring(ctx, scoring); err != nil {
 		if errors.Is(err, errs.ErrConflict) {
@@ -191,6 +195,27 @@ func (s *scoringService) RevokeScoring(
 	}
 
 	return &ScoringOutput{Body: newScoringResponse(*scoring)}, nil
+}
+
+// loadForReferee fetches a scoring and checks the caller referees its bout, so a
+// non-referee learns nothing about the score's state from later errors.
+func (s *scoringService) loadForReferee(ctx context.Context, id int64) (*Scoring, uuid.UUID, error) {
+	scoring, err := s.repo.GetScoringByID(ctx, id)
+	if err != nil {
+		return nil, uuid.Nil, errs.HumaError(fmt.Errorf("get scoring: %w", err))
+	}
+
+	match, err := s.bouts.GetBoutByID(ctx, scoring.BoutID)
+	if err != nil {
+		return nil, uuid.Nil, errs.HumaError(fmt.Errorf("get bout: %w", err))
+	}
+
+	caller, err := bout.AuthorizeReferee(ctx, match)
+	if err != nil {
+		return nil, uuid.Nil, errs.HumaError(err)
+	}
+
+	return scoring, caller, nil
 }
 
 func (s *scoringService) GetScoringHistory(

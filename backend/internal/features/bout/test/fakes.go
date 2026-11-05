@@ -145,6 +145,12 @@ func (f *FakeBoutRepository) TransitionBoutByID(
 	if err != nil {
 		return err
 	}
+	if transition.RefereeID != nil {
+		if stored.RefereeID != nil && *stored.RefereeID != *transition.RefereeID {
+			return fmt.Errorf("update bout %s: %w", id, errs.ErrConflict)
+		}
+		stored.RefereeID = transition.RefereeID
+	}
 
 	stored.Status = transition.To
 	if transition.StartedAt != nil {

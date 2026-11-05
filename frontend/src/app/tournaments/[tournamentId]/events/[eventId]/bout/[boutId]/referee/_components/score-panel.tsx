@@ -8,12 +8,10 @@ interface ScorePanelProps {
   team: string;
   score: number;
   scoringClosed: boolean;
-  // TODO: restore the referee gate once the fallback scorer is removed.
-  // disabled: boolean;
   onTouch: () => void;
 }
 
-export function ScorePanel({ name, team, score, scoringClosed, /* disabled, */ onTouch }: ScorePanelProps) {
+export function ScorePanel({ name, team, score, scoringClosed, onTouch }: ScorePanelProps) {
   return (
     <div
       className={cn(
@@ -35,8 +33,6 @@ export function ScorePanel({ name, team, score, scoringClosed, /* disabled, */ o
       {!scoringClosed && (
         <Button
           aria-label={`Touch ${name}`}
-          // TODO: restore the referee gate once the fallback scorer is removed.
-          // disabled={disabled}
           onClick={onTouch}
           className="h-32 w-full touch-manipulation rounded-xl [&_svg]:size-16"
         >

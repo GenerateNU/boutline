@@ -13,7 +13,7 @@ export function useBoutScoring(boutId: string) {
     error: queueError,
     scoreVersion,
     submit,
-  } = useScoringActions({ boutId, matchup, confirmed, setConfirmed, setBout, refreshHistory });
+  } = useScoringActions({ boutId, confirmed, setConfirmed, setBout, refreshHistory });
 
   const touches = optimisticTouches(scores, pending);
   const { confirmedBy, confirm } = useResultConfirmation(scoreVersion, touches.length, submit);
@@ -28,9 +28,6 @@ export function useBoutScoring(boutId: string) {
     error: matchup ? queueError : loadError,
     phase,
     starting,
-    // TODO: restore the referee gate once the fallback scorer is removed.
-    // canScore: refereeId !== null,
-    // canUndo: refereeId !== null && !locked && touches.length > 0,
     canUndo: undoable,
     tally: result,
     history: historyRows(history, pending),

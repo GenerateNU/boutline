@@ -24,7 +24,7 @@ func RegisterScoringService(api huma.API, service ScoringService) {
 		Method:        http.MethodPost,
 		Path:          scoringBasePath,
 		Summary:       "Create a scoring",
-		Description:   "Create a new scoring entry.",
+		Description:   "Create a new scoring entry, recorded as the signed-in user. Only the bout's assigned referee can do this.",
 		Tags:          []string{"Scoring"},
 		DefaultStatus: http.StatusCreated,
 	}, service.CreateScoring)
@@ -42,6 +42,7 @@ func RegisterScoringService(api huma.API, service ScoringService) {
 		Method:      http.MethodPost,
 		Path:        scoringBasePath + "/{id}/revoke",
 		Summary:     "Revoke a scoring",
+		Description: "Recorded as revoked by the signed-in user. Only the bout's assigned referee can do this.",
 		Tags:        []string{"Scoring"},
 	}, service.RevokeScoring)
 
@@ -60,7 +61,7 @@ func RegisterScoringService(api huma.API, service ScoringService) {
 		Method:      http.MethodPatch,
 		Path:        scoringBasePath + "/{id}",
 		Summary:     "Update a scoring",
-		Description: "A scoring that has been revoked cannot be edited.",
+		Description: "Only the bout's assigned referee can do this. A scoring that has been revoked cannot be edited.",
 		Tags:        []string{"Scoring"},
 	}, service.UpdateScoringByID)
 

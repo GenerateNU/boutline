@@ -72,6 +72,10 @@ type BoutTransition struct {
 	StartedAt   *time.Time
 	CompletedAt *time.Time
 	From        []BoutStatus
+	// RefereeID is written with the transition, which only applies while the bout
+	// has no referee or already has this one. Checking it in the same UPDATE stops
+	// two staff starting an unassigned bout at once from both claiming it.
+	RefereeID *uuid.UUID
 }
 
 func (t BoutTransition) columns() map[string]any {
@@ -81,6 +85,9 @@ func (t BoutTransition) columns() map[string]any {
 	}
 	if t.CompletedAt != nil {
 		columns["completed_at"] = *t.CompletedAt
+	}
+	if t.RefereeID != nil {
+		columns["referee_id"] = *t.RefereeID
 	}
 
 	return columns
@@ -163,7 +170,14 @@ func (r *boutRepository) UpdateBoutByID(ctx context.Context, id uuid.UUID, updat
 }
 
 func (r *boutRepository) TransitionBoutByID(ctx context.Context, id uuid.UUID, transition BoutTransition) error {
-	return r.updateByID(ctx, id, transition.columns(), transition.From)
+	var scopes []func(*gorm.DB) *gorm.DB
+	if transition.RefereeID != nil {
+		scopes = append(scopes, func(db *gorm.DB) *gorm.DB {
+			return db.Where("(referee_id IS NULL OR referee_id = ?)", *transition.RefereeID)
+		})
+	}
+
+	return r.updateByID(ctx, id, transition.columns(), transition.From, scopes...)
 }
 
 func (r *boutRepository) updateByID(
@@ -171,8 +185,9 @@ func (r *boutRepository) updateByID(
 	id uuid.UUID,
 	columns map[string]any,
 	allowedStatuses []BoutStatus,
+	scopes ...func(*gorm.DB) *gorm.DB,
 ) error {
-	query := r.db.WithContext(ctx).Model(&Bout{}).Where("id = ?", id)
+	query := r.db.WithContext(ctx).Model(&Bout{}).Where("id = ?", id).Scopes(scopes...)
 	if len(allowedStatuses) > 0 {
 		query = query.Where("status IN ?", allowedStatuses)
 	}

@@ -39,7 +39,7 @@ func (r *scoringRepository) CreateScoring(ctx context.Context, scoring *Scoring)
 	if err := r.db.WithContext(ctx).Create(scoring).Error; err != nil {
 		if errors.Is(err, gorm.ErrForeignKeyViolated) {
 			return fmt.Errorf("create scoring: %w",
-				errs.Public("created_by, competitor_id and bout_id must reference existing rows", errs.ErrInvalidInput))
+				errs.Public("competitor_id and bout_id must reference existing rows", errs.ErrInvalidInput))
 		}
 		return fmt.Errorf("create scoring: %w", err)
 	}

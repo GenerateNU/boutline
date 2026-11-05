@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/bout"
 	"boutline/internal/features/scoring"
+	"boutline/internal/features/user"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -28,23 +30,35 @@ func apiError(t *testing.T, err error) (int, string) {
 
 func ptr[T any](v T) *T { return &v }
 
-func createInput(createdBy, competitorID, BoutID string, points int) *scoring.ScoringCreateInput {
+func createInput(competitorID, boutID string, points int) *scoring.ScoringCreateInput {
 	return &scoring.ScoringCreateInput{
 		Body: scoring.ScoringCreateBody{
-			CreatedBy:    createdBy,
 			CompetitorID: competitorID,
-			BoutID:       BoutID,
+			BoutID:       boutID,
 			Points:       points,
 		},
 	}
 }
 
+// refereedBout is a bout whose assigned referee is the given user, or nobody.
+func refereedBout(referee *uuid.UUID) bout.Bout {
+	return bout.Bout{ID: uuid.New(), RefereeID: referee}
+}
+
+func asCaller(ctx context.Context, caller *uuid.UUID) context.Context {
+	if caller == nil {
+		return ctx
+	}
+
+	return user.WithUserID(ctx, *caller)
+}
+
 func TestCreateScoring(t *testing.T) {
 	t.Parallel()
 
-	creator := uuid.New().String()
+	referee := uuid.New()
 	competitor := uuid.New().String()
-	match := uuid.New().String()
+	match := refereedBout(&referee)
 
 	tests := []struct {
 		name       string
@@ -54,27 +68,22 @@ func TestCreateScoring(t *testing.T) {
 	}{
 		{
 			name:       "stores the score with the given points",
-			input:      createInput(creator, competitor, match, 2),
+			input:      createInput(competitor, match.ID.String(), 2),
 			wantPoints: 2,
 		},
 		{
 			name:       "keeps a single point",
-			input:      createInput(creator, competitor, match, 1),
+			input:      createInput(competitor, match.ID.String(), 1),
 			wantPoints: 1,
 		},
 		{
-			name:     "rejects a created_by that is not a uuid",
-			input:    createInput("not-a-uuid", competitor, match, 1),
-			wantCode: http.StatusBadRequest,
-		},
-		{
 			name:     "rejects a competitor_id that is not a uuid",
-			input:    createInput(creator, "not-a-uuid", match, 1),
+			input:    createInput("not-a-uuid", match.ID.String(), 1),
 			wantCode: http.StatusBadRequest,
 		},
 		{
 			name:     "rejects a bout_id that is not a uuid",
-			input:    createInput(creator, competitor, "not-a-uuid", 1),
+			input:    createInput(competitor, "not-a-uuid", 1),
 			wantCode: http.StatusBadRequest,
 		},
 	}
@@ -84,7 +93,8 @@ func TestCreateScoring(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakeScoringRepository()
-			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).CreateScoring(t.Context(), tt.input)
+			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup(match)).
+				CreateScoring(asCaller(t.Context(), &referee), tt.input)
 
 			if tt.wantCode != 0 {
 				code, _ := apiError(t, err)
@@ -100,6 +110,7 @@ func TestCreateScoring(t *testing.T) {
 			assert.Equal(t, tt.wantPoints, out.Body.Points)
 			assert.Equal(t, tt.input.Body.CompetitorID, out.Body.CompetitorID)
 			assert.Equal(t, tt.input.Body.BoutID, out.Body.BoutID)
+			assert.Equal(t, referee.String(), out.Body.CreatedBy)
 			assert.Nil(t, out.Body.RevokedAt)
 			assert.Nil(t, out.Body.RevokedBy)
 			assert.Len(t, repo.Scores, 1)
@@ -107,17 +118,92 @@ func TestCreateScoring(t *testing.T) {
 	}
 }
 
+func TestCreateScoringAuthorization(t *testing.T) {
+	t.Parallel()
+
+	referee := uuid.New()
+	stranger := uuid.New()
+
+	tests := []struct {
+		name        string
+		caller      *uuid.UUID
+		boutReferee *uuid.UUID
+		unknownBout bool
+		wantCode    int
+		wantDetail  string
+	}{
+		{name: "records the assigned referee as created_by", caller: &referee, boutReferee: &referee},
+		{
+			name:        "refuses a different signed-in user",
+			caller:      &stranger,
+			boutReferee: &referee,
+			wantCode:    http.StatusForbidden,
+			wantDetail:  "only the bout's assigned referee can do this",
+		},
+		{
+			name:        "refuses a request with no caller",
+			boutReferee: &referee,
+			wantCode:    http.StatusForbidden,
+			wantDetail:  "only the bout's assigned referee can do this",
+		},
+		{
+			name:       "refuses a bout with no referee",
+			caller:     &referee,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "only the bout's assigned referee can do this",
+		},
+		{
+			name:        "rejects an unknown bout_id",
+			caller:      &referee,
+			unknownBout: true,
+			wantCode:    http.StatusBadRequest,
+			wantDetail:  "bout_id must reference an existing bout",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			match := refereedBout(tt.boutReferee)
+			boutID := match.ID.String()
+			if tt.unknownBout {
+				boutID = uuid.New().String()
+			}
+			repo := NewFakeScoringRepository()
+
+			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup(match)).
+				CreateScoring(asCaller(t.Context(), tt.caller), createInput(uuid.New().String(), boutID, 1))
+
+			if tt.wantCode != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+				assert.Equal(t, tt.wantDetail, detail)
+				assert.Nil(t, out)
+				assert.Empty(t, repo.Scores)
+
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.caller.String(), out.Body.CreatedBy)
+			assert.Equal(t, *tt.caller, repo.Scores[out.Body.ID].CreatedBy)
+		})
+	}
+}
+
 func TestCreateScoringAssignsDistinctIDs(t *testing.T) {
 	t.Parallel()
 
-	creator := uuid.New().String()
+	referee := uuid.New()
 	competitor := uuid.New().String()
-	match := uuid.New().String()
-	service := scoring.NewScoringService(NewFakeScoringRepository(), NewFakeBoutLookup())
+	match := refereedBout(&referee)
+	service := scoring.NewScoringService(NewFakeScoringRepository(), NewFakeBoutLookup(match))
+	ctx := asCaller(t.Context(), &referee)
 
-	first, err := service.CreateScoring(t.Context(), createInput(creator, competitor, match, 1))
+	first, err := service.CreateScoring(ctx, createInput(competitor, match.ID.String(), 1))
 	require.NoError(t, err)
-	second, err := service.CreateScoring(t.Context(), createInput(creator, competitor, match, 1))
+	second, err := service.CreateScoring(ctx, createInput(competitor, match.ID.String(), 1))
 	require.NoError(t, err)
 
 	assert.NotEqual(t, first.Body.ID, second.Body.ID)
@@ -126,12 +212,14 @@ func TestCreateScoringAssignsDistinctIDs(t *testing.T) {
 func TestCreateScoringRejectsAnUnknownReference(t *testing.T) {
 	t.Parallel()
 
+	referee := uuid.New()
+	match := refereedBout(&referee)
 	repo := NewFakeScoringRepository()
 	repo.Err = fmt.Errorf("create scoring: %w",
 		errs.Public("bout_id must reference an existing match", errs.ErrInvalidInput))
 
-	_, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).CreateScoring(t.Context(),
-		createInput(uuid.New().String(), uuid.New().String(), uuid.New().String(), 1))
+	_, err := scoring.NewScoringService(repo, NewFakeBoutLookup(match)).
+		CreateScoring(asCaller(t.Context(), &referee), createInput(uuid.New().String(), match.ID.String(), 1))
 
 	code, detail := apiError(t, err)
 	assert.Equal(t, http.StatusBadRequest, code)
@@ -340,9 +428,11 @@ func TestUpdateScoringByID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			stored := seeded(1, uuid.New())
+			referee := uuid.New()
+			match := refereedBout(&referee)
+			stored := seeded(1, match.ID)
 			if tt.seedRevoked {
-				stored = seededRevoked(1, stored.BoutID)
+				stored = seededRevoked(1, match.ID)
 			}
 			repo := NewFakeScoringRepository(stored)
 
@@ -351,8 +441,8 @@ func TestUpdateScoringByID(t *testing.T) {
 				id = 999
 			}
 
-			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).UpdateScoringByID(t.Context(),
-				&scoring.ScoringUpdateInput{ID: id, Body: tt.body})
+			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup(match)).
+				UpdateScoringByID(asCaller(t.Context(), &referee), &scoring.ScoringUpdateInput{ID: id, Body: tt.body})
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -384,45 +474,76 @@ func TestUpdateScoringByID(t *testing.T) {
 	}
 }
 
-func TestRevokeScoring(t *testing.T) {
+func TestUpdateScoringAuthorization(t *testing.T) {
 	t.Parallel()
 
-	referee := uuid.New().String()
+	referee := uuid.New()
+	stranger := uuid.New()
 
 	tests := []struct {
-		name         string
-		seedRevoked  bool
-		revokedBy    string
-		useUnknownID bool
-		wantCode     int
+		name        string
+		caller      *uuid.UUID
+		boutReferee *uuid.UUID
+		wantForbid  bool
 	}{
-		{name: "marks the score as revoked", revokedBy: referee},
-		{
-			name:        "refuses a score that is already revoked",
-			seedRevoked: true,
-			revokedBy:   referee,
-			wantCode:    http.StatusConflict,
-		},
-		{
-			name:      "rejects a revoked_by that is not a uuid",
-			revokedBy: "not-a-uuid",
-			wantCode:  http.StatusBadRequest,
-		},
-		{
-			name:         "reports an unknown id as not found",
-			revokedBy:    referee,
-			useUnknownID: true,
-			wantCode:     http.StatusNotFound,
-		},
+		{name: "lets the assigned referee edit", caller: &referee, boutReferee: &referee},
+		{name: "refuses a different signed-in user", caller: &stranger, boutReferee: &referee, wantForbid: true},
+		{name: "refuses a request with no caller", boutReferee: &referee, wantForbid: true},
+		{name: "refuses a bout with no referee", caller: &referee, wantForbid: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			stored := seeded(1, uuid.New())
+			match := refereedBout(tt.boutReferee)
+			stored := seeded(1, match.ID)
+			repo := NewFakeScoringRepository(stored)
+
+			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup(match)).
+				UpdateScoringByID(asCaller(t.Context(), tt.caller),
+					&scoring.ScoringUpdateInput{ID: stored.ID, Body: scoring.ScoringUpdateBody{Points: ptr(4)}})
+
+			if tt.wantForbid {
+				code, detail := apiError(t, err)
+				assert.Equal(t, http.StatusForbidden, code)
+				assert.Equal(t, "only the bout's assigned referee can do this", detail)
+				assert.Nil(t, out)
+				assert.Equal(t, stored.Points, repo.Scores[stored.ID].Points)
+
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, 4, out.Body.Points)
+			assert.Equal(t, 4, repo.Scores[stored.ID].Points)
+		})
+	}
+}
+
+func TestRevokeScoring(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		seedRevoked  bool
+		useUnknownID bool
+		wantCode     int
+	}{
+		{name: "marks the score as revoked"},
+		{name: "refuses a score that is already revoked", seedRevoked: true, wantCode: http.StatusConflict},
+		{name: "reports an unknown id as not found", useUnknownID: true, wantCode: http.StatusNotFound},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			referee := uuid.New()
+			match := refereedBout(&referee)
+			stored := seeded(1, match.ID)
 			if tt.seedRevoked {
-				stored = seededRevoked(1, stored.BoutID)
+				stored = seededRevoked(1, match.ID)
 			}
 			repo := NewFakeScoringRepository(stored)
 
@@ -431,11 +552,8 @@ func TestRevokeScoring(t *testing.T) {
 				id = 999
 			}
 
-			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).RevokeScoring(t.Context(),
-				&scoring.ScoringRevokeInput{
-					ID:   id,
-					Body: scoring.ScoringRevokeBody{RevokedBy: tt.revokedBy},
-				})
+			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup(match)).
+				RevokeScoring(asCaller(t.Context(), &referee), &scoring.ScoringRevokeInput{ID: id})
 
 			if tt.wantCode != 0 {
 				code, _ := apiError(t, err)
@@ -453,11 +571,60 @@ func TestRevokeScoring(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, out.Body.RevokedAt)
 			require.NotNil(t, out.Body.RevokedBy)
-			assert.Equal(t, tt.revokedBy, *out.Body.RevokedBy)
+			assert.Equal(t, referee.String(), *out.Body.RevokedBy)
 
 			require.NotNil(t, repo.Scores[stored.ID].RevokedAt)
 			require.NotNil(t, repo.Scores[stored.ID].RevokedBy)
-			assert.Equal(t, tt.revokedBy, repo.Scores[stored.ID].RevokedBy.String())
+			assert.Equal(t, referee, *repo.Scores[stored.ID].RevokedBy)
+		})
+	}
+}
+
+func TestRevokeScoringAuthorization(t *testing.T) {
+	t.Parallel()
+
+	referee := uuid.New()
+	stranger := uuid.New()
+
+	tests := []struct {
+		name        string
+		caller      *uuid.UUID
+		boutReferee *uuid.UUID
+		wantForbid  bool
+	}{
+		{name: "records the assigned referee as revoked_by", caller: &referee, boutReferee: &referee},
+		{name: "refuses a different signed-in user", caller: &stranger, boutReferee: &referee, wantForbid: true},
+		{name: "refuses a request with no caller", boutReferee: &referee, wantForbid: true},
+		{name: "refuses a bout with no referee", caller: &referee, wantForbid: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			match := refereedBout(tt.boutReferee)
+			stored := seeded(1, match.ID)
+			repo := NewFakeScoringRepository(stored)
+
+			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup(match)).
+				RevokeScoring(asCaller(t.Context(), tt.caller), &scoring.ScoringRevokeInput{ID: stored.ID})
+
+			if tt.wantForbid {
+				code, detail := apiError(t, err)
+				assert.Equal(t, http.StatusForbidden, code)
+				assert.Equal(t, "only the bout's assigned referee can do this", detail)
+				assert.Nil(t, out)
+				assert.Nil(t, repo.Scores[stored.ID].RevokedAt)
+				assert.Nil(t, repo.Scores[stored.ID].RevokedBy)
+
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, out.Body.RevokedBy)
+			assert.Equal(t, tt.caller.String(), *out.Body.RevokedBy)
+			require.NotNil(t, repo.Scores[stored.ID].RevokedBy)
+			assert.Equal(t, *tt.caller, *repo.Scores[stored.ID].RevokedBy)
 		})
 	}
 }
@@ -465,22 +632,20 @@ func TestRevokeScoring(t *testing.T) {
 func TestRevokedScoreDropsOutOfTheLiveList(t *testing.T) {
 	t.Parallel()
 
-	match := uuid.New()
-	service := scoring.NewScoringService(NewFakeScoringRepository(seeded(1, match)), NewFakeBoutLookup())
+	referee := uuid.New()
+	match := refereedBout(&referee)
+	service := scoring.NewScoringService(NewFakeScoringRepository(seeded(1, match.ID)), NewFakeBoutLookup(match))
 
-	_, err := service.RevokeScoring(t.Context(), &scoring.ScoringRevokeInput{
-		ID:   1,
-		Body: scoring.ScoringRevokeBody{RevokedBy: uuid.New().String()},
-	})
+	_, err := service.RevokeScoring(asCaller(t.Context(), &referee), &scoring.ScoringRevokeInput{ID: 1})
 	require.NoError(t, err)
 
-	live, err := service.ListScoring(t.Context(), &scoring.ScoringListInput{BoutID: match.String()})
+	live, err := service.ListScoring(t.Context(), &scoring.ScoringListInput{BoutID: match.ID.String()})
 	require.NoError(t, err)
 	assert.Empty(t, live.Body.Data)
 	assert.Zero(t, live.Body.Total)
 
 	replay, err := service.ListScoring(t.Context(),
-		&scoring.ScoringListInput{BoutID: match.String(), IncludeRevoked: true})
+		&scoring.ScoringListInput{BoutID: match.ID.String(), IncludeRevoked: true})
 	require.NoError(t, err)
 	assert.Len(t, replay.Body.Data, 1)
 }

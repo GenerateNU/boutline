@@ -9,6 +9,7 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
+	"boutline/internal/features/user"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -397,9 +398,9 @@ func (s *boutService) StartBout(ctx context.Context, input *BoutIDInput) (*BoutO
 		return nil, errs.HumaError(errs.Public(
 			"bouts can only be started in an active tournament", errs.ErrConflict))
 	}
-	if bout.RefereeID == nil {
-		return nil, errs.HumaError(errs.Public(
-			"a referee must be assigned before the bout can start", errs.ErrConflict))
+	referee, err := s.startingReferee(ctx, bout)
+	if err != nil {
+		return nil, errs.HumaError(err)
 	}
 
 	now := time.Now().UTC()
@@ -407,14 +408,50 @@ func (s *boutService) StartBout(ctx context.Context, input *BoutIDInput) (*BoutO
 		To:        BoutStatusActive,
 		StartedAt: &now,
 		From:      []BoutStatus{BoutStatusUpcoming},
+		RefereeID: &referee,
 	})
+	// Still upcoming after a conflict means another staff member claimed it first.
+	if errors.Is(err, errs.ErrConflict) {
+		if latest, getErr := s.repo.GetBoutByID(ctx, id); getErr == nil && latest.Status == BoutStatusUpcoming {
+			return nil, errs.HumaError(errNotBoutReferee)
+		}
+	}
 
 	return s.afterUpdate(ctx, id, err, "only an upcoming bout can be started")
+}
+
+// An unassigned bout goes to whichever staff member starts it, so the referee
+// screen never has to assign one first.
+func (s *boutService) startingReferee(ctx context.Context, b *Bout) (uuid.UUID, error) {
+	if b.RefereeID != nil {
+		return AuthorizeReferee(ctx, b)
+	}
+
+	caller, ok := user.UserIDFrom(ctx)
+	if !ok {
+		return uuid.Nil, errNotBoutReferee
+	}
+	if _, err := s.memberships.GetTournamentUser(ctx, b.TournamentID, caller); err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			return uuid.Nil, errs.Public("only the tournament's staff can referee this bout", errs.ErrForbidden)
+		}
+		return uuid.Nil, fmt.Errorf("get tournament user: %w", err)
+	}
+
+	return caller, nil
 }
 
 func (s *boutService) EndBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error) {
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	bout, err := s.repo.GetBoutByID(ctx, id)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get bout: %w", err))
+	}
+	if _, err := AuthorizeReferee(ctx, bout); err != nil {
 		return nil, errs.HumaError(err)
 	}
 

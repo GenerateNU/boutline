@@ -15,8 +15,6 @@ interface ScoreboardProps {
 }
 
 export function Scoreboard({ boutId }: ScoreboardProps) {
-  // TODO: restore the referee gate once the fallback scorer is removed.
-  // const { matchup, error, canScore, canUndo, locked, tally, touch, undo } = useBoutScoring(boutId);
   const {
     matchup,
     error,
@@ -68,8 +66,6 @@ export function Scoreboard({ boutId }: ScoreboardProps) {
               team={team}
               score={tally.scores[side]}
               scoringClosed={phase.kind !== "scoring"}
-              // TODO: restore the referee gate once the fallback scorer is removed.
-              // disabled={!canScore}
               onTouch={() => touch(id)}
             />
           ))}
@@ -83,12 +79,6 @@ export function Scoreboard({ boutId }: ScoreboardProps) {
           onConfirm={confirm}
           onUndo={undo}
         />
-        {/* TODO: restore the referee gate once the fallback scorer is removed.
-        {!canScore && (
-          <p className="text-sm text-muted-foreground">
-            Assign a referee to this bout before scoring.
-          </p>
-        )} */}
         {error && (
           <p role="alert" className="text-sm text-destructive">
             {error}

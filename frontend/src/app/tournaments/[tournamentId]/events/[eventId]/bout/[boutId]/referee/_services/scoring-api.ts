@@ -13,13 +13,6 @@ export function startBout(boutId: string) {
   return apiRequest<Bout>(`/bouts/${boutId}/start`, { method: "POST" });
 }
 
-export function assignReferee(boutId: string, refereeId: string) {
-  return apiRequest<Bout>(`/bouts/${boutId}`, {
-    method: "PATCH",
-    body: JSON.stringify({ referee_id: refereeId }),
-  });
-}
-
 export function endBout(boutId: string) {
   return apiRequest<Bout>(`/bouts/${boutId}/end`, { method: "POST" });
 }
@@ -48,16 +41,13 @@ export async function getScoringHistory(boutId: string) {
   return data;
 }
 
-export function createScoring(boutId: string, competitorId: string, createdBy: string) {
+export function createScoring(boutId: string, competitorId: string) {
   return apiRequest<Scoring>("/scoring", {
     method: "POST",
-    body: JSON.stringify({ bout_id: boutId, competitor_id: competitorId, created_by: createdBy }),
+    body: JSON.stringify({ bout_id: boutId, competitor_id: competitorId }),
   });
 }
 
-export function revokeScoring(scoringId: number, revokedBy: string) {
-  return apiRequest<Scoring>(`/scoring/${scoringId}/revoke`, {
-    method: "POST",
-    body: JSON.stringify({ revoked_by: revokedBy }),
-  });
+export function revokeScoring(scoringId: number) {
+  return apiRequest<Scoring>(`/scoring/${scoringId}/revoke`, { method: "POST" });
 }

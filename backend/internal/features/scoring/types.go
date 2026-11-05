@@ -35,7 +35,6 @@ func newScoringResponse(scoring Scoring) ScoringResponse {
 }
 
 type ScoringCreateBody struct {
-	CreatedBy    string `json:"created_by" format:"uuid" doc:"User recording the score"`
 	Points       int    `json:"points,omitempty" default:"1" minimum:"1" doc:"Points granted for this score, defaults to 1"`
 	CompetitorID string `json:"competitor_id" format:"uuid" doc:"Competitor who scored"`
 	BoutID       string `json:"bout_id" format:"uuid" doc:"Match the score belongs to"`
@@ -50,12 +49,7 @@ type ScoringIDInput struct {
 }
 
 type ScoringRevokeInput struct {
-	ID   int64 `path:"id" minimum:"1" doc:"Scoring ID"`
-	Body ScoringRevokeBody
-}
-
-type ScoringRevokeBody struct {
-	RevokedBy string `json:"revoked_by" format:"uuid" doc:"Referee revoking the score"`
+	ID int64 `path:"id" minimum:"1" doc:"Scoring ID"`
 }
 
 type ScoringUpdateBody struct {

@@ -5,7 +5,6 @@ import { Scoring } from "@/types/scoring";
 import { errorMessage } from "@/utils/error-message";
 
 import {
-  assignReferee,
   createScoring,
   endBout,
   getBout,
@@ -13,17 +12,11 @@ import {
   revokeScoring,
   startBout,
 } from "../_services/scoring-api";
-import { Matchup } from "../_types/matchup";
 import { ScoringAction } from "../_types/scoring-state";
 import { byRecordedOrder } from "../tally-helper";
 
-// TODO: remove this bypass once bouts always have a referee (or scoring uses the
-// logged-in user). It is the seeded Alex Morgan user, so it only works on a seeded database.
-const FALLBACK_SCORER_ID = "a0000000-0000-4000-8000-000000000001";
-
 interface ScoringActionsOptions {
   boutId: string;
-  matchup: Matchup | null;
   // The saved scores, held in a ref so an action reads the latest list rather than the
   // one from the render that started it.
   confirmed: RefObject<Scoring[]>;
@@ -36,7 +29,6 @@ interface ScoringActionsOptions {
 // and recovers when one fails. A tap while an action is saving is ignored.
 export function useScoringActions({
   boutId,
-  matchup,
   confirmed,
   setConfirmed,
   setBout,
@@ -53,15 +45,9 @@ export function useScoringActions({
   // tick, so a ref decides whether an action is already running.
   const busy = useRef(false);
 
-  // TODO: restore the referee gate once the fallback scorer is removed.
-  // const refereeId = matchup?.bout.referee_id ?? null;
-  const scorerId = matchup?.bout.referee_id ?? FALLBACK_SCORER_ID;
-
   // Entry point for the screen. The optimistic score shows the action from `pending`
   // until the server answers.
   function submit(action: ScoringAction) {
-    // TODO: restore the referee gate once the fallback scorer is removed.
-    // if (!refereeId) return;
     if (busy.current) {
       return;
     }
@@ -102,12 +88,7 @@ export function useScoringActions({
   }
 
   async function startMatch() {
-    // TODO: restore the referee gate once the fallback scorer is removed. The backend
-    // won't start a bout without a referee and there's no referee login yet, so the
-    // fallback scorer is assigned first.
-    if (!matchup?.bout.referee_id) {
-      await assignReferee(boutId, FALLBACK_SCORER_ID);
-    }
+    // With no referee, the server makes the caller the referee as part of starting.
     setBout(await startBout(boutId));
   }
 
@@ -124,7 +105,7 @@ export function useScoringActions({
   // it, so it joins the saved scores last. Adding it before the history refresh would
   // count it twice until the refresh finished.
   async function recordTouch(competitorId: string) {
-    const created = await createScoring(boutId, competitorId, scorerId);
+    const created = await createScoring(boutId, competitorId);
     await refreshHistoryQuietly();
     setConfirmed(byRecordedOrder([...confirmed.current, created]));
   }
@@ -137,7 +118,7 @@ export function useScoringActions({
     if (!latest) {
       return;
     }
-    await revokeScoring(latest.id, scorerId);
+    await revokeScoring(latest.id);
     await refreshHistoryQuietly();
     setConfirmed(confirmed.current.filter((score) => score.id !== latest.id));
   }

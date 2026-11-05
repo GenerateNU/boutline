@@ -8,7 +8,9 @@ import (
 	"boutline/internal/features/bout"
 	"boutline/internal/features/tournament"
 	tournamentusertest "boutline/internal/features/tournamentuser/test"
+	"boutline/internal/features/user"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -24,11 +26,30 @@ func newTestAPI(
 	t.Helper()
 
 	_, api := humatest.New(t)
+	api.UseMiddleware(withTestCaller)
 	bout.RegisterBoutService(api, bout.NewBoutService(
 		NewFakeBoutRepository(seed...), tournaments, NewFakePoolLookup(nil), members,
 	))
 
 	return api
+}
+
+const testCallerHeader = "X-Test-Caller"
+
+// withTestCaller stands in for the auth middleware: the caller comes from a
+// test-only header instead of a verified token.
+func withTestCaller(ctx huma.Context, next func(huma.Context)) {
+	caller, err := uuid.Parse(ctx.Header(testCallerHeader))
+	if err != nil {
+		next(ctx)
+		return
+	}
+
+	next(huma.WithContext(ctx, user.WithUserID(ctx.Context(), caller)))
+}
+
+func asCaller(id uuid.UUID) string {
+	return testCallerHeader + ": " + id.String()
 }
 
 func decodeBody(t *testing.T, raw []byte) map[string]any {
@@ -241,23 +262,32 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 func TestLifecycleEndpoints(t *testing.T) {
 	t.Parallel()
 
+	staff := tournamentusertest.NewStaff()
 	activeTournament := seededTournament(tournament.TournamentStatusActive)
+	activeTournament.ID = staff.TournamentID
 	stored := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
-	api := newTestAPI(t, tournamentusertest.NewFakeMembershipLookup(), NewFakeTournamentLookup(activeTournament), stored)
+	stored.RefereeID = nil
+	api := newTestAPI(t, staff.Lookup(), NewFakeTournamentLookup(activeTournament), stored)
 	base := "/api/v1/bouts/" + stored.ID.String()
+	referee := asCaller(staff.Referee)
 
-	started := api.Post(base + "/start")
+	assert.Equal(t, http.StatusForbidden, api.Post(base+"/start", asCaller(staff.Outsider)).Code)
+
+	started := api.Post(base+"/start", referee)
 	require.Equal(t, http.StatusOK, started.Code, "body: %s", started.Body)
-	assert.Equal(t, "active", decodeBody(t, started.Body.Bytes())["status"])
+	startedBody := decodeBody(t, started.Body.Bytes())
+	assert.Equal(t, "active", startedBody["status"])
+	assert.Equal(t, staff.Referee.String(), startedBody["referee_id"], "starting claims the unassigned bout")
 
-	assert.Equal(t, http.StatusConflict, api.Post(base+"/start").Code)
+	assert.Equal(t, http.StatusConflict, api.Post(base+"/start", referee).Code)
+	assert.Equal(t, http.StatusForbidden, api.Post(base+"/end", asCaller(staff.Admin)).Code)
 
-	ended := api.Post(base + "/end")
+	ended := api.Post(base+"/end", referee)
 	require.Equal(t, http.StatusOK, ended.Code, "body: %s", ended.Body)
 	assert.Equal(t, "ended", decodeBody(t, ended.Body.Bytes())["status"])
 
-	assert.Equal(t, http.StatusConflict, api.Post(base+"/end").Code)
-	assert.Equal(t, http.StatusConflict, api.Post(base+"/start").Code)
+	assert.Equal(t, http.StatusConflict, api.Post(base+"/end", referee).Code)
+	assert.Equal(t, http.StatusConflict, api.Post(base+"/start", referee).Code)
 }
 
 func TestDeleteEndpoint(t *testing.T) {
@@ -267,11 +297,12 @@ func TestDeleteEndpoint(t *testing.T) {
 	stored := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
 	api := newTestAPI(t, tournamentusertest.NewFakeMembershipLookup(), NewFakeTournamentLookup(activeTournament), stored)
 	base := "/api/v1/bouts/" + stored.ID.String()
+	referee := asCaller(*stored.RefereeID)
 
-	require.Equal(t, http.StatusOK, api.Post(base+"/start").Code)
+	require.Equal(t, http.StatusOK, api.Post(base+"/start", referee).Code)
 	assert.Equal(t, http.StatusConflict, api.Delete(base).Code)
 
-	require.Equal(t, http.StatusOK, api.Post(base+"/end").Code)
+	require.Equal(t, http.StatusOK, api.Post(base+"/end", referee).Code)
 	deleted := api.Delete(base)
 	require.Equal(t, http.StatusNoContent, deleted.Code, "body: %s", deleted.Body)
 	assert.Empty(t, deleted.Body.String())

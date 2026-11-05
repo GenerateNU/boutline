@@ -309,8 +309,8 @@ timed, on a strip.
 | GET | `/bouts?tournament_id&pool_id&status&ids` | newest first |
 | GET | `/bouts/{id}` | |
 | PATCH | `/bouts/{id}` | only while `upcoming` |
-| POST | `/bouts/{id}/start` | tournament active, referee assigned, `upcoming → active` |
-| POST | `/bouts/{id}/end` | `active → ended` |
+| POST | `/bouts/{id}/start` | tournament active, `upcoming → active`; only the assigned referee, or, on an unassigned bout, any staff member, who becomes its referee |
+| POST | `/bouts/{id}/end` | `active → ended`; only the assigned referee |
 | DELETE | `/bouts/{id}` | only while `upcoming` or `ended` (narrowed in §8.3) |
 
 ### 2.9 Scoring
@@ -323,6 +323,9 @@ deleted: undo marks it revoked, so the full history of a bout survives.
 `scorings`: `id` (bigserial, so touches sort by insert order), `bout_id`,
 `competitor_id`, `points` (≥ 1, default 1), `created_by`, `revoked_at`,
 `revoked_by`.
+
+Only the bout's assigned referee can award, change or revoke its touches (403
+otherwise). `created_by` and `revoked_by` are the caller, not request fields.
 
 | Method | Path | |
 | --- | --- | --- |
@@ -530,16 +533,16 @@ so it is built to survive double taps, slow networks and failed requests.
   and history from the server, which wins.
 - **History.** A newest-first log of time, "Touch {name}", running score
   (fencer 1 – fencer 2), with revoked touches kept and labelled "Revoked".
-- Start assigns a referee if none is set, then starts the bout.
+- Starting an unassigned bout makes the logged-in staff member its referee; the
+  server does this as part of `POST /bouts/{id}/start` (§2.8).
 
 ### 5.3 Temporary bypass
 
-**Status:** Open until §7.1 and §7.2.
+**Status:** Completed (removed).
 
-The page sits behind the login gate, but it still sends a fixed seeded user
-(`FALLBACK_SCORER_ID`, Alex Morgan) as scorer and referee instead of the logged-in
-user. The real referee checks are commented out with TODOs. **Any logged-in user
-can score any bout.**
+The screen used to send a fixed seeded user as scorer and referee. It now sends
+no actor at all: the server takes the logged-in user and refuses anyone but the
+bout's assigned referee, and the screen shows that refusal as an error.
 
 ---
 
@@ -589,24 +592,25 @@ logged-in user reseat another tournament's pools.
 
 ### 7.1 Actors from the session
 
-**Status:** Planned. Issue: #184.
+**Status:** Partial. Issue: #184. Scoring's actors and the referee screen are done.
 
-- `created_by` (tournament, scoring), `revoked_by` and the acting referee come from
-  `UserIDFrom`, not the request body. Today all three are client-supplied.
+- `created_by` (tournament) comes from `UserIDFrom`, not the request body. Scoring's
+  `created_by` and `revoked_by`, and the acting referee, already do (§2.9, §7.2).
 - `PATCH` and `DELETE /users/{id}` only for the caller's own ID (403 otherwise).
   Today any logged-in user can rename or delete any other user.
-- The referee screen drops `FALLBACK_SCORER_ID` (§5.3) and restores its
-  commented-out referee checks.
+- Built: the referee screen no longer sends `FALLBACK_SCORER_ID` (§5.3).
 
 ### 7.2 Role checks
 
-**Status:** Planned. Issue: #4.
+**Status:** Partial. Issue: #4. Bout and scoring checks are built.
 
 - An authorization helper, `requireRole(tournamentID, admin|referee)`, runs on every
-  mutating route. Today only competitor delete checks the caller.
+  mutating route. Today competitor delete, bout start and end, and scoring writes
+  check the caller.
 - The creator becomes an `admin` member automatically on create (today they don't).
-- Starting, scoring and ending a bout requires the `referee` role and being the
-  bout's assigned referee (open question in §D).
+- Built: starting, scoring and ending a bout requires being its assigned referee.
+  Either staff role can be assigned (§9.3), and starting an unassigned bout assigns
+  the staff member who starts it.
 - Guard against removing or demoting the last admin.
 
 ### 7.3 Visibility
@@ -1379,7 +1383,8 @@ What each state allows:
 - **Event / PoolStage**: editable and deletable only while `upcoming`.
 - **DirectElimination**: `event_id` is editable until `ended`.
 - **Bout**: editable only while `upcoming`. Starting a bout requires an active
-  tournament and an assigned referee. Deletion rules are §8.3.
+  tournament, and the caller must be its referee or become it (§2.8). Deletion
+  rules are §8.3.
 
 ### A.3 Fencing terms
 
@@ -1509,8 +1514,6 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - Épée double touch at one touch from the end (4–4, 14–14): annul it, or allow
   5–5? The current rules give a bout no winner in that case, so the scoring
   rules and the `confirming` phase have to pick one.
-- May a tournament admin referee and score bouts, or only users with the
-  `referee` role?
 - Does withdrawing a fencer after the DE draw but before their first bout give
   the opponent a walkover bout, or a bye? (Chapter 17.)
 - How is a tableau seed corrected after the draw? Either re-run the draw while no
