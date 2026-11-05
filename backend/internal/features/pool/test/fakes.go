@@ -21,6 +21,10 @@ type FakePoolRepository struct {
 	Tournaments map[uuid.UUID]uuid.UUID // pool id to the tournament its stage's event belongs to
 	OpenBouts   map[uuid.UUID]int64     // pool id to its bouts that have not ended
 	Err         error                   // when set, every method fails with it
+
+	Bouts       []pool.PoolBout
+	Competitors map[uuid.UUID]pool.PoolEntrant     // competitors that exist, by id
+	Stages      map[uuid.UUID]pool.LockedPoolStage // pool stage id to what create reads under its lock
 }
 
 func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
@@ -34,24 +38,70 @@ func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
 		WithBouts:   map[uuid.UUID]bool{},
 		Tournaments: map[uuid.UUID]uuid.UUID{},
 		OpenBouts:   map[uuid.UUID]int64{},
+
+		Competitors: map[uuid.UUID]pool.PoolEntrant{},
+		Stages:      map[uuid.UUID]pool.LockedPoolStage{},
 	}
 }
 
-func (f *FakePoolRepository) CreatePool(_ context.Context, toCreate *pool.Pool) error {
+func (f *FakePoolRepository) CreatePoolsWithBouts(_ context.Context, lineups []pool.PoolLineup) error {
 	if f.Err != nil {
 		return f.Err
 	}
 
-	if f.numberTaken(toCreate.PoolStageID, toCreate.Number, uuid.Nil) {
-		return fmt.Errorf("create pool: %w", errDuplicateNumber())
+	// The unique number and referee foreign key are the database's to enforce; the
+	// real-database test covers them.
+	now := time.Now()
+	for i := range lineups {
+		lineup := &lineups[i]
+		lineup.Pool.ID = uuid.New()
+		lineup.Pool.CreatedAt = now
+		lineup.Pool.UpdatedAt = now
+		f.Pools[lineup.Pool.ID] = lineup.Pool
+
+		for j := range lineup.Bouts {
+			lineup.Bouts[j].ID = uuid.New()
+			lineup.Bouts[j].PoolID = lineup.Pool.ID
+			lineup.Bouts[j].CreatedAt = now
+			lineup.Bouts[j].UpdatedAt = now
+			f.Bouts = append(f.Bouts, lineup.Bouts[j])
+		}
 	}
 
-	toCreate.ID = uuid.New()
-	toCreate.CreatedAt = time.Now()
-	toCreate.UpdatedAt = toCreate.CreatedAt
-	f.Pools[toCreate.ID] = *toCreate
-
 	return nil
+}
+
+// The fake has no concurrency to guard against, so fn runs on the fake itself.
+func (f *FakePoolRepository) WithLockedPoolStage(
+	_ context.Context,
+	poolStageID uuid.UUID,
+	fn func(repo pool.PoolRepository, stage pool.LockedPoolStage) error,
+) error {
+	if f.Err != nil {
+		return f.Err
+	}
+
+	stage, ok := f.Stages[poolStageID]
+	if !ok {
+		return fmt.Errorf("lock pool stage %s: %w", poolStageID, errs.ErrNotFound)
+	}
+
+	return fn(f, stage)
+}
+
+func (f *FakePoolRepository) ListPoolEntrants(_ context.Context, competitorIDs []uuid.UUID) ([]pool.PoolEntrant, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	var entrants []pool.PoolEntrant
+	for _, id := range competitorIDs {
+		if entrant, ok := f.Competitors[id]; ok {
+			entrants = append(entrants, entrant)
+		}
+	}
+
+	return entrants, nil
 }
 
 // numberTaken mirrors the unique index on (pool_stage_id, number); except is the
