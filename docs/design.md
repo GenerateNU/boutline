@@ -955,9 +955,10 @@ ranking seeds the tableau.
 
 - `pools.number` (≥ 1, unique per pool stage) labels the pool, and `pools.strip`
   is its strip assignment.
-- `bouts.slot` (≥ 1, unique per pool) is a pool bout's place in the pool's bout
-  order. Bouts created in one batch share a `created_at`, so the order needs a
-  column. The same column holds a DE bout's bracket position (§12.1).
+- `bouts.group_slot` (≥ 1, unique per pool) is a pool bout's place in the pool's
+  bout order. Bouts created in one batch share a `created_at`, so the order needs
+  a column. A DE bout's bracket position is a separate column, `bouts.slot`
+  (§12.1).
 - A pool's fencers are the competitors in its bouts. There is no pool-fencers
   table.
 - A pool's bouts copy its strip (`location`), referee and number (`group_number`).
@@ -1111,8 +1112,11 @@ draw's single write and the cleanup when the DE is deleted all belong to the DE.
 
 - `bouts.direct_elimination_id` and `bouts.round_size` record a DE bout's round
   (the number of fencers in it: 64, 32, …, 2 is the final).
-  - A DE bout reuses `bouts.slot` (§11.1) as its 1-based position in the round,
-    top to bottom, with `competitor_1` as the top fencer.
+  - `bouts.slot` is a DE bout's 1-based position in the round, top to bottom,
+    with `competitor_1` as the top fencer. It is separate from a pool bout's
+    `bouts.group_slot` (§11.1).
+  - `direct_elimination_id`, `round_size` and `slot` are all set or all null, and
+    a bout belongs to a pool or a DE, never both.
   - The bouts at slots 2k−1 and 2k feed slot k of the next round.
   - `(direct_elimination_id, round_size, slot)` is unique.
 
@@ -1168,6 +1172,16 @@ once the event's pool stage has ended:
 - `GET /events/{id}/tableau` (public) returns every round from the bracket size
   down to the final, each with its bouts in slot order and each fencer's seed.
   Rounds not yet created come back with no bouts.
+- Response shape: `{ "rounds": [{ "size": 8, "bouts": [...] }] }`, largest round
+  first, `size: 2` being the final. Each bout carries `id`, `slot` (1-based, top
+  to bottom), `status` (`upcoming`, `active` or `ended`), `top` and `bottom`
+  fencers (`id`, `first_name`, `last_name`, `club`, `seed`), and `top_score` and
+  `bottom_score`. `club` is the fencer's primary club and is `null` when they
+  have none.
+- Scores are `null` while the bout is `upcoming`; once it has started they are
+  the sum of the fencer's unrevoked scorings, `0` if there are none yet.
+- `rounds` is `[]` when the event has no direct elimination or no entries.
+  A bout whose fencer has no entry row is corrupt data and returns a 500.
 - The Tableau tab shows the bracket by round, with live scores on active bouts.
   Positions without a bout (byes, rounds not yet created) are drawn empty. On a
   phone it snaps to one round at a time, with round tabs kept in sync (#168).

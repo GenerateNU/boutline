@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"boutline/internal/features/competitor"
+	"boutline/internal/features/directelimination"
 	"boutline/internal/features/pool"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
@@ -28,21 +29,29 @@ func (s BoutStatus) IsValid() bool {
 // Two competitor columns hard-code the number of sides into the table. That is
 // knowingly worse than a join table, but every bout here has exactly two.
 type Bout struct {
-	ID               uuid.UUID              `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	TournamentID     uuid.UUID              `gorm:"type:uuid;not null;index"`
-	Tournament       *tournament.Tournament `gorm:"foreignKey:TournamentID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
-	Location         *string                `gorm:"type:text"`
-	StartTime        *time.Time
-	StartedAt        *time.Time
-	CompletedAt      *time.Time
-	RefereeID        *uuid.UUID `gorm:"type:uuid;index"`
-	Referee          *user.User `gorm:"foreignKey:RefereeID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
-	PoolID           *uuid.UUID `gorm:"type:uuid;index"`
-	Pool             *pool.Pool `gorm:"foreignKey:PoolID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
-	TimeLimitSeconds *int       `gorm:"check:chk_bouts_time_limit_seconds,time_limit_seconds > 0"`
-	PointsToWin      int        `gorm:"not null;check:chk_bouts_points_to_win,points_to_win > 0"`
-	GroupNumber      int        `gorm:"not null;default:0;check:chk_bouts_group_number,group_number >= 0"`
-	Status           BoutStatus `gorm:"type:text;not null;index;default:upcoming;check:chk_bouts_status,status IN ('upcoming','active','ended')"`
+	ID           uuid.UUID              `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	TournamentID uuid.UUID              `gorm:"type:uuid;not null;index"`
+	Tournament   *tournament.Tournament `gorm:"foreignKey:TournamentID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	Location     *string                `gorm:"type:text"`
+	StartTime    *time.Time
+	StartedAt    *time.Time
+	CompletedAt  *time.Time
+	RefereeID    *uuid.UUID `gorm:"type:uuid;index"`
+	Referee      *user.User `gorm:"foreignKey:RefereeID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
+	PoolID       *uuid.UUID `gorm:"type:uuid;index;check:chk_bouts_single_stage,pool_id IS NULL OR direct_elimination_id IS NULL"`
+	Pool         *pool.Pool `gorm:"foreignKey:PoolID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
+	// A tableau bout sets all three of DirectEliminationID, RoundSize and Slot;
+	// any other bout leaves them null. RoundSize is the number of fencers in the
+	// round (2 is the final, 4 the semis) and Slot is the 1-based position in it,
+	// top to bottom, with Competitor1 as the top fencer.
+	DirectEliminationID *uuid.UUID                           `gorm:"type:uuid;index;uniqueIndex:idx_bouts_tableau_slot;check:chk_bouts_tableau_placement,(direct_elimination_id IS NULL) = (round_size IS NULL) AND (round_size IS NULL) = (slot IS NULL)"`
+	DirectElimination   *directelimination.DirectElimination `gorm:"foreignKey:DirectEliminationID;references:ID;constraint:OnDelete:RESTRICT,OnUpdate:CASCADE"`
+	RoundSize           *int                                 `gorm:"uniqueIndex:idx_bouts_tableau_slot;check:chk_bouts_round_size,round_size >= 2 AND (round_size & (round_size - 1)) = 0"`
+	Slot                *int                                 `gorm:"uniqueIndex:idx_bouts_tableau_slot;check:chk_bouts_slot,slot >= 1 AND slot <= round_size / 2"`
+	TimeLimitSeconds    *int                                 `gorm:"check:chk_bouts_time_limit_seconds,time_limit_seconds > 0"`
+	PointsToWin         int                                  `gorm:"not null;check:chk_bouts_points_to_win,points_to_win > 0"`
+	GroupNumber         int                                  `gorm:"not null;default:0;check:chk_bouts_group_number,group_number >= 0"`
+	Status              BoutStatus                           `gorm:"type:text;not null;index;default:upcoming;check:chk_bouts_status,status IN ('upcoming','active','ended')"`
 	// RESTRICT rather than CASCADE so removing a competitor cannot silently
 	// erase the bouts they fought.
 	Competitor1ID uuid.UUID              `gorm:"column:competitor_1_id;type:uuid;not null;index:idx_bouts_competitor_1_id"`
