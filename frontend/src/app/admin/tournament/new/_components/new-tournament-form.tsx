@@ -40,7 +40,7 @@ function NewTournamentForm() {
       </div>
       <SelectField variant="filled" label="Authority" name="authority" options={authorities} placeholder="" required />
 
-      <Button type="submit" variant="brand" className="mt-6 h-12 rounded-full">
+      <Button type="submit" variant="filled" className="mt-6 h-12 rounded-full">
         Continue
       </Button>
     </form>
