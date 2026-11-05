@@ -141,15 +141,15 @@ func fillBoutFromPool(tx *gorm.DB, bout *Bout) error {
 	bout.GroupNumber = p.Number
 	bout.Location = p.Strip
 
-	// Append the bout to the end of the pool's bout order: group_slot is what
+	// Append the bout to the end of the pool's bout order: slot is what
 	// orders a pool's bouts, since bouts made together share a created_at. The
 	// lock keeps MAX + 1 unique; the unique index is a backstop.
 	var slot int
-	err = tx.Table("bouts").Where("pool_id = ?", poolID).Select("COALESCE(MAX(group_slot), 0) + 1").Scan(&slot).Error
+	err = tx.Table("bouts").Where("pool_id = ?", poolID).Select("COALESCE(MAX(slot), 0) + 1").Scan(&slot).Error
 	if err != nil {
-		return fmt.Errorf("next group slot in pool %s: %w", poolID, err)
+		return fmt.Errorf("next slot in pool %s: %w", poolID, err)
 	}
-	bout.GroupSlot = &slot
+	bout.Slot = &slot
 
 	return nil
 }

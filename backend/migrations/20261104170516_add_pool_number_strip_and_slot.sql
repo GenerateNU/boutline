@@ -1,12 +1,12 @@
 -- Modify "bouts" table
-ALTER TABLE "bouts" ADD CONSTRAINT "chk_bouts_group_slot" CHECK (group_slot >= 1), ADD COLUMN "group_slot" bigint NULL;
+ALTER TABLE "bouts" ADD CONSTRAINT "chk_bouts_slot" CHECK (slot >= 1), ADD COLUMN "slot" bigint NULL;
 -- Existing pool bouts have no slot, so each pool's bouts are slotted in creation
 -- order before the unique index is built.
-UPDATE "bouts" SET "group_slot" = slotted.slot
+UPDATE "bouts" SET "slot" = slotted.slot
 FROM (SELECT "id", row_number() OVER (PARTITION BY "pool_id" ORDER BY "created_at", "id") AS slot FROM "bouts" WHERE "pool_id" IS NOT NULL) AS slotted
 WHERE "bouts"."id" = slotted.id;
--- Create index "idx_bouts_pool_id_group_slot" to table: "bouts"
-CREATE UNIQUE INDEX "idx_bouts_pool_id_group_slot" ON "bouts" ("pool_id", "group_slot");
+-- Create index "idx_bouts_pool_id_slot" to table: "bouts"
+CREATE UNIQUE INDEX "idx_bouts_pool_id_slot" ON "bouts" ("pool_id", "slot");
 -- Modify "pools" table
 ALTER TABLE "pools" ADD CONSTRAINT "chk_pools_number" CHECK (number >= 1), ADD COLUMN "number" bigint NULL, ADD COLUMN "strip" text NULL, ADD COLUMN "start_time" timestamptz NULL;
 -- Existing pools have no number, so each stage's pools are numbered in creation

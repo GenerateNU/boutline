@@ -157,7 +157,7 @@ erDiagram
       timestamptz created_at
       timestamptz updated_at
       uuid pool_id FK
-      bigint group_slot
+      bigint slot
     }
     bouts }o--o| competitors : fk_bouts_competitor1
     bouts }o--o| competitors : fk_bouts_competitor2

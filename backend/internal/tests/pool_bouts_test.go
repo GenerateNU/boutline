@@ -87,7 +87,7 @@ func TestConcurrentPoolBoutsTakeDistinctSlots(t *testing.T) {
 		if id, ok := body["id"].(string); ok {
 			t.Cleanup(func() { send(t, app, testkit.DELETE, "/api/v1/bouts/"+id, nil, http.StatusNoContent) })
 		}
-		slots = append(slots, body["group_slot"])
+		slots = append(slots, body["slot"])
 	}
 
 	assert.ElementsMatch(t, []any{float64(1), float64(2), float64(3), float64(4), float64(5)}, slots)
