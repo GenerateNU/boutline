@@ -16,11 +16,12 @@ import (
 var _ pool.PoolRepository = (*FakePoolRepository)(nil)
 
 type FakePoolRepository struct {
-	Pools       map[uuid.UUID]pool.Pool
-	WithBouts   map[uuid.UUID]bool      // pools the real database would refuse to delete
-	Tournaments map[uuid.UUID]uuid.UUID // pool id to the tournament its stage's event belongs to
-	OpenBouts   map[uuid.UUID]int64     // pool id to its bouts that have not ended
-	Err         error                   // when set, every method fails with it
+	Pools            map[uuid.UUID]pool.Pool
+	WithBouts        map[uuid.UUID]bool      // pools the real database would refuse to delete
+	Tournaments      map[uuid.UUID]uuid.UUID // pool id to the tournament its stage's event belongs to
+	StageTournaments map[uuid.UUID]uuid.UUID // pool stage id to the tournament its event belongs to
+	OpenBouts        map[uuid.UUID]int64     // pool id to its bouts that have not ended
+	Err              error                   // when set, every method fails with it
 }
 
 func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
@@ -30,10 +31,11 @@ func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
 	}
 
 	return &FakePoolRepository{
-		Pools:       pools,
-		WithBouts:   map[uuid.UUID]bool{},
-		Tournaments: map[uuid.UUID]uuid.UUID{},
-		OpenBouts:   map[uuid.UUID]int64{},
+		Pools:            pools,
+		WithBouts:        map[uuid.UUID]bool{},
+		Tournaments:      map[uuid.UUID]uuid.UUID{},
+		StageTournaments: map[uuid.UUID]uuid.UUID{},
+		OpenBouts:        map[uuid.UUID]int64{},
 	}
 }
 
@@ -71,6 +73,19 @@ func (f *FakePoolRepository) GetPoolTournamentID(_ context.Context, id uuid.UUID
 	tournamentID, ok := f.Tournaments[id]
 	if !ok {
 		return uuid.Nil, fmt.Errorf("select pool %s tournament: %w", id, errs.ErrNotFound)
+	}
+
+	return tournamentID, nil
+}
+
+func (f *FakePoolRepository) GetPoolStageTournamentID(_ context.Context, poolStageID uuid.UUID) (uuid.UUID, error) {
+	if f.Err != nil {
+		return uuid.Nil, f.Err
+	}
+
+	tournamentID, ok := f.StageTournaments[poolStageID]
+	if !ok {
+		return uuid.Nil, fmt.Errorf("select pool stage %s tournament: %w", poolStageID, errs.ErrNotFound)
 	}
 
 	return tournamentID, nil

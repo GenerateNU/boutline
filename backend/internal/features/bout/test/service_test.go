@@ -9,6 +9,7 @@ import (
 
 	"boutline/internal/features/bout"
 	"boutline/internal/features/tournament"
+	tournamentusertest "boutline/internal/features/tournamentuser/test"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -74,11 +75,13 @@ func createInput(tournamentID string, refereeID *string, competitor1ID, competit
 func TestCreateBout(t *testing.T) {
 	t.Parallel()
 
+	staff := tournamentusertest.NewStaff()
 	activeTournament := seededTournament(tournament.TournamentStatusActive)
+	activeTournament.ID = staff.TournamentID
 	pendingTournament := seededTournament(tournament.TournamentStatusPending)
 	endedTournament := seededTournament(tournament.TournamentStatusEnded)
 
-	referee := uuid.New().String()
+	referee := staff.Referee.String()
 	competitor1 := uuid.New().String()
 	competitor2 := uuid.New().String()
 
@@ -99,11 +102,34 @@ func TestCreateBout(t *testing.T) {
 		name        string
 		lookup      *FakeTournamentLookup
 		pools       *FakePoolLookup
+		membersErr  error
 		input       *bout.BoutCreateInput
 		wantCode    int
 		wantDetail  string
 		wantNoBouts bool
 	}{
+		{
+			name:   "lets a tournament admin referee",
+			lookup: NewFakeTournamentLookup(activeTournament),
+			input:  createInput(activeTournament.ID.String(), ptr(staff.Admin.String()), competitor1, competitor2, 11),
+		},
+		{
+			name:        "rejects a referee who is not on the tournament's staff",
+			lookup:      NewFakeTournamentLookup(activeTournament),
+			input:       createInput(activeTournament.ID.String(), ptr(staff.Outsider.String()), competitor1, competitor2, 11),
+			wantCode:    http.StatusBadRequest,
+			wantDetail:  "referee_id must reference a staff member of the tournament",
+			wantNoBouts: true,
+		},
+		{
+			name:        "reports a staff lookup failure as a server error",
+			lookup:      NewFakeTournamentLookup(activeTournament),
+			membersErr:  errors.New("connection refused"),
+			input:       createInput(activeTournament.ID.String(), ptr(referee), competitor1, competitor2, 11),
+			wantCode:    http.StatusInternalServerError,
+			wantDetail:  "internal server error",
+			wantNoBouts: true,
+		},
 		{
 			name:   "creates an upcoming bout in an active tournament",
 			lookup: NewFakeTournamentLookup(activeTournament),
@@ -246,8 +272,11 @@ func TestCreateBout(t *testing.T) {
 				pools = NewFakePoolLookup(nil)
 			}
 
+			members := staff.Lookup()
+			members.Err = tt.membersErr
+
 			repo := NewFakeBoutRepository()
-			out, err := bout.NewBoutService(repo, tt.lookup, pools).CreateBout(t.Context(), tt.input)
+			out, err := bout.NewBoutService(repo, tt.lookup, pools, members).CreateBout(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -385,7 +414,7 @@ func TestListBouts(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := bout.NewBoutService(NewFakeBoutRepository(tt.seed...), NewFakeTournamentLookup(), NewFakePoolLookup(nil)).
+			out, err := bout.NewBoutService(NewFakeBoutRepository(tt.seed...), NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
 				ListBouts(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
@@ -412,7 +441,7 @@ func TestUpdateBoutByID(t *testing.T) {
 		stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
-		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).UpdateBoutByID(t.Context(),
+		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).UpdateBoutByID(t.Context(),
 			&bout.BoutUpdateInput{ID: stored.ID.String(), Body: bout.BoutUpdateBody{
 				PointsToWin: ptr(21),
 			}})
@@ -430,7 +459,7 @@ func TestUpdateBoutByID(t *testing.T) {
 		poolID := uuid.New()
 		pools := NewFakePoolLookup(map[uuid.UUID]uuid.UUID{poolID: stored.TournamentID})
 
-		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), pools).UpdateBoutByID(t.Context(),
+		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), pools, tournamentusertest.NewFakeMembershipLookup()).UpdateBoutByID(t.Context(),
 			&bout.BoutUpdateInput{ID: stored.ID.String(), Body: bout.BoutUpdateBody{
 				PoolID: ptr(poolID.String()),
 			}})
@@ -448,7 +477,7 @@ func TestUpdateBoutByID(t *testing.T) {
 		poolID := uuid.New()
 		pools := NewFakePoolLookup(map[uuid.UUID]uuid.UUID{poolID: uuid.New()})
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), pools).UpdateBoutByID(t.Context(),
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), pools, tournamentusertest.NewFakeMembershipLookup()).UpdateBoutByID(t.Context(),
 			&bout.BoutUpdateInput{ID: stored.ID.String(), Body: bout.BoutUpdateBody{
 				PoolID: ptr(poolID.String()),
 			}})
@@ -459,13 +488,48 @@ func TestUpdateBoutByID(t *testing.T) {
 		assert.Nil(t, repo.Bouts[stored.ID].PoolID)
 	})
 
+	t.Run("reassigns the referee to another staff member", func(t *testing.T) {
+		t.Parallel()
+
+		staff := tournamentusertest.NewStaff()
+		stored := seededBout(bout.BoutStatusUpcoming, staff.TournamentID)
+		repo := NewFakeBoutRepository(stored)
+
+		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), staff.Lookup()).
+			UpdateBoutByID(t.Context(), &bout.BoutUpdateInput{ID: stored.ID.String(), Body: bout.BoutUpdateBody{
+				RefereeID: ptr(staff.Admin.String()),
+			}})
+
+		require.NoError(t, err)
+		assert.Equal(t, ptr(staff.Admin.String()), out.Body.RefereeID)
+		assert.Equal(t, &staff.Admin, repo.Bouts[stored.ID].RefereeID)
+	})
+
+	t.Run("refuses a referee who is not on the tournament's staff", func(t *testing.T) {
+		t.Parallel()
+
+		staff := tournamentusertest.NewStaff()
+		stored := seededBout(bout.BoutStatusUpcoming, staff.TournamentID)
+		repo := NewFakeBoutRepository(stored)
+
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), staff.Lookup()).
+			UpdateBoutByID(t.Context(), &bout.BoutUpdateInput{ID: stored.ID.String(), Body: bout.BoutUpdateBody{
+				RefereeID: ptr(staff.Outsider.String()),
+			}})
+
+		code, detail := apiError(t, err)
+		assert.Equal(t, http.StatusBadRequest, code)
+		assert.Equal(t, "referee_id must reference a staff member of the tournament", detail)
+		assert.Equal(t, stored.RefereeID, repo.Bouts[stored.ID].RefereeID)
+	})
+
 	t.Run("refuses to edit an active bout", func(t *testing.T) {
 		t.Parallel()
 
 		stored := seededBout(bout.BoutStatusActive, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).UpdateBoutByID(t.Context(),
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).UpdateBoutByID(t.Context(),
 			&bout.BoutUpdateInput{ID: stored.ID.String(), Body: bout.BoutUpdateBody{PointsToWin: ptr(21)}})
 
 		code, detail := apiError(t, err)
@@ -479,7 +543,7 @@ func TestUpdateBoutByID(t *testing.T) {
 		stored := seededBout(bout.BoutStatusEnded, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).UpdateBoutByID(t.Context(),
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).UpdateBoutByID(t.Context(),
 			&bout.BoutUpdateInput{ID: stored.ID.String(), Body: bout.BoutUpdateBody{PointsToWin: ptr(21)}})
 
 		code, detail := apiError(t, err)
@@ -493,7 +557,7 @@ func TestUpdateBoutByID(t *testing.T) {
 		stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).UpdateBoutByID(t.Context(),
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).UpdateBoutByID(t.Context(),
 			&bout.BoutUpdateInput{ID: stored.ID.String(), Body: bout.BoutUpdateBody{}})
 
 		code, detail := apiError(t, err)
@@ -507,7 +571,7 @@ func TestUpdateBoutByID(t *testing.T) {
 		stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).UpdateBoutByID(t.Context(),
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).UpdateBoutByID(t.Context(),
 			&bout.BoutUpdateInput{ID: stored.ID.String(), Body: bout.BoutUpdateBody{
 				Competitor1ID: ptr(stored.Competitor2ID.String()),
 			}})
@@ -544,7 +608,7 @@ func TestUpdateBoutByID(t *testing.T) {
 				}
 				repo := NewFakeBoutRepository(stored)
 
-				_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).UpdateBoutByID(t.Context(),
+				_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).UpdateBoutByID(t.Context(),
 					&bout.BoutUpdateInput{ID: stored.ID.String(), Body: tt.body})
 
 				if tt.wantStatus == http.StatusOK {
@@ -564,7 +628,7 @@ func TestUpdateBoutByID(t *testing.T) {
 
 		repo := NewFakeBoutRepository()
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).UpdateBoutByID(t.Context(),
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).UpdateBoutByID(t.Context(),
 			&bout.BoutUpdateInput{ID: uuid.New().String(), Body: bout.BoutUpdateBody{PointsToWin: ptr(21)}})
 
 		code, _ := apiError(t, err)
@@ -583,7 +647,7 @@ func TestStartBout(t *testing.T) {
 		stored.StartTime = ptr(time.Date(2026, 10, 1, 14, 0, 0, 0, time.UTC))
 		repo := NewFakeBoutRepository(stored)
 
-		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament), NewFakePoolLookup(nil)).
+		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
 			StartBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
 
 		require.NoError(t, err)
@@ -601,7 +665,7 @@ func TestStartBout(t *testing.T) {
 		stored.RefereeID = nil
 		repo := NewFakeBoutRepository(stored)
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament), NewFakePoolLookup(nil)).
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
 			StartBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
 
 		code, detail := apiError(t, err)
@@ -617,7 +681,7 @@ func TestStartBout(t *testing.T) {
 		stored := seededBout(bout.BoutStatusUpcoming, pendingTournament.ID)
 		repo := NewFakeBoutRepository(stored)
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(pendingTournament), NewFakePoolLookup(nil)).
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(pendingTournament), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
 			StartBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
 
 		code, detail := apiError(t, err)
@@ -632,7 +696,7 @@ func TestStartBout(t *testing.T) {
 		stored := seededBout(bout.BoutStatusUpcoming, endedTournament.ID)
 		repo := NewFakeBoutRepository(stored)
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(endedTournament), NewFakePoolLookup(nil)).
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(endedTournament), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
 			StartBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
 
 		code, detail := apiError(t, err)
@@ -647,7 +711,7 @@ func TestStartBout(t *testing.T) {
 		stored := seededBout(bout.BoutStatusActive, activeTournament.ID)
 		repo := NewFakeBoutRepository(stored)
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament), NewFakePoolLookup(nil)).
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
 			StartBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
 
 		code, detail := apiError(t, err)
@@ -660,7 +724,7 @@ func TestStartBout(t *testing.T) {
 
 		repo := NewFakeBoutRepository()
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
 			StartBout(t.Context(), &bout.BoutIDInput{ID: uuid.New().String()})
 
 		code, _ := apiError(t, err)
@@ -677,7 +741,7 @@ func TestEndBout(t *testing.T) {
 		stored := seededBout(bout.BoutStatusActive, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
-		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).
+		out, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
 			EndBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
 
 		require.NoError(t, err)
@@ -692,7 +756,7 @@ func TestEndBout(t *testing.T) {
 		stored := seededBout(bout.BoutStatusUpcoming, uuid.New())
 		repo := NewFakeBoutRepository(stored)
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
 			EndBout(t.Context(), &bout.BoutIDInput{ID: stored.ID.String()})
 
 		code, detail := apiError(t, err)
@@ -705,7 +769,7 @@ func TestEndBout(t *testing.T) {
 
 		repo := NewFakeBoutRepository()
 
-		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).
+		_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
 			EndBout(t.Context(), &bout.BoutIDInput{ID: uuid.New().String()})
 
 		code, _ := apiError(t, err)
@@ -750,7 +814,7 @@ func TestDeleteBoutByID(t *testing.T) {
 				id = uuid.New()
 			}
 
-			_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).
+			_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
 				DeleteBoutByID(t.Context(), &bout.BoutIDInput{ID: id.String()})
 
 			if tt.wantCode == 0 {
@@ -775,7 +839,7 @@ func TestBoutRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo := NewFakeBoutRepository()
 	repo.Err = errors.New("connection refused")
 
-	_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil)).
+	_, err := bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), tournamentusertest.NewFakeMembershipLookup()).
 		ListBouts(t.Context(), &bout.BoutListInput{})
 
 	code, detail := apiError(t, err)

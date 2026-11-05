@@ -17,6 +17,7 @@ type PoolRepository interface {
 	CreatePool(ctx context.Context, pool *Pool) error
 	GetPoolByID(ctx context.Context, id uuid.UUID) (*Pool, error)
 	GetPoolTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
+	GetPoolStageTournamentID(ctx context.Context, poolStageID uuid.UUID) (uuid.UUID, error)
 	ListPools(ctx context.Context, filter PoolListFilter) ([]Pool, int64, error)
 	UpdatePoolByID(ctx context.Context, id uuid.UUID, update PoolUpdate) error
 	StartPoolByID(ctx context.Context, id uuid.UUID, startedAt time.Time) error
@@ -94,6 +95,26 @@ func (r *poolRepository) GetPoolTournamentID(ctx context.Context, id uuid.UUID) 
 			return uuid.Nil, fmt.Errorf("select pool %s tournament: %w", id, errs.ErrNotFound)
 		}
 		return uuid.Nil, fmt.Errorf("select pool %s tournament: %w", id, err)
+	}
+
+	return tournamentID, nil
+}
+
+func (r *poolRepository) GetPoolStageTournamentID(ctx context.Context, poolStageID uuid.UUID) (uuid.UUID, error) {
+	var tournamentID uuid.UUID
+
+	err := r.db.WithContext(ctx).
+		Table("pool_stages").
+		Select("events.tournament_id").
+		Joins("JOIN events ON events.id = pool_stages.event_id").
+		Where("pool_stages.id = ?", poolStageID).
+		Row().
+		Scan(&tournamentID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return uuid.Nil, fmt.Errorf("select pool stage %s tournament: %w", poolStageID, errs.ErrNotFound)
+		}
+		return uuid.Nil, fmt.Errorf("select pool stage %s tournament: %w", poolStageID, err)
 	}
 
 	return tournamentID, nil

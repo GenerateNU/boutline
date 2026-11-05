@@ -8,6 +8,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/poolstage"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -40,12 +41,17 @@ type PoolService interface {
 }
 
 type poolService struct {
-	repo       PoolRepository
-	poolStages PoolStageLookup
+	repo        PoolRepository
+	poolStages  PoolStageLookup
+	memberships tournamentuser.MembershipLookup
 }
 
-func NewPoolService(repo PoolRepository, poolStages PoolStageLookup) PoolService {
-	return &poolService{repo: repo, poolStages: poolStages}
+func NewPoolService(
+	repo PoolRepository,
+	poolStages PoolStageLookup,
+	memberships tournamentuser.MembershipLookup,
+) PoolService {
+	return &poolService{repo: repo, poolStages: poolStages, memberships: memberships}
 }
 
 func (s *poolService) CreatePool(ctx context.Context, input *PoolCreateInput) (*PoolOutput, error) {
@@ -64,6 +70,9 @@ func (s *poolService) CreatePool(ctx context.Context, input *PoolCreateInput) (*
 				"pool_stage_id must reference an existing pool stage", errs.ErrInvalidInput))
 		}
 		return nil, errs.HumaError(fmt.Errorf("get pool stage: %w", err))
+	}
+	if err := s.validateStageReferee(ctx, poolStageID, refereeID); err != nil {
+		return nil, errs.HumaError(err)
 	}
 
 	pool := &Pool{PoolStageID: poolStageID, RefereeID: refereeID}
@@ -138,6 +147,14 @@ func (s *poolService) UpdatePoolByID(ctx context.Context, input *PoolUpdateInput
 	}
 	if refereeID == nil {
 		return nil, errs.HumaError(errs.Public("provide at least one field to update", errs.ErrInvalidInput))
+	}
+
+	tournamentID, err := s.repo.GetPoolTournamentID(ctx, id)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get pool tournament: %w", err))
+	}
+	if err := tournamentuser.ValidateReferee(ctx, s.memberships, tournamentID, refereeID); err != nil {
+		return nil, errs.HumaError(err)
 	}
 
 	if err := s.repo.UpdatePoolByID(ctx, id, PoolUpdate{RefereeID: refereeID}); err != nil {
@@ -243,6 +260,21 @@ func (s *poolService) updateResponse(ctx context.Context, id uuid.UUID, err erro
 	}
 
 	return &PoolOutput{Body: newPoolResponse(*pool)}, nil
+}
+
+// A pool reaches its tournament through its stage's event, so the tournament is
+// only looked up when there is a referee to check against it.
+func (s *poolService) validateStageReferee(ctx context.Context, poolStageID uuid.UUID, refereeID *uuid.UUID) error {
+	if refereeID == nil {
+		return nil
+	}
+
+	tournamentID, err := s.repo.GetPoolStageTournamentID(ctx, poolStageID)
+	if err != nil {
+		return fmt.Errorf("get pool stage tournament: %w", err)
+	}
+
+	return tournamentuser.ValidateReferee(ctx, s.memberships, tournamentID, refereeID)
 }
 
 func parseOptionalUUID(raw *string, field string) (*uuid.UUID, error) {
