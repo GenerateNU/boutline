@@ -54,12 +54,6 @@ func (PoolBout) TableName() string {
 	return "bouts"
 }
 
-// PoolEntrant is a competitor as seating needs them.
-type PoolEntrant struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-}
-
 // PoolLineup is a pool to create, its fencers in position order and its bouts in slot order.
 type PoolLineup struct {
 	Pool    Pool
