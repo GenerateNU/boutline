@@ -66,7 +66,13 @@ func (s *poolService) CreatePool(ctx context.Context, input *PoolCreateInput) (*
 		return nil, errs.HumaError(fmt.Errorf("get pool stage: %w", err))
 	}
 
-	pool := &Pool{PoolStageID: poolStageID, RefereeID: refereeID}
+	pool := &Pool{
+		PoolStageID: poolStageID,
+		RefereeID:   refereeID,
+		Number:      input.Body.Number,
+		Strip:       input.Body.Strip,
+		StartTime:   input.Body.StartTime,
+	}
 	if err := s.repo.CreatePool(ctx, pool); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("create pool: %w", err))
 	}
@@ -136,11 +142,17 @@ func (s *poolService) UpdatePoolByID(ctx context.Context, input *PoolUpdateInput
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
-	if refereeID == nil {
+	update := PoolUpdate{
+		RefereeID: refereeID,
+		Number:    input.Body.Number,
+		Strip:     input.Body.Strip,
+		StartTime: input.Body.StartTime,
+	}
+	if len(update.columns()) == 0 {
 		return nil, errs.HumaError(errs.Public("provide at least one field to update", errs.ErrInvalidInput))
 	}
 
-	if err := s.repo.UpdatePoolByID(ctx, id, PoolUpdate{RefereeID: refereeID}); err != nil {
+	if err := s.repo.UpdatePoolByID(ctx, id, update); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("update pool: %w", err))
 	}
 

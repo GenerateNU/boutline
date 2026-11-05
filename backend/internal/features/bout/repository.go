@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/pool"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -25,7 +26,6 @@ type BoutUpdate struct {
 	Location         *string
 	StartTime        *time.Time
 	RefereeID        *uuid.UUID
-	PoolID           *uuid.UUID
 	TimeLimitSeconds *int
 	PointsToWin      *int
 	GroupNumber      *int
@@ -34,7 +34,7 @@ type BoutUpdate struct {
 }
 
 func (e BoutUpdate) columns() map[string]any {
-	columns := make(map[string]any, 9)
+	columns := make(map[string]any, 8)
 
 	if e.Location != nil {
 		columns["location"] = *e.Location
@@ -44,9 +44,6 @@ func (e BoutUpdate) columns() map[string]any {
 	}
 	if e.RefereeID != nil {
 		columns["referee_id"] = *e.RefereeID
-	}
-	if e.PoolID != nil {
-		columns["pool_id"] = *e.PoolID
 	}
 	if e.TimeLimitSeconds != nil {
 		columns["time_limit_seconds"] = *e.TimeLimitSeconds
@@ -104,9 +101,55 @@ func NewBoutRepository(db *gorm.DB) BoutRepository {
 }
 
 func (r *boutRepository) CreateBout(ctx context.Context, bout *Bout) error {
-	if err := r.db.WithContext(ctx).Create(bout).Error; err != nil {
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Pool bouts copy their pool (§11.1). Stopgap until pool create (§11.2)
+		// makes them.
+		if bout.PoolID != nil {
+			if err := fillBoutFromPool(tx, bout); err != nil {
+				return err
+			}
+		}
+
+		return tx.Create(bout).Error
+	})
+	if err != nil {
 		return translateBoutWriteError("create bout", err)
 	}
+
+	return nil
+}
+
+// fillBoutFromPool copies the pool's referee, strip and number onto the bout and gives it the pool's next slot.
+func fillBoutFromPool(tx *gorm.DB, bout *Bout) error {
+	poolID := *bout.PoolID
+
+	// Serializes with pool edits and other pool-bout creates.
+	if err := pool.LockPoolStage(tx, poolID); err != nil {
+		return err
+	}
+
+	// Copy the pool's referee, strip and number onto the bout.
+	var p pool.Pool
+	err := tx.Select("referee_id", "number", "strip").Take(&p, "id = ?", poolID).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return errs.Public("pool_id does not reference an existing pool", errs.ErrInvalidInput)
+	}
+	if err != nil {
+		return fmt.Errorf("select pool %s: %w", poolID, err)
+	}
+	bout.RefereeID = p.RefereeID
+	bout.GroupNumber = p.Number
+	bout.Location = p.Strip
+
+	// Append the bout to the end of the pool's bout order: slot is what
+	// orders a pool's bouts, since bouts made together share a created_at. The
+	// lock keeps MAX + 1 unique; the unique index is a backstop.
+	var slot int
+	err = tx.Table("bouts").Where("pool_id = ?", poolID).Select("COALESCE(MAX(slot), 0) + 1").Scan(&slot).Error
+	if err != nil {
+		return fmt.Errorf("next slot in pool %s: %w", poolID, err)
+	}
+	bout.Slot = &slot
 
 	return nil
 }
