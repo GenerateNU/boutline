@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Ellipsis, EllipsisVertical, Settings, Shapes, Swords } from "lucide-react";
+import { Ellipsis, EllipsisVertical, House, Reply, Settings, Shapes, Swords } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { BackButton } from "@/components/primitives/back-button";
@@ -22,6 +22,7 @@ import { Menu, MenuItem } from "@/components/primitives/menu";
 import { CircularProgress } from "@/components/primitives/circular-progress";
 import { DatePicker } from "@/components/primitives/date-picker";
 import { LinearProgress } from "@/components/primitives/linear-progress";
+import { PinButton } from "@/components/primitives/pin-button";
 import { Radio, RadioItem } from "@/components/primitives/radio";
 import { RatingBadge } from "@/components/primitives/rating-badge";
 import { Section } from "@/components/primitives/section";
@@ -161,6 +162,20 @@ export default function Home() {
           <FilterButton aria-label="Filter" />
           <FilterButton aria-label="Filter" active />
           <FilterButton aria-label="Filter" size="sm" disabled />
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <PinButton aria-label="Pin" />
+          <PinButton aria-label="Pin" active />
+          <PinButton aria-label="Pin" variant="obsidian" />
+          <PinButton aria-label="Pin" variant="primary" />
+          <PinButton aria-label="Home" variant="primary">
+            <House aria-hidden />
+          </PinButton>
+          <PinButton aria-label="Back" variant="primary">
+            <Reply aria-hidden />
+          </PinButton>
+          <PinButton aria-label="Pin" size="sm" />
+          <PinButton aria-label="Pin" size="sm" variant="primary" />
         </div>
       </Section>
 
