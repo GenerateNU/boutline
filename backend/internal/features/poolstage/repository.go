@@ -183,7 +183,7 @@ func (r *poolStageRepository) ListPoolStageEntrants(ctx context.Context, competi
 
 	err := r.db.WithContext(ctx).
 		Table("competitors").
-		Select("id, tournament_id, first_name, last_name, rating, team").
+		Select("id, event_id, first_name, last_name, rating, team").
 		Where("id IN ?", competitorIDs).
 		Scan(&entrants).Error
 	if err != nil {

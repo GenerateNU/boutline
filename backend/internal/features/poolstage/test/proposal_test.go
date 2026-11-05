@@ -21,7 +21,7 @@ type proposalFixture struct {
 	repo  *FakePoolStageRepository
 }
 
-// newProposalFixture enters count competitors in the stage's tournament, all on different
+// newProposalFixture enters count competitors in the stage's event, all on different
 // clubs unless clubs says otherwise.
 func newProposalFixture(count, maxPerPool int, clubs map[int]string) *proposalFixture {
 	f := &proposalFixture{event: seededEvent()}
@@ -35,20 +35,20 @@ func newProposalFixture(count, maxPerPool int, clubs map[int]string) *proposalFi
 		if !ok {
 			club = fmt.Sprintf("Club %d", n)
 		}
-		f.enter(n, &f.event.TournamentID, ratings[n%len(ratings)], club)
+		f.enter(n, f.event.ID, ratings[n%len(ratings)], club)
 	}
 
 	return f
 }
 
-func (f *proposalFixture) enter(n int, tournamentID *uuid.UUID, rating competitor.Rating, club string) {
+func (f *proposalFixture) enter(n int, eventID uuid.UUID, rating competitor.Rating, club string) {
 	f.repo.Entrants[entrant(n)] = poolstage.PoolStageEntrant{
-		ID:           entrant(n),
-		TournamentID: tournamentID,
-		FirstName:    fmt.Sprintf("Fencer%d", n),
-		LastName:     "Test",
-		Rating:       rating,
-		Team:         club,
+		ID:        entrant(n),
+		EventID:   eventID,
+		FirstName: fmt.Sprintf("Fencer%d", n),
+		LastName:  "Test",
+		Rating:    rating,
+		Team:      club,
 	}
 }
 
@@ -153,18 +153,11 @@ func TestProposePoolsRejects(t *testing.T) {
 			wantDetail: fmt.Sprintf("competitor %s does not exist", entrant(99)),
 		},
 		{
-			name:       "a competitor from another tournament",
-			prepare:    func(f *proposalFixture) { f.enter(9, ptr(uuid.New()), "A", "Elsewhere") },
+			name:       "a competitor entered in another event",
+			prepare:    func(f *proposalFixture) { f.enter(9, uuid.New(), "A", "Elsewhere") },
 			ids:        []string{entrant(1).String(), entrant(9).String()},
 			wantCode:   http.StatusBadRequest,
-			wantDetail: fmt.Sprintf("competitor %s is not entered in this pool stage's tournament", entrant(9)),
-		},
-		{
-			name:       "a competitor in no tournament",
-			prepare:    func(f *proposalFixture) { f.enter(9, nil, "A", "Unattached") },
-			ids:        []string{entrant(1).String(), entrant(9).String()},
-			wantCode:   http.StatusBadRequest,
-			wantDetail: fmt.Sprintf("competitor %s is not entered in this pool stage's tournament", entrant(9)),
+			wantDetail: fmt.Sprintf("competitor %s is not entered in this pool stage's event", entrant(9)),
 		},
 		{
 			name: "a pool stage that is no longer upcoming",
