@@ -52,10 +52,10 @@ func (PoolStage) TableName() string {
 
 // PoolStageEntrant is a competitor as a pool proposal needs them.
 type PoolStageEntrant struct {
-	ID           uuid.UUID
-	TournamentID *uuid.UUID
-	FirstName    string
-	LastName     string
-	Rating       competitor.Rating
-	Team         string
+	ID        uuid.UUID
+	EventID   uuid.UUID
+	FirstName string
+	LastName  string
+	Rating    competitor.Rating
+	Team      string
 }

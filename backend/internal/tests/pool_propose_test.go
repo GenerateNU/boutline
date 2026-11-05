@@ -13,19 +13,16 @@ import (
 )
 
 // Proposes pools for the seeded upcoming Women's Foil stage from real competitors, so the
-// entrant query and the tournament check run against Postgres. Nothing is saved.
+// entrant query and the event check run against Postgres. Nothing is saved.
 func TestProposePoolsAgainstRealDatabase(t *testing.T) {
 	app := testkit.GetDBTestApp(t)
 	headers := map[string]string{"Authorization": "Bearer " + poolCreateToken(t, app)}
 	route := "/api/v1/pool-stages/" + poolCreateStageID + "/proposed-pools"
 
-	// Fall Open's competitors: Maya, Liam, Hana, Noah, Amara, Ethan and six of the later entries.
-	entered := []int{1, 2, 5, 6, 7, 8, 17, 18, 19, 20, 21, 22}
-
 	t.Run("splits the field into balanced pools without saving them", func(t *testing.T) {
 		before := poolCreateStageTotal(t, app, headers)
-		ids := make([]string, 0, len(entered))
-		for _, n := range entered {
+		ids := make([]string, 0, 12)
+		for n := 1; n <= 12; n++ {
 			ids = append(ids, poolCreateCompetitorID(n))
 		}
 
@@ -53,20 +50,21 @@ func TestProposePoolsAgainstRealDatabase(t *testing.T) {
 	})
 
 	rejects := []struct {
-		name   string
-		other  int
-		detail string
+		name  string
+		other string
 	}{
-		{name: "a competitor in no tournament", other: 3, detail: "is not entered in this pool stage's tournament"},
-		{name: "a competitor from another tournament", other: 9, detail: "is not entered in this pool stage's tournament"},
+		// Maya is entered in Mixed Épée, the same tournament's other event.
+		{name: "a competitor from another event of the tournament", other: "d0000000-0000-4000-8000-000000000001"},
+		// Sofia Rossi is entered in another tournament.
+		{name: "a competitor from another tournament", other: "d0000000-0000-4000-8000-000000000009"},
 	}
 	for _, tt := range rejects {
 		t.Run(tt.name, func(t *testing.T) {
 			result := testkit.New(t).
 				Request(testkit.Request{App: app, Route: route, Method: testkit.POST, Headers: headers,
-					Body: map[string]any{"competitor_ids": []string{poolCreateCompetitorID(1), poolCreateCompetitorID(tt.other)}}}).
+					Body: map[string]any{"competitor_ids": []string{poolCreateCompetitorID(1), tt.other}}}).
 				AssertStatus(http.StatusBadRequest)
-			assert.Contains(t, result.GetBody()["detail"], tt.detail)
+			assert.Contains(t, result.GetBody()["detail"], "is not entered in this pool stage's event")
 		})
 	}
 }

@@ -73,17 +73,13 @@ func parseProposalCompetitors(raw []string) ([]uuid.UUID, error) {
 }
 
 // loadProposalEntrants returns every competitor by id after checking each exists and is
-// entered in the stage's tournament; the first failure is reported in request order.
+// entered in the stage's event, the rule pool creation applies, so a proposal can be
+// created as is. The first failure is reported in request order.
 func (s *poolStageService) loadProposalEntrants(
 	ctx context.Context,
 	stage PoolStage,
 	competitorIDs []uuid.UUID,
 ) (map[uuid.UUID]PoolStageEntrant, error) {
-	event, err := s.events.GetEventByID(ctx, stage.EventID)
-	if err != nil {
-		return nil, fmt.Errorf("get pool stage event: %w", err)
-	}
-
 	listed, err := s.repo.ListPoolStageEntrants(ctx, competitorIDs)
 	if err != nil {
 		return nil, fmt.Errorf("list competitors: %w", err)
@@ -98,9 +94,9 @@ func (s *poolStageService) loadProposalEntrants(
 		if !ok {
 			return nil, errs.Public(fmt.Sprintf("competitor %s does not exist", id), errs.ErrInvalidInput)
 		}
-		if entrant.TournamentID == nil || *entrant.TournamentID != event.TournamentID {
+		if entrant.EventID != stage.EventID {
 			return nil, errs.Public(
-				fmt.Sprintf("competitor %s is not entered in this pool stage's tournament", id), errs.ErrInvalidInput)
+				fmt.Sprintf("competitor %s is not entered in this pool stage's event", id), errs.ErrInvalidInput)
 		}
 	}
 
