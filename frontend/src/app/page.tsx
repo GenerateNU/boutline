@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Ellipsis, EllipsisVertical, Settings, Shapes } from "lucide-react";
+import { Ellipsis, EllipsisVertical, Settings, Shapes, Swords } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
+import { BackButton } from "@/components/primitives/back-button";
 import { Button } from "@/components/primitives/button";
 import {
   Card,
@@ -15,12 +16,14 @@ import {
 } from "@/components/primitives/card";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Chip } from "@/components/primitives/chip";
+import { FilterButton } from "@/components/primitives/filter-button";
 import { List, ListItem } from "@/components/primitives/list";
 import { Menu, MenuItem } from "@/components/primitives/menu";
 import { CircularProgress } from "@/components/primitives/circular-progress";
 import { DatePicker } from "@/components/primitives/date-picker";
 import { LinearProgress } from "@/components/primitives/linear-progress";
 import { Radio, RadioItem } from "@/components/primitives/radio";
+import { RatingBadge } from "@/components/primitives/rating-badge";
 import { Section } from "@/components/primitives/section";
 import { SearchBar } from "@/components/primitives/search-bar";
 import { SegmentItem } from "@/components/primitives/segment-item";
@@ -29,7 +32,11 @@ import {
   SegmentedButtonItem,
 } from "@/components/primitives/segmented-button";
 import { Slider } from "@/components/primitives/slider";
+import { Stat, StatRow } from "@/components/primitives/stat-row";
+import { StatTile } from "@/components/primitives/stat-tile";
+import { StatusBadge } from "@/components/primitives/status-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/primitives/tabs";
+import { Tag } from "@/components/primitives/tag";
 import { TextField } from "@/components/primitives/text-field";
 import { useToast } from "@/components/primitives/toast";
 import { Toggle } from "@/components/primitives/toggle";
@@ -146,7 +153,35 @@ export default function Home() {
             <Ellipsis />
           </Button>
           <Button variant="outline">Label</Button>
+          <Button variant="tonal">Label</Button>
+          <Button variant="filled" size="sm">Small</Button>
+          <Button variant="filled" size="lg">Large</Button>
+          <Button variant="filled" disabled>Disabled</Button>
+          <BackButton href="/">Back</BackButton>
+          <FilterButton aria-label="Filter" />
+          <FilterButton aria-label="Filter" active />
+          <FilterButton aria-label="Filter" size="sm" disabled />
         </div>
+      </Section>
+
+      <Section title="Status and labels">
+        <div className="flex flex-wrap items-center gap-3">
+          <StatusBadge status="in-progress" />
+          <StatusBadge status="upcoming" />
+          <StatusBadge status="live" />
+          <StatusBadge status="occupied" />
+          <RatingBadge>A26</RatingBadge>
+          <RatingBadge tone="subtle">A26</RatingBadge>
+          <Tag icon={<Swords aria-hidden />}>Specialty: Foil</Tag>
+        </div>
+        <StatTile label="Pool" value="3" className="w-42.5" />
+        <StatRow>
+          <Stat value="3-0" label="V-D" />
+          <Stat value="1.00" label="V/M" />
+          <Stat value="15" label="TS" />
+          <Stat value="6" label="TR" />
+          <Stat value="+9" label="Ind" />
+        </StatRow>
       </Section>
 
       <Section title="Checkbox">
