@@ -279,9 +279,10 @@ each with a referee.
     one pool.
   - `POST /pool-stages/{id}/end`: `active → ended`, and only when every pool has
     completed.
-- Pool routes: CRUD (`POST` needs a `number`, and a duplicate in the stage is a 409;
-  `PATCH` changes the referee, number, strip and start time, and the pool's
-  upcoming bouts follow (§11.1); delete is a 409 when the pool has bouts), plus:
+- Pool routes: CRUD (`POST` creates a batch of pools with their bouts, §11.2, and
+  a duplicate `number` in the stage is a 409; `PATCH` changes the referee, number,
+  strip and start time, and the pool's upcoming bouts follow (§11.1); delete is a
+  409 when the pool has bouts), plus:
   - `POST /pools/{id}/start`: needs an assigned referee and an `active` stage;
     writes `started_at`.
   - `POST /pools/{id}/end`: needs every bout in the pool ended; writes
@@ -973,9 +974,8 @@ ranking seeds the tableau.
 
 ### 11.1 Pool data
 
-**Status:** Partial. The columns are built, and so is copying from the pool: on
-`POST /bouts` and on pool edits, both under the pool stage lock. Pool create
-(§11.2) will copy the same way.
+**Status:** Completed. Pool create (§11.2), `POST /bouts` and pool edits all copy
+from the pool under the pool stage lock.
 
 - `pools.number` (≥ 1, unique per pool stage) labels the pool, and `pools.strip`
   is its strip assignment.
@@ -1018,10 +1018,17 @@ pools are generated after the tournament starts.
    - Planned additions: cap `max_competitor_per_pool` at 12, the largest size with a
      standard bout order, and match clubs by the normalised key in §8.4. #153 asks
      for clubmates who do share a pool to fence each other first.
-2. **Create** (Planned): `POST /pools` takes the adjusted pools and creates each one
-   with every round-robin bout. Bouts follow the standard order for the pool's
-   size, so no one fences back-to-back, and use the event's pool touches and time
-   (§8.5).
+2. **Create** (Partial): `POST /pools` takes the adjusted pools
+   (`{pools: [{pool_stage_id, number, strip?, start_time?, referee_id?, fencers}],
+   points_to_win, time_limit_seconds}`, all in one stage) and creates each one
+   with every round-robin bout, under the stage lock below. It needs an active
+   tournament. Fencers take grid positions in the order each pool lists them,
+   which Propose returns in seed order. Bouts follow the standard order for the
+   pool's size, so no one fences back-to-back. Still to do: fencers aren't yet
+   checked against the stage's event or the stage's existing pools, bouts take
+   touches and time from the request (default 5 and 180) rather than the event's
+   (§8.5), pools are capped at 10 fencers rather than 12, and create is open to
+   any signed-in user until roles land (§7.2).
 3. **Re-seat** (Planned): `PATCH /pools/{id}` with `fencers` replaces a pool's
    fencers and regenerates its bouts, while none of them has started. Depends on
    §9.1. A branch (`jleung/pool-reseat`) has a first version.

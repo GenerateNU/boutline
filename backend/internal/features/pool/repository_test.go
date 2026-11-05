@@ -24,7 +24,7 @@ func TestTranslatePoolWriteError(t *testing.T) {
 			name:       "foreign key violation becomes an invalid input",
 			err:        fmt.Errorf("%w: boom", gorm.ErrForeignKeyViolated),
 			wantStatus: http.StatusBadRequest,
-			wantMsg:    "pool_stage_id or referee_id does not reference an existing record",
+			wantMsg:    "referee_id does not reference an existing record",
 		},
 		{
 			name:       "duplicate key becomes a conflict",

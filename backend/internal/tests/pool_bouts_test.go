@@ -14,12 +14,11 @@ import (
 )
 
 const (
-	fallOpenPoolStage = "f0000000-0000-4000-8000-000000000001"
-	alexMorgan        = "a0000000-0000-4000-8000-000000000001"
-	jordanLee         = "a0000000-0000-4000-8000-000000000002"
-	samRivera         = "a0000000-0000-4000-8000-000000000003"
-	mayaChen          = "d0000000-0000-4000-8000-000000000001"
-	liamOBrien        = "d0000000-0000-4000-8000-000000000002"
+	alexMorgan = "a0000000-0000-4000-8000-000000000001"
+	jordanLee  = "a0000000-0000-4000-8000-000000000002"
+	samRivera  = "a0000000-0000-4000-8000-000000000003"
+	sofiaRusso = "d0000000-0000-4000-8000-000000000033"
+	lenaFisher = "d0000000-0000-4000-8000-000000000034"
 )
 
 // These tests build their own pools and bouts rather than editing seeded ones,
@@ -90,7 +89,8 @@ func TestConcurrentPoolBoutsTakeDistinctSlots(t *testing.T) {
 		slots = append(slots, body["slot"])
 	}
 
-	assert.ElementsMatch(t, []any{float64(1), float64(2), float64(3), float64(4), float64(5)}, slots)
+	// Slot 1 is the bout pool create made.
+	assert.ElementsMatch(t, []any{float64(2), float64(3), float64(4), float64(5), float64(6)}, slots)
 }
 
 func TestPoolBoutCopiesItsPool(t *testing.T) {
@@ -144,13 +144,27 @@ func TestPoolBoutsCreatedDuringAnEditMatchThePool(t *testing.T) {
 	}
 }
 
+// createPool seats Sofia and Lena in a new pool of the upcoming Women's Foil stage,
+// which creates the pool's one round-robin bout at slot 1.
 func createPool(t *testing.T, app *fiber.App, number int) string {
 	t.Helper()
 
-	id := createdID(t, send(t, app, testkit.POST, "/api/v1/pools", map[string]any{
-		"pool_stage_id": fallOpenPoolStage, "number": number, "strip": "Strip 9", "referee_id": jordanLee,
-	}, http.StatusCreated))
-	t.Cleanup(func() { send(t, app, testkit.DELETE, "/api/v1/pools/"+id, nil, http.StatusNoContent) })
+	created := send(t, app, testkit.POST, "/api/v1/pools", map[string]any{"pools": []map[string]any{{
+		"pool_stage_id": poolCreateStageID, "number": number, "strip": "Strip 9", "referee_id": jordanLee,
+		"fencers": []string{sofiaRusso, lenaFisher},
+	}}}, http.StatusCreated)
+	pools, ok := created["data"].([]any)
+	require.True(t, ok && len(pools) == 1, "create returned no pool: %v", created)
+	id := createdID(t, pools[0].(map[string]any))
+
+	// bouts.pool_id is RESTRICT, so the pool's own bout goes first.
+	t.Cleanup(func() {
+		headers := authHeaders(t, uuid.MustParse(alexMorgan))
+		for _, boutID := range poolCreateListIDs(t, app, headers, "/api/v1/bouts", "pool_id", id) {
+			send(t, app, testkit.DELETE, "/api/v1/bouts/"+boutID, nil, http.StatusNoContent)
+		}
+		send(t, app, testkit.DELETE, "/api/v1/pools/"+id, nil, http.StatusNoContent)
+	})
 
 	return id
 }
@@ -167,7 +181,7 @@ func createPoolBout(t *testing.T, app *fiber.App, poolID string) string {
 func poolBoutBody(poolID string) map[string]any {
 	return map[string]any{
 		"tournament_id": fallOpen2026, "pool_id": poolID, "referee_id": jordanLee,
-		"competitor_1_id": mayaChen, "competitor_2_id": liamOBrien,
+		"competitor_1_id": sofiaRusso, "competitor_2_id": lenaFisher,
 		"points_to_win": 5, "location": "Strip 9", "group_number": 90,
 	}
 }

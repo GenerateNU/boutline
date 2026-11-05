@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"boutline/internal/features/poolstage"
+	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
 
 	"github.com/google/uuid"
@@ -26,6 +27,19 @@ type Pool struct {
 
 func (Pool) TableName() string {
 	return "pools"
+}
+
+// LockedPoolStage is what pool create reads from the pool stage row it holds locked.
+type LockedPoolStage struct {
+	Status               poolstage.PoolStageStatus
+	MaxCompetitorPerPool int
+	TournamentID         uuid.UUID
+	TournamentStatus     tournament.TournamentStatus
+}
+
+// PoolEntrant is a competitor as pool create checks them.
+type PoolEntrant struct {
+	ID uuid.UUID
 }
 
 // Mirrors bout.BoutStatusUpcoming; bout imports this package, so it cannot be referenced here.

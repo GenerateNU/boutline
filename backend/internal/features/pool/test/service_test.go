@@ -8,6 +8,7 @@ import (
 
 	"boutline/internal/features/pool"
 	"boutline/internal/features/poolstage"
+	"boutline/internal/features/tournament"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -39,84 +40,185 @@ func apiError(t *testing.T, err error) (int, string) {
 
 func ptr[T any](v T) *T { return &v }
 
-func TestCreatePool(t *testing.T) {
+// competitor returns a deterministic id whose bytewise order follows n.
+func competitor(n int) uuid.UUID { return uuid.UUID{15: byte(n)} }
+
+type createFixture struct {
+	stage      poolstage.PoolStage
+	otherStage poolstage.PoolStage
+	tournament uuid.UUID
+	referee    uuid.UUID
+	repo       *FakePoolRepository
+	lookup     *FakePoolStageLookup
+}
+
+func newCreateFixture() *createFixture {
+	f := &createFixture{
+		stage:      seededPoolStage(),
+		otherStage: seededPoolStage(),
+		tournament: uuid.New(),
+		referee:    uuid.New(),
+		repo:       NewFakePoolRepository(),
+	}
+	// Create reads the stage under its lock, so only the repository holds it.
+	f.lookup = NewFakePoolStageLookup()
+	f.lockStage(f.stage)
+	f.lockStage(f.otherStage)
+
+	for n := 1; n <= 10; n++ {
+		f.repo.Competitors[competitor(n)] = pool.PoolEntrant{ID: competitor(n)}
+	}
+
+	return f
+}
+
+func (f *createFixture) updateStage(change func(*poolstage.PoolStage)) {
+	change(&f.stage)
+	f.lockStage(f.stage)
+}
+
+// lockStage stores what pool create reads from the stage row it locks.
+func (f *createFixture) lockStage(stage poolstage.PoolStage) {
+	f.repo.Stages[stage.ID] = pool.LockedPoolStage{
+		Status:               stage.Status,
+		MaxCompetitorPerPool: stage.MaxCompetitorPerPool,
+		TournamentID:         f.tournament,
+		TournamentStatus:     tournament.TournamentStatusActive,
+	}
+}
+
+func (f *createFixture) item(number int, fencers ...int) pool.PoolCreateItem {
+	return pool.PoolCreateItem{PoolStageID: f.stage.ID.String(), Number: number, Fencers: fencerIDs(fencers...)}
+}
+
+func (f *createFixture) body(items ...pool.PoolCreateItem) pool.PoolCreateBody {
+	return pool.PoolCreateBody{Pools: items, PointsToWin: 5, TimeLimitSeconds: 180}
+}
+
+// seedPool stores a pool with a bout between each pair of its listed fencers.
+func (f *createFixture) seedPool(stageID uuid.UUID, number int, fencers ...int) {
+	seeded := pool.Pool{ID: uuid.New(), PoolStageID: stageID, Number: number}
+	f.repo.Pools[seeded.ID] = seeded
+	for i := 0; i+1 < len(fencers); i++ {
+		f.repo.Bouts = append(f.repo.Bouts, pool.PoolBout{
+			ID:            uuid.New(),
+			PoolID:        seeded.ID,
+			Competitor1ID: competitor(fencers[i]),
+			Competitor2ID: competitor(fencers[i+1]),
+		})
+	}
+}
+
+func TestCreatePools(t *testing.T) {
 	t.Parallel()
 
-	stage := seededPoolStage()
-	otherStage := seededPoolStage()
-	referee := uuid.New()
-	startTime := time.Date(2026, 10, 24, 9, 30, 0, 0, time.UTC)
-	numberOne := pool.Pool{ID: uuid.New(), PoolStageID: stage.ID, Number: 1}
-
 	tests := []struct {
-		name        string
-		lookup      *FakePoolStageLookup
-		existing    []pool.Pool
-		body        pool.PoolCreateBody
-		wantCode    int
-		wantDetail  string
-		wantReferee *string
+		name       string
+		setup      func(f *createFixture)
+		items      func(f *createFixture) []pool.PoolCreateItem
+		wantCode   int
+		wantDetail string
 	}{
 		{
-			name:   "creates a pool without a referee",
-			lookup: NewFakePoolStageLookup(stage),
-			body:   pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1},
-		},
-		{
-			name:        "creates a pool with a referee",
-			lookup:      NewFakePoolStageLookup(stage),
-			body:        pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1, RefereeID: ptr(referee.String())},
-			wantReferee: ptr(referee.String()),
-		},
-		{
-			name:   "echoes number, strip and start_time",
-			lookup: NewFakePoolStageLookup(stage),
-			body: pool.PoolCreateBody{
-				PoolStageID: stage.ID.String(),
-				Number:      3,
-				Strip:       ptr("Strip 4"),
-				StartTime:   &startTime,
+			name: "creates pools in an upcoming stage",
+			items: func(f *createFixture) []pool.PoolCreateItem {
+				return []pool.PoolCreateItem{f.item(1, 1, 2, 3), f.item(2, 4, 5)}
 			},
 		},
 		{
-			name:       "rejects a number already used in the pool stage",
-			lookup:     NewFakePoolStageLookup(stage),
-			existing:   []pool.Pool{numberOne},
-			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1},
-			wantCode:   http.StatusConflict,
-			wantDetail: "a pool with this number already exists in the pool stage",
+			name: "accepts a number used in another pool stage",
+			setup: func(f *createFixture) {
+				f.seedPool(f.otherStage.ID, 1, 6, 7)
+			},
+			items: func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
 		},
 		{
-			name:     "accepts a number used in another pool stage",
-			lookup:   NewFakePoolStageLookup(stage, otherStage),
-			existing: []pool.Pool{numberOne},
-			body:     pool.PoolCreateBody{PoolStageID: otherStage.ID.String(), Number: 1},
+			name: "allows ten fencers when the stage allows more",
+			setup: func(f *createFixture) {
+				f.updateStage(func(s *poolstage.PoolStage) { s.MaxCompetitorPerPool = 12 })
+			},
+			items: func(f *createFixture) []pool.PoolCreateItem {
+				return []pool.PoolCreateItem{f.item(1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)}
+			},
 		},
 		{
-			name:       "rejects a pool_stage_id that does not exist",
-			lookup:     NewFakePoolStageLookup(),
-			body:       pool.PoolCreateBody{PoolStageID: uuid.New().String(), Number: 1},
+			name: "rejects pools from different pool stages",
+			items: func(f *createFixture) []pool.PoolCreateItem {
+				other := f.item(2, 3, 4)
+				other.PoolStageID = f.otherStage.ID.String()
+
+				return []pool.PoolCreateItem{f.item(1, 1, 2), other}
+			},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "every pool must belong to the same pool stage",
+		},
+		{
+			name: "rejects a competitor listed twice in one pool",
+			items: func(f *createFixture) []pool.PoolCreateItem {
+				return []pool.PoolCreateItem{f.item(1, 1, 2, 1)}
+			},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "competitor " + competitor(1).String() + " is listed more than once",
+		},
+		{
+			name: "rejects a competitor listed in two pools",
+			items: func(f *createFixture) []pool.PoolCreateItem {
+				return []pool.PoolCreateItem{f.item(1, 1, 2), f.item(2, 3, 2)}
+			},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "competitor " + competitor(2).String() + " is listed more than once",
+		},
+		{
+			name: "rejects a pool stage that does not exist",
+			setup: func(f *createFixture) {
+				delete(f.repo.Stages, f.stage.ID)
+			},
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "pool_stage_id must reference an existing pool stage",
 		},
 		{
-			name:       "rejects a bad pool_stage_id",
-			lookup:     NewFakePoolStageLookup(stage),
-			body:       pool.PoolCreateBody{PoolStageID: "not-a-uuid", Number: 1},
-			wantCode:   http.StatusBadRequest,
-			wantDetail: "pool_stage_id must be a valid uuid",
+			name: "rejects a pool stage that is not upcoming",
+			setup: func(f *createFixture) {
+				f.updateStage(func(s *poolstage.PoolStage) { s.Status = poolstage.PoolStageStatusActive })
+			},
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
+			wantCode:   http.StatusConflict,
+			wantDetail: "pools can only be created in an upcoming pool stage",
 		},
 		{
-			name:       "rejects a bad referee_id",
-			lookup:     NewFakePoolStageLookup(stage),
-			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1, RefereeID: ptr("not-a-uuid")},
-			wantCode:   http.StatusBadRequest,
-			wantDetail: "referee_id must be a valid uuid",
+			name: "rejects a tournament that is not active",
+			setup: func(f *createFixture) {
+				locked := f.repo.Stages[f.stage.ID]
+				locked.TournamentStatus = tournament.TournamentStatusPending
+				f.repo.Stages[f.stage.ID] = locked
+			},
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
+			wantCode:   http.StatusConflict,
+			wantDetail: "pools can only be created in an active tournament",
 		},
 		{
-			name:       "reports a pool stage lookup failure as a server error",
-			lookup:     &FakePoolStageLookup{Err: errors.New("connection refused")},
-			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1},
+			name: "rejects a pool above the stage's max_competitor_per_pool",
+			items: func(f *createFixture) []pool.PoolCreateItem {
+				return []pool.PoolCreateItem{f.item(7, 1, 2, 3, 4, 5)}
+			},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "pool 7 must have between 2 and 4 fencers",
+		},
+		{
+			name: "names the first unknown competitor in request order",
+			items: func(f *createFixture) []pool.PoolCreateItem {
+				return []pool.PoolCreateItem{f.item(1, 1, 20, 21)}
+			},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "competitor " + competitor(20).String() + " does not exist",
+		},
+		{
+			name: "reports a repository failure as a server error",
+			setup: func(f *createFixture) {
+				f.repo.Err = errors.New("connection refused")
+			},
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
 			wantCode:   http.StatusInternalServerError,
 			wantDetail: "internal server error",
 		},
@@ -126,29 +228,94 @@ func TestCreatePool(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			repo := NewFakePoolRepository(tt.existing...)
-			out, err := pool.NewPoolService(repo, tt.lookup).
-				CreatePool(t.Context(), &pool.PoolCreateInput{Body: tt.body})
+			f := newCreateFixture()
+			if tt.setup != nil {
+				tt.setup(f)
+			}
+			items := tt.items(f)
+			poolsBefore, boutsBefore := len(f.repo.Pools), len(f.repo.Bouts)
+
+			out, err := pool.NewPoolService(f.repo, f.lookup).
+				CreatePools(t.Context(), &pool.PoolCreateInput{Body: f.body(items...)})
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
 				assert.Equal(t, tt.wantCode, code)
 				assert.Equal(t, tt.wantDetail, detail)
 				assert.Nil(t, out)
-				assert.Len(t, repo.Pools, len(tt.existing))
+				assert.Len(t, f.repo.Pools, poolsBefore)
+				assert.Len(t, f.repo.Bouts, boutsBefore)
 
 				return
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, tt.body.PoolStageID, out.Body.PoolStageID)
-			assert.Equal(t, tt.wantReferee, out.Body.RefereeID)
-			assert.Equal(t, tt.body.Number, out.Body.Number)
-			assert.Equal(t, tt.body.Strip, out.Body.Strip)
-			assert.Equal(t, tt.body.StartTime, out.Body.StartTime)
-			assert.Len(t, repo.Pools, len(tt.existing)+1)
+			assert.Len(t, out.Body.Data, len(items))
+			assert.Len(t, f.repo.Pools, poolsBefore+len(items))
 		})
 	}
+}
+
+// poolBoutPairs are the seat pairs of the standard bout order, by pool size.
+var poolBoutPairs = map[int][][2]int{
+	2: {{1, 2}},
+	3: {{1, 2}, {2, 3}, {3, 1}},
+	4: {{1, 4}, {2, 3}, {1, 3}, {2, 4}, {3, 4}, {1, 2}},
+}
+
+// Seating and the bout order itself are covered by newPoolLineup's tests; this checks the
+// service hands each pool to it and stores what comes back.
+func TestCreatePoolsStoresPoolsWithTheirBouts(t *testing.T) {
+	t.Parallel()
+
+	f := newCreateFixture()
+	startTime := time.Date(2026, 10, 24, 9, 30, 0, 0, time.UTC)
+	first := f.item(2, 3, 1, 4, 2)
+	first.Strip, first.RefereeID, first.StartTime = ptr("Strip A"), ptr(f.referee.String()), &startTime
+	body := f.body(first, f.item(1, 7, 5, 6))
+	body.PointsToWin, body.TimeLimitSeconds = 15, 540
+
+	out, err := pool.NewPoolService(f.repo, f.lookup).CreatePools(t.Context(), &pool.PoolCreateInput{Body: body})
+
+	require.NoError(t, err)
+	require.Len(t, out.Body.Data, 2)
+	// Fencers keep the order the request lists them in.
+	wantSeating := [][]int{{3, 1, 4, 2}, {7, 5, 6}}
+	for i, created := range out.Body.Data {
+		item := body.Pools[i]
+		assert.Equal(t, item.Number, created.Number, "pools come back in request order")
+		assert.Equal(t, item.StartTime, created.StartTime)
+
+		for seat, n := range wantSeating[i] {
+			assert.Equal(t, pool.PoolCreatedFencer{CompetitorID: competitor(n).String(), Position: seat + 1}, created.Fencers[seat])
+		}
+
+		stored := boutsOf(f.repo, created.ID)
+		require.Len(t, stored, len(poolBoutPairs[len(wantSeating[i])]))
+		for k, bout := range stored {
+			assert.Equal(t, created.Bouts[k].ID, bout.ID.String())
+			assert.Equal(t, k+1, bout.Slot)
+			assert.Equal(t, f.tournament, bout.TournamentID)
+			assert.Equal(t, item.Strip, bout.Location)
+			assert.Equal(t, item.Number, bout.GroupNumber)
+			assert.Equal(t, "upcoming", bout.Status)
+			assert.Equal(t, 15, bout.PointsToWin)
+			assert.Equal(t, 540, bout.TimeLimitSeconds)
+		}
+	}
+	assert.Equal(t, &f.referee, boutsOf(f.repo, out.Body.Data[0].ID)[0].RefereeID)
+	assert.Nil(t, boutsOf(f.repo, out.Body.Data[1].ID)[0].RefereeID)
+}
+
+func boutsOf(repo *FakePoolRepository, poolID string) []pool.PoolBout {
+	var found []pool.PoolBout
+	for _, bout := range repo.Bouts {
+		if bout.PoolID.String() == poolID {
+			found = append(found, bout)
+		}
+	}
+
+	return found
 }
 
 func TestListPools(t *testing.T) {
