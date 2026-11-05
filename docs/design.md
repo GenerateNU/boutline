@@ -303,7 +303,7 @@ editable, and not once ended.
 A bout is one match between two competitors, to a number of touches, optionally
 timed, on a strip.
 
-`bouts`: `tournament_id`, `pool_id?`, `group_slot?` (§11.1), `referee_id?`,
+`bouts`: `tournament_id`, `pool_id?`, `slot?` (§11.1), `referee_id?`,
 `competitor_1_id`, `competitor_2_id` (must differ), `points_to_win` (> 0),
 `time_limit_seconds?`, `location?` (strip, max 200 chars), `group_number`,
 `start_time`, `status` (`upcoming` | `active` | `ended`), `started_at`,
@@ -311,7 +311,7 @@ timed, on a strip.
 
 | Method | Path | Rules |
 | --- | --- | --- |
-| POST | `/bouts` | tournament must be active; the pool must belong to the same tournament; a pool bout copies the pool's referee, strip and number and takes its next `group_slot`, under the pool stage lock (§11.2), until pool create makes pool bouts |
+| POST | `/bouts` | tournament must be active; the pool must belong to the same tournament; a pool bout copies the pool's referee, strip and number and takes its next `slot`, under the pool stage lock (§11.2), until pool create makes pool bouts |
 | GET | `/bouts?tournament_id&pool_id&status&ids` | newest first |
 | GET | `/bouts/{id}` | |
 | PATCH | `/bouts/{id}` | only while `upcoming`; `pool_id` can't change |
@@ -963,10 +963,11 @@ ranking seeds the tableau.
 
 - `pools.number` (≥ 1, unique per pool stage) labels the pool, and `pools.strip`
   is its strip assignment.
-- `bouts.group_slot` (≥ 1, unique per pool) is a pool bout's place in the pool's
-  bout order. Bouts created in one batch share a `created_at`, so the order needs
-  a column. A DE bout's bracket position is a separate column, `bouts.slot`
-  (§12.1).
+- `bouts.slot` (≥ 1, unique per pool) is a pool bout's place in the pool's bout
+  order. Bouts created in one batch share a `created_at`, so the order needs a
+  column. The same column holds a DE bout's bracket position (§12.1): which of
+  `pool_id` and `direct_elimination_id` is set says what the slot is a position
+  in.
 - A pool's fencers are the competitors in its bouts. There is no pool-fencers
   table.
 - A pool's bouts copy its strip (`location`), referee and number (`group_number`).
@@ -1123,7 +1124,10 @@ draw's single write and the cleanup when the DE is deleted all belong to the DE.
   - A DE bout reuses `bouts.slot` (§11.1) as its 1-based position in the round,
     top to bottom, with `competitor_1` as the top fencer.
   - The bouts at slots 2k−1 and 2k feed slot k of the next round.
-  - `(direct_elimination_id, round_size, slot)` is unique.
+  - `(direct_elimination_id, round_size, slot)` is unique. Postgres treats nulls
+    as distinct, so this index and the pool's `(pool_id, slot)` never collide.
+  - A bout belongs to a pool or a DE, never both, and has a `slot` exactly when
+    it belongs to one.
 
 ### 12.2 Draw
 
