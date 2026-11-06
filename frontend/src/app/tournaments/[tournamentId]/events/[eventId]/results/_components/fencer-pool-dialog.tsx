@@ -6,14 +6,37 @@ import { MockCountry } from "@/app/tournaments/[tournamentId]/_components/mock-c
 import { Button } from "@/components/primitives/button";
 import { Stat, StatRow } from "@/components/primitives/stat-row";
 import { Tag } from "@/components/primitives/tag";
-import type { PoolStanding } from "../../_types/results";
+import type { PoolBoutResult, PoolStanding } from "../../_types/results";
 
-interface FencerPoolSheetProps {
+function PoolBoutRow({ bout }: { bout: PoolBoutResult }) {
+  const { opponent, touchesScored, touchesReceived } = bout;
+
+  return (
+    <li className="flex items-center gap-2">
+      <p className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-foreground text-xs text-background">
+        {touchesScored > touchesReceived ? "V" : "D"}
+      </p>
+      <p className="w-8 shrink-0 font-mono text-sm font-medium">
+        {touchesScored}-{touchesReceived}
+      </p>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm uppercase">
+          vs. {opponent.firstName} {opponent.lastName}
+        </p>
+        <p className="truncate text-xs text-muted-foreground uppercase">
+          <MockCountry /> - {opponent.club || "No club"}
+        </p>
+      </div>
+    </li>
+  );
+}
+
+interface FencerPoolDialogProps {
   standing: PoolStanding;
   fencerHref: string;
 }
 
-function FencerPoolSheet({ standing, fencerHref }: FencerPoolSheetProps) {
+function FencerPoolDialog({ standing, fencerHref }: FencerPoolDialogProps) {
   const {
     fencer,
     pool,
@@ -61,23 +84,8 @@ function FencerPoolSheet({ standing, fencerHref }: FencerPoolSheetProps) {
         </StatRow>
 
         <ul className="flex flex-col gap-3">
-          {bouts.map(({ opponent, touchesScored, touchesReceived }) => (
-            <li key={opponent.id} className="flex items-center gap-2">
-              <p className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-foreground text-xs text-background">
-                {touchesScored > touchesReceived ? "V" : "D"}
-              </p>
-              <p className="w-8 shrink-0 font-mono text-sm font-medium">
-                {touchesScored}-{touchesReceived}
-              </p>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm uppercase">
-                  vs. {opponent.firstName} {opponent.lastName}
-                </p>
-                <p className="truncate text-xs text-muted-foreground uppercase">
-                  <MockCountry /> - {opponent.club || "No club"}
-                </p>
-              </div>
-            </li>
+          {bouts.map((bout) => (
+            <PoolBoutRow key={bout.opponent.id} bout={bout} />
           ))}
         </ul>
 
@@ -93,4 +101,4 @@ function FencerPoolSheet({ standing, fencerHref }: FencerPoolSheetProps) {
   );
 }
 
-export { FencerPoolSheet };
+export { FencerPoolDialog };
