@@ -1,20 +1,35 @@
 "use client";
 
+import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 import { User } from "lucide-react";
 import { Avatar as AvatarPrimitive } from "radix-ui";
 
-function Avatar({
-  className,
-  ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Root>) {
+const avatarVariants = cva(
+  "flex shrink-0 overflow-hidden rounded-full border border-foreground bg-surface",
+  {
+    variants: {
+      size: {
+        sm: "size-5",
+        md: "size-6.25",
+        lg: "size-7.5",
+      },
+    },
+    defaultVariants: {
+      size: "lg",
+    },
+  },
+);
+
+interface AvatarProps
+  extends React.ComponentProps<typeof AvatarPrimitive.Root>,
+    VariantProps<typeof avatarVariants> {}
+
+function Avatar({ className, size, ...props }: AvatarProps) {
   return (
     <AvatarPrimitive.Root
       data-slot="avatar"
-      className={cn(
-        "flex size-10 shrink-0 overflow-hidden rounded-full border border-foreground",
-        className,
-      )}
+      className={cn(avatarVariants({ size, className }))}
       {...props}
     />
   );
@@ -29,12 +44,12 @@ function AvatarFallback({
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        "flex size-full items-center justify-center text-sm",
+        "flex size-full items-center justify-center text-xs text-obsidian",
         className,
       )}
       {...props}
     >
-      {children ?? <User aria-hidden className="size-5" />}
+      {children ?? <User aria-hidden className="size-1/2" />}
     </AvatarPrimitive.Fallback>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Ellipsis, EllipsisVertical, Settings, Shapes } from "lucide-react";
+import { Ellipsis, EllipsisVertical, House, Reply, Settings, Shapes, Swords } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
+import { BackButton } from "@/components/primitives/back-button";
 import { Button } from "@/components/primitives/button";
 import {
   Card,
@@ -15,12 +16,15 @@ import {
 } from "@/components/primitives/card";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Chip } from "@/components/primitives/chip";
+import { FilterButton } from "@/components/primitives/filter-button";
 import { List, ListItem } from "@/components/primitives/list";
 import { Menu, MenuItem } from "@/components/primitives/menu";
 import { CircularProgress } from "@/components/primitives/circular-progress";
 import { DatePicker } from "@/components/primitives/date-picker";
 import { LinearProgress } from "@/components/primitives/linear-progress";
+import { PinButton } from "@/components/primitives/pin-button";
 import { Radio, RadioItem } from "@/components/primitives/radio";
+import { RatingBadge } from "@/components/primitives/rating-badge";
 import { Section } from "@/components/primitives/section";
 import { SearchBar } from "@/components/primitives/search-bar";
 import { SegmentItem } from "@/components/primitives/segment-item";
@@ -29,7 +33,11 @@ import {
   SegmentedButtonItem,
 } from "@/components/primitives/segmented-button";
 import { Slider } from "@/components/primitives/slider";
+import { Stat, StatRow } from "@/components/primitives/stat-row";
+import { StatTile } from "@/components/primitives/stat-tile";
+import { StatusBadge } from "@/components/primitives/status-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/primitives/tabs";
+import { Tag } from "@/components/primitives/tag";
 import { TextField } from "@/components/primitives/text-field";
 import { useToast } from "@/components/primitives/toast";
 import { Toggle } from "@/components/primitives/toggle";
@@ -45,6 +53,17 @@ import { NavigationBar } from "@/components/primitives/navigation/navigation-bar
 import { NavigationDrawer } from "@/components/primitives/navigation/navigation-drawer";
 import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
 import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+
+const buttonVariantNames = ["filled", "outline", "tonal", "text"] as const;
+const buttonSizes = ["sm", "default", "lg"] as const;
+
+// Static stand-ins for each variant's hover fill, so the grid can show that state.
+const hoverClasses: Record<(typeof buttonVariantNames)[number], string> = {
+  filled: "bg-blue-dark",
+  outline: "bg-blue-lighter",
+  tonal: "bg-blue-light",
+  text: "bg-blue-lighter",
+};
 
 const barItems = Array.from({ length: 5 }, (_, index) => ({
   id: `bar-${index}`,
@@ -122,31 +141,132 @@ export default function Home() {
 
       <hr />
 
+      <Section title="Button">
+        <div className="grid grid-cols-3 items-center justify-items-start gap-x-3 gap-y-4">
+          {buttonVariantNames.flatMap((variant) =>
+            buttonSizes.map((size) => [
+              <Button key={`${variant}-${size}`} variant={variant} size={size}>
+                Button
+              </Button>,
+              <Button
+                key={`${variant}-${size}-hover`}
+                variant={variant}
+                size={size}
+                className={hoverClasses[variant]}
+              >
+                Button
+              </Button>,
+              <Button key={`${variant}-${size}-disabled`} variant={variant} size={size} disabled>
+                Button
+              </Button>,
+            ]),
+          )}
+        </div>
+      </Section>
+
+      <Section title="Back Button">
+        <div className="grid grid-cols-3 items-center justify-items-start gap-x-3 gap-y-4">
+          {buttonSizes.map((size) => [
+            <BackButton key={size} href="/" size={size} />,
+            <BackButton key={`${size}-hover`} href="/" size={size} className="bg-blue-lighter" />,
+            <BackButton key={`${size}-disabled`} href="/" size={size} disabled />,
+          ])}
+        </div>
+      </Section>
+
+      <Section title="Filter Button">
+        <div className="flex flex-wrap items-center gap-3">
+          <FilterButton aria-label="Filter" />
+          <FilterButton aria-label="Filter" active />
+          <FilterButton aria-label="Filter" disabled />
+          <FilterButton aria-label="Filter" size="sm" />
+          <FilterButton aria-label="Filter" size="sm" active />
+          <FilterButton aria-label="Filter" size="sm" disabled />
+        </div>
+      </Section>
+
+      <Section title="Pin Button">
+        <div className="flex flex-wrap items-center gap-3">
+          <PinButton aria-label="Pin" />
+          <PinButton aria-label="Pin" active />
+          <PinButton aria-label="Pin" variant="obsidian" />
+          <PinButton aria-label="Pin" variant="primary" />
+          <PinButton aria-label="Home" variant="primary">
+            <House aria-hidden />
+          </PinButton>
+          <PinButton aria-label="Back" variant="primary">
+            <Reply aria-hidden />
+          </PinButton>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <PinButton aria-label="Pin" size="sm" />
+          <PinButton aria-label="Pin" size="sm" variant="primary" />
+        </div>
+      </Section>
+
       <Section title="Avatar">
         <div className="flex items-center gap-4">
-          <Avatar>
+          <Avatar size="sm">
+            <AvatarFallback />
+          </Avatar>
+          <Avatar size="md">
             <AvatarFallback />
           </Avatar>
           <Avatar>
-            <AvatarFallback>LA</AvatarFallback>
+            <AvatarFallback />
+          </Avatar>
+          <Avatar size="md">
+            <AvatarFallback>EK</AvatarFallback>
           </Avatar>
           <Avatar>
-            <AvatarFallback>
-              <span className="size-5 rounded-full bg-muted-foreground/50" />
-            </AvatarFallback>
+            <AvatarFallback>EK</AvatarFallback>
           </Avatar>
         </div>
       </Section>
 
-      <Section title="Button">
+      <Section title="Status Badge">
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="filled">Label</Button>
-          <Button variant="text">Label</Button>
-          <Button variant="outline" size="icon" aria-label="More">
-            <Ellipsis />
-          </Button>
-          <Button variant="outline">Label</Button>
+          <StatusBadge status="in-progress" />
+          <StatusBadge status="upcoming" />
+          <StatusBadge status="completed" />
+          <StatusBadge status="not-started" />
+          <StatusBadge status="live" />
+          <StatusBadge status="scheduled" />
+          <StatusBadge status="occupied" />
+          <StatusBadge status="available" />
         </div>
+      </Section>
+
+      <Section title="Rating Badge">
+        <div className="flex flex-wrap items-center gap-3">
+          <RatingBadge>A26</RatingBadge>
+          <RatingBadge tone="subtle">A26</RatingBadge>
+        </div>
+      </Section>
+
+      <Section title="Tag">
+        <div className="flex flex-wrap items-center gap-3">
+          <Tag icon={<Swords aria-hidden />}>Specialty: Foil</Tag>
+        </div>
+      </Section>
+
+      <Section title="Stat Tile">
+        <StatTile label="Pool" value="3" className="w-42.5" />
+      </Section>
+
+      <Section title="Stat Row">
+        <StatRow>
+          <Stat value="3-0" label="V-D" />
+          <Stat value="1.00" label="V/M" />
+          <Stat value="15" label="TS" />
+          <Stat value="6" label="TR" />
+          <Stat value="+9" label="Ind" />
+        </StatRow>
+        <StatRow>
+          <Stat value="Final" label="Status" />
+          <Stat value="1" label="Pool" />
+          <Stat value="3" label="Strip" />
+        </StatRow>
       </Section>
 
       <Section title="Checkbox">
