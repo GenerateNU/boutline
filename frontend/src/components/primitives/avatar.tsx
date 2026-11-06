@@ -6,12 +6,12 @@ import { User } from "lucide-react";
 import { Avatar as AvatarPrimitive } from "radix-ui";
 
 const avatarVariants = cva(
-  "flex shrink-0 overflow-hidden rounded-full border border-outline bg-surface shadow-sm",
+  "flex shrink-0 overflow-hidden rounded-full border border-foreground bg-surface",
   {
     variants: {
       size: {
-        sm: "size-5 border-[0.5px]",
-        md: "size-6.25 border-[0.75px]",
+        sm: "size-5",
+        md: "size-6.25",
         lg: "size-7.5",
       },
     },
