@@ -3,6 +3,7 @@ package competitor
 import (
 	"net/http"
 
+	"boutline/internal/features/athlete"
 	"boutline/internal/features/event"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
@@ -22,6 +23,7 @@ func RegisterCompetitorRoutes(api huma.API, params *types.ServiceParams) {
 		event.NewEventRepository(params.DB),
 		tournament.NewTournamentRepository(params.DB),
 		tournamentuser.NewTournamentUserRepository(params.DB),
+		athlete.NewAthleteRepository(params.DB),
 	))
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"boutline/internal/errs"
@@ -27,6 +28,11 @@ type EventLookup interface {
 // TournamentMembershipLookup is the subset of the tournament-user repository needed here.
 type TournamentMembershipLookup interface {
 	GetTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) (*tournamentuser.TournamentUser, error)
+}
+
+// AthleteLinker resolves a member number to the athlete it identifies, creating the athlete if needed.
+type AthleteLinker interface {
+	UpsertAthleteByMemberNumber(ctx context.Context, memberNumber string) (uuid.UUID, error)
 }
 
 var errCompetitorDeleteForbidden = errs.Public(
@@ -53,6 +59,7 @@ type competitorService struct {
 	events      EventLookup
 	tournaments TournamentLookup
 	memberships TournamentMembershipLookup
+	athletes    AthleteLinker
 }
 
 func NewCompetitorService(
@@ -60,8 +67,11 @@ func NewCompetitorService(
 	events EventLookup,
 	tournaments TournamentLookup,
 	memberships TournamentMembershipLookup,
+	athletes AthleteLinker,
 ) CompetitorService {
-	return &competitorService{repo: repo, events: events, tournaments: tournaments, memberships: memberships}
+	return &competitorService{
+		repo: repo, events: events, tournaments: tournaments, memberships: memberships, athletes: athletes,
+	}
 }
 
 func (s *competitorService) CreateCompetitor(
@@ -83,7 +93,29 @@ func (s *competitorService) CreateCompetitor(
 	if err := s.repo.CreateCompetitor(ctx, competitor); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("create competitor: %w", err))
 	}
+	if competitor.MemberNumber != nil {
+		competitor.AthleteID = s.linkAthlete(ctx, competitor.ID, *competitor.MemberNumber)
+	}
 	return &CompetitorOutput{Body: newCompetitorResponse(*competitor)}, nil
+}
+
+// linkAthlete is best-effort: a failure is logged and never fails the request. A failed upsert still
+// unlinks, so a changed number cannot stay attached to the previous number's athlete.
+func (s *competitorService) linkAthlete(ctx context.Context, competitorID uuid.UUID, memberNumber string) *uuid.UUID {
+	var athleteID *uuid.UUID
+	if memberNumber != "" {
+		id, err := s.athletes.UpsertAthleteByMemberNumber(ctx, memberNumber)
+		if err != nil {
+			slog.ErrorContext(ctx, "upsert athlete", "competitor_id", competitorID, "err", err)
+		} else {
+			athleteID = &id
+		}
+	}
+	if err := s.repo.SetCompetitorAthlete(ctx, competitorID, athleteID); err != nil {
+		slog.ErrorContext(ctx, "set competitor athlete", "competitor_id", competitorID, "err", err)
+		return nil
+	}
+	return athleteID
 }
 
 func competitorFromCreate(body CompetitorCreateBody) (*Competitor, error) {
@@ -114,6 +146,11 @@ func competitorFromCreate(body CompetitorCreateBody) (*Competitor, error) {
 		return nil, errs.Public("division must not be blank", errs.ErrInvalidInput)
 	}
 
+	memberNumber, err := parseMemberNumber(body.MemberNumber)
+	if err != nil {
+		return nil, err
+	}
+
 	rating := RatingU
 	if body.Rating != "" {
 		rating, err = parseRating(body.Rating)
@@ -136,7 +173,7 @@ func competitorFromCreate(body CompetitorCreateBody) (*Competitor, error) {
 		RatingYear:    body.RatingYear,
 		PrimaryClub:   optionalText(body.PrimaryClub),
 		SecondaryClub: optionalText(body.SecondaryClub),
-		MemberNumber:  optionalText(body.MemberNumber),
+		MemberNumber:  optionalText(memberNumber),
 		Team:          strings.TrimSpace(body.Team),
 	}, nil
 }
@@ -171,6 +208,9 @@ func (s *competitorService) UpdateCompetitorByID(
 	}
 	if err := s.repo.UpdateCompetitorByID(ctx, id, *update); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("update competitor: %w", err))
+	}
+	if update.MemberNumber != nil {
+		s.linkAthlete(ctx, id, *update.MemberNumber)
 	}
 
 	competitor, err := s.repo.GetCompetitorByID(ctx, id)
@@ -233,8 +273,14 @@ func competitorUpdateFrom(body CompetitorUpdateBody) (*CompetitorUpdate, error) 
 	// For these, an empty string is allowed: it clears the value.
 	update.PrimaryClub = trimmed(body.PrimaryClub)
 	update.SecondaryClub = trimmed(body.SecondaryClub)
-	update.MemberNumber = trimmed(body.MemberNumber)
 	update.Team = trimmed(body.Team)
+	if body.MemberNumber != nil {
+		number, err := parseMemberNumber(*body.MemberNumber)
+		if err != nil {
+			return nil, err
+		}
+		update.MemberNumber = &number
+	}
 
 	if update == (CompetitorUpdate{}) {
 		return nil, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
