@@ -169,7 +169,7 @@ export default function Home() {
           {buttonSizes.map((size) => [
             <BackButton key={size} href="/" size={size} />,
             <BackButton key={`${size}-hover`} href="/" size={size} className="bg-blue-lighter" />,
-            <BackButton key={`${size}-disabled`} href="/" size={size} aria-disabled />,
+            <BackButton key={`${size}-disabled`} href="/" size={size} disabled />,
           ])}
         </div>
       </Section>

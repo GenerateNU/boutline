@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "cn";
@@ -14,10 +16,12 @@ const sizeClasses: Record<BackButtonSize, string> = {
 
 interface BackButtonProps extends React.ComponentProps<typeof Link> {
   size?: BackButtonSize;
+  disabled?: boolean;
 }
 
 function BackButton({
   size = "default",
+  disabled,
   className,
   children = "Back",
   ...props
@@ -33,7 +37,14 @@ function BackButton({
         className,
       )}
     >
-      <Link data-slot="back-button" {...props}>
+      {/* Links can't be disabled natively, so block keyboard activation too. */}
+      <Link
+        data-slot="back-button"
+        {...props}
+        aria-disabled={disabled || undefined}
+        tabIndex={disabled ? -1 : props.tabIndex}
+        onClick={disabled ? (event) => event.preventDefault() : props.onClick}
+      >
         <ChevronLeft aria-hidden />
         {children}
       </Link>
