@@ -3,6 +3,7 @@ package competitor
 import (
 	"time"
 
+	"boutline/internal/features/athlete"
 	"boutline/internal/features/event"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
@@ -52,13 +53,15 @@ type Competitor struct {
 	// The fencer this record belongs to. Nullable: competitors created before
 	// ownership existed have no owner, and deleting the account unlinks rather
 	// than deletes the record so its results survive.
-	UserID    *uuid.UUID `gorm:"type:uuid;index"`
-	User      *user.User `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:SET NULL,OnUpdate:CASCADE"`
-	FirstName string     `gorm:"type:text;not null"`
-	LastName  string     `gorm:"type:text;not null"`
-	Gender    Gender     `gorm:"type:text;not null;check:chk_competitors_gender,gender IN ('F','M','O')"`
-	Birthdate time.Time  `gorm:"type:date;not null"`
-	Division  string     `gorm:"type:text;not null"`
+	UserID    *uuid.UUID       `gorm:"type:uuid;index"`
+	User      *user.User       `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:SET NULL,OnUpdate:CASCADE"`
+	AthleteID *uuid.UUID       `gorm:"type:uuid;index"`
+	Athlete   *athlete.Athlete `gorm:"foreignKey:AthleteID;references:ID;constraint:OnDelete:SET NULL,OnUpdate:CASCADE"`
+	FirstName string           `gorm:"type:text;not null"`
+	LastName  string           `gorm:"type:text;not null"`
+	Gender    Gender           `gorm:"type:text;not null;check:chk_competitors_gender,gender IN ('F','M','O')"`
+	Birthdate time.Time        `gorm:"type:date;not null"`
+	Division  string           `gorm:"type:text;not null"`
 	// Rating defaults to U (unrated) for competitors with no classification on file.
 	Rating        Rating  `gorm:"type:text;not null;default:U;check:chk_competitors_rating,rating IN ('A','B','C','D','E','U')"`
 	RatingYear    *int16  `gorm:"type:smallint;check:chk_competitors_rating_year,rating_year BETWEEN 0 AND 99"`

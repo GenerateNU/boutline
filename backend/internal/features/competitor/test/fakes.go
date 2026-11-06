@@ -24,7 +24,20 @@ var (
 	TestOtherAdminID = uuid.MustParse("c0000000-0000-4000-8000-000000000004")
 )
 
+// testEventID is the event every seeded competitor belongs to unless a test changes it.
+var testEventID = uuid.MustParse("11111111-1111-1111-1111-111111111111")
+
+// otherTestEventID is a second event of the test tournament, for tests that need competitors in different events.
+var otherTestEventID = uuid.MustParse("22222222-2222-2222-2222-222222222222")
+
 func NewTestService(repo competitor.CompetitorRepository) competitor.CompetitorService {
+	return NewTestServiceWithAthletes(repo, FakeAthleteLinker{})
+}
+
+func NewTestServiceWithAthletes(
+	repo competitor.CompetitorRepository,
+	athletes competitor.AthleteLinker,
+) competitor.CompetitorService {
 	return competitor.NewCompetitorService(repo,
 		FakeEventLookup{
 			testEventID:      {ID: testEventID, TournamentID: TestTournamentID},
@@ -37,7 +50,25 @@ func NewTestService(repo competitor.CompetitorRepository) competitor.CompetitorS
 			{UserID: TestAdminID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleAdmin},
 			{UserID: TestRefereeID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleReferee},
 			{UserID: TestOtherAdminID, TournamentID: uuid.New(), Role: tournamentuser.TournamentUserRoleAdmin},
-		})
+		},
+		athletes)
+}
+
+var _ competitor.AthleteLinker = FakeAthleteLinker{}
+
+type FakeAthleteLinker struct {
+	Err error // when set, every upsert fails with it
+}
+
+func FakeAthleteID(number string) uuid.UUID {
+	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(number))
+}
+
+func (f FakeAthleteLinker) UpsertAthleteByMemberNumber(_ context.Context, number string) (uuid.UUID, error) {
+	if f.Err != nil {
+		return uuid.Nil, f.Err
+	}
+	return FakeAthleteID(number), nil
 }
 
 var _ competitor.CompetitorRepository = (*FakeCompetitorRepository)(nil)
@@ -262,6 +293,20 @@ func (f *FakeCompetitorRepository) DeleteCompetitor(_ context.Context, id uuid.U
 		return fmt.Errorf("delete competitor %s: %w", id, errs.ErrNotFound)
 	}
 	delete(f.Competitors, id)
+	return nil
+}
+
+func (f *FakeCompetitorRepository) SetCompetitorAthlete(
+	_ context.Context,
+	id uuid.UUID,
+	athleteID *uuid.UUID,
+) error {
+	if f.Err != nil {
+		return f.Err
+	}
+	stored := f.Competitors[id]
+	stored.AthleteID = athleteID
+	f.Competitors[id] = stored
 	return nil
 }
 

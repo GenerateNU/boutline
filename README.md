@@ -140,6 +140,14 @@ treats as a reference without a foreign key behind it does not appear as one.
 <!-- schema-diagram:start -->
 ```mermaid
 erDiagram
+    athletes {
+      uuid id PK
+      text member_number
+      uuid user_id FK
+      timestamptz created_at
+      timestamptz updated_at
+    }
+    athletes |o--o| users : fk_athletes_user
     bouts {
       uuid id PK
       uuid tournament_id FK
@@ -185,7 +193,9 @@ erDiagram
       text primary_club
       text secondary_club
       text member_number
+      uuid athlete_id FK
     }
+    competitors }o--o| athletes : fk_competitors_athlete
     competitors }o--o| events : fk_competitors_event
     competitors }o--o| tournaments : fk_competitors_tournament
     competitors }o--o| users : fk_competitors_user
