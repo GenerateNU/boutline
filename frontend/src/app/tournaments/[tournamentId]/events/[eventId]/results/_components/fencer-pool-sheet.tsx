@@ -14,16 +14,24 @@ interface FencerPoolSheetProps {
 }
 
 function FencerPoolSheet({ standing, fencerHref }: FencerPoolSheetProps) {
-  const { fencer, pool, poolPlace, victories, touchesScored, touchesReceived, bouts } =
-    standing;
-  const indicator = touchesScored - touchesReceived;
+  const {
+    fencer,
+    pool,
+    poolPlace,
+    victories,
+    victoryRatio,
+    touchesScored,
+    touchesReceived,
+    indicator,
+    bouts,
+  } = standing;
 
   return (
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-40 bg-foreground/20" />
       <Dialog.Content
         aria-describedby={undefined}
-        className="fixed inset-x-4 top-1/2 z-50 mx-auto flex max-w-88 -translate-y-1/2 flex-col gap-4 rounded-xl border border-foreground bg-background p-4"
+        className="fixed inset-x-4 top-1/2 z-50 mx-auto flex max-h-dvh max-w-88 -translate-y-1/2 flex-col overflow-y-auto gap-4 rounded-xl border border-foreground bg-background p-4"
       >
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground uppercase">Fencer in pool {pool}</p>
@@ -46,7 +54,7 @@ function FencerPoolSheet({ standing, fencerHref }: FencerPoolSheetProps) {
 
         <StatRow>
           <Stat label="V-D" value={`${victories}-${bouts.length - victories}`} />
-          <Stat label="V/M" value={(victories / bouts.length).toFixed(2)} />
+          <Stat label="V/M" value={victoryRatio.toFixed(2)} />
           <Stat label="TS" value={touchesScored} />
           <Stat label="TR" value={touchesReceived} />
           <Stat label="Ind" value={indicator > 0 ? `+${indicator}` : indicator} />

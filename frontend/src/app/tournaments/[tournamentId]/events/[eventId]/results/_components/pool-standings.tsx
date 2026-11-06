@@ -8,6 +8,10 @@ interface PoolStandingsProps {
 }
 
 function PoolStandings({ standings, fencerBasePath }: PoolStandingsProps) {
+  if (standings.length === 0) {
+    return <p className="text-sm text-muted-foreground">No pool results yet.</p>;
+  }
+
   const qualifiers = standings.filter(({ advanced }) => advanced);
   const eliminated = standings.filter(({ advanced }) => !advanced);
   const groups = [

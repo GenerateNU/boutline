@@ -17,8 +17,10 @@ export interface PoolStanding {
   pool: number;
   poolPlace: number;
   victories: number;
+  victoryRatio: number;
   touchesScored: number;
   touchesReceived: number;
+  indicator: number;
   advanced: boolean;
   bouts: PoolBoutResult[];
 }
