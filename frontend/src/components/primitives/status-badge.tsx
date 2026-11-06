@@ -13,15 +13,15 @@ type Status =
 const statuses: Record<Status, { label: string; className: string }> = {
   "in-progress": {
     label: "In Progress",
-    className: "bg-status-amber text-status-amber-foreground",
+    className: "bg-amber-light text-amber-dark",
   },
   upcoming: {
     label: "Upcoming",
-    className: "bg-status-lavender text-status-lavender-foreground",
+    className: "bg-lavender-light text-lavender-dark",
   },
   completed: {
     label: "Completed",
-    className: "bg-status-green text-status-green-foreground",
+    className: "bg-green-light text-green-dark",
   },
   "not-started": {
     label: "Not Started",
@@ -30,16 +30,16 @@ const statuses: Record<Status, { label: string; className: string }> = {
   live: {
     label: "Live",
     className:
-      "bg-status-mint text-status-mint-foreground before:size-1.5 before:rounded-full before:bg-accent-green",
+      "bg-mint-light text-mint-dark before:size-1.5 before:rounded-full before:bg-accent-green",
   },
   scheduled: { label: "Scheduled", className: "bg-blue-lightest text-blue" },
   occupied: {
     label: "Occupied",
-    className: "bg-status-red text-status-red-foreground",
+    className: "bg-red-light text-red-dark",
   },
   available: {
     label: "Available",
-    className: "bg-status-green text-status-green-foreground",
+    className: "bg-green-light text-green-dark",
   },
 };
 

@@ -43,16 +43,16 @@
   --color-neutral-secondary: var(--neutral-secondary);
   --color-neutral-muted: var(--neutral-muted);
   --color-accent-green: var(--accent-green);
-  --color-status-amber: var(--status-amber);
-  --color-status-amber-foreground: var(--status-amber-foreground);
-  --color-status-lavender: var(--status-lavender);
-  --color-status-lavender-foreground: var(--status-lavender-foreground);
-  --color-status-green: var(--status-green);
-  --color-status-green-foreground: var(--status-green-foreground);
-  --color-status-mint: var(--status-mint);
-  --color-status-mint-foreground: var(--status-mint-foreground);
-  --color-status-red: var(--status-red);
-  --color-status-red-foreground: var(--status-red-foreground);
+  --color-amber-light: var(--amber-light);
+  --color-amber-dark: var(--amber-dark);
+  --color-lavender-light: var(--lavender-light);
+  --color-lavender-dark: var(--lavender-dark);
+  --color-green-light: var(--green-light);
+  --color-green-dark: var(--green-dark);
+  --color-mint-light: var(--mint-light);
+  --color-mint-dark: var(--mint-dark);
+  --color-red-light: var(--red-light);
+  --color-red-dark: var(--red-dark);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -108,16 +108,16 @@
   --neutral-secondary: #586472;
   --neutral-muted: #969da5;
   --accent-green: #00c597;
-  --status-amber: #ffe8cb;
-  --status-amber-foreground: #764c00;
-  --status-lavender: #e9e8f3;
-  --status-lavender-foreground: #65647b;
-  --status-green: #ddf0df;
-  --status-green-foreground: #076127;
-  --status-mint: #d5f7e1;
-  --status-mint-foreground: #046e41;
-  --status-red: #fee5e4;
-  --status-red-foreground: #ad032a;
+  --amber-light: #ffe8cb;
+  --amber-dark: #764c00;
+  --lavender-light: #e9e8f3;
+  --lavender-dark: #65647b;
+  --green-light: #ddf0df;
+  --green-dark: #076127;
+  --mint-light: #d5f7e1;
+  --mint-dark: #046e41;
+  --red-light: #fee5e4;
+  --red-dark: #ad032a;
 }
 
 @layer base {
