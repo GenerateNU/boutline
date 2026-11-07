@@ -19,6 +19,7 @@ type PoolRepository interface {
 	GetPoolByID(ctx context.Context, id uuid.UUID) (*Pool, error)
 	GetPoolTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	ListPoolEntrants(ctx context.Context, competitorIDs []uuid.UUID) ([]PoolEntrant, error)
+	ListEnteredCompetitorIDs(ctx context.Context, poolStageID uuid.UUID, competitorIDs []uuid.UUID) ([]uuid.UUID, error)
 	ListPools(ctx context.Context, filter PoolListFilter) ([]Pool, int64, error)
 	UpdatePoolByID(ctx context.Context, id uuid.UUID, update PoolUpdate) error
 	StartPoolByID(ctx context.Context, id uuid.UUID, startedAt time.Time) error
@@ -158,7 +159,7 @@ func (r *poolRepository) WithLockedPoolStage(
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var stage LockedPoolStage
 		result := tx.Raw(`
-			SELECT ps.status, ps.max_competitor_per_pool, e.tournament_id, t.status AS tournament_status
+			SELECT ps.status, ps.max_competitor_per_pool, ps.event_id, e.tournament_id, t.status AS tournament_status
 			FROM pool_stages ps
 			JOIN events e ON e.id = ps.event_id
 			JOIN tournaments t ON t.id = e.tournament_id
@@ -180,7 +181,7 @@ func (r *poolRepository) ListPoolEntrants(ctx context.Context, competitorIDs []u
 
 	err := r.db.WithContext(ctx).
 		Table("competitors").
-		Select("id").
+		Select("id, event_id").
 		Where("id IN ?", competitorIDs).
 		Scan(&entrants).Error
 	if err != nil {
@@ -188,6 +189,24 @@ func (r *poolRepository) ListPoolEntrants(ctx context.Context, competitorIDs []u
 	}
 
 	return entrants, nil
+}
+
+func (r *poolRepository) ListEnteredCompetitorIDs(ctx context.Context, poolStageID uuid.UUID, competitorIDs []uuid.UUID) ([]uuid.UUID, error) {
+	var entered []uuid.UUID
+
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT b.competitor_1_id FROM bouts b JOIN pools p ON p.id = b.pool_id
+		WHERE p.pool_stage_id = ? AND b.competitor_1_id IN ?
+		UNION
+		SELECT b.competitor_2_id FROM bouts b JOIN pools p ON p.id = b.pool_id
+		WHERE p.pool_stage_id = ? AND b.competitor_2_id IN ?`,
+		poolStageID, competitorIDs, poolStageID, competitorIDs).
+		Scan(&entered).Error
+	if err != nil {
+		return nil, fmt.Errorf("select competitors already in pool stage %s: %w", poolStageID, err)
+	}
+
+	return entered, nil
 }
 
 func (r *poolRepository) ListPools(ctx context.Context, filter PoolListFilter) ([]Pool, int64, error) {

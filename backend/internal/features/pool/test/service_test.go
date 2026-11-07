@@ -66,7 +66,7 @@ func newCreateFixture() *createFixture {
 	f.lockStage(f.otherStage)
 
 	for n := 1; n <= 10; n++ {
-		f.repo.Competitors[competitor(n)] = pool.PoolEntrant{ID: competitor(n)}
+		f.repo.Competitors[competitor(n)] = pool.PoolEntrant{ID: competitor(n), EventID: f.stage.EventID}
 	}
 
 	return f
@@ -82,6 +82,7 @@ func (f *createFixture) lockStage(stage poolstage.PoolStage) {
 	f.repo.Stages[stage.ID] = pool.LockedPoolStage{
 		Status:               stage.Status,
 		MaxCompetitorPerPool: stage.MaxCompetitorPerPool,
+		EventID:              stage.EventID,
 		TournamentID:         f.tournament,
 		TournamentStatus:     tournament.TournamentStatusActive,
 	}
@@ -95,7 +96,7 @@ func (f *createFixture) body(items ...pool.PoolCreateItem) pool.PoolCreateBody {
 	return pool.PoolCreateBody{Pools: items, PointsToWin: 5, TimeLimitSeconds: 180}
 }
 
-// seedPool stores a pool with a bout between each pair of its listed fencers.
+// seedPool stores a pool whose fencers already have bouts, so they count as seated.
 func (f *createFixture) seedPool(stageID uuid.UUID, number int, fencers ...int) {
 	seeded := pool.Pool{ID: uuid.New(), PoolStageID: stageID, Number: number}
 	f.repo.Pools[seeded.ID] = seeded
@@ -124,6 +125,13 @@ func TestCreatePools(t *testing.T) {
 			items: func(f *createFixture) []pool.PoolCreateItem {
 				return []pool.PoolCreateItem{f.item(1, 1, 2, 3), f.item(2, 4, 5)}
 			},
+		},
+		{
+			name: "accepts a competitor already seated in another pool stage",
+			setup: func(f *createFixture) {
+				f.seedPool(f.otherStage.ID, 1, 1, 2)
+			},
+			items: func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
 		},
 		{
 			name: "accepts a number used in another pool stage",
@@ -198,6 +206,17 @@ func TestCreatePools(t *testing.T) {
 			wantDetail: "pools can only be created in an active tournament",
 		},
 		{
+			name: "names a competitor entered in another event",
+			setup: func(f *createFixture) {
+				entrant := f.repo.Competitors[competitor(3)]
+				entrant.EventID = f.otherStage.EventID
+				f.repo.Competitors[competitor(3)] = entrant
+			},
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 3, 2)} },
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "competitor " + competitor(3).String() + " is not entered in this pool stage's event",
+		},
+		{
 			name: "rejects a pool above the stage's max_competitor_per_pool",
 			items: func(f *createFixture) []pool.PoolCreateItem {
 				return []pool.PoolCreateItem{f.item(7, 1, 2, 3, 4, 5)}
@@ -212,6 +231,17 @@ func TestCreatePools(t *testing.T) {
 			},
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "competitor " + competitor(20).String() + " does not exist",
+		},
+		{
+			name: "names the first competitor already seated in this pool stage",
+			setup: func(f *createFixture) {
+				f.seedPool(f.stage.ID, 9, 2, 3)
+			},
+			items: func(f *createFixture) []pool.PoolCreateItem {
+				return []pool.PoolCreateItem{f.item(1, 1, 3, 2)}
+			},
+			wantCode:   http.StatusConflict,
+			wantDetail: "competitor " + competitor(3).String() + " is already in a pool of this pool stage",
 		},
 		{
 			name: "reports a repository failure as a server error",

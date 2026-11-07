@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 	"testing"
 
 	"boutline/internal/features/pool"
@@ -248,11 +249,25 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 			AssertField("detail", "pool_stage_id must reference an existing pool stage")
 	})
 
+	t.Run("a fencer entered in another event is rejected", func(t *testing.T) {
+		other := poolCreateItem(3, 7)
+		other["fencers"] = append(other["fencers"].([]string), "d0000000-0000-4000-8000-000000000001")
+
+		poolCreatePost(t, app, headers, other).
+			AssertStatus(http.StatusBadRequest).
+			AssertField("detail", "competitor d0000000-0000-4000-8000-000000000001 is not entered in this pool stage's event")
+	})
+
 	conflicts := []struct {
 		name   string
 		pool   map[string]any
 		detail string
 	}{
+		{
+			name:   "a fencer already in a pool of the stage is rejected",
+			pool:   poolCreateItem(3, 1, 7),
+			detail: "competitor " + poolCreateCompetitorID(1) + " is already in a pool of this pool stage",
+		},
 		{
 			name:   "a number already used in the stage is rejected",
 			pool:   poolCreateItem(1, 7, 8),
@@ -267,4 +282,34 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 				AssertField("detail", tt.detail)
 		})
 	}
+}
+
+// Concurrent creates each seat fencer 9 in a new pool. The stage lock serializes
+// the seating check with the insert, so exactly one create can win; without it,
+// every create could pass the check before any had inserted.
+func TestConcurrentPoolCreatesSeatAFencerOnce(t *testing.T) {
+	app := testkit.GetDBTestApp(t)
+	headers := map[string]string{"Authorization": "Bearer " + poolCreateToken(t, app)}
+	t.Cleanup(func() { poolCreateEmptyStage(t, app, headers) })
+
+	const creates = 5
+	statuses := make([]int, creates)
+	details := make([]any, creates)
+	var wg sync.WaitGroup
+	for i := range creates {
+		wg.Go(func() {
+			result := poolCreatePost(t, app, headers, poolCreateItem(20+i, 9, i+1))
+			statuses[i], details[i] = result.GetStatus(), result.GetBody()["detail"]
+		})
+	}
+	wg.Wait()
+
+	counts := map[int]int{}
+	for i, status := range statuses {
+		counts[status]++
+		if status == http.StatusConflict {
+			assert.Equal(t, "competitor "+poolCreateCompetitorID(9)+" is already in a pool of this pool stage", details[i])
+		}
+	}
+	assert.Equal(t, map[int]int{http.StatusCreated: 1, http.StatusConflict: creates - 1}, counts)
 }

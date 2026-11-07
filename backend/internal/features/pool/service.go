@@ -73,7 +73,7 @@ func (s *poolService) CreatePools(ctx context.Context, input *PoolCreateInput) (
 			return err
 		}
 
-		if err := checkEntrants(ctx, repo, requests); err != nil {
+		if err := checkEntrants(ctx, repo, stageID, stage.EventID, requests); err != nil {
 			return err
 		}
 
