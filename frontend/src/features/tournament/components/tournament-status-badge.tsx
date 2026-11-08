@@ -1,5 +1,4 @@
-import { cn } from "cn";
-
+import { StatusBadge, type Status } from "@/components/primitives/status-badge";
 import type { TournamentStatus } from "@/features/tournament/types/tournament";
 
 const statusLabels: Record<TournamentStatus, string> = {
@@ -8,26 +7,18 @@ const statusLabels: Record<TournamentStatus, string> = {
   ended: "Completed",
 };
 
-interface TournamentStatusBadgeProps extends React.ComponentProps<"span"> {
+const badgeStatus: Record<TournamentStatus, Status> = {
+  pending: "upcoming",
+  active: "in-progress",
+  ended: "completed",
+};
+
+interface TournamentStatusBadgeProps extends React.ComponentProps<"div"> {
   status: TournamentStatus;
 }
 
-function TournamentStatusBadge({
-  status,
-  className,
-  ...props
-}: TournamentStatusBadgeProps) {
-  return (
-    <span
-      className={cn(
-        "inline-flex h-7 min-w-19 items-center justify-center rounded-sm bg-chip px-2 text-xs leading-5",
-        className,
-      )}
-      {...props}
-    >
-      {statusLabels[status]}
-    </span>
-  );
+function TournamentStatusBadge({ status, ...props }: TournamentStatusBadgeProps) {
+  return <StatusBadge status={badgeStatus[status]} {...props} />;
 }
 
 export { TournamentStatusBadge, statusLabels };

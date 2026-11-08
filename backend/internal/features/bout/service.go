@@ -268,13 +268,6 @@ func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body Bou
 	if update.RefereeID, err = parseOptionalUUID(body.RefereeID, "referee_id"); err != nil {
 		return update, err
 	}
-	if update.PoolID, err = parseOptionalUUID(body.PoolID, "pool_id"); err != nil {
-		return update, err
-	}
-	if err := s.validateUpdatedPool(ctx, id, update.PoolID); err != nil {
-		return update, err
-	}
-
 	if update.Competitor1ID, err = parseOptionalUUID(body.Competitor1ID, "competitor_1_id"); err != nil {
 		return update, err
 	}
@@ -307,7 +300,7 @@ func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body Bou
 	update.Location = body.Location
 	update.StartTime = body.StartTime
 
-	if update.Location == nil && update.StartTime == nil && update.RefereeID == nil && update.PoolID == nil &&
+	if update.Location == nil && update.StartTime == nil && update.RefereeID == nil &&
 		update.TimeLimitSeconds == nil && update.PointsToWin == nil && update.GroupNumber == nil &&
 		update.Competitor1ID == nil && update.Competitor2ID == nil {
 		return update, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
@@ -316,36 +309,26 @@ func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body Bou
 	return update, nil
 }
 
-func (s *boutService) validateUpdatedPool(ctx context.Context, boutID uuid.UUID, poolID *uuid.UUID) error {
-	if poolID == nil {
-		return nil
-	}
-
-	stored, err := s.repo.GetBoutByID(ctx, boutID)
-	if err != nil {
-		return err
-	}
-
-	return s.validatePool(ctx, poolID, stored.TournamentID)
-}
-
-// When only one competitor is supplied, the other side of the pair comes from
-// the stored row, so the distinctness check needs a read the plain field
-// validation above cannot see.
+// A tableau bout's fencers must match its entry rows, or the event's tableau
+// cannot be built. When only one competitor is supplied, the other side of the
+// pair comes from the stored row, so the distinctness check needs that read too.
 func (s *boutService) validateCompetitorPair(ctx context.Context, id uuid.UUID, competitor1ID, competitor2ID *uuid.UUID) error {
-	if competitor1ID != nil && competitor2ID != nil {
-		if *competitor1ID == *competitor2ID {
-			return errs.Public("competitor_1_id and competitor_2_id must be different", errs.ErrInvalidInput)
-		}
-		return nil
-	}
 	if competitor1ID == nil && competitor2ID == nil {
 		return nil
+	}
+	if competitor1ID != nil && competitor2ID != nil && *competitor1ID == *competitor2ID {
+		return errs.Public("competitor_1_id and competitor_2_id must be different", errs.ErrInvalidInput)
 	}
 
 	stored, err := s.repo.GetBoutByID(ctx, id)
 	if err != nil {
 		return err
+	}
+	if stored.DirectEliminationID != nil {
+		return errs.Public("competitors of a tableau bout cannot be changed", errs.ErrConflict)
+	}
+	if competitor1ID != nil && competitor2ID != nil {
+		return nil
 	}
 
 	other := stored.Competitor2ID

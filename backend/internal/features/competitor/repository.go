@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"boutline/internal/errs"
 	"boutline/internal/utils"
@@ -40,15 +41,25 @@ type CompetitorTeamCount struct {
 	Count int64
 }
 
+// CompetitorUpdate holds the fields a patch changes; a nil field is left alone.
+// EventID is not here on purpose: competitors belong to one event and are not moved.
 type CompetitorUpdate struct {
-	FirstName *string
-	LastName  *string
-	Rating    *Rating
-	Team      *string
+	FirstName     *string
+	LastName      *string
+	Gender        *Gender
+	Birthdate     *time.Time
+	Division      *string
+	Rating        *Rating
+	RatingYear    *int16
+	PrimaryClub   *string
+	SecondaryClub *string
+	MemberNumber  *string
+	Team          *string
 }
 
 type CompetitorListFilter struct {
 	IDs          []uuid.UUID // empty means don't filter by id
+	EventID      *uuid.UUID  // nil means don't filter by event
 	TournamentID *uuid.UUID  // nil means don't filter by tournament
 	Rating       *Rating     // nil means don't filter by rating
 	Team         *string     // nil means don't filter by team
@@ -66,15 +77,36 @@ func NewCompetitorRepository(db *gorm.DB) CompetitorRepository {
 }
 
 func (u CompetitorUpdate) columns() map[string]any {
-	columns := make(map[string]any, 4)
+	columns := make(map[string]any, 11)
 	if u.FirstName != nil {
 		columns["first_name"] = *u.FirstName
 	}
 	if u.LastName != nil {
 		columns["last_name"] = *u.LastName
 	}
+	if u.Gender != nil {
+		columns["gender"] = string(*u.Gender)
+	}
+	if u.Birthdate != nil {
+		columns["birthdate"] = *u.Birthdate
+	}
+	if u.Division != nil {
+		columns["division"] = *u.Division
+	}
 	if u.Rating != nil {
 		columns["rating"] = string(*u.Rating)
+	}
+	if u.RatingYear != nil {
+		columns["rating_year"] = *u.RatingYear
+	}
+	if u.PrimaryClub != nil {
+		columns["primary_club"] = nullIfEmpty(*u.PrimaryClub)
+	}
+	if u.SecondaryClub != nil {
+		columns["secondary_club"] = nullIfEmpty(*u.SecondaryClub)
+	}
+	if u.MemberNumber != nil {
+		columns["member_number"] = nullIfEmpty(*u.MemberNumber)
 	}
 	if u.Team != nil {
 		columns["team"] = *u.Team
@@ -82,11 +114,17 @@ func (u CompetitorUpdate) columns() map[string]any {
 	return columns
 }
 
+func nullIfEmpty(value string) any {
+	if value == "" {
+		return nil
+	}
+	return value
+}
+
 func (r *competitorRepository) CreateCompetitor(ctx context.Context, competitor *Competitor) error {
 	if err := r.db.WithContext(ctx).Create(competitor).Error; err != nil {
-		return fmt.Errorf("create competitor: %w", err)
+		return translateCompetitorWriteError("create competitor", err)
 	}
-
 	return nil
 }
 
@@ -111,7 +149,7 @@ func (r *competitorRepository) UpdateCompetitorByID(
 ) error {
 	result := r.db.WithContext(ctx).Model(&Competitor{}).Where("id = ?", id).Updates(update.columns())
 	if result.Error != nil {
-		return fmt.Errorf("update competitor %s: %w", id, result.Error)
+		return translateCompetitorWriteError(fmt.Sprintf("update competitor %s", id), result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("update competitor %s: %w", id, errs.ErrNotFound)
@@ -124,6 +162,9 @@ func (r *competitorRepository) ListCompetitors(
 	filter CompetitorListFilter,
 ) ([]Competitor, int64, error) {
 	query := r.db.WithContext(ctx).Model(&Competitor{})
+	if filter.EventID != nil {
+		query = query.Where("event_id = ?", *filter.EventID)
+	}
 	if filter.TournamentID != nil {
 		query = query.Where("tournament_id = ?", *filter.TournamentID)
 	}
@@ -220,3 +261,22 @@ func (r *competitorRepository) DeleteCompetitor(ctx context.Context, id uuid.UUI
 
 	return nil
 }
+
+// Maps database constraint errors to client-actionable errors
+func translateCompetitorWriteError(op string, err error) error {
+	if errors.Is(err, gorm.ErrForeignKeyViolated) {
+		return fmt.Errorf("%s: %w", op,
+			errs.Public("event does not exist", errs.ErrInvalidInput))
+	}
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return fmt.Errorf("%s: %w", op,
+			errs.Public(DuplicateMemberNumberMessage, errs.ErrDuplicate))
+	}
+	if errors.Is(err, gorm.ErrCheckConstraintViolated) {
+		return fmt.Errorf("%s: %w", op,
+			errs.Public("competitor fields violate a constraint", errs.ErrInvalidInput))
+	}
+	return fmt.Errorf("%s: %w", op, err)
+}
+
+const DuplicateMemberNumberMessage = "a competitor with this member number already exists in this event"
