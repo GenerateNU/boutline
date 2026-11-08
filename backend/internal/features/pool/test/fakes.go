@@ -66,6 +66,9 @@ func (f *FakePoolRepository) CreatePoolsWithBouts(_ context.Context, lineups []p
 			lineup.Bouts[j].UpdatedAt = now
 			f.Bouts = append(f.Bouts, lineup.Bouts[j])
 		}
+		// New bouts are upcoming, so the pool can't be deleted or ended until they finish.
+		f.WithBouts[lineup.Pool.ID] = true
+		f.OpenBouts[lineup.Pool.ID] = int64(len(lineup.Bouts))
 	}
 
 	return nil
@@ -89,7 +92,11 @@ func (f *FakePoolRepository) WithLockedPoolStage(
 	return fn(f, stage)
 }
 
-func (f *FakePoolRepository) ListPoolEntrants(_ context.Context, competitorIDs []uuid.UUID) ([]pool.PoolEntrant, error) {
+func (f *FakePoolRepository) ListPoolEntrants(
+	_ context.Context,
+	poolStageID uuid.UUID,
+	competitorIDs []uuid.UUID,
+) ([]pool.PoolEntrant, error) {
 	if f.Err != nil {
 		return nil, f.Err
 	}
@@ -97,11 +104,23 @@ func (f *FakePoolRepository) ListPoolEntrants(_ context.Context, competitorIDs [
 	var entrants []pool.PoolEntrant
 	for _, id := range competitorIDs {
 		if entrant, ok := f.Competitors[id]; ok {
+			entrant.Seated = f.seated(poolStageID, id)
 			entrants = append(entrants, entrant)
 		}
 	}
 
 	return entrants, nil
+}
+
+func (f *FakePoolRepository) seated(poolStageID, competitorID uuid.UUID) bool {
+	for _, bout := range f.Bouts {
+		inBout := bout.Competitor1ID == competitorID || bout.Competitor2ID == competitorID
+		if inBout && f.Pools[bout.PoolID].PoolStageID == poolStageID {
+			return true
+		}
+	}
+
+	return false
 }
 
 // numberTaken mirrors the unique index on (pool_stage_id, number); except is the

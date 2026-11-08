@@ -18,7 +18,7 @@ type PoolRepository interface {
 	CreatePoolsWithBouts(ctx context.Context, lineups []PoolLineup) error
 	GetPoolByID(ctx context.Context, id uuid.UUID) (*Pool, error)
 	GetPoolTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
-	ListPoolEntrants(ctx context.Context, competitorIDs []uuid.UUID) ([]PoolEntrant, error)
+	ListPoolEntrants(ctx context.Context, poolStageID uuid.UUID, competitorIDs []uuid.UUID) ([]PoolEntrant, error)
 	ListPools(ctx context.Context, filter PoolListFilter) ([]Pool, int64, error)
 	UpdatePoolByID(ctx context.Context, id uuid.UUID, update PoolUpdate) error
 	StartPoolByID(ctx context.Context, id uuid.UUID, startedAt time.Time) error
@@ -101,7 +101,14 @@ func (r *poolRepository) CreatePoolsWithBouts(ctx context.Context, lineups []Poo
 				lineups[i].Bouts[j].PoolID = lineups[i].Pool.ID
 			}
 			if err := tx.Create(&lineups[i].Bouts).Error; err != nil {
-				return translatePoolWriteError("create pools", err)
+				// The pool insert already proved the referee exists, and the tournament is
+				// share-locked, so a foreign key failure here is a competitor deleted since
+				// create checked it.
+				if errors.Is(err, gorm.ErrForeignKeyViolated) {
+					return fmt.Errorf("create pools: %w",
+						errs.Public("every fencer must reference an existing competitor", errs.ErrInvalidInput))
+				}
+				return fmt.Errorf("create pools: %w", err)
 			}
 		}
 
@@ -158,7 +165,7 @@ func (r *poolRepository) WithLockedPoolStage(
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var stage LockedPoolStage
 		result := tx.Raw(`
-			SELECT ps.status, ps.max_competitor_per_pool, e.tournament_id, t.status AS tournament_status
+			SELECT ps.status, ps.max_competitor_per_pool, ps.event_id, e.tournament_id, t.status AS tournament_status
 			FROM pool_stages ps
 			JOIN events e ON e.id = ps.event_id
 			JOIN tournaments t ON t.id = e.tournament_id
@@ -175,13 +182,22 @@ func (r *poolRepository) WithLockedPoolStage(
 	})
 }
 
-func (r *poolRepository) ListPoolEntrants(ctx context.Context, competitorIDs []uuid.UUID) ([]PoolEntrant, error) {
+func (r *poolRepository) ListPoolEntrants(
+	ctx context.Context,
+	poolStageID uuid.UUID,
+	competitorIDs []uuid.UUID,
+) ([]PoolEntrant, error) {
 	var entrants []PoolEntrant
 
-	err := r.db.WithContext(ctx).
-		Table("competitors").
-		Select("id").
-		Where("id IN ?", competitorIDs).
+	// Each requested competitor's event, and whether they already fence a bout in one of this stage's pools.
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT c.id, c.event_id, EXISTS (
+			SELECT 1 FROM bouts b
+			JOIN pools p ON p.id = b.pool_id
+			WHERE p.pool_stage_id = ? AND (b.competitor_1_id = c.id OR b.competitor_2_id = c.id)
+		) AS seated
+		FROM competitors c
+		WHERE c.id IN ?`, poolStageID, competitorIDs).
 		Scan(&entrants).Error
 	if err != nil {
 		return nil, fmt.Errorf("select competitors: %w", err)

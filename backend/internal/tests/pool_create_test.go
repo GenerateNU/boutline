@@ -18,6 +18,8 @@ import (
 const (
 	poolCreateStageID   = "f0000000-0000-4000-8000-000000000002"
 	poolCreateRefereeID = "a0000000-0000-4000-8000-000000000002"
+	// A Mixed Épée competitor, so not entered in the stage's event.
+	poolCreateOtherEventCompetitorID = "d0000000-0000-4000-8000-000000000001"
 )
 
 // Women's Foil's seeded competitors are d0000000-0000-4000-8000-0000000000NN for
@@ -178,9 +180,21 @@ func (f poolCreateFixture) assertStoredBouts(t *testing.T, created pool.PoolCrea
 	require.True(t, ok, "data field is not an array")
 	require.Len(t, rows, len(created.Bouts))
 
+	want := make(map[string]pool.PoolCreatedBout, len(created.Bouts))
+	for _, bout := range created.Bouts {
+		want[bout.ID] = bout
+	}
+
 	for _, row := range rows {
 		bout, ok := row.(map[string]any)
 		require.True(t, ok)
+		id, ok := bout["id"].(string)
+		require.True(t, ok, "id field is not a string: %v", bout)
+		wantBout, ok := want[id]
+		require.True(t, ok, "stored bout %s is not in the create response", id)
+		assert.Equal(t, wantBout.Competitor1ID, bout["competitor_1_id"])
+		assert.Equal(t, wantBout.Competitor2ID, bout["competitor_2_id"])
+		assert.EqualValues(t, wantBout.Slot, bout["slot"])
 		assert.EqualValues(t, 5, bout["points_to_win"])
 		assert.EqualValues(t, 180, bout["time_limit_seconds"])
 		assert.EqualValues(t, 1, bout["group_number"])
@@ -248,22 +262,39 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 			AssertField("detail", "pool_stage_id must reference an existing pool stage")
 	})
 
-	conflicts := []struct {
+	otherEvent := poolCreateItem(3, 7)
+	otherEvent["fencers"] = append(otherEvent["fencers"].([]string), poolCreateOtherEventCompetitorID)
+
+	rejections := []struct {
 		name   string
 		pool   map[string]any
+		status int
 		detail string
 	}{
 		{
 			name:   "a number already used in the stage is rejected",
 			pool:   poolCreateItem(1, 7, 8),
+			status: http.StatusConflict,
 			detail: "a pool with this number already exists in the pool stage",
+		},
+		{
+			name:   "a competitor already in one of the stage's pools is rejected",
+			pool:   poolCreateItem(3, 7, 6),
+			status: http.StatusConflict,
+			detail: "competitor " + poolCreateCompetitorID(6) + " is already in a pool in this pool stage",
+		},
+		{
+			name:   "a competitor from another event is rejected",
+			pool:   otherEvent,
+			status: http.StatusBadRequest,
+			detail: "competitor " + poolCreateOtherEventCompetitorID + " is not entered in the pool stage's event",
 		},
 	}
 
-	for _, tt := range conflicts {
+	for _, tt := range rejections {
 		t.Run(tt.name, func(t *testing.T) {
 			poolCreatePost(t, app, headers, tt.pool).
-				AssertStatus(http.StatusConflict).
+				AssertStatus(tt.status).
 				AssertField("detail", tt.detail)
 		})
 	}

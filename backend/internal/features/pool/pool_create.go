@@ -104,14 +104,20 @@ func checkFencerCounts(requests []poolRequest, limit int) error {
 	return nil
 }
 
-// checkEntrants checks that every requested competitor exists.
-func checkEntrants(ctx context.Context, repo PoolRepository, requests []poolRequest) error {
+// checkEntrants checks that every requested competitor exists, is entered in the
+// stage's event, and is not already in one of the stage's pools.
+func checkEntrants(
+	ctx context.Context,
+	repo PoolRepository,
+	poolStageID, eventID uuid.UUID,
+	requests []poolRequest,
+) error {
 	var requested []uuid.UUID
 	for _, request := range requests {
 		requested = append(requested, request.fencers...)
 	}
 
-	listed, err := repo.ListPoolEntrants(ctx, requested)
+	listed, err := repo.ListPoolEntrants(ctx, poolStageID, requested)
 	if err != nil {
 		return fmt.Errorf("list competitors: %w", err)
 	}
@@ -120,8 +126,17 @@ func checkEntrants(ctx context.Context, repo PoolRepository, requests []poolRequ
 		entrants[entrant.ID] = entrant
 	}
 	for _, id := range requested {
-		if _, ok := entrants[id]; !ok {
+		entrant, ok := entrants[id]
+		if !ok {
 			return errs.Public(fmt.Sprintf("competitor %s does not exist", id), errs.ErrInvalidInput)
+		}
+		if entrant.EventID != eventID {
+			return errs.Public(fmt.Sprintf("competitor %s is not entered in the pool stage's event", id),
+				errs.ErrInvalidInput)
+		}
+		if entrant.Seated {
+			return errs.Public(fmt.Sprintf("competitor %s is already in a pool in this pool stage", id),
+				errs.ErrConflict)
 		}
 	}
 

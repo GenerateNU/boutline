@@ -1024,11 +1024,13 @@ pools are generated after the tournament starts.
    with every round-robin bout, under the stage lock below. It needs an active
    tournament. Fencers take grid positions in the order each pool lists them,
    which Propose returns in seed order. Bouts follow the standard order for the
-   pool's size, so no one fences back-to-back. Still to do: fencers aren't yet
-   checked against the stage's event or the stage's existing pools, bouts take
-   touches and time from the request (default 5 and 180) rather than the event's
-   (§8.5), pools are capped at 10 fencers rather than 12, and create is open to
-   any signed-in user until roles land (§7.2).
+   pool's size, which spreads each fencer's bouts out but can still schedule
+   someone back-to-back (unavoidable in a pool of 3). Every fencer must be
+   entered in the stage's event (400) and not already in one of the stage's
+   pools (409). Still to do: bouts take touches and time from the request
+   (default 5 and 180) rather than the event's (§8.5), pools are capped at 10
+   fencers rather than 12, and create is open to any signed-in user until roles
+   land (§7.2).
 3. **Re-seat** (Planned): `PATCH /pools/{id}` with `fencers` replaces a pool's
    fencers and regenerates its bouts, while none of them has started. Depends on
    §9.1. A branch (`jleung/pool-reseat`) has a first version.

@@ -33,13 +33,16 @@ func (Pool) TableName() string {
 type LockedPoolStage struct {
 	Status               poolstage.PoolStageStatus
 	MaxCompetitorPerPool int
+	EventID              uuid.UUID
 	TournamentID         uuid.UUID
 	TournamentStatus     tournament.TournamentStatus
 }
 
 // PoolEntrant is a competitor as pool create checks them.
 type PoolEntrant struct {
-	ID uuid.UUID
+	ID      uuid.UUID
+	EventID uuid.UUID
+	Seated  bool // already in a bout of one of the stage's pools
 }
 
 // Mirrors bout.BoutStatusUpcoming; bout imports this package, so it cannot be referenced here.

@@ -66,7 +66,7 @@ func newCreateFixture() *createFixture {
 	f.lockStage(f.otherStage)
 
 	for n := 1; n <= 10; n++ {
-		f.repo.Competitors[competitor(n)] = pool.PoolEntrant{ID: competitor(n)}
+		f.repo.Competitors[competitor(n)] = pool.PoolEntrant{ID: competitor(n), EventID: f.stage.EventID}
 	}
 
 	return f
@@ -82,6 +82,7 @@ func (f *createFixture) lockStage(stage poolstage.PoolStage) {
 	f.repo.Stages[stage.ID] = pool.LockedPoolStage{
 		Status:               stage.Status,
 		MaxCompetitorPerPool: stage.MaxCompetitorPerPool,
+		EventID:              stage.EventID,
 		TournamentID:         f.tournament,
 		TournamentStatus:     tournament.TournamentStatusActive,
 	}
@@ -212,6 +213,31 @@ func TestCreatePools(t *testing.T) {
 			},
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "competitor " + competitor(20).String() + " does not exist",
+		},
+		{
+			name: "rejects a competitor from another event",
+			setup: func(f *createFixture) {
+				f.repo.Competitors[competitor(2)] = pool.PoolEntrant{ID: competitor(2), EventID: f.otherStage.EventID}
+			},
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "competitor " + competitor(2).String() + " is not entered in the pool stage's event",
+		},
+		{
+			name: "rejects a competitor already in a pool of the stage under a new number",
+			setup: func(f *createFixture) {
+				f.seedPool(f.stage.ID, 1, 3, 4)
+			},
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(2, 1, 4)} },
+			wantCode:   http.StatusConflict,
+			wantDetail: "competitor " + competitor(4).String() + " is already in a pool in this pool stage",
+		},
+		{
+			name: "accepts a competitor already in a pool of another stage",
+			setup: func(f *createFixture) {
+				f.seedPool(f.otherStage.ID, 1, 1, 2)
+			},
+			items: func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
 		},
 		{
 			name: "reports a repository failure as a server error",
