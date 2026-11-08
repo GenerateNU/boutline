@@ -1,10 +1,10 @@
 package test
 
 import (
-	"context"
 	"testing"
 	"time"
 
+	"boutline/internal/cache"
 	"boutline/internal/features/scoring"
 
 	"github.com/google/uuid"
@@ -22,10 +22,10 @@ func TestCachedScoringRepository_ListScoringHistory(t *testing.T) {
 		t.Parallel()
 
 		inner := NewFakeScoringRepository(seeded)
-		fakeCache := NewFakeCache()
+		fakeCache := cache.NewFakeCache()
 		repo := scoring.NewCachedScoringRepository(inner, fakeCache)
 
-		first, err := repo.ListScoringHistory(context.Background(), boutID)
+		first, err := repo.ListScoringHistory(t.Context(), boutID)
 		require.NoError(t, err)
 		require.Len(t, first, 1)
 		assert.True(t, fakeCache.Has("scoring:bout:"+boutID.String()+":history"))
@@ -34,7 +34,7 @@ func TestCachedScoringRepository_ListScoringHistory(t *testing.T) {
 		// still see the stale, pre-mutation data.
 		inner.Scores[1] = scoring.Scoring{ID: 1, BoutID: boutID, Points: 99, CreatedAt: seeded.CreatedAt}
 
-		second, err := repo.ListScoringHistory(context.Background(), boutID)
+		second, err := repo.ListScoringHistory(t.Context(), boutID)
 		require.NoError(t, err)
 		require.Len(t, second, 1)
 		assert.Equal(t, 1, second[0].Points)
@@ -44,11 +44,11 @@ func TestCachedScoringRepository_ListScoringHistory(t *testing.T) {
 		t.Parallel()
 
 		inner := NewFakeScoringRepository(seeded)
-		fakeCache := NewFakeCache()
+		fakeCache := cache.NewFakeCache()
 		fakeCache.Err = assert.AnError
 		repo := scoring.NewCachedScoringRepository(inner, fakeCache)
 
-		got, err := repo.ListScoringHistory(context.Background(), boutID)
+		got, err := repo.ListScoringHistory(t.Context(), boutID)
 		require.NoError(t, err)
 		assert.Len(t, got, 1)
 	})
@@ -57,7 +57,7 @@ func TestCachedScoringRepository_ListScoringHistory(t *testing.T) {
 		t.Parallel()
 
 		inner := NewFakeScoringRepository(seeded)
-		fakeCache := NewFakeCache()
+		fakeCache := cache.NewFakeCache()
 		repo := scoring.NewCachedScoringRepository(inner, fakeCache)
 		cacheKey := "scoring:bout:" + boutID.String() + ":history"
 
@@ -65,17 +65,17 @@ func TestCachedScoringRepository_ListScoringHistory(t *testing.T) {
 		// fetched its (now stale) snapshot from the db, but before it reaches
 		// the cache fill — the race the generation check guards against.
 		inner.BeforeListScoringHistoryReturn = func() {
-			require.NoError(t, repo.CreateScoring(context.Background(), &scoring.Scoring{BoutID: boutID, Points: 2}))
+			require.NoError(t, repo.CreateScoring(t.Context(), &scoring.Scoring{BoutID: boutID, Points: 2}))
 		}
 
-		stale, err := repo.ListScoringHistory(context.Background(), boutID)
+		stale, err := repo.ListScoringHistory(t.Context(), boutID)
 		require.NoError(t, err)
 		require.Len(t, stale, 1, "the read already had this snapshot in hand before the write landed")
 		assert.False(t, fakeCache.Has(cacheKey), "the read must not re-cache data a concurrent write already invalidated")
 
 		inner.BeforeListScoringHistoryReturn = nil
 
-		fresh, err := repo.ListScoringHistory(context.Background(), boutID)
+		fresh, err := repo.ListScoringHistory(t.Context(), boutID)
 		require.NoError(t, err)
 		assert.Len(t, fresh, 2, "a read with no race in flight should see and cache the write")
 		assert.True(t, fakeCache.Has(cacheKey))
@@ -91,16 +91,16 @@ func TestCachedScoringRepository_InvalidatesOnWrite(t *testing.T) {
 	cases := map[string]func(t *testing.T, repo scoring.ScoringRepository, inner *FakeScoringRepository){
 		"create": func(t *testing.T, repo scoring.ScoringRepository, _ *FakeScoringRepository) {
 			t.Helper()
-			require.NoError(t, repo.CreateScoring(context.Background(), &scoring.Scoring{BoutID: boutID, Points: 1}))
+			require.NoError(t, repo.CreateScoring(t.Context(), &scoring.Scoring{BoutID: boutID, Points: 1}))
 		},
 		"update": func(t *testing.T, repo scoring.ScoringRepository, _ *FakeScoringRepository) {
 			t.Helper()
-			require.NoError(t, repo.UpdateScoring(context.Background(), &scoring.Scoring{ID: 1, BoutID: boutID, Points: 2}))
+			require.NoError(t, repo.UpdateScoring(t.Context(), &scoring.Scoring{ID: 1, BoutID: boutID, Points: 2}))
 		},
 		"revoke": func(t *testing.T, repo scoring.ScoringRepository, _ *FakeScoringRepository) {
 			t.Helper()
 			now := time.Now()
-			require.NoError(t, repo.RevokeScoring(context.Background(), &scoring.Scoring{ID: 1, BoutID: boutID, RevokedAt: &now}))
+			require.NoError(t, repo.RevokeScoring(t.Context(), &scoring.Scoring{ID: 1, BoutID: boutID, RevokedAt: &now}))
 		},
 	}
 
@@ -109,10 +109,10 @@ func TestCachedScoringRepository_InvalidatesOnWrite(t *testing.T) {
 			t.Parallel()
 
 			inner := NewFakeScoringRepository(seeded)
-			fakeCache := NewFakeCache()
+			fakeCache := cache.NewFakeCache()
 			repo := scoring.NewCachedScoringRepository(inner, fakeCache)
 
-			_, err := repo.ListScoringHistory(context.Background(), boutID)
+			_, err := repo.ListScoringHistory(t.Context(), boutID)
 			require.NoError(t, err)
 			require.True(t, fakeCache.Has("scoring:bout:"+boutID.String()+":history"))
 

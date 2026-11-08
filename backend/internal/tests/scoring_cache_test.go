@@ -28,7 +28,10 @@ const (
 // runs, not that routes.go actually wires a real Redis connection into it.
 func TestScoringHistoryCacheAgainstRealRedis(t *testing.T) {
 	app, redisClient, db := testkit.GetDBAndCacheTestApp(t)
-	ctx := context.Background()
+	ctx := t.Context()
+	// t.Context is cancelled before cleanups run, so cleanup needs a context
+	// that outlives it.
+	cleanupCtx := context.WithoutCancel(ctx)
 	cacheKey := "scoring:bout:" + scoringCacheTestBoutID + ":history"
 	historyRoute := "/api/v1/scoring/match/" + scoringCacheTestBoutID + "/history"
 	headers := authHeaders(t, uuid.MustParse(scoringCacheTestCreatedByID))
@@ -38,7 +41,7 @@ func TestScoringHistoryCacheAgainstRealRedis(t *testing.T) {
 		if err := db.Exec("DELETE FROM scorings WHERE bout_id = ?", scoringCacheTestBoutID).Error; err != nil {
 			t.Errorf("cleanup: delete scorings for bout %s: %v", scoringCacheTestBoutID, err)
 		}
-		if err := redisClient.Del(ctx, cacheKey).Err(); err != nil {
+		if err := redisClient.Del(cleanupCtx, cacheKey, cacheKey+":gen").Err(); err != nil {
 			t.Errorf("cleanup: delete cache key %s: %v", cacheKey, err)
 		}
 	})

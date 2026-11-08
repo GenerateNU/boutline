@@ -31,45 +31,15 @@ func historyCacheKey(boutID uuid.UUID) string {
 	return fmt.Sprintf("scoring:bout:%s:history", boutID)
 }
 
-// Cache key for version number on a bout's scoring history, used to gate race conditions
-func historyGenKey(boutID uuid.UUID) string {
-	return fmt.Sprintf("scoring:bout:%s:history:gen", boutID)
-}
-
 func (r *cachedScoringRepository) ListScoringHistory(ctx context.Context, boutID uuid.UUID) ([]Scoring, error) {
-	key := historyCacheKey(boutID)
-
-	var cached []Scoring
-	hit, err := r.cache.Get(ctx, key, &cached)
-	if err != nil {
-		slog.Error("read scoring history cache", "bout_id", boutID, "err", err)
-	} else if hit {
-		return cached, nil
-	}
-
-	genKey := historyGenKey(boutID)
-	version, err := r.cache.Incr(ctx, genKey)
-	if err != nil {
-		slog.Error("read scoring history cache generation", "bout_id", boutID, "err", err)
-	}
-
-	scores, err := r.inner.ListScoringHistory(ctx, boutID)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := r.cache.SetIfUnchanged(ctx, key, genKey, version, scores, historyCacheTTL); err != nil {
-		slog.Error("write scoring history cache", "bout_id", boutID, "err", err)
-	}
-
-	return scores, nil
+	return cache.Fetch(ctx, r.cache, historyCacheKey(boutID), historyCacheTTL,
+		func(ctx context.Context) ([]Scoring, error) {
+			return r.inner.ListScoringHistory(ctx, boutID)
+		})
 }
 
-// clearHistoryCache bumps the generation and deletes the cache entry in one
-// atomic step, so a read racing between the two can never observe the
-// now-stale entry as a hit.
 func (r *cachedScoringRepository) clearHistoryCache(ctx context.Context, boutID uuid.UUID) {
-	if err := r.cache.IncrAndDel(ctx, historyGenKey(boutID), historyCacheKey(boutID)); err != nil {
+	if err := r.cache.Drop(ctx, historyCacheKey(boutID)); err != nil {
 		slog.Error("clear scoring history cache", "bout_id", boutID, "err", err)
 	}
 }

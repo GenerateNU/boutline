@@ -1,7 +1,6 @@
 package testkit
 
 import (
-	"context"
 	"os"
 	"sync"
 	"testing"
@@ -38,7 +37,7 @@ func GetDBAndCacheTestApp(t *testing.T) (*fiber.App, *redis.Client, *gorm.DB) {
 			return
 		}
 
-		db, err := database.Connect(context.Background(), *dbCfg)
+		db, err := database.Connect(t.Context(), *dbCfg)
 		if err != nil {
 			dbCacheErr = err
 			return
@@ -50,7 +49,7 @@ func GetDBAndCacheTestApp(t *testing.T) (*fiber.App, *redis.Client, *gorm.DB) {
 			return
 		}
 
-		redisClient, err := cache.Connect(context.Background(), *redisCfg)
+		redisClient, err := cache.Connect(t.Context(), *redisCfg)
 		if err != nil {
 			dbCacheErr = err
 			return
