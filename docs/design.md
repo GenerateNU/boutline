@@ -1077,7 +1077,7 @@ to the API (§11.3) remains.
 - **Filter sheet:** a filter button beside the search opens Fencer and
   Club search, Pool Status and Pool Number chips, and Sort by Pool Number, Start
   time or Strip, with Clear All and Show pools.
-- **Pool page** (Planned): a back button to the list, the status pill and fencer count, and
+- **Pool page:** a back button to the list, the status pill and fencer count, and
   the V/D grid (`V5` / `D3` cells). Below it sits the standings table. Tapping a
   bout cell outlines it in navy and swaps the standings for "Showing the bout you
   tapped" and a bout card: Bout N of M, "Pool bout", an All bouts link, winner and
