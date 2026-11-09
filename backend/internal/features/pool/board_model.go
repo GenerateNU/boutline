@@ -35,6 +35,9 @@ func (p PoolBoardPoolRow) Status() PoolBoardStatus {
 	}
 }
 
+// PoolBoardFencerRow is one fencer as a pool's board shows them: name, team and
+// grid position. It is read from the pool's bouts and the competitors table, not
+// stored anywhere of its own.
 type PoolBoardFencerRow struct {
 	PoolID       uuid.UUID
 	CompetitorID uuid.UUID
@@ -44,6 +47,9 @@ type PoolBoardFencerRow struct {
 	Team         string
 }
 
+// PoolBoardBoutRow is a read-only view of one bout in the bouts table, with each
+// side's score summed from its scorings. It is not a second copy of the bout; it
+// exists because bout and scoring both import pool, so pool can't use their types.
 type PoolBoardBoutRow struct {
 	ID               uuid.UUID
 	PoolID           uuid.UUID
