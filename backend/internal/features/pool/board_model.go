@@ -48,8 +48,9 @@ type PoolBoardFencerRow struct {
 }
 
 // PoolBoardBoutRow is a read-only view of one bout in the bouts table, with each
-// side's score summed from its scorings. It is not a second copy of the bout; it
-// exists because bout and scoring both import pool, so pool can't use their types.
+// side's score summed from its scorings. The board query scans into a slice of
+// these, like a SQL view, so it is not a second copy of the bout. It exists
+// because bout imports pool and scoring imports bout, so pool can't use their types.
 type PoolBoardBoutRow struct {
 	ID               uuid.UUID
 	PoolID           uuid.UUID
