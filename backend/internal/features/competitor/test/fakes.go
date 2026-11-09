@@ -309,6 +309,7 @@ func (f *FakeCompetitorRepository) UpdateCompetitorByID(
 	}
 	if update.MemberNumber != nil {
 		stored.MemberNumber = emptyToNil(*update.MemberNumber)
+		stored.AthleteID = nil
 	}
 	if update.Team != nil {
 		stored.Team = *update.Team

@@ -128,13 +128,14 @@ INSERT INTO athletes (id, member_number, created_at, updated_at) VALUES
   ('aa000000-0000-4000-8000-000000000002', '100000002', now(), now())
 ON CONFLICT DO NOTHING;
 
-UPDATE competitors SET member_number = v.member_number, athlete_id = v.athlete_id::uuid
+UPDATE competitors SET member_number = v.member_number, athlete_id = athletes.id
 FROM (VALUES
-  ('d0000000-0000-4000-8000-000000000001'::uuid, '100000001', 'aa000000-0000-4000-8000-000000000001'),
-  ('d0000000-0000-4000-8000-000000000013'::uuid, '100000001', 'aa000000-0000-4000-8000-000000000001'),
-  ('d0000000-0000-4000-8000-000000000010'::uuid, '100000002', 'aa000000-0000-4000-8000-000000000002'),
-  ('d0000000-0000-4000-8000-000000000014'::uuid, '100000002', 'aa000000-0000-4000-8000-000000000002')
-) v(id, member_number, athlete_id)
+  ('d0000000-0000-4000-8000-000000000001'::uuid, '100000001'),
+  ('d0000000-0000-4000-8000-000000000013'::uuid, '100000001'),
+  ('d0000000-0000-4000-8000-000000000010'::uuid, '100000002'),
+  ('d0000000-0000-4000-8000-000000000014'::uuid, '100000002')
+) v(id, member_number)
+JOIN athletes ON athletes.member_number = v.member_number
 WHERE competitors.id = v.id;
 
 -- Mixed Épée is mid-way through its pool stage; Women's Foil has one planned

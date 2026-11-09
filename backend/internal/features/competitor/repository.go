@@ -124,6 +124,7 @@ func (u CompetitorUpdate) columns() map[string]any {
 	}
 	if u.MemberNumber != nil {
 		columns["member_number"] = nullIfEmpty(*u.MemberNumber)
+		columns["athlete_id"] = nil
 	}
 	if u.Team != nil {
 		columns["team"] = *u.Team

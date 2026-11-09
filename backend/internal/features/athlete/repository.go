@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const upsertAthleteByMemberNumberSQL = `
@@ -162,7 +163,10 @@ func (r *athleteRepository) SearchAthleteProfiles(
 	err := search().
 		Select("competitors.athlete_id").
 		Group("competitors.athlete_id").
-		Order(gorm.Expr("MAX(word_similarity(?, "+athleteNameTrigramExpr+")) DESC, competitors.athlete_id", filter.Term)).
+		Clauses(clause.OrderBy{Expression: clause.Expr{
+			SQL:  "MAX(word_similarity(?, " + athleteNameTrigramExpr + ")) DESC, competitors.athlete_id",
+			Vars: []any{filter.Term},
+		}}).
 		Limit(filter.Limit).
 		Offset(filter.Offset).
 		Scan(&ids).Error

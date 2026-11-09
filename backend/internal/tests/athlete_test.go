@@ -21,11 +21,11 @@ func randomMemberNumber() string {
 	return fmt.Sprintf("1%08d", rand.IntN(100_000_000))
 }
 
-func createAthleteCompetitor(t *testing.T, app *fiber.App, eventID, memberNumber string) map[string]any {
+func createAthleteCompetitor(t *testing.T, app *fiber.App, eventID, memberNumber, lastName string) map[string]any {
 	t.Helper()
 
 	body := send(t, app, testkit.POST, "/api/v1/competitors", map[string]any{
-		"eventId": eventID, "firstName": "Ottoline", "lastName": "Vanderquist",
+		"eventId": eventID, "firstName": "Ottoline", "lastName": lastName,
 		"gender": "F", "birthdate": "1999-05-17", "division": "Massachusetts",
 		"memberNumber": memberNumber,
 	}, http.StatusCreated)
@@ -41,7 +41,7 @@ func TestAthleteLinkingAndReads(t *testing.T) {
 
 	var athleteID string
 	for _, eventID := range []string{openEpeeEventID, mixedEpeeEventID, openSabreEventID} {
-		body := createAthleteCompetitor(t, app, eventID, memberNumber)
+		body := createAthleteCompetitor(t, app, eventID, memberNumber, "Vanderquist")
 
 		id, ok := body["athleteId"].(string)
 		require.True(t, ok, "competitor in event %s has no athleteId: %v", eventID, body)
@@ -51,6 +51,8 @@ func TestAthleteLinkingAndReads(t *testing.T) {
 		assert.Equal(t, athleteID, id, "event %s linked to a different athlete", eventID)
 		assert.NotContains(t, body, "memberNumber")
 	}
+
+	similarID := createAthleteCompetitor(t, app, openEpeeEventID, randomMemberNumber(), "Vanderquest")["athleteId"]
 
 	tests := []struct {
 		name   string
@@ -86,6 +88,15 @@ func TestAthleteLinkingAndReads(t *testing.T) {
 			},
 		},
 		{
+			name: "search ranks the exact name first", route: "/api/v1/athletes?q=Ottoline%20Vanderquist", status: http.StatusOK,
+			check: func(t *testing.T, body map[string]any) {
+				data := body["data"].([]any)
+				require.Len(t, data, 2)
+				assert.Equal(t, athleteID, data[0].(map[string]any)["id"])
+				assert.Equal(t, similarID, data[1].(map[string]any)["id"])
+			},
+		},
+		{
 			name: "unknown athlete is not found", route: "/api/v1/athletes/" + uuid.NewString(), status: http.StatusNotFound,
 		},
 	}
@@ -101,7 +112,7 @@ func TestAthleteLinkingAndReads(t *testing.T) {
 
 func TestCompetitorMemberNumberUnlinking(t *testing.T) {
 	app := testkit.GetDBTestApp(t)
-	created := createAthleteCompetitor(t, app, mixedEpeeEventID, randomMemberNumber())
+	created := createAthleteCompetitor(t, app, mixedEpeeEventID, randomMemberNumber(), "Vanderquist")
 	route := "/api/v1/competitors/" + createdID(t, created)
 
 	t.Run("an empty member number clears the athlete link", func(t *testing.T) {

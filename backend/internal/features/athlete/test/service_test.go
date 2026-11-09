@@ -1,7 +1,6 @@
 package test
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"testing"
@@ -41,7 +40,7 @@ func TestGetAthleteByID(t *testing.T) {
 			t.Parallel()
 			repo := NewFakeAthleteRepository()
 			repo.Err = tt.repoErr
-			out, err := athlete.NewAthleteService(repo).GetAthleteByID(context.Background(), &athlete.AthleteIDInput{ID: tt.id})
+			out, err := athlete.NewAthleteService(repo).GetAthleteByID(t.Context(), &athlete.AthleteIDInput{ID: tt.id})
 			if tt.wantStatus != 0 {
 				assert.Equal(t, tt.wantStatus, apiStatus(t, err))
 				return
@@ -79,7 +78,7 @@ func TestListAthleteCompetitors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			out, err := athlete.NewAthleteService(NewFakeAthleteRepository()).ListAthleteCompetitors(
-				context.Background(), &athlete.AthleteHistoryInput{ID: tt.id, Limit: tt.limit, Offset: tt.offset})
+				t.Context(), &athlete.AthleteHistoryInput{ID: tt.id, Limit: tt.limit, Offset: tt.offset})
 			if tt.wantStatus != 0 {
 				assert.Equal(t, tt.wantStatus, apiStatus(t, err))
 				return
@@ -111,7 +110,7 @@ func TestSearchAthletes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			out, err := athlete.NewAthleteService(NewFakeAthleteRepository()).SearchAthletes(
-				context.Background(), &athlete.AthleteSearchInput{Query: tt.query})
+				t.Context(), &athlete.AthleteSearchInput{Query: tt.query})
 			if tt.wantStatus != 0 {
 				assert.Equal(t, tt.wantStatus, apiStatus(t, err))
 				return
