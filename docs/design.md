@@ -1074,7 +1074,7 @@ to the API (§11.3) remains.
   one at a time or with Collapse all / Expand all. A card has a Bouts | Standings
   toggle that shows the V/D grid or the standings table (# · Fencer · V · V/M · TS ·
   TR · Ind, by place), and a View pool link. There is no pinning (chapter 6).
-- **Filter sheet** (Planned): a filter button beside the search opens Fencer and
+- **Filter sheet:** a filter button beside the search opens Fencer and
   Club search, Pool Status and Pool Number chips, and Sort by Pool Number, Start
   time or Strip, with Clear All and Show pools.
 - **Pool page** (Planned): a back button to the list, the status pill and fencer count, and

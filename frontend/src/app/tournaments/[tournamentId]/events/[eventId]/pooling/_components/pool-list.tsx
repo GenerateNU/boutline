@@ -1,12 +1,11 @@
 "use client";
 
 import { ChevronsDownUp, ChevronsUpDown } from "lucide-react";
-import { useState } from "react";
 
 import { Button } from "@/components/primitives/button";
 
 import { useCollapsedPools } from "../_hooks/use-collapsed-pools";
-import { filterPools } from "../_services/filter-pools";
+import { usePoolFilters } from "../_hooks/use-pool-filters";
 import { noPoolsMessage } from "../_services/no-pools-message";
 import type { PoolBoard } from "../_types/pool-board";
 
@@ -19,8 +18,7 @@ interface PoolListProps {
 }
 
 export function PoolList({ pools, poolingPath }: PoolListProps) {
-  const [search, setSearch] = useState("");
-  const matches = filterPools(pools, search);
+  const { search, setSearch, filters, setFilters, matches, poolNumbers } = usePoolFilters(pools);
   const { collapsedIds, setPoolOpen, setAllOpen } = useCollapsedPools();
 
   const allCollapsed = matches.length > 0 && matches.every((pool) => collapsedIds.has(pool.id));
@@ -28,7 +26,13 @@ export function PoolList({ pools, poolingPath }: PoolListProps) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <PoolSearch value={search} onChange={setSearch} />
+        <PoolSearch
+          value={search}
+          onChange={setSearch}
+          filters={filters}
+          poolNumbers={poolNumbers}
+          onFiltersChange={setFilters}
+        />
         {matches.length > 0 && (
           <Button
             type="button"
@@ -56,7 +60,7 @@ export function PoolList({ pools, poolingPath }: PoolListProps) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-neutral-secondary">{noPoolsMessage(search)}</p>
+        <p className="text-sm text-neutral-secondary">{noPoolsMessage(search, filters)}</p>
       )}
     </div>
   );
