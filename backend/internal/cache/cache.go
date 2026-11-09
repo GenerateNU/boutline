@@ -13,10 +13,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Cache is the raw key/value layer, shaped for Redis. Features should reach for
-// Fetch and Cache.Drop instead: together those implement read-through caching
-// that a concurrent write cannot leave stale, and the generation bookkeeping
-// that makes that work stays inside this package.
+// Cache is the cache interface, shaped for Redis and intended for data keys to
+// have corresponding "*:gen" keys for race-safe generation control
+//
+// Use `Fetch` instead of `Cache.Load`/`.Save` directly, since it orchestrates
+// the generation key for you.
 type Cache interface {
 	// Load reports what is cached for key, along with the key's generation at
 	// the moment of the read.
@@ -40,30 +41,25 @@ type Entry struct {
 	Gen Generation
 }
 
-// Generation identifies a key's invalidation epoch. It is opaque: callers pass
-// one from Load to Save and never construct or compare one. The zero value is
-// deliberately unusable, so a generation that could not be read makes the Save
-// that follows a no-op rather than an unguarded write.
+// Generation identifies a key's invalidation epoch. Callers pass from Load to
+// Save and shouldn't care about its internals. The zero value is safe, and used
+// to represent a non-existent or expired generation key
 type Generation struct {
-	// token is a fresh random value per invalidation rather than a counter, so
-	// a generation lost to expiry or to a Redis restart cannot be reproduced by
-	// the next one and mistaken for it. Empty means the key has never been
-	// invalidated.
+	// unique token representing this generation, empty means a non-existint or
+	// expired generation key
 	token string
 	valid bool
 }
 
-// GenerationTTL bounds how long an invalidated key's generation is kept, so
-// generations do not accumulate forever for keys nobody reads again. It must
-// stay well above the longest a load can take, for the one case expiry exposes:
-// a fill that read no generation at all, which a write then invalidates, whose
-// token expires before the fill saves -- the fill sees absent again, matches,
-// and publishes a stale value. A fill that did read a token stays safe either
-// way, since an expired generation no longer matches it.
+// A TTL for generation keys. Must be longer than the longest possible write,
+// so a stale write cannot succeed because the generation expired while it 
+// was writing.
 const GenerationTTL = time.Hour
 
-// newGenerationToken is called once per invalidation, so an implementation
-// marks each epoch with a value no later epoch can repeat.
+// Generates a random generation token. 
+// Randomness is used over increments. With increments, Redis could restart
+// and begin counting from 0 again, then accidentally match a generation token
+// produced before the restart
 func newGenerationToken() (string, error) {
 	var token [16]byte
 	if _, err := rand.Read(token[:]); err != nil {
