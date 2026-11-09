@@ -38,6 +38,8 @@ type Tournament struct {
 	Code        string               `gorm:"type:text;not null;uniqueIndex:idx_tournaments_code"`
 	Status      TournamentStatus     `gorm:"type:text;not null;index;default:pending;check:chk_tournaments_status,status IN ('pending','active','ended')"`
 	CreatedBy   uuid.UUID            `gorm:"type:uuid;not null;index"`
+	City        *string              `gorm:"type:text"`
+	Country     *string              `gorm:"type:text;index"`
 	StartTime   *time.Time
 	StartedAt   *time.Time
 	CompletedAt *time.Time

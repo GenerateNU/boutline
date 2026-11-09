@@ -281,6 +281,8 @@ erDiagram
       timestamptz completed_at
       timestamptz created_at
       timestamptz updated_at
+      text city
+      text country
     }
     tournaments }o--o| users : fk_users_created_tournaments
     users {

@@ -139,6 +139,12 @@ type TeamListInput struct {
 	Offset       int    `query:"offset" default:"0" minimum:"0"`
 }
 
+type ClubListInput struct {
+	Query  string `query:"q" maxLength:"120" doc:"Fuzzy match term; omit to return every club"`
+	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset int    `query:"offset" default:"0" minimum:"0"`
+}
+
 type TeamListBody struct {
 	Data   []TeamResponse `json:"data"`
 	Total  int64          `json:"total" doc:"Clubs matching the filter, ignoring the page"`

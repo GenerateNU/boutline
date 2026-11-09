@@ -57,6 +57,24 @@ describe("getTournaments", () => {
 
   it.each([
     {
+      name: "club and country",
+      filters: { club: "Allez Fencing", country: "CA" },
+      expected: { club: "Allez Fencing", country: "CA" },
+    },
+    { name: "neither", filters: {}, expected: { club: null, country: null } },
+  ])("sends the right club and country params for $name", async ({ filters, expected }) => {
+    const body = { data: [], total: 0, limit: 20, offset: 0 };
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => body });
+
+    await getTournaments(20, 0, filters);
+
+    const { searchParams } = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(searchParams.get("club")).toBe(expected.club);
+    expect(searchParams.get("country")).toBe(expected.country);
+  });
+
+  it.each([
+    {
       name: "date with a time zone",
       filters: { date: "2026-10-23", timeZone: "America/New_York" },
       expected: {

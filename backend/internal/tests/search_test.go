@@ -61,6 +61,22 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			wantContain: "Boston Fencing Club",
 		},
 		{
+			name:        "club list tolerates a typo in q",
+			route:       "/api/v1/clubs",
+			query:       map[string]string{"q": "Allez Fencng"}, // seeded: Allez Fencing
+			wantStatus:  http.StatusOK,
+			wantField:   "name",
+			wantContain: "Allez Fencing",
+		},
+		{
+			name:        "club list includes secondary clubs",
+			route:       "/api/v1/clubs",
+			query:       map[string]string{"q": "Tokyo"}, // seeded: Kenji Tanaka's secondary club
+			wantStatus:  http.StatusOK,
+			wantField:   "name",
+			wantContain: "Tokyo Fencing Club",
+		},
+		{
 			name:        "tournaments list tolerates a typo in q",
 			route:       "/api/v1/tournaments",
 			query:       map[string]string{"q": "Fall Opn 2026"}, // seeded: Fall Open 2026

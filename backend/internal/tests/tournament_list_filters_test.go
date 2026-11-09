@@ -57,6 +57,28 @@ func TestTournamentListFiltersAgainstRealDatabase(t *testing.T) {
 				assert.Equal(t, "public", row["visibility"])
 			},
 		},
+		{
+			name:        "club matches a competitor's primary club",
+			query:       map[string]string{"club": "Allez Fencing"},
+			wantNames:   []string{"Fall Open 2026"},
+			absentNames: []string{"Winter Classic 2026", "Summer Invitational 2026"},
+		},
+		{
+			name:        "club matches a competitor's secondary club",
+			query:       map[string]string{"club": "Tokyo Fencing Club"},
+			wantNames:   []string{"Summer Invitational 2026"},
+			absentNames: []string{"Fall Open 2026", "Winter Classic 2026"},
+		},
+		{
+			name:        "country keeps only that country",
+			query:       map[string]string{"country": "CA"},
+			wantNames:   []string{"Winter Classic 2026"},
+			absentNames: []string{"Fall Open 2026", "Summer Invitational 2026"},
+			check: func(t *testing.T, row map[string]any) {
+				assert.Equal(t, "CA", row["country"])
+				assert.Equal(t, "Toronto", row["city"])
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -111,4 +133,32 @@ func seededStartTime(t *testing.T, app *fiber.App, id string) time.Time {
 	parsed, err := time.Parse(time.RFC3339Nano, start)
 	require.NoError(t, err)
 	return parsed
+}
+
+func TestListTournamentCountriesAgainstRealDatabase(t *testing.T) {
+	app := testkit.GetDBTestApp(t)
+
+	body := testkit.New(t).
+		Request(testkit.Request{
+			App:     app,
+			Route:   "/api/v1/countries",
+			Method:  testkit.GET,
+			Headers: authHeaders(t, searchTestUserID),
+		}).
+		AssertStatus(http.StatusOK).
+		GetBody()
+
+	rows, ok := body["data"].([]any)
+	require.True(t, ok, "data field is not an array")
+
+	codes := make([]string, 0, len(rows))
+	for _, raw := range rows {
+		row, ok := raw.(map[string]any)
+		require.True(t, ok)
+		codes = append(codes, row["code"].(string))
+		assert.Greater(t, row["tournament_count"], float64(0))
+	}
+
+	assert.Subset(t, codes, []string{"CA", "FR", "US"})
+	assert.IsIncreasing(t, codes)
 }

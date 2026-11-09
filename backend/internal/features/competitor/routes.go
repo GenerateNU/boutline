@@ -14,6 +14,7 @@ import (
 const (
 	competitorBasePath  = "/api/v1/competitors"
 	tournamentTeamsPath = "/api/v1/tournaments/{id}/teams"
+	clubsPath           = "/api/v1/clubs"
 )
 
 func RegisterCompetitorRoutes(api huma.API, params *types.ServiceParams) {
@@ -52,6 +53,16 @@ func RegisterCompetitorService(api huma.API, service CompetitorService) {
 			"unaffiliated competitors are left out.",
 		Tags: []string{"Tournaments"},
 	}, service.ListTeamsByTournament)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listClubs",
+		Method:      http.MethodGet,
+		Path:        clubsPath,
+		Summary:     "List every club, optionally fuzzy-matched by name",
+		Description: "Clubs are the distinct primary and secondary clubs of all competitors, each with its " +
+			"competitor count.",
+		Tags: []string{"Competitors"},
+	}, service.ListClubs)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getCompetitorByID",
