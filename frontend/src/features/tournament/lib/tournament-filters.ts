@@ -4,6 +4,7 @@ import { readOffsetParam, type SearchParams, readStringParam } from "@/lib/searc
 
 const statuses: TournamentStatus[] = ["pending", "active", "ended"];
 const maxClubLength = 120;
+export const countryCodePattern = /^[A-Z]{2}$/;
 
 export function parseTournamentFilters(query: SearchParams) {
   const calendarView = query.view === "calendar";
@@ -21,6 +22,6 @@ export function parseTournamentFilters(query: SearchParams) {
     tz: readStringParam(query, "tz") || undefined,
     // Values the backend would reject are dropped, since a 422 would break the page.
     club: club && club.length <= maxClubLength ? club : undefined,
-    country: /^[A-Z]{2}$/.test(country) ? country : undefined,
+    country: countryCodePattern.test(country) ? country : undefined,
   };
 }

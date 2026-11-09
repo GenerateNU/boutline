@@ -109,6 +109,18 @@ describe("FilterSheet", () => {
     expect(replace).toHaveBeenLastCalledWith("/tournaments", { scroll: false });
   });
 
+  it("skips malformed country codes instead of crashing", async () => {
+    apiRequestMock.mockImplementation(async (path) =>
+      (String(path).startsWith("/countries")
+        ? { data: [{ code: "USA", tournament_count: 1 }, { code: "FR", tournament_count: 2 }] }
+        : respond(String(path))) as never,
+    );
+    await openSheet();
+
+    expect(screen.getByRole("radio", { name: "France" })).toBeInTheDocument();
+    expect(screen.queryByText("USA")).not.toBeInTheDocument();
+  });
+
   it.each([
     { term: "fran", want: "France", hidden: ["Canada", "United States"] },
     { term: "United", want: "United States", hidden: ["France", "Canada"] },

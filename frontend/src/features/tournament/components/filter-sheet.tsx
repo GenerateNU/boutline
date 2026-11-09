@@ -12,6 +12,7 @@ import {
 import { ClubOptions } from "@/features/competitor/components/club-options";
 import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
+import { countryCodePattern } from "@/features/tournament/lib/tournament-filters";
 import type {
   TournamentStatus,
   TournamentVisibility,
@@ -88,7 +89,9 @@ function FilterSheet({ visibility }: FilterSheetProps) {
     const query = visibility ? `?visibility=${visibility}` : "";
     try {
       const result = await apiRequest<CountryListResult>(`/countries${query}`);
-      setCountries(result.data);
+      // The column itself isn't constrained, and a malformed code would make
+      // Intl.DisplayNames throw mid-render.
+      setCountries(result.data.filter(({ code }) => countryCodePattern.test(code)));
       setCountriesFailed(false);
     } catch {
       setCountriesFailed(true);
