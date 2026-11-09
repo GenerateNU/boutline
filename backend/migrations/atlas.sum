@@ -1,4 +1,4 @@
-h1:YD8USiB6njWB2NkbKy8z00KfRBbUbEIuE7AQKQpj2p8=
+h1:nxOg+M7O/VBbHAzJXwx+oYiFU1W13ccMrH7jcnMeYlw=
 20260912065155_create_examples.sql h1:0KjoBLsLY6UbTg23Ctie16NbsSEZPGfFV/QxvOV7NHE=
 20260919030549_create_tournaments.sql h1:x/6bQNnr7O+E76TEIpBmjwvZeZDH9AYV8c6v8SEB0w4=
 20260921045710_create_users.sql h1:sYJ+YDgRgLEeCsWY1twv4IioM7e9VT5NQwjkT99CngM=
@@ -21,4 +21,5 @@ h1:YD8USiB6njWB2NkbKy8z00KfRBbUbEIuE7AQKQpj2p8=
 20261029000000_add_additional_competitor_fields.sql h1:2H/SnOp35gBeLQdFxlC+ISDlYXfn4hSsm7s6xg6xLXE=
 20261030041722_add_tableau.sql h1:3wZWLcRg85UAy/R+BNluY1U3LE0pM7J8/dDXLap9z1g=
 20261105034110_add_pool_number_strip_and_slot.sql h1:jsQMrazlCgN+F5UeClLGdNF0j+Ys2OM9ZGOk70VwTXs=
-20261109185324_add_tournament_filters.sql h1:fuWRPe3qOsq2WalQng/qp97bnXXE4BcCxxsBh+CAatk=
+20261106191910_add_tournament_location.sql h1:db7ivxsw09HJOtqwfmx0FdWgeUQgfCa4PCYwqav2teY=
+20261109190839_index_competitor_clubs.sql h1:B9HipwjfZ/E9ndpWMSPjPngt4xxIN1VMLvIAe2G/xME=
