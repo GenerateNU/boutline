@@ -105,21 +105,37 @@ describe("getTableau", () => {
     expect(rounds[0].bouts[0].bottomScore).toBeUndefined();
   });
 
-  it("turns a null club into an empty string", async () => {
+  it.each([
+    { name: "top", top: noClub, bottom: kenji },
+    { name: "bottom", top: maya, bottom: noClub },
+  ])("turns a null club on the $name fencer into an empty string", async ({ name, top, bottom }) => {
     respondWith({
       rounds: [
         {
           size: 2,
-          bouts: [
-            { id: "b-1", slot: 1, status: "upcoming", top: noClub, bottom: kenji, top_score: null, bottom_score: null },
-          ],
+          bouts: [{ id: "b-1", slot: 1, status: "upcoming", top, bottom, top_score: null, bottom_score: null }],
         },
       ],
     });
 
     const { rounds } = await getTableau("e-1");
 
-    expect(rounds[0].bouts[0].top.club).toBe("");
+    expect(rounds[0].bouts[0][name as "top" | "bottom"].club).toBe("");
+  });
+
+  it.each(["upcoming", "active", "ended"])("keeps a bout's %s status", async (status) => {
+    respondWith({
+      rounds: [
+        {
+          size: 2,
+          bouts: [{ id: "b-1", slot: 1, status, top: maya, bottom: kenji, top_score: null, bottom_score: null }],
+        },
+      ],
+    });
+
+    const { rounds } = await getTableau("e-1");
+
+    expect(rounds[0].bouts[0].status).toBe(status);
   });
 
   it("passes an undrawn tableau through as no rounds", async () => {

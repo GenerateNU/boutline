@@ -28,9 +28,13 @@ interface BracketRoundProps {
 // connector lines to the next round.
 function BracketRound({ round, isLast, query, boutBasePath, ref }: BracketRoundProps) {
   // A bout goes in the slot matching its number; a slot is empty for a bye or until its bout exists.
-  const slots = Array.from({ length: round.size / 2 }, (_, index) =>
-    round.bouts.find((bout) => bout.number === index + 1),
-  );
+  const boutsByNumber = new Map<number, TableauBout>();
+  for (const bout of round.bouts) {
+    if (!boutsByNumber.has(bout.number)) {
+      boutsByNumber.set(bout.number, bout);
+    }
+  }
+  const slots = Array.from({ length: round.size / 2 }, (_, index) => boutsByNumber.get(index + 1));
   const groups = isLast ? slots.map((slot) => [slot]) : pairUp(slots);
 
   return (
