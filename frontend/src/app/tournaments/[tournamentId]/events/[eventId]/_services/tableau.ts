@@ -9,7 +9,7 @@ function toTableauFencer(fencer: TableauFencerResponse): TableauFencer {
     id: fencer.id,
     firstName: fencer.first_name,
     lastName: fencer.last_name,
-    club: fencer.club,
+    club: fencer.club ?? "",
     seed: fencer.seed,
   };
 }
@@ -26,10 +26,12 @@ export async function getTableau(eventId: string): Promise<Tableau> {
   return {
     rounds: body.rounds.map((round) => ({
       id: String(round.size),
+      size: round.size,
       ...tableauRoundName(round.size),
       bouts: round.bouts.map((bout) => ({
         id: bout.id,
         number: bout.slot,
+        status: bout.status,
         top: toTableauFencer(bout.top),
         bottom: toTableauFencer(bout.bottom),
         topScore: bout.top_score ?? undefined,

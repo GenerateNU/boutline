@@ -3,6 +3,7 @@ import { cn } from "cn";
 
 import type { TableauBout } from "../../_types/tableau";
 import { FencerRow } from "./fencer-row";
+import { LiveBadge } from "./live-badge";
 
 interface BracketMatchProps {
   bout: TableauBout;
@@ -23,6 +24,7 @@ function BracketMatch({ bout, href, dimmed = false }: BracketMatchProps) {
         <FencerRow fencer={bout.top} score={bout.topScore} />
       </div>
       <FencerRow fencer={bout.bottom} score={bout.bottomScore} />
+      {bout.status === "active" && <LiveBadge />}
     </Link>
   );
 }

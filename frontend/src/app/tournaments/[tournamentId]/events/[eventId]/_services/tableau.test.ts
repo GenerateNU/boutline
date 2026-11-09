@@ -1,6 +1,6 @@
 import { getTableau } from "./tableau";
 
-const fencer = (id: string, first: string, last: string, club: string, seed: number) => ({
+const fencer = (id: string, first: string, last: string, club: string | null, seed: number) => ({
   id,
   first_name: first,
   last_name: last,
@@ -8,6 +8,7 @@ const fencer = (id: string, first: string, last: string, club: string, seed: num
   seed,
 });
 
+const noClub = fencer("f-9", "Ana", "Silva", null, 9);
 const maya = fencer("f-1", "Maya", "Chen", "Boston Fencing Club", 1);
 const kenji = fencer("f-4", "Kenji", "Tanaka", "Northeastern Fencing", 4);
 
@@ -42,7 +43,9 @@ describe("getTableau", () => {
       rounds: [
         {
           size: 4,
-          bouts: [{ id: "b-1", slot: 1, top: maya, bottom: kenji, top_score: 15, bottom_score: 9 }],
+          bouts: [
+            { id: "b-1", slot: 1, status: "ended", top: maya, bottom: kenji, top_score: 15, bottom_score: 9 },
+          ],
         },
         { size: 2, bouts: [] },
       ],
@@ -52,12 +55,14 @@ describe("getTableau", () => {
       rounds: [
         {
           id: "4",
+          size: 4,
           name: "Semi-finals",
           boutName: "Semi-final",
           bouts: [
             {
               id: "b-1",
               number: 1,
+              status: "ended",
               top: {
                 id: "f-1",
                 firstName: "Maya",
@@ -77,7 +82,7 @@ describe("getTableau", () => {
             },
           ],
         },
-        { id: "2", name: "Finals", boutName: "Final", bouts: [] },
+        { id: "2", size: 2, name: "Finals", boutName: "Final", bouts: [] },
       ],
     });
   });
@@ -87,7 +92,9 @@ describe("getTableau", () => {
       rounds: [
         {
           size: 2,
-          bouts: [{ id: "b-1", slot: 1, top: maya, bottom: kenji, top_score: null, bottom_score: null }],
+          bouts: [
+            { id: "b-1", slot: 1, status: "upcoming", top: maya, bottom: kenji, top_score: null, bottom_score: null },
+          ],
         },
       ],
     });
@@ -96,6 +103,23 @@ describe("getTableau", () => {
 
     expect(rounds[0].bouts[0].topScore).toBeUndefined();
     expect(rounds[0].bouts[0].bottomScore).toBeUndefined();
+  });
+
+  it("turns a null club into an empty string", async () => {
+    respondWith({
+      rounds: [
+        {
+          size: 2,
+          bouts: [
+            { id: "b-1", slot: 1, status: "upcoming", top: noClub, bottom: kenji, top_score: null, bottom_score: null },
+          ],
+        },
+      ],
+    });
+
+    const { rounds } = await getTableau("e-1");
+
+    expect(rounds[0].bouts[0].top.club).toBe("");
   });
 
   it("passes an undrawn tableau through as no rounds", async () => {

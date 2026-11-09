@@ -6,9 +6,12 @@ export interface TableauFencer {
   seed: number;
 }
 
+export type TableauBoutStatus = "upcoming" | "active" | "ended";
+
 export interface TableauBout {
   id: string;
   number: number;
+  status: TableauBoutStatus;
   top: TableauFencer;
   bottom: TableauFencer;
   topScore?: number;
@@ -17,6 +20,7 @@ export interface TableauBout {
 
 export interface TableauRound {
   id: string;
+  size: number;
   name: string;
   boutName: string;
   bouts: TableauBout[];

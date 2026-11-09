@@ -36,8 +36,7 @@ function TableauBracket({ rounds, focusedRoundId, query, boutBasePath }: Tableau
     });
   }, [focusedRoundId, firstRoundId]);
 
-  const firstRoundCount = rounds[0]?.bouts.length || 1;
-  const height = firstRoundCount * SLOT_HEIGHT;
+  const height = (rounds[0].size / 2) * SLOT_HEIGHT;
 
   return (
     <div className="overflow-x-auto pb-2">
@@ -49,7 +48,6 @@ function TableauBracket({ rounds, focusedRoundId, query, boutBasePath }: Tableau
               columnRefs.current[round.id] = element;
             }}
             round={round}
-            slotCount={Math.max(1, firstRoundCount / 2 ** roundIndex)}
             isLast={roundIndex === rounds.length - 1}
             query={query}
             boutBasePath={boutBasePath}

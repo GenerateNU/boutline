@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import type { TableauBout } from "../../_types/tableau";
 import { FencerRow } from "./fencer-row";
+import { LiveBadge } from "./live-badge";
 
 interface BoutCardProps {
   bout: TableauBout;
@@ -22,6 +23,7 @@ function BoutCard({ bout, title, nextLabel, href }: BoutCardProps) {
         <FencerRow fencer={bout.top} score={bout.topScore} showSeed />
       </div>
       <FencerRow fencer={bout.bottom} score={bout.bottomScore} showSeed />
+      {bout.status === "active" && <LiveBadge />}
       {nextLabel && (
         <p className="flex items-center gap-1 border-t border-muted-foreground/40 pt-2 text-sm">
           Winner <ArrowRight aria-hidden className="size-4" /> {nextLabel}

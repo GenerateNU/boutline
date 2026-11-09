@@ -1,7 +1,7 @@
 import type { TableauBout, TableauRound } from "../../_types/tableau";
 
 export function boutTitle(round: TableauRound, number: number): string {
-  return round.bouts.length === 1 ? round.boutName : `${round.boutName} ${number}`;
+  return round.size === 2 ? round.boutName : `${round.boutName} ${number}`;
 }
 
 // A bout matches when either fencer's name or club contains the search text.

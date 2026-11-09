@@ -1,14 +1,17 @@
+import type { TableauBoutStatus } from "./tableau";
+
 export interface TableauFencerResponse {
   id: string;
   first_name: string;
   last_name: string;
-  club: string;
+  club: string | null;
   seed: number;
 }
 
 export interface TableauBoutResponse {
   id: string;
   slot: number;
+  status: TableauBoutStatus;
   top: TableauFencerResponse;
   bottom: TableauFencerResponse;
   top_score: number | null;

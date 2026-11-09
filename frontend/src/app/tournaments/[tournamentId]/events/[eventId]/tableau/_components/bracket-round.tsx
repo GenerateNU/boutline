@@ -18,7 +18,6 @@ function pairUp(slots: Slot[]): Slot[][] {
 
 interface BracketRoundProps {
   round: TableauRound;
-  slotCount: number;
   isLast: boolean;
   query: string;
   boutBasePath: string;
@@ -27,9 +26,9 @@ interface BracketRoundProps {
 
 // One column of a tableau's bracket, e.g. "Semi-finals": its matches and the
 // connector lines to the next round.
-function BracketRound({ round, slotCount, isLast, query, boutBasePath, ref }: BracketRoundProps) {
-  // A bout goes in the slot matching its number; a slot is empty until its bout exists.
-  const slots = Array.from({ length: slotCount }, (_, index) =>
+function BracketRound({ round, isLast, query, boutBasePath, ref }: BracketRoundProps) {
+  // A bout goes in the slot matching its number; a slot is empty for a bye or until its bout exists.
+  const slots = Array.from({ length: round.size / 2 }, (_, index) =>
     round.bouts.find((bout) => bout.number === index + 1),
   );
   const groups = isLast ? slots.map((slot) => [slot]) : pairUp(slots);
