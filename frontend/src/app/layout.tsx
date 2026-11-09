@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Manrope } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 
 import { GlobalNav } from "@/components/primitives/global-nav";
 import { Toaster } from "@/components/primitives/toast";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
 });
 
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${satoshi.variable} h-full antialiased`}
+      className={`${manrope.variable} ${geistMono.variable} ${satoshi.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Toaster>

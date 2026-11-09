@@ -413,7 +413,7 @@ different roles in different tournaments.
 ## 4. Browsing tournaments
 
 **Status:** Partial. The tournament screens are wired to the real API. The event
-tabs for pools, tableau and results are placeholders until chapters 11–13.
+tabs for pools, tableau and results run on placeholder data until chapters 11–13.
 
 **What it is:** the public face of Boutline. Anyone can find a tournament by name
 or date, open a private one by its code, and look through its events, fencers and
@@ -477,8 +477,9 @@ Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers.
   searches the tournament's clubs. It lists every fencer in the tournament, since
   competitors don't belong to an event yet (§8.4). Rows link to a fencer page,
   which is placeholder text.
-- **Pooling** and **Tableau** (Placeholder): a bout list from a hardcoded fixture,
-  the same for every event. Replaced in §11.6 and §12.5.
+- **Pooling** (Partial): see §11.6 for its current state.
+- **Tableau** (Placeholder): a bout list from a hardcoded fixture, the same for every
+  event. Replaced in §12.5.
 - **Results** (Placeholder): static text. Replaced in §13.3.
 - **Bout page** (`…/bout/[boutId]`, Placeholder): two score tiles, a "Referee
   view" button and a touch log, from the fixture. Only its referee link reaches
@@ -573,6 +574,7 @@ request with the `ids` filter on `/competitors` and `/bouts` (§B.1).
 `/pinned` is a scaffold for testing the state: dropdowns of every fencer and bout
 with Pin/Unpin buttons. The planned version puts a pin control on fencer rows and
 bout cards, and turns `/pinned` into the viewer's list of pinned fencers and bouts.
+The Pooling tab has no pool pins.
 
 ---
 
@@ -1064,14 +1066,24 @@ results, stored on the DE entry (§12.1).
 
 ### 11.6 Pooling tab and pool screen
 
-**Status:** Planned. Issue: #127.
+**Status:** Partial. Issue: #127. Each part below is built to the hi-fi design on
+placeholder data (`pooling/_services/pools.ts`) unless marked Planned. Wiring them
+to the API (§11.3) remains.
 
-The Pooling tab lists the event's pools with their fencers, referee, strip and
-progress, each linking to a pool screen. The pool screen shows the classic grid
-(fencer × fencer, `V5` / `D3` cells) plus the summary columns from §11.3, and the
-pool's bouts in order. Today the tab is the shared fixture (§4.4). A branch
-(`claude/boutline-frontend-setup-e6b230`) has a draft pool list, pool page and
-filter sheet.
+- **Pool list:** a "Search pools" field. Each pool is a collapsible card, collapsed
+  one at a time or with Collapse all / Expand all. A card has a Bouts | Standings
+  toggle that shows the V/D grid or the standings table (# · Fencer · V · V/M · TS ·
+  TR · Ind, by place), and a View pool link. There is no pinning (chapter 6).
+- **Filter sheet** (Planned): a filter button beside the search opens Fencer and
+  Club search, Pool Status and Pool Number chips, and Sort by Pool Number, Start
+  time or Strip, with Clear All and Show pools.
+- **Pool page** (Planned): a back button to the list, the status pill and fencer count, and
+  the V/D grid (`V5` / `D3` cells). Below it sits the standings table. Tapping a
+  bout cell outlines it in navy and swaps the standings for "Showing the bout you
+  tapped" and a bout card: Bout N of M, "Pool bout", an All bouts link, winner and
+  loser rows with V/D tiles and scores, Status / Pool / Strip, and links to both
+  fencers.
+- Club short codes and fencer country are not shown yet, since the data has neither.
 
 ---
 
@@ -1452,8 +1464,9 @@ Network code must survive retries and races:
 
 ## Appendix C. Visual language
 
-The UI is a **lofi** pass: monochrome, outlined, light mode only. Polish comes later
-through the tokens, so components use tokens, never raw colors.
+The hi-fi pass is underway: a navy brand, a palette of tokens, and status colors,
+light mode only. Screens move over one at a time, and the rest still look like the
+earlier outlined set. Components use tokens, never raw colors.
 
 ### C.1 Layout
 - Mobile-first, one column:
@@ -1466,26 +1479,40 @@ through the tokens, so components use tokens, never raw colors.
 ### C.2 Color tokens (`src/app/globals.css`)
 | Token | Use |
 | --- | --- |
-| `background` / `foreground` | page and text; `foreground` is also the outline color |
-| `muted` / `muted-foreground` | hover fills, secondary text, empty states |
-| `selected` (blue) | only a chosen state: filled button, toggle on, active tab |
+| `blue` `#21358b` | the brand navy: primary buttons, links, selected outlines |
+| `blue-dark`, `blue-light`, `blue-lighter`, `blue-lightest` | button pressed and hover fills, tinted backgrounds |
+| `brand` | alias of `blue`, kept for existing uses |
+| `background` / `foreground` | page and text |
+| `surface` | grey fill behind grouped content |
+| `outline` `#d5d7d8` | borders on cards, fields and buttons |
+| `obsidian` | strong text and headings |
+| `neutral-secondary` / `neutral-muted` | secondary text / placeholders and hints |
+| `muted` / `muted-foreground` | hover fills, empty states |
+| `disabled`, `disabled-subtle`, `disabled-border`, `disabled-foreground` | disabled controls |
+| `green` (#32944b), `accent-green`, `mint-*` | success and winning accents; `green` fills the V tile on the pool bout card |
+| `green-light` / `green-dark`, `amber-light` / `amber-dark`, `red-light` / `red-dark`, `lavender-light` / `lavender-dark` | status pairs: tinted fill with dark text |
+| `selected` (blue) | only a chosen state: toggle on, active tab |
 | `destructive` | errors and destructive actions |
-| `border`, `input`, `ring` | hairlines, field borders, focus rings |
+| `border`, `input`, `ring`, `chip` | hairlines, field borders, focus rings, chip fill |
 
-No Tailwind palette colors. The tournament status badge breaks this today
-(`bg-amber-600`, `bg-emerald-600`); status colors become tokens next time it is
-touched.
+No Tailwind palette colors. Status pills (tournament, pool and event status) go
+through the `StatusBadge` primitive, which maps a status to one of the status pairs.
 
 ### C.3 Type
-Geist Sans; Geist Mono for aligned numbers. Body and controls `text-sm`, metadata
-`text-xs text-muted-foreground`, at most `font-medium`. Sizes from `text-2xl` up are
-reserved for scores and bout banners. Referee scores go up to `text-9xl`.
+Manrope (via `next/font/google`) is the UI sans font. Geist Mono stays for aligned
+numbers. Satoshi (`font-satoshi`) is used only on screens that opt in. Body and
+controls `text-sm`, metadata `text-xs text-muted-foreground`; titles may use
+`font-semibold`. Sizes from `text-2xl` up are reserved for scores and bout banners.
+Referee scores go up to `text-9xl`.
 
 ### C.4 Shape and interaction
-- `--radius` 0.625rem, with `rounded-sm`…`rounded-xl` derived from it. List cards
-  use `rounded-md`; pills (tab nav, icon buttons, avatars) use `rounded-full`. 1px
-  `border-foreground`, no shadows.
-- Focus `focus-visible:ring-2 ring-ring`; hover `bg-muted`; disabled `opacity-50`.
+- `--radius` 0.625rem, with `rounded-sm`…`rounded-xl` derived from it. Buttons and
+  chips use `rounded-md`; pills (tab nav, icon buttons, avatars) use `rounded-full`.
+- Cards, the search field and the filter button are white with a 1px `border-outline`
+  border, a 12px radius (`rounded-[12px]`) and `shadow-sm`.
+- Pool grid cells and their header pills use a 4px radius.
+- Focus `focus-visible:ring-2 ring-ring`; hover `bg-blue-lighter` on buttons and
+  `bg-muted` elsewhere; disabled `opacity-50`.
 - Icons from `lucide-react` at `size-4`, `aria-hidden` when decorative.
 - Referee touch targets are large (`h-32`), because they are pressed under time
   pressure.
@@ -1497,6 +1524,8 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   segmented button, text field, select, checkbox, radio, toggle, slider, date
   picker, calendar, dropzone, dialogs and filter sheet, pagination, toast,
   tooltip, and progress indicators.
+- `StatusBadge` is the one status pill (§C.2). `FilterButton` opens a filter sheet.
+  `BackButton` returns to the parent list.
 - Many are only used by the `/` showcase so far.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.
@@ -1505,7 +1534,7 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 
 ## Appendix D. Open questions
 
-- Hi-fi design: brand color, dark mode, and whether `selected` stays blue.
+- Hi-fi design: dark mode, and whether `selected` stays blue.
 - Desktop layouts for the organizer console, which may outgrow 440px.
 - Team events (relay scoring to 45) are in the form but have no model.
 - Do spectators need accounts (to follow fencers across devices) or stay

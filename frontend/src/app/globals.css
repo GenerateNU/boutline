@@ -3,7 +3,7 @@
    the generated component sources are written against. */
 @import "shadcn/tailwind.css";
 
-/* The lofi set is light-only: there is no dark-mode toggle and no `dark:`
+/* This set is light-only: there is no dark-mode toggle and no `dark:`
    utility in any component, so no .dark token block is defined. */
 @theme inline {
   --color-background: var(--background);
@@ -14,6 +14,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-brand: var(--brand);
   --color-selected: var(--selected);
   --color-selected-foreground: var(--selected-foreground);
   --color-secondary: var(--secondary);
@@ -26,7 +27,6 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-brand: var(--brand);
   --color-chip: var(--chip);
   --color-blue: var(--blue);
   --color-blue-dark: var(--blue-dark);
@@ -47,6 +47,7 @@
   --color-amber-dark: var(--amber-dark);
   --color-lavender-light: var(--lavender-light);
   --color-lavender-dark: var(--lavender-dark);
+  --color-green: var(--green);
   --color-green-light: var(--green-light);
   --color-green-dark: var(--green-dark);
   --color-mint-light: var(--mint-light);
@@ -59,7 +60,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-manrope);
   --font-mono: var(--font-geist-mono);
   --font-satoshi: var(--font-satoshi-face);
 
@@ -90,7 +91,7 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --brand: oklch(0.274 0.097 269.29);
+  --brand: var(--blue);
   --chip: oklch(0.885 0 0);
   --radius: 0.625rem;
   --blue: #21358b;
@@ -112,6 +113,7 @@
   --amber-dark: #764c00;
   --lavender-light: #e9e8f3;
   --lavender-dark: #65647b;
+  --green: #32944b;
   --green-light: #ddf0df;
   --green-dark: #076127;
   --mint-light: #d5f7e1;
