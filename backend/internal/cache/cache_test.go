@@ -41,35 +41,43 @@ func TestFetch(t *testing.T) {
 		t.Parallel()
 
 		fakeCache := cache.NewFakeCache()
-		load, calls := loadsOnce(want)
+		current := want
+		load := func(context.Context) (payload, error) { return current, nil }
 
 		got, err := cache.Fetch(t.Context(), fakeCache, testKey, testTTL, load)
 		require.NoError(t, err)
 		assert.Equal(t, want, got)
-		assert.Equal(t, 1, *calls)
 		require.True(t, fakeCache.Has(testKey))
+
+		// If the second fetch reached the loader rather than the cache, it
+		// would observe this changed value instead of the cached one.
+		current = payload{Name: "fleche", Count: 7}
 
 		got, err = cache.Fetch(t.Context(), fakeCache, testKey, testTTL, load)
 		require.NoError(t, err)
-		assert.Equal(t, want, got)
-		assert.Equal(t, 1, *calls, "the second fetch should not have reached the loader")
+		assert.Equal(t, want, got, "the second fetch should have been served from cache")
 	})
 
 	t.Run("a dropped key is loaded again", func(t *testing.T) {
 		t.Parallel()
 
 		fakeCache := cache.NewFakeCache()
-		load, calls := loadsOnce(want)
-
-		_, err := cache.Fetch(t.Context(), fakeCache, testKey, testTTL, load)
-		require.NoError(t, err)
-		require.NoError(t, fakeCache.Drop(t.Context(), testKey))
-		assert.False(t, fakeCache.Has(testKey))
+		current := want
+		load := func(context.Context) (payload, error) { return current, nil }
 
 		got, err := cache.Fetch(t.Context(), fakeCache, testKey, testTTL, load)
 		require.NoError(t, err)
 		assert.Equal(t, want, got)
-		assert.Equal(t, 2, *calls)
+
+		require.NoError(t, fakeCache.Drop(t.Context(), testKey))
+		assert.False(t, fakeCache.Has(testKey))
+
+		other := payload{Name: "fleche", Count: 7}
+		current = other
+
+		got, err = cache.Fetch(t.Context(), fakeCache, testKey, testTTL, load)
+		require.NoError(t, err)
+		assert.Equal(t, other, got, "a fetch after drop should reload rather than serve the old value")
 	})
 
 	t.Run("a loader error reaches the caller and nothing is published", func(t *testing.T) {
