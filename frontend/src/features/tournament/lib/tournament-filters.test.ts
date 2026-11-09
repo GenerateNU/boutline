@@ -65,4 +65,16 @@ describe("parseTournamentFilters", () => {
   ])("parses $name", ({ query, want }) => {
     expect(parseTournamentFilters(query)).toMatchObject(want);
   });
+
+  it.each([
+    { name: "a trimmed club", query: { club: " Allez Fencing " }, want: { club: "Allez Fencing", country: undefined } },
+    { name: "a club at the length limit", query: { club: "a".repeat(120) }, want: { club: "a".repeat(120), country: undefined } },
+    { name: "a too-long club", query: { club: "a".repeat(121) }, want: { club: undefined, country: undefined } },
+    { name: "a valid country", query: { country: "CA" }, want: { club: undefined, country: "CA" } },
+    { name: "a lowercase country", query: { country: "ca" }, want: { club: undefined, country: undefined } },
+    { name: "a too-long country", query: { country: "ZZZ" }, want: { club: undefined, country: undefined } },
+    { name: "an array country", query: { country: ["CA", "US"] }, want: { club: undefined, country: undefined } },
+  ])("parses club and country for $name", ({ query, want }) => {
+    expect(parseTournamentFilters(query)).toMatchObject(want);
+  });
 });

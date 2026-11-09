@@ -185,7 +185,8 @@ for sharing it privately.
 
 - `tournaments`: `name` (1–120), `visibility` (`private` | `public`, default
   private), `code` (unique), `status` (`pending` | `active` | `ended`),
-  `created_by` (user), `start_time`, `started_at`, `completed_at`.
+  `created_by` (user), `start_time`, `started_at`, `completed_at`, `city`
+  (free text, optional), `country` (ISO 3166-1 alpha-2 such as `US`, optional).
 - **Join code:** six characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, which
   leaves out the look-alikes 0/O and 1/I/L. Generated with `crypto/rand` and
   retried up to five times on collision. Lookup is case-insensitive and trims
@@ -194,10 +195,11 @@ for sharing it privately.
 | Method | Path | Notes |
 | --- | --- | --- |
 | POST | `/tournaments` | create; the code is server-generated |
-| GET | `/tournaments?q&status&visibility&start_from&start_to&limit&offset` | fuzzy name search; filters by status, visibility and a `start_time` window |
+| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly) |
 | GET | `/tournaments/{id}` | |
 | GET | `/tournaments/code/{code}` | open by code |
-| PATCH | `/tournaments/{id}` | name, visibility, start_time; 409 once ended |
+| PATCH | `/tournaments/{id}` | name, visibility, start_time, city, country (an empty string clears city or country); 409 once ended |
+| GET | `/countries?visibility&limit&offset` | the countries that have tournaments, with a count each, sorted by code |
 | POST | `/tournaments/{id}/start` | `pending → active` |
 | POST | `/tournaments/{id}/complete` | `active → ended` |
 
@@ -255,6 +257,9 @@ are not a table of their own; a club is the set of distinct `team` values.
   the only route that checks the caller today.
 - `GET /tournaments/{id}/teams?q`: the tournament's clubs with a fencer count each,
   fuzzy-searchable, leaving out fencers with no club.
+- `GET /clubs?q&limit&offset`: every club across all tournaments, built from
+  `primary_club` and `secondary_club` (not `team`), with a fencer count each and
+  fuzzy search. It feeds the tournament search's Club filter.
 
 ### 2.6 Pool stages and pools
 
@@ -442,12 +447,15 @@ from the venue floor.
   after a 300 ms debounce.
 - **Dates:** a week strip of four days with paging and a day toggle, or a calendar
   view with month and year steppers. Both filter by `start_time`.
-- **Filter sheet:** only the Status chips work. Club, Country and Distance are inert
-  (#122).
+- **Filter sheet:** Status, Club and Country work; Distance is inert, since
+  tournaments have no coordinates (#122). Club suggests names from `GET /clubs` and
+  sets `?club=`; Country offers only countries that have tournaments, from
+  `GET /countries`, and sets `?country=` to the code.
 - A "Create tournament" card links to the creation form when the viewer has a
   session cookie.
-- Each card shows a hardcoded "City, Country" until tournaments have a location
-  (§10.1).
+- Each card shows the tournament's city and country code (e.g. "Boston, US"), or
+  "City, Country" when neither is set. The creation form doesn't save a location
+  yet (§10.1).
 
 ### 4.3 Tournament page (`/tournaments/[id]`)
 

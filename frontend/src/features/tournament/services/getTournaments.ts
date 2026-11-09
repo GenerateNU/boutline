@@ -12,7 +12,7 @@ const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 export async function getTournaments(
   limit: number,
   offset: number,
-  { query, status, visibility, date, timeZone }: TournamentListFilters = {},
+  { query, status, visibility, date, timeZone, club, country }: TournamentListFilters = {},
 ): Promise<TournamentListResult> {
   const url = new URL("/api/v1/tournaments", apiProxyTarget);
   url.searchParams.set("limit", String(limit));
@@ -25,6 +25,12 @@ export async function getTournaments(
   }
   if (visibility) {
     url.searchParams.set("visibility", visibility);
+  }
+  if (club) {
+    url.searchParams.set("club", club);
+  }
+  if (country) {
+    url.searchParams.set("country", country);
   }
   if (date) {
     const { from, to } = dayRange(date, timeZone);

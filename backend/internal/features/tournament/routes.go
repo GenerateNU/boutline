@@ -12,6 +12,7 @@ import (
 const (
 	tournamentBasePath = "/api/v1/tournaments"
 	membershipBasePath = tournamentBasePath + "/{id}/users"
+	countryBasePath    = "/api/v1/countries"
 )
 
 func RegisterTournamentRoutes(api huma.API, params *types.ServiceParams) {
@@ -39,6 +40,14 @@ func RegisterTournamentService(api huma.API, service TournamentService) {
 		Summary:     "List tournaments, optionally fuzzy-matched by name",
 		Tags:        []string{"Tournaments"},
 	}, service.ListTournaments)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listTournamentCountries",
+		Method:      http.MethodGet,
+		Path:        countryBasePath,
+		Summary:     "List the countries that have tournaments",
+		Tags:        []string{"Tournaments"},
+	}, service.ListTournamentCountries)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getTournamentByID",

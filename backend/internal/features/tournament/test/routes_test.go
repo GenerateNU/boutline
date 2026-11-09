@@ -514,3 +514,187 @@ func TestRemoveTournamentUserEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, api.Delete(path).Code)
 }
+
+func TestLocationEndpoints(t *testing.T) {
+	t.Parallel()
+
+	creator := uuid.New().String()
+	located := withLocation(seeded("located", tournament.TournamentStatusPending), "Boston", "US")
+
+	tests := []struct {
+		name       string
+		method     string
+		path       string
+		body       map[string]any
+		wantStatus int
+		wantFields map[string]any
+	}{
+		{
+			name:       "create echoes city and country",
+			method:     http.MethodPost,
+			path:       "/api/v1/tournaments",
+			body:       map[string]any{"name": "n", "created_by": creator, "city": " Boston ", "country": "US"},
+			wantStatus: http.StatusCreated,
+			wantFields: map[string]any{"city": "Boston", "country": "US"},
+		},
+		{
+			name:       "create without a location returns nulls",
+			method:     http.MethodPost,
+			path:       "/api/v1/tournaments",
+			body:       map[string]any{"name": "n", "created_by": creator},
+			wantStatus: http.StatusCreated,
+			wantFields: map[string]any{"city": nil, "country": nil},
+		},
+		{
+			name:       "create rejects a lowercase country",
+			method:     http.MethodPost,
+			path:       "/api/v1/tournaments",
+			body:       map[string]any{"name": "n", "created_by": creator, "country": "us"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "patch with an empty city clears it",
+			method:     http.MethodPatch,
+			path:       "/api/v1/tournaments/" + located.ID.String(),
+			body:       map[string]any{"city": ""},
+			wantStatus: http.StatusOK,
+			wantFields: map[string]any{"city": nil, "country": "US"},
+		},
+		{
+			name:       "patch with only a country succeeds",
+			method:     http.MethodPatch,
+			path:       "/api/v1/tournaments/" + located.ID.String(),
+			body:       map[string]any{"country": "CA"},
+			wantStatus: http.StatusOK,
+			wantFields: map[string]any{"city": "Boston", "country": "CA"},
+		},
+		{
+			name:       "patch with an empty country clears it",
+			method:     http.MethodPatch,
+			path:       "/api/v1/tournaments/" + located.ID.String(),
+			body:       map[string]any{"country": ""},
+			wantStatus: http.StatusOK,
+			wantFields: map[string]any{"country": nil},
+		},
+		{
+			name:       "patch rejects a malformed country",
+			method:     http.MethodPatch,
+			path:       "/api/v1/tournaments/" + located.ID.String(),
+			body:       map[string]any{"country": "USA"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := newTestAPI(t, located).Do(tt.method, tt.path, tt.body)
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+
+			body := decodeBody(t, resp.Body.Bytes())
+			for field, want := range tt.wantFields {
+				assert.Equal(t, want, body[field])
+			}
+		})
+	}
+}
+
+func TestListEndpointLocationFilters(t *testing.T) {
+	t.Parallel()
+
+	us := withLocation(seeded("us", tournament.TournamentStatusPending), "Boston", "US")
+	ca := withLocation(seeded("ca", tournament.TournamentStatusPending), "Toronto", "CA")
+	unplaced := seeded("unplaced", tournament.TournamentStatusPending)
+
+	tests := []struct {
+		name       string
+		query      string
+		wantStatus int
+		wantTotal  float64
+	}{
+		{name: "country filters to an exact code", query: "?country=US", wantStatus: http.StatusOK, wantTotal: 1},
+		{name: "omitting country applies no filter", query: "", wantStatus: http.StatusOK, wantTotal: 3},
+		{name: "rejects a lowercase country", query: "?country=us", wantStatus: http.StatusUnprocessableEntity},
+		{name: "rejects a three-letter country", query: "?country=USA", wantStatus: http.StatusUnprocessableEntity},
+		{name: "club is accepted and matches nothing here", query: "?club=Nowhere", wantStatus: http.StatusOK, wantTotal: 0},
+		{name: "rejects an overlong club", query: "?club=" + strings.Repeat("x", 121), wantStatus: http.StatusUnprocessableEntity},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := newTestAPI(t, us, ca, unplaced).Get("/api/v1/tournaments" + tt.query)
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+			if tt.wantStatus == http.StatusOK {
+				assert.InDelta(t, tt.wantTotal, decodeBody(t, resp.Body.Bytes())["total"], 0)
+			}
+		})
+	}
+}
+
+func TestCountriesEndpoint(t *testing.T) {
+	t.Parallel()
+
+	row := func(name, country string, visibility tournament.TournamentVisibility) tournament.Tournament {
+		located := withLocation(seeded(name, tournament.TournamentStatusPending), "Anywhere", country)
+		located.Visibility = visibility
+
+		return located
+	}
+	seed := []tournament.Tournament{
+		row("a", "US", tournament.TournamentVisibilityPublic),
+		row("b", "US", tournament.TournamentVisibilityPrivate),
+		row("c", "CA", tournament.TournamentVisibilityPrivate),
+		seeded("unset", tournament.TournamentStatusPending),
+	}
+
+	tests := []struct {
+		name       string
+		query      string
+		wantStatus int
+		wantData   []any
+		wantTotal  float64
+	}{
+		{
+			name:       "groups counts sorted by code",
+			query:      "",
+			wantStatus: http.StatusOK,
+			wantData: []any{
+				map[string]any{"code": "CA", "tournament_count": float64(1)},
+				map[string]any{"code": "US", "tournament_count": float64(2)},
+			},
+			wantTotal: 2,
+		},
+		{
+			name:       "respects visibility",
+			query:      "?visibility=public",
+			wantStatus: http.StatusOK,
+			wantData:   []any{map[string]any{"code": "US", "tournament_count": float64(1)}},
+			wantTotal:  1,
+		},
+		{name: "rejects a zero limit", query: "?limit=0", wantStatus: http.StatusUnprocessableEntity},
+		{name: "rejects a limit above the maximum", query: "?limit=251", wantStatus: http.StatusUnprocessableEntity},
+		{name: "rejects a visibility outside the enum", query: "?visibility=secret", wantStatus: http.StatusUnprocessableEntity},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := newTestAPI(t, seed...).Get("/api/v1/countries" + tt.query)
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+			if tt.wantStatus != http.StatusOK {
+				return
+			}
+
+			body := decodeBody(t, resp.Body.Bytes())
+			assert.Equal(t, tt.wantData, body["data"])
+			assert.InDelta(t, tt.wantTotal, body["total"], 0)
+		})
+	}
+}

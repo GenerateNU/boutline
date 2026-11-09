@@ -46,6 +46,7 @@ type CompetitorService interface {
 	UpdateCompetitorByID(ctx context.Context, input *CompetitorUpdateInput) (*CompetitorOutput, error)
 	DeleteCompetitor(ctx context.Context, input *CompetitorIDInput) (*struct{}, error)
 	ListTeamsByTournament(ctx context.Context, input *TeamListInput) (*TeamListOutput, error)
+	ListClubs(ctx context.Context, input *ClubListInput) (*TeamListOutput, error)
 }
 
 type competitorService struct {
@@ -389,6 +390,33 @@ func (s *competitorService) ListTeamsByTournament(
 	data := make([]TeamResponse, 0, len(teams))
 	for _, team := range teams {
 		data = append(data, TeamResponse{Name: team.Team, CompetitorCount: team.Count})
+	}
+	return &TeamListOutput{Body: TeamListBody{
+		Data:   data,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}}, nil
+}
+
+func (s *competitorService) ListClubs(
+	ctx context.Context,
+	input *ClubListInput,
+) (*TeamListOutput, error) {
+	limit, offset := page(input.Limit, input.Offset)
+
+	clubs, total, err := s.repo.ListCompetitorClubs(ctx, CompetitorClubListFilter{
+		Term:   strings.TrimSpace(input.Query),
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("list clubs: %w", err))
+	}
+
+	data := make([]TeamResponse, 0, len(clubs))
+	for _, club := range clubs {
+		data = append(data, TeamResponse{Name: club.Team, CompetitorCount: club.Count})
 	}
 	return &TeamListOutput{Body: TeamListBody{
 		Data:   data,

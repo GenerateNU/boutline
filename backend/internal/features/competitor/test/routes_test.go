@@ -298,6 +298,32 @@ func TestListTeamsEndpoint(t *testing.T) {
 	})
 }
 
+func TestListClubsEndpoint(t *testing.T) {
+	t.Parallel()
+	member := seeded("A", "Adams", competitor.RatingU, "")
+	member.PrimaryClub = ptr("NU Fencing")
+	member.SecondaryClub = ptr("Tokyo Fencing Club")
+
+	t.Run("returns the paginated envelope", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, member).Get("/api/v1/clubs?q=nu")
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Equal(t, float64(1), body["total"])
+		assert.Equal(t, float64(20), body["limit"])
+		assert.Equal(t, float64(0), body["offset"])
+		assert.Equal(t,
+			[]any{map[string]any{"name": "NU Fencing", "competitorCount": float64(1)}}, body["data"])
+	})
+
+	t.Run("rejects a limit of zero with a 422", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, member).Get("/api/v1/clubs?limit=0")
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code, "body: %s", resp.Body)
+	})
+}
+
 func TestUpdateEndpoint(t *testing.T) {
 	t.Parallel()
 	stored := seeded("Lee", "Kiefer", competitor.RatingB, "NU Fencing")

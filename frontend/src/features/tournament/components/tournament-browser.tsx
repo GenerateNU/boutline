@@ -27,7 +27,7 @@ async function TournamentBrowser({
   canCreate = false,
   visibility,
 }: TournamentBrowserProps) {
-  const { offset, status, day, date, calendarView, search, tz } =
+  const { offset, status, day, date, calendarView, search, tz, club, country } =
     parseTournamentFilters(query);
 
   const { data, total, limit } = await getTournaments(PAGE_SIZE, offset, {
@@ -36,6 +36,8 @@ async function TournamentBrowser({
     visibility,
     date,
     timeZone: tz,
+    club,
+    country,
   });
 
   return (
@@ -54,7 +56,7 @@ async function TournamentBrowser({
                 </p>
               )}
             </div>
-            <FilterSheet />
+            <FilterSheet visibility={visibility} />
           </div>
         </>
       ) : (
@@ -71,7 +73,7 @@ async function TournamentBrowser({
               placeholder="e.g. Fall Open 2026"
               defaultValue={search}
             />
-            <FilterSheet />
+            <FilterSheet visibility={visibility} />
           </div>
           <h1 className="pt-5 text-xl leading-6 font-medium uppercase">
             Tournaments
@@ -112,6 +114,8 @@ async function TournamentBrowser({
           params={{
             q: search,
             status,
+            club,
+            country,
             date,
             tz: date ? tz : undefined,
             view: calendarView ? "calendar" : undefined,

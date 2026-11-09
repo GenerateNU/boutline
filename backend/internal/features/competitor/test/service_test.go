@@ -18,12 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// testEventID is the event every seeded competitor belongs to unless a test changes it.
-var testEventID = uuid.MustParse("11111111-1111-1111-1111-111111111111")
-
-// otherTestEventID is a second event of the test tournament, for tests that need competitors in different events.
-var otherTestEventID = uuid.MustParse("22222222-2222-2222-2222-222222222222")
-
 func seeded(firstName, lastName string, rating competitor.Rating, team string) competitor.Competitor {
 	return competitor.Competitor{
 		ID:           uuid.New(),
@@ -875,6 +869,61 @@ func TestListCompetitorsByTournament(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, code)
 		assert.Equal(t, "tournament_id must be a valid uuid", detail)
 	})
+}
+
+func TestListClubs(t *testing.T) {
+	t.Parallel()
+	both := seeded("A", "Adams", competitor.RatingU, "")
+	both.PrimaryClub = ptr("NU Fencing")
+	both.SecondaryClub = ptr("Tokyo Fencing Club")
+	primaryOnly := seeded("B", "Baker", competitor.RatingU, "")
+	primaryOnly.PrimaryClub = ptr("NU Fencing")
+	secondaryOnly := seeded("C", "Clark", competitor.RatingU, "")
+	secondaryOnly.SecondaryClub = ptr("BU Fencing")
+	emptyClub := seeded("E", "Evans", competitor.RatingU, "")
+	emptyClub.PrimaryClub = ptr("")
+	teamOnly := seeded("D", "Diaz", competitor.RatingU, "Deprecated Team")
+	service := NewTestService(NewFakeCompetitorRepository(both, primaryOnly, secondaryOnly, emptyClub, teamOnly))
+
+	tests := []struct {
+		name      string
+		input     competitor.ClubListInput
+		want      []competitor.TeamResponse
+		wantTotal int64
+	}{
+		{
+			name: "lists primary and secondary clubs with counts, ignoring team",
+			want: []competitor.TeamResponse{
+				{Name: "BU Fencing", CompetitorCount: 1},
+				{Name: "NU Fencing", CompetitorCount: 2},
+				{Name: "Tokyo Fencing Club", CompetitorCount: 1},
+			},
+			wantTotal: 3,
+		},
+		{
+			name:      "filters by club name",
+			input:     competitor.ClubListInput{Query: "tokyo"},
+			want:      []competitor.TeamResponse{{Name: "Tokyo Fencing Club", CompetitorCount: 1}},
+			wantTotal: 1,
+		},
+		{
+			name:      "paginates",
+			input:     competitor.ClubListInput{Limit: 1, Offset: 1},
+			want:      []competitor.TeamResponse{{Name: "NU Fencing", CompetitorCount: 2}},
+			wantTotal: 3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			input := tt.input
+			out, err := service.ListClubs(t.Context(), &input)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, out.Body.Data)
+			assert.Equal(t, tt.wantTotal, out.Body.Total)
+		})
+	}
 }
 
 func TestListTeamsByTournament(t *testing.T) {

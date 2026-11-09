@@ -16,6 +16,15 @@ import (
 const (
 	competitorNameTrigramExpr = "first_name || ' ' || last_name"
 	competitorTeamTrigramExpr = "team"
+	competitorClubTrigramExpr = "club"
+
+	// One row per club a competitor belongs to; a secondary club that repeats
+	// the primary is skipped so that competitor isn't counted twice.
+	competitorClubsSource = "SELECT primary_club AS club FROM competitors " +
+		"WHERE primary_club IS NOT NULL AND primary_club <> '' " +
+		"UNION ALL SELECT secondary_club AS club FROM competitors " +
+		"WHERE secondary_club IS NOT NULL AND secondary_club <> '' " +
+		"AND secondary_club IS DISTINCT FROM primary_club"
 )
 
 type CompetitorRepository interface {
@@ -25,6 +34,13 @@ type CompetitorRepository interface {
 	UpdateCompetitorByID(ctx context.Context, id uuid.UUID, update CompetitorUpdate) error
 	DeleteCompetitor(ctx context.Context, id uuid.UUID) error
 	ListCompetitorTeams(ctx context.Context, filter CompetitorTeamListFilter) ([]CompetitorTeamCount, int64, error)
+	ListCompetitorClubs(ctx context.Context, filter CompetitorClubListFilter) ([]CompetitorTeamCount, int64, error)
+}
+
+type CompetitorClubListFilter struct {
+	Term   string
+	Limit  int
+	Offset int
 }
 
 type CompetitorTeamListFilter struct {
@@ -245,6 +261,40 @@ func (r *competitorRepository) ListCompetitorTeams(
 		return nil, 0, fmt.Errorf("list competitor teams: %w", err)
 	}
 	return teams, total, nil
+}
+
+// ListCompetitorClubs lists distinct clubs across every tournament, counting a
+// competitor once per club they name as primary or secondary.
+func (r *competitorRepository) ListCompetitorClubs(
+	ctx context.Context,
+	filter CompetitorClubListFilter,
+) ([]CompetitorTeamCount, int64, error) {
+	// Built fresh for each query for the same Distinct carry-over reason as
+	// ListCompetitorTeams.
+	clubs := func() *gorm.DB {
+		return utils.TrigramMatch(r.db.WithContext(ctx).Table("(?) AS clubs", r.db.Raw(competitorClubsSource)),
+			competitorClubTrigramExpr, filter.Term)
+	}
+
+	var total int64
+	if err := clubs().Distinct(competitorClubTrigramExpr).Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count competitor club list: %w", err)
+	}
+
+	var found []CompetitorTeamCount
+	findQuery := clubs().
+		Select(competitorClubTrigramExpr + " AS team, COUNT(*) AS count").
+		Group(competitorClubTrigramExpr)
+	findQuery = utils.TrigramOrder(findQuery, competitorClubTrigramExpr, filter.Term,
+		competitorClubTrigramExpr, competitorClubTrigramExpr)
+	err := findQuery.
+		Limit(filter.Limit).
+		Offset(filter.Offset).
+		Find(&found).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("list competitor clubs: %w", err)
+	}
+	return found, total, nil
 }
 
 func (r *competitorRepository) DeleteCompetitor(ctx context.Context, id uuid.UUID) error {

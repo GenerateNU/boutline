@@ -61,6 +61,22 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			wantContain: "Boston Fencing Club",
 		},
 		{
+			name:        "club list tolerates a typo in q",
+			route:       "/api/v1/clubs",
+			query:       map[string]string{"q": "Allez Fencng"}, // seeded: Allez Fencing
+			wantStatus:  http.StatusOK,
+			wantField:   "name",
+			wantContain: "Allez Fencing",
+		},
+		{
+			name:        "club list includes secondary clubs",
+			route:       "/api/v1/clubs",
+			query:       map[string]string{"q": "Tokyo"}, // seeded: Kenji Tanaka's secondary club
+			wantStatus:  http.StatusOK,
+			wantField:   "name",
+			wantContain: "Tokyo Fencing Club",
+		},
+		{
 			name:        "tournaments list tolerates a typo in q",
 			route:       "/api/v1/tournaments",
 			query:       map[string]string{"q": "Fall Opn 2026"}, // seeded: Fall Open 2026
@@ -139,9 +155,28 @@ func TestListCompetitorTeamsByTournament(t *testing.T) {
 				}).
 				AssertStatus(http.StatusOK)
 
-			assert.Equal(t, tt.want, bostonCompetitorCount(t, result.GetBody()))
+			assert.Equal(t, tt.want, competitorCount(t, result.GetBody(), "Boston Fencing Club"))
 		})
 	}
+}
+
+// Allez Fencing has 5 seeded competitors, one of whom (Grace) lists it as both
+// her primary and secondary club; she must not be counted twice.
+func TestListClubsCountsEachCompetitorOnce(t *testing.T) {
+	app := testkit.GetDBTestApp(t)
+
+	body := testkit.New(t).
+		Request(testkit.Request{
+			App:     app,
+			Route:   "/api/v1/clubs",
+			Method:  testkit.GET,
+			Query:   map[string]string{"q": "Allez Fencing"},
+			Headers: authHeaders(t, searchTestUserID),
+		}).
+		AssertStatus(http.StatusOK).
+		GetBody()
+
+	assert.Equal(t, int64(5), competitorCount(t, body, "Allez Fencing"))
 }
 
 // seeds/seed.sql holds exactly 3 real tournaments plus 22 bare "Pagination
@@ -197,19 +232,19 @@ func TestTournamentListPagination(t *testing.T) {
 	}
 }
 
-func bostonCompetitorCount(t *testing.T, body map[string]any) int64 {
+func competitorCount(t *testing.T, body map[string]any, club string) int64 {
 	t.Helper()
 	rows, ok := body["data"].([]any)
 	require.True(t, ok, "data field is not an array")
 	for _, row := range rows {
 		fields, ok := row.(map[string]any)
 		require.True(t, ok)
-		if fields["name"] == "Boston Fencing Club" {
+		if fields["name"] == club {
 			count, ok := fields["competitorCount"].(float64)
 			require.True(t, ok)
 			return int64(count)
 		}
 	}
-	t.Fatalf("Boston Fencing Club not found in %v", rows)
+	t.Fatalf("%s not found in %v", club, rows)
 	return 0
 }

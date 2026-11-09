@@ -16,10 +16,10 @@ INSERT INTO users (id, email, password, first_name, last_name, created_at, updat
 ON CONFLICT DO NOTHING;
 
 -- Codes use the service's alphabet, which leaves out 0, 1, I, L and O.
-INSERT INTO tournaments (id, name, visibility, code, status, created_by, start_time, started_at, completed_at, created_at, updated_at) VALUES
-  ('b0000000-0000-4000-8000-000000000001', 'Fall Open 2026',           'public',  'F7KQ2M', 'active',  'a0000000-0000-4000-8000-000000000001', now() - interval '3 hours',  now() - interval '3 hours',  NULL,                                          now() - interval '14 days', now()),
-  ('b0000000-0000-4000-8000-000000000002', 'Winter Classic 2026',      'private', 'W9TXH3', 'pending', 'a0000000-0000-4000-8000-000000000004', now() + interval '30 days',  NULL,                        NULL,                                          now() - interval '2 days',  now()),
-  ('b0000000-0000-4000-8000-000000000003', 'Summer Invitational 2026', 'public',  'S4NPR8', 'ended',   'a0000000-0000-4000-8000-000000000001', now() - interval '90 days',  now() - interval '90 days',  now() - interval '90 days' + interval '9 hours', now() - interval '120 days', now())
+INSERT INTO tournaments (id, name, visibility, code, status, created_by, start_time, started_at, completed_at, created_at, updated_at, city, country) VALUES
+  ('b0000000-0000-4000-8000-000000000001', 'Fall Open 2026',           'public',  'F7KQ2M', 'active',  'a0000000-0000-4000-8000-000000000001', now() - interval '3 hours',  now() - interval '3 hours',  NULL,                                          now() - interval '14 days', now(), 'Boston', 'US'),
+  ('b0000000-0000-4000-8000-000000000002', 'Winter Classic 2026',      'private', 'W9TXH3', 'pending', 'a0000000-0000-4000-8000-000000000004', now() + interval '30 days',  NULL,                        NULL,                                          now() - interval '2 days',  now(), 'Toronto', 'CA'),
+  ('b0000000-0000-4000-8000-000000000003', 'Summer Invitational 2026', 'public',  'S4NPR8', 'ended',   'a0000000-0000-4000-8000-000000000001', now() - interval '90 days',  now() - interval '90 days',  now() - interval '90 days' + interval '9 hours', now() - interval '120 days', now(), 'Paris', 'FR')
 ON CONFLICT DO NOTHING;
 
 -- Bare tournaments with no events or competitors, solely to push the unfiltered
@@ -72,40 +72,41 @@ ON CONFLICT DO NOTHING;
 
 -- Competitors are entered in an event and tagged with that event's
 -- tournament, except Priya, Diego, and Marcus, left untagged to
--- exercise competitors with no tournament yet.
-INSERT INTO competitors (id, event_id, tournament_id, first_name, last_name, rating, team, gender, birthdate, division, created_at, updated_at) VALUES
-  ('d0000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Maya', 'Chen', 'A', 'Boston Fencing Club', 'F', '1998-04-12', 'Massachusetts', now(), now()),
-  ('d0000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Liam', 'O''Brien', 'B', 'Northeastern Fencing', 'M', '2001-09-03', 'Massachusetts', now(), now()),
-  ('d0000000-0000-4000-8000-000000000003', 'c0000000-0000-4000-8000-000000000001', NULL, 'Priya', 'Patel', 'C', 'Cambridge FC', 'F', '1995-01-27', 'New York', now(), now()),
-  ('d0000000-0000-4000-8000-000000000004', 'c0000000-0000-4000-8000-000000000001', NULL, 'Diego', 'Martinez', 'U', '', 'M', '2003-06-18', 'California', now(), now()),
-  ('d0000000-0000-4000-8000-000000000005', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Hana', 'Sato', 'A', 'Northeastern Fencing', 'F', '1999-11-30', 'Massachusetts', now(), now()),
-  ('d0000000-0000-4000-8000-000000000006', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Noah', 'Williams', 'D', 'Boston Fencing Club', 'O', '2000-02-14', 'Connecticut', now(), now()),
-  ('d0000000-0000-4000-8000-000000000007', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Amara', 'Okafor', 'B', 'Cambridge FC', 'F', '1997-07-08', 'New Jersey', now(), now()),
-  ('d0000000-0000-4000-8000-000000000008', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Ethan', 'Kowalski', 'E', '', 'M', '2004-12-21', 'Illinois', now(), now()),
-  ('d0000000-0000-4000-8000-000000000017', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Isabel', 'Moreau', 'B', 'Cambridge FC', 'F', '1997-02-11', 'Massachusetts', now(), now()),
-  ('d0000000-0000-4000-8000-000000000018', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Tomas', 'Novak', 'C', 'Boston Fencing Club', 'M', '1995-08-23', 'New York', now(), now()),
-  ('d0000000-0000-4000-8000-000000000019', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Grace', 'Lindqvist', 'A', 'Allez Fencing', 'F', '2000-05-19', 'Massachusetts', now(), now()),
-  ('d0000000-0000-4000-8000-000000000020', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Omar', 'Haddad', 'D', 'Allez Fencing', 'M', '1998-12-02', 'New Jersey', now(), now()),
-  ('d0000000-0000-4000-8000-000000000021', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Yuki', 'Mori', 'U', 'Northeastern Fencing', 'O', '2002-03-30', 'California', now(), now()),
-  ('d0000000-0000-4000-8000-000000000022', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Elena', 'Petrova', 'B', 'Cambridge FC', 'F', '1996-09-14', 'Illinois', now(), now()),
-  ('d0000000-0000-4000-8000-000000000023', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Samuel', 'Adeyemi', 'C', 'Allez Fencing', 'M', '1999-01-07', 'Connecticut', now(), now()),
-  ('d0000000-0000-4000-8000-000000000024', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Clara', 'Bauer', 'E', 'Boston Fencing Club', 'F', '2001-06-26', 'Rhode Island', now(), now()),
-  ('d0000000-0000-4000-8000-000000000025', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Nina', 'Kovacs', 'A', 'Northeastern Fencing', 'F', '1994-11-18', 'Massachusetts', now(), now()),
-  ('d0000000-0000-4000-8000-000000000026', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Felix', 'Dubois', 'D', 'Cambridge FC', 'M', '2003-04-09', 'New York', now(), now()),
-  ('d0000000-0000-4000-8000-000000000027', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Aisha', 'Rahman', 'B', '', 'F', '1998-07-21', 'Texas', now(), now()),
-  ('d0000000-0000-4000-8000-000000000028', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Jonas', 'Berg', 'C', 'Allez Fencing', 'M', '1993-10-05', 'Illinois', now(), now()),
-  ('d0000000-0000-4000-8000-000000000029', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Mei', 'Lin', 'U', 'Boston Fencing Club', 'F', '2000-08-13', 'California', now(), now()),
-  ('d0000000-0000-4000-8000-000000000030', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Pablo', 'Ruiz', 'E', 'Northeastern Fencing', 'M', '1997-12-29', 'Texas', now(), now()),
-  ('d0000000-0000-4000-8000-000000000031', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Freya', 'Olsen', 'A', 'Allez Fencing', 'F', '1995-03-16', 'Massachusetts', now(), now()),
-  ('d0000000-0000-4000-8000-000000000032', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Andre', 'Silva', 'D', 'Cambridge FC', 'M', '2002-09-01', 'New Jersey', now(), now()),
-  ('d0000000-0000-4000-8000-000000000009', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Sofia', 'Rossi', 'C', 'Boston Fencing Club', 'F', '1996-03-05', 'New York', now(), now()),
-  ('d0000000-0000-4000-8000-000000000010', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Kenji', 'Tanaka', 'U', 'Northeastern Fencing', 'M', '2002-08-16', 'Massachusetts', now(), now()),
-  ('d0000000-0000-4000-8000-000000000011', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Leila', 'Haddad', 'D', 'Cambridge FC', 'F', '1994-10-09', 'Rhode Island', now(), now()),
-  ('d0000000-0000-4000-8000-000000000012', 'c0000000-0000-4000-8000-000000000003', NULL, 'Marcus', 'Johnson', 'B', '', 'M', '1993-05-25', 'Texas', now(), now()),
-  ('d0000000-0000-4000-8000-000000000013', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Maya', 'Chen', 'A', 'Boston Fencing Club', 'F', '1998-04-12', 'Massachusetts', now(), now()),
-  ('d0000000-0000-4000-8000-000000000014', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Kenji', 'Tanaka', 'U', 'Northeastern Fencing', 'M', '2002-08-16', 'Massachusetts', now(), now()),
-  ('d0000000-0000-4000-8000-000000000015', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Hana', 'Sato', 'A', 'Northeastern Fencing', 'F', '1999-11-30', 'Massachusetts', now(), now()),
-  ('d0000000-0000-4000-8000-000000000016', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Sofia', 'Rossi', 'C', 'Boston Fencing Club', 'F', '1996-03-05', 'New York', now(), now())
+-- exercise competitors with no tournament yet. Grace lists Allez Fencing as
+-- both clubs, so /clubs must still count her once.
+INSERT INTO competitors (id, event_id, tournament_id, first_name, last_name, rating, team, gender, birthdate, division, created_at, updated_at, primary_club, secondary_club) VALUES
+  ('d0000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Maya', 'Chen', 'A', 'Boston Fencing Club', 'F', '1998-04-12', 'Massachusetts', now(), now(), 'Boston Fencing Club', NULL),
+  ('d0000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Liam', 'O''Brien', 'B', 'Northeastern Fencing', 'M', '2001-09-03', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000003', 'c0000000-0000-4000-8000-000000000001', NULL, 'Priya', 'Patel', 'C', 'Cambridge FC', 'F', '1995-01-27', 'New York', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000004', 'c0000000-0000-4000-8000-000000000001', NULL, 'Diego', 'Martinez', 'U', '', 'M', '2003-06-18', 'California', now(), now(), NULL, NULL),
+  ('d0000000-0000-4000-8000-000000000005', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Hana', 'Sato', 'A', 'Northeastern Fencing', 'F', '1999-11-30', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000006', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Noah', 'Williams', 'D', 'Boston Fencing Club', 'O', '2000-02-14', 'Connecticut', now(), now(), 'Boston Fencing Club', NULL),
+  ('d0000000-0000-4000-8000-000000000007', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Amara', 'Okafor', 'B', 'Cambridge FC', 'F', '1997-07-08', 'New Jersey', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000008', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Ethan', 'Kowalski', 'E', '', 'M', '2004-12-21', 'Illinois', now(), now(), NULL, NULL),
+  ('d0000000-0000-4000-8000-000000000017', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Isabel', 'Moreau', 'B', 'Cambridge FC', 'F', '1997-02-11', 'Massachusetts', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000018', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Tomas', 'Novak', 'C', 'Boston Fencing Club', 'M', '1995-08-23', 'New York', now(), now(), 'Boston Fencing Club', NULL),
+  ('d0000000-0000-4000-8000-000000000019', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Grace', 'Lindqvist', 'A', 'Allez Fencing', 'F', '2000-05-19', 'Massachusetts', now(), now(), 'Allez Fencing', 'Allez Fencing'),
+  ('d0000000-0000-4000-8000-000000000020', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Omar', 'Haddad', 'D', 'Allez Fencing', 'M', '1998-12-02', 'New Jersey', now(), now(), 'Allez Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000021', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Yuki', 'Mori', 'U', 'Northeastern Fencing', 'O', '2002-03-30', 'California', now(), now(), 'Northeastern Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000022', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Elena', 'Petrova', 'B', 'Cambridge FC', 'F', '1996-09-14', 'Illinois', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000023', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Samuel', 'Adeyemi', 'C', 'Allez Fencing', 'M', '1999-01-07', 'Connecticut', now(), now(), 'Allez Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000024', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Clara', 'Bauer', 'E', 'Boston Fencing Club', 'F', '2001-06-26', 'Rhode Island', now(), now(), 'Boston Fencing Club', NULL),
+  ('d0000000-0000-4000-8000-000000000025', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Nina', 'Kovacs', 'A', 'Northeastern Fencing', 'F', '1994-11-18', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000026', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Felix', 'Dubois', 'D', 'Cambridge FC', 'M', '2003-04-09', 'New York', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000027', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Aisha', 'Rahman', 'B', '', 'F', '1998-07-21', 'Texas', now(), now(), NULL, NULL),
+  ('d0000000-0000-4000-8000-000000000028', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Jonas', 'Berg', 'C', 'Allez Fencing', 'M', '1993-10-05', 'Illinois', now(), now(), 'Allez Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000029', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Mei', 'Lin', 'U', 'Boston Fencing Club', 'F', '2000-08-13', 'California', now(), now(), 'Boston Fencing Club', NULL),
+  ('d0000000-0000-4000-8000-000000000030', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Pablo', 'Ruiz', 'E', 'Northeastern Fencing', 'M', '1997-12-29', 'Texas', now(), now(), 'Northeastern Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000031', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Freya', 'Olsen', 'A', 'Allez Fencing', 'F', '1995-03-16', 'Massachusetts', now(), now(), 'Allez Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000032', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Andre', 'Silva', 'D', 'Cambridge FC', 'M', '2002-09-01', 'New Jersey', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000009', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Sofia', 'Rossi', 'C', 'Boston Fencing Club', 'F', '1996-03-05', 'New York', now(), now(), 'Boston Fencing Club', NULL),
+  ('d0000000-0000-4000-8000-000000000010', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Kenji', 'Tanaka', 'U', 'Northeastern Fencing', 'M', '2002-08-16', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000011', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Leila', 'Haddad', 'D', 'Cambridge FC', 'F', '1994-10-09', 'Rhode Island', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000012', 'c0000000-0000-4000-8000-000000000003', NULL, 'Marcus', 'Johnson', 'B', '', 'M', '1993-05-25', 'Texas', now(), now(), NULL, NULL),
+  ('d0000000-0000-4000-8000-000000000013', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Maya', 'Chen', 'A', 'Boston Fencing Club', 'F', '1998-04-12', 'Massachusetts', now(), now(), 'Boston Fencing Club', NULL),
+  ('d0000000-0000-4000-8000-000000000014', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Kenji', 'Tanaka', 'U', 'Northeastern Fencing', 'M', '2002-08-16', 'Massachusetts', now(), now(), 'Northeastern Fencing', 'Tokyo Fencing Club'),
+  ('d0000000-0000-4000-8000-000000000015', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Hana', 'Sato', 'A', 'Northeastern Fencing', 'F', '1999-11-30', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000016', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Sofia', 'Rossi', 'C', 'Boston Fencing Club', 'F', '1996-03-05', 'New York', now(), now(), 'Boston Fencing Club', NULL)
 ON CONFLICT DO NOTHING;
 
 -- Mixed Épée is mid-way through its pool stage; Women's Foil has one planned

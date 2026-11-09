@@ -11,7 +11,10 @@ function TournamentCard({ tournament }: { tournament: Tournament }) {
     >
       <p className="truncate leading-5 font-medium uppercase">{tournament.name}</p>
       <div className="flex items-center justify-between">
-        <p className="text-xs leading-4">City, Country</p>
+        <p className="text-xs leading-4">
+          {[tournament.city, tournament.country].filter(Boolean).join(", ") ||
+            ""}
+        </p>
         <TournamentStatusBadge status={tournament.status} />
       </div>
     </Link>

@@ -24,6 +24,12 @@ var (
 	TestOtherAdminID = uuid.MustParse("c0000000-0000-4000-8000-000000000004")
 )
 
+// testEventID is the event every seeded competitor belongs to unless a test changes it.
+var testEventID = uuid.MustParse("11111111-1111-1111-1111-111111111111")
+
+// otherTestEventID is a second event of the test tournament, for tests that need competitors in different events.
+var otherTestEventID = uuid.MustParse("22222222-2222-2222-2222-222222222222")
+
 func NewTestService(repo competitor.CompetitorRepository) competitor.CompetitorService {
 	return competitor.NewCompetitorService(repo,
 		FakeEventLookup{
@@ -181,6 +187,42 @@ func (f *FakeCompetitorRepository) ListCompetitorTeams(
 	// Ordered by team name rather than a real word-similarity score, since
 	// the fake only does substring matching -- real ranking is covered by
 	// the database-backed tests in internal/tests.
+	slices.SortFunc(matched, func(a, b competitor.CompetitorTeamCount) int {
+		return strings.Compare(a.Team, b.Team)
+	})
+
+	total := int64(len(matched))
+	if filter.Offset >= len(matched) {
+		return []competitor.CompetitorTeamCount{}, total, nil
+	}
+	matched = matched[filter.Offset:]
+	if filter.Limit < len(matched) {
+		matched = matched[:filter.Limit]
+	}
+	return matched, total, nil
+}
+
+func (f *FakeCompetitorRepository) ListCompetitorClubs(
+	_ context.Context,
+	filter competitor.CompetitorClubListFilter,
+) ([]competitor.CompetitorTeamCount, int64, error) {
+	if f.Err != nil {
+		return nil, 0, f.Err
+	}
+	term := strings.ToLower(filter.Term)
+	counts := make(map[string]int64)
+	for _, candidate := range f.Competitors {
+		for _, club := range []*string{candidate.PrimaryClub, candidate.SecondaryClub} {
+			if club != nil && *club != "" && strings.Contains(strings.ToLower(*club), term) {
+				counts[*club]++
+			}
+		}
+	}
+
+	matched := make([]competitor.CompetitorTeamCount, 0, len(counts))
+	for club, count := range counts {
+		matched = append(matched, competitor.CompetitorTeamCount{Team: club, Count: count})
+	}
 	slices.SortFunc(matched, func(a, b competitor.CompetitorTeamCount) int {
 		return strings.Compare(a.Team, b.Team)
 	})
