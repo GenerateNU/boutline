@@ -20,8 +20,11 @@ const (
 	PoolMaxPageSize     = 100
 )
 
-// poolMaxFencers caps a pool at the largest size with a standard bout order.
-const poolMaxFencers = 10
+// A pool's size must have a standard bout order (poolBoutOrder).
+const (
+	poolMinFencers = 4
+	poolMaxFencers = 10
+)
 
 const (
 	msgPoolStarted = "this pool has already started"

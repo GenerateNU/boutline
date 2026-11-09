@@ -123,7 +123,7 @@ func TestCreatePools(t *testing.T) {
 		{
 			name: "creates pools in an upcoming stage",
 			items: func(f *createFixture) []pool.PoolCreateItem {
-				return []pool.PoolCreateItem{f.item(1, 1, 2, 3), f.item(2, 4, 5)}
+				return []pool.PoolCreateItem{f.item(1, 1, 2, 3, 4), f.item(2, 5, 6, 7, 8)}
 			},
 		},
 		{
@@ -131,7 +131,7 @@ func TestCreatePools(t *testing.T) {
 			setup: func(f *createFixture) {
 				f.seedPool(f.otherStage.ID, 1, 6, 7)
 			},
-			items: func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
+			items: func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2, 3, 4)} },
 		},
 		{
 			name: "allows ten fencers when the stage allows more",
@@ -145,7 +145,7 @@ func TestCreatePools(t *testing.T) {
 		{
 			name: "rejects pools from different pool stages",
 			items: func(f *createFixture) []pool.PoolCreateItem {
-				other := f.item(2, 3, 4)
+				other := f.item(2, 5, 6, 7, 8)
 				other.PoolStageID = f.otherStage.ID.String()
 
 				return []pool.PoolCreateItem{f.item(1, 1, 2), other}
@@ -174,7 +174,7 @@ func TestCreatePools(t *testing.T) {
 			setup: func(f *createFixture) {
 				delete(f.repo.Stages, f.stage.ID)
 			},
-			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2, 3, 4)} },
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "pool_stage_id must reference an existing pool stage",
 		},
@@ -183,7 +183,7 @@ func TestCreatePools(t *testing.T) {
 			setup: func(f *createFixture) {
 				f.updateStage(func(s *poolstage.PoolStage) { s.Status = poolstage.PoolStageStatusActive })
 			},
-			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2, 3, 4)} },
 			wantCode:   http.StatusConflict,
 			wantDetail: "pools can only be created in an upcoming pool stage",
 		},
@@ -194,7 +194,7 @@ func TestCreatePools(t *testing.T) {
 				locked.TournamentStatus = tournament.TournamentStatusPending
 				f.repo.Stages[f.stage.ID] = locked
 			},
-			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2, 3, 4)} },
 			wantCode:   http.StatusConflict,
 			wantDetail: "pools can only be created in an active tournament",
 		},
@@ -204,12 +204,20 @@ func TestCreatePools(t *testing.T) {
 				return []pool.PoolCreateItem{f.item(7, 1, 2, 3, 4, 5)}
 			},
 			wantCode:   http.StatusBadRequest,
-			wantDetail: "pool 7 must have between 2 and 4 fencers",
+			wantDetail: "pool 7 can have at most 4 fencers",
+		},
+		{
+			name: "rejects a pool of three",
+			items: func(f *createFixture) []pool.PoolCreateItem {
+				return []pool.PoolCreateItem{f.item(3, 1, 2, 3)}
+			},
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "pool 3 must have at least 4 fencers",
 		},
 		{
 			name: "names the first unknown competitor in request order",
 			items: func(f *createFixture) []pool.PoolCreateItem {
-				return []pool.PoolCreateItem{f.item(1, 1, 20, 21)}
+				return []pool.PoolCreateItem{f.item(1, 1, 20, 21, 2)}
 			},
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "competitor " + competitor(20).String() + " does not exist",
@@ -219,7 +227,7 @@ func TestCreatePools(t *testing.T) {
 			setup: func(f *createFixture) {
 				f.repo.Competitors[competitor(2)] = pool.PoolEntrant{ID: competitor(2), EventID: f.otherStage.EventID}
 			},
-			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2, 3, 4)} },
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "competitor " + competitor(2).String() + " is not entered in the pool stage's event",
 		},
@@ -228,7 +236,7 @@ func TestCreatePools(t *testing.T) {
 			setup: func(f *createFixture) {
 				f.seedPool(f.stage.ID, 1, 3, 4)
 			},
-			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(2, 1, 4)} },
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(2, 1, 2, 4, 5)} },
 			wantCode:   http.StatusConflict,
 			wantDetail: "competitor " + competitor(4).String() + " is already in a pool in this pool stage",
 		},
@@ -237,14 +245,14 @@ func TestCreatePools(t *testing.T) {
 			setup: func(f *createFixture) {
 				f.seedPool(f.otherStage.ID, 1, 1, 2)
 			},
-			items: func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
+			items: func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2, 3, 4)} },
 		},
 		{
 			name: "reports a repository failure as a server error",
 			setup: func(f *createFixture) {
 				f.repo.Err = errors.New("connection refused")
 			},
-			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2)} },
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2, 3, 4)} },
 			wantCode:   http.StatusInternalServerError,
 			wantDetail: "internal server error",
 		},
@@ -284,8 +292,6 @@ func TestCreatePools(t *testing.T) {
 
 // poolBoutPairs are the seat pairs of the standard bout order, by pool size.
 var poolBoutPairs = map[int][][2]int{
-	2: {{1, 2}},
-	3: {{1, 2}, {2, 3}, {3, 1}},
 	4: {{1, 4}, {2, 3}, {1, 3}, {2, 4}, {3, 4}, {1, 2}},
 }
 
@@ -298,7 +304,7 @@ func TestCreatePoolsStoresPoolsWithTheirBouts(t *testing.T) {
 	startTime := time.Date(2026, 10, 24, 9, 30, 0, 0, time.UTC)
 	first := f.item(2, 3, 1, 4, 2)
 	first.Strip, first.RefereeID, first.StartTime = ptr("Strip A"), ptr(f.referee.String()), &startTime
-	body := f.body(first, f.item(1, 7, 5, 6))
+	body := f.body(first, f.item(1, 7, 5, 6, 8))
 	body.PointsToWin, body.TimeLimitSeconds = 15, 540
 
 	out, err := pool.NewPoolService(f.repo, f.lookup).CreatePools(t.Context(), &pool.PoolCreateInput{Body: body})
@@ -306,7 +312,7 @@ func TestCreatePoolsStoresPoolsWithTheirBouts(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, out.Body.Data, 2)
 	// Fencers keep the order the request lists them in.
-	wantSeating := [][]int{{3, 1, 4, 2}, {7, 5, 6}}
+	wantSeating := [][]int{{3, 1, 4, 2}, {7, 5, 6, 8}}
 	for i, created := range out.Body.Data {
 		item := body.Pools[i]
 		assert.Equal(t, item.Number, created.Number, "pools come back in request order")

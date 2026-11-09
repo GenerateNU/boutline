@@ -87,7 +87,7 @@ func TestCreateEndpoint(t *testing.T) {
 			"pools": []any{map[string]any{
 				"pool_stage_id": f.stage.ID.String(),
 				"number":        1,
-				"fencers":       fencerIDs(1, 2),
+				"fencers":       fencerIDs(1, 2, 3, 4),
 			}},
 		})
 
@@ -98,9 +98,11 @@ func TestCreateEndpoint(t *testing.T) {
 		assert.Nil(t, created["strip"])
 		assert.Nil(t, created["start_time"])
 
-		require.Len(t, f.repo.Bouts, 1)
-		assert.Equal(t, 5, f.repo.Bouts[0].PointsToWin)
-		assert.Equal(t, 180, f.repo.Bouts[0].TimeLimitSeconds)
+		require.Len(t, f.repo.Bouts, 6)
+		for _, bout := range f.repo.Bouts {
+			assert.Equal(t, 5, bout.PointsToWin)
+			assert.Equal(t, 180, bout.TimeLimitSeconds)
+		}
 	})
 
 	t.Run("rejects malformed bodies before the handler runs", func(t *testing.T) {
@@ -120,16 +122,16 @@ func TestCreateEndpoint(t *testing.T) {
 		}{
 			{"empty pools", map[string]any{"pools": []any{}}},
 			{"missing pools", map[string]any{}},
-			{"one fencer", pools(item(1, fencerIDs(1)))},
+			{"three fencers", pools(item(1, fencerIDs(1, 2, 3)))},
 			{"eleven fencers", pools(item(1, fencerIDs(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)))},
 			{"non-uuid fencer", pools(item(1, []string{competitor(1).String(), "not-a-uuid"}))},
 			{"non-uuid referee_id", pools(map[string]any{
-				"pool_stage_id": f.stage.ID.String(), "number": 1, "fencers": fencerIDs(1, 2), "referee_id": "nope",
+				"pool_stage_id": f.stage.ID.String(), "number": 1, "fencers": fencerIDs(1, 2, 3, 4), "referee_id": "nope",
 			})},
-			{"non-uuid pool_stage_id", pools(map[string]any{"pool_stage_id": "nope", "number": 1, "fencers": fencerIDs(1, 2)})},
-			{"zero number", pools(item(0, fencerIDs(1, 2)))},
+			{"non-uuid pool_stage_id", pools(map[string]any{"pool_stage_id": "nope", "number": 1, "fencers": fencerIDs(1, 2, 3, 4)})},
+			{"zero number", pools(item(0, fencerIDs(1, 2, 3, 4)))},
 			{"zero points_to_win", map[string]any{
-				"pools":         []any{item(1, fencerIDs(1, 2))},
+				"pools":         []any{item(1, fencerIDs(1, 2, 3, 4))},
 				"points_to_win": 0,
 			}},
 		}

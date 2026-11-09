@@ -42,7 +42,7 @@ type PoolCreateItem struct {
 	Strip       *string    `json:"strip,omitempty" maxLength:"200"`
 	StartTime   *time.Time `json:"start_time,omitempty" doc:"Scheduled start"`
 	RefereeID   *string    `json:"referee_id,omitempty" format:"uuid" doc:"Also referees every bout of the pool"`
-	Fencers     []string   `json:"fencers" format:"uuid" minItems:"2" maxItems:"10" doc:"Competitor ids in grid position order"`
+	Fencers     []string   `json:"fencers" format:"uuid" minItems:"4" maxItems:"10" doc:"Competitor ids in grid position order"`
 }
 
 type PoolCreateBody struct {

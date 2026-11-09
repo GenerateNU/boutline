@@ -219,7 +219,7 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 	t.Run("a bad referee rolls back every pool in the request", func(t *testing.T) {
 		before := poolCreateStageTotal(t, app, headers)
 
-		second := poolCreateItem(2, 12, 4, 3)
+		second := poolCreateItem(2, 12, 4, 3, 7)
 		second["referee_id"] = uuid.NewString()
 
 		poolCreatePost(t, app, headers, poolCreateItem(1, 6, 1, 5, 2), second).
@@ -234,7 +234,7 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 		first["strip"] = "Strip 3"
 		first["referee_id"] = poolCreateRefereeID
 
-		result := poolCreatePost(t, app, headers, first, poolCreateItem(2, 12, 4, 3)).
+		result := poolCreatePost(t, app, headers, first, poolCreateItem(2, 12, 4, 3, 7)).
 			AssertStatus(http.StatusCreated)
 		created := poolCreateDecode(t, result)
 
@@ -247,14 +247,14 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 			[]int{6, 1, 5, 2},
 			[][2]int{{6, 2}, {1, 5}, {6, 5}, {1, 2}, {5, 2}, {6, 1}})
 		poolCreateAssertLineup(t, created[1],
-			[]int{12, 4, 3},
-			[][2]int{{12, 4}, {4, 3}, {3, 12}})
+			[]int{12, 4, 3, 7},
+			[][2]int{{12, 7}, {4, 3}, {12, 3}, {4, 7}, {3, 7}, {12, 4}})
 
 		fixture.assertStoredBouts(t, created[0])
 	})
 
 	t.Run("an unknown pool stage is rejected", func(t *testing.T) {
-		unknown := poolCreateItem(3, 7, 8)
+		unknown := poolCreateItem(3, 8, 9, 10, 11)
 		unknown["pool_stage_id"] = uuid.NewString()
 
 		poolCreatePost(t, app, headers, unknown).
@@ -262,7 +262,7 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 			AssertField("detail", "pool_stage_id must reference an existing pool stage")
 	})
 
-	otherEvent := poolCreateItem(3, 7)
+	otherEvent := poolCreateItem(3, 8, 9, 10)
 	otherEvent["fencers"] = append(otherEvent["fencers"].([]string), poolCreateOtherEventCompetitorID)
 
 	rejections := []struct {
@@ -273,13 +273,13 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 	}{
 		{
 			name:   "a number already used in the stage is rejected",
-			pool:   poolCreateItem(1, 7, 8),
+			pool:   poolCreateItem(1, 8, 9, 10, 11),
 			status: http.StatusConflict,
 			detail: "a pool with this number already exists in the pool stage",
 		},
 		{
 			name:   "a competitor already in one of the stage's pools is rejected",
-			pool:   poolCreateItem(3, 7, 6),
+			pool:   poolCreateItem(3, 8, 9, 10, 6),
 			status: http.StatusConflict,
 			detail: "competitor " + poolCreateCompetitorID(6) + " is already in a pool in this pool stage",
 		},

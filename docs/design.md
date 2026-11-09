@@ -1024,8 +1024,9 @@ pools are generated after the tournament starts.
    with every round-robin bout, under the stage lock below. It needs an active
    tournament. Fencers take grid positions in the order each pool lists them,
    which Propose returns in seed order. Bouts follow the standard order for the
-   pool's size, which spreads each fencer's bouts out but can still schedule
-   someone back-to-back (unavoidable in a pool of 3). Every fencer must be
+   pool's size, which spreads each fencer's bouts out. A pool needs 4 to 10
+   fencers (400 otherwise): neither the FIE nor USA Fencing allows pools of 2 or
+   3, so they have no standard order. Every fencer must be
    entered in the stage's event (400) and not already in one of the stage's
    pools (409). Still to do: bouts take touches and time from the request
    (default 5 and 180) rather than the event's (§8.5), pools are capped at 10

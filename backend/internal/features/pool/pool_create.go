@@ -94,9 +94,15 @@ func checkNoRepeatedCompetitor(requests []poolRequest) error {
 
 func checkFencerCounts(requests []poolRequest, limit int) error {
 	for _, request := range requests {
-		if n := len(request.fencers); n < 2 || n > limit {
+		n := len(request.fencers)
+		if n < poolMinFencers {
 			return errs.Public(
-				fmt.Sprintf("pool %d must have between 2 and %d fencers", request.pool.Number, limit),
+				fmt.Sprintf("pool %d must have at least %d fencers", request.pool.Number, poolMinFencers),
+				errs.ErrInvalidInput)
+		}
+		if n > limit {
+			return errs.Public(
+				fmt.Sprintf("pool %d can have at most %d fencers", request.pool.Number, limit),
 				errs.ErrInvalidInput)
 		}
 	}
