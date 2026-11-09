@@ -13,7 +13,7 @@ function TournamentCard({ tournament }: { tournament: Tournament }) {
       <div className="flex items-center justify-between">
         <p className="text-xs leading-4">
           {[tournament.city, tournament.country].filter(Boolean).join(", ") ||
-            "City, Country"}
+            ""}
         </p>
         <TournamentStatusBadge status={tournament.status} />
       </div>

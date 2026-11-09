@@ -95,11 +95,19 @@ function FilterSheet({ visibility }: FilterSheetProps) {
     }
   }
 
-  const [debouncedSearchClubs] = useDebouncedCallback(searchClubs, debounceMs);
+  const [debouncedSearchClubs, cancelClubSearch] = useDebouncedCallback(searchClubs, debounceMs);
 
-  const shownCountries = (countries ?? []).filter(({ code }) =>
-    countryName(code).toLowerCase().includes(countryTerm),
-  );
+  // The active club may not be in the current results, and it needs a chip so
+  // it can be seen and cleared. ClubOptions only reads the name.
+  const selectedClubMissing =
+    clubs !== null && selectedClub !== "" && !clubs.some(({ name }) => name === selectedClub);
+  const shownClubs = selectedClubMissing
+    ? [{ name: selectedClub, competitorCount: 0 }, ...clubs]
+    : clubs;
+
+  const shownCountries =
+    countries &&
+    countries.filter(({ code }) => countryName(code).toLowerCase().includes(countryTerm));
 
   return (
     <FilterSheetDialog
@@ -130,6 +138,9 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         setSelectedClub("");
         setSelectedCountry("");
         setCountryTerm("");
+        // The form reset empties the club searchbox, so the list must match it.
+        cancelClubSearch();
+        void searchClubs("");
       }}
       onSubmit={() => {
         setFilters({
@@ -145,7 +156,7 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         onChange={(event) => debouncedSearchClubs(event.target.value.trim())}
       >
         <ClubOptions
-          clubs={clubs}
+          clubs={shownClubs}
           failed={clubsFailed}
           selectedClub={selectedClub}
           onToggleClub={(name) => setSelectedClub(name === selectedClub ? "" : name)}
@@ -156,25 +167,12 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         label="Country"
         onChange={(event) => setCountryTerm(event.target.value.trim().toLowerCase())}
       >
-        {countriesFailed && <p className="text-sm text-muted-foreground">Couldn’t load countries.</p>}
-        {!countriesFailed && countries !== null && shownCountries.length === 0 && (
-          <p className="text-sm text-muted-foreground">No countries match.</p>
-        )}
-        {!countriesFailed && shownCountries.length > 0 && (
-          <SegmentedButton
-            type="single"
-            aria-label="Countries"
-            value={selectedCountry}
-            onValueChange={setSelectedCountry}
-            className="flex flex-wrap gap-2 overflow-visible rounded-none border-0 pt-1"
-          >
-            {shownCountries.map(({ code }) => (
-              <SegmentedButtonItem key={code} value={code} className={chipClassName}>
-                {countryName(code)}
-              </SegmentedButtonItem>
-            ))}
-          </SegmentedButton>
-        )}
+        <CountryOptions
+          countries={shownCountries}
+          failed={countriesFailed}
+          selectedCountry={selectedCountry}
+          onSelectCountry={setSelectedCountry}
+        />
       </FilterSearchField>
 
       <ChipGroup label="Distance" value={distance} onValueChange={setDistance}>
@@ -193,6 +191,40 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         ))}
       </ChipGroup>
     </FilterSheetDialog>
+  );
+}
+
+interface CountryOptionsProps {
+  countries: Country[] | null;
+  failed: boolean;
+  selectedCountry: string;
+  onSelectCountry: (code: string) => void;
+}
+
+function CountryOptions({ countries, failed, selectedCountry, onSelectCountry }: CountryOptionsProps) {
+  if (failed) {
+    return <p className="text-sm text-muted-foreground">Couldn’t load countries.</p>;
+  }
+  if (countries === null) {
+    return null;
+  }
+  if (countries.length === 0) {
+    return <p className="text-sm text-muted-foreground">No countries match.</p>;
+  }
+  return (
+    <SegmentedButton
+      type="single"
+      aria-label="Countries"
+      value={selectedCountry}
+      onValueChange={onSelectCountry}
+      className="flex flex-wrap gap-2 overflow-visible rounded-none border-0 pt-1"
+    >
+      {countries.map(({ code }) => (
+        <SegmentedButtonItem key={code} value={code} className={chipClassName}>
+          {countryName(code)}
+        </SegmentedButtonItem>
+      ))}
+    </SegmentedButton>
   );
 }
 

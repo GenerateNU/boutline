@@ -18,11 +18,13 @@ const (
 	competitorTeamTrigramExpr = "team"
 	competitorClubTrigramExpr = "club"
 
-	// A competitor with two clubs yields one row per club.
+	// One row per club a competitor belongs to; a secondary club that repeats
+	// the primary is skipped so that competitor isn't counted twice.
 	competitorClubsSource = "SELECT primary_club AS club FROM competitors " +
 		"WHERE primary_club IS NOT NULL AND primary_club <> '' " +
 		"UNION ALL SELECT secondary_club AS club FROM competitors " +
-		"WHERE secondary_club IS NOT NULL AND secondary_club <> ''"
+		"WHERE secondary_club IS NOT NULL AND secondary_club <> '' " +
+		"AND secondary_club IS DISTINCT FROM primary_club"
 )
 
 type CompetitorRepository interface {

@@ -72,7 +72,8 @@ ON CONFLICT DO NOTHING;
 
 -- Competitors are entered in an event and tagged with that event's
 -- tournament, except Priya, Diego, and Marcus, left untagged to
--- exercise competitors with no tournament yet.
+-- exercise competitors with no tournament yet. Grace lists Allez Fencing as
+-- both clubs, so /clubs must still count her once.
 INSERT INTO competitors (id, event_id, tournament_id, first_name, last_name, rating, team, gender, birthdate, division, created_at, updated_at, primary_club, secondary_club) VALUES
   ('d0000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Maya', 'Chen', 'A', 'Boston Fencing Club', 'F', '1998-04-12', 'Massachusetts', now(), now(), 'Boston Fencing Club', NULL),
   ('d0000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Liam', 'O''Brien', 'B', 'Northeastern Fencing', 'M', '2001-09-03', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
@@ -84,7 +85,7 @@ INSERT INTO competitors (id, event_id, tournament_id, first_name, last_name, rat
   ('d0000000-0000-4000-8000-000000000008', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Ethan', 'Kowalski', 'E', '', 'M', '2004-12-21', 'Illinois', now(), now(), NULL, NULL),
   ('d0000000-0000-4000-8000-000000000017', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Isabel', 'Moreau', 'B', 'Cambridge FC', 'F', '1997-02-11', 'Massachusetts', now(), now(), 'Cambridge FC', NULL),
   ('d0000000-0000-4000-8000-000000000018', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Tomas', 'Novak', 'C', 'Boston Fencing Club', 'M', '1995-08-23', 'New York', now(), now(), 'Boston Fencing Club', NULL),
-  ('d0000000-0000-4000-8000-000000000019', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Grace', 'Lindqvist', 'A', 'Allez Fencing', 'F', '2000-05-19', 'Massachusetts', now(), now(), 'Allez Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000019', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Grace', 'Lindqvist', 'A', 'Allez Fencing', 'F', '2000-05-19', 'Massachusetts', now(), now(), 'Allez Fencing', 'Allez Fencing'),
   ('d0000000-0000-4000-8000-000000000020', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Omar', 'Haddad', 'D', 'Allez Fencing', 'M', '1998-12-02', 'New Jersey', now(), now(), 'Allez Fencing', NULL),
   ('d0000000-0000-4000-8000-000000000021', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Yuki', 'Mori', 'U', 'Northeastern Fencing', 'O', '2002-03-30', 'California', now(), now(), 'Northeastern Fencing', NULL),
   ('d0000000-0000-4000-8000-000000000022', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Elena', 'Petrova', 'B', 'Cambridge FC', 'F', '1996-09-14', 'Illinois', now(), now(), 'Cambridge FC', NULL),

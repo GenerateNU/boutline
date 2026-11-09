@@ -79,6 +79,36 @@ describe("FilterSheet", () => {
     expect(replace).toHaveBeenLastCalledWith("/tournaments?query=open", { scroll: false });
   });
 
+  it("cancels a pending club search and reloads all clubs on Clear all", async () => {
+    jest.useFakeTimers();
+    await openSheet();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Club" }), {
+      target: { value: "Sal" },
+    });
+    apiRequestMock.mockClear();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(apiRequestMock.mock.calls.map(([path]) => path)).toEqual(["/clubs?limit=10"]);
+    jest.useRealTimers();
+  });
+
+  it("shows the active club even when it is not in the search results", async () => {
+    currentParams = new URLSearchParams("club=Tokyo+Fencing+Club");
+    await openSheet();
+
+    const chip = screen.getByRole("button", { name: "Tokyo Fencing Club" });
+    expect(chip).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(chip);
+    fireEvent.click(screen.getByRole("button", { name: "Show Tournaments" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/tournaments", { scroll: false });
+  });
+
   it.each([
     { term: "fran", want: "France", hidden: ["Canada", "United States"] },
     { term: "United", want: "United States", hidden: ["France", "Canada"] },

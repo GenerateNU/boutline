@@ -3,10 +3,12 @@ import type { TournamentStatus } from "@/features/tournament/types/tournament";
 import { readOffsetParam, type SearchParams, readStringParam } from "@/lib/search-params";
 
 const statuses: TournamentStatus[] = ["pending", "active", "ended"];
+const maxClubLength = 120;
 
 export function parseTournamentFilters(query: SearchParams) {
   const calendarView = query.view === "calendar";
   const day = parseDateParam(readStringParam(query, "date") || undefined);
+  const club = readStringParam(query, "club");
   const country = readStringParam(query, "country");
 
   return {
@@ -17,8 +19,8 @@ export function parseTournamentFilters(query: SearchParams) {
     calendarView,
     search: calendarView ? "" : readStringParam(query, "q"),
     tz: readStringParam(query, "tz") || undefined,
-    club: readStringParam(query, "club") || undefined,
-    // An invalid code is dropped so it never reaches the backend, which would 422 the page.
+    // Values the backend would reject are dropped, since a 422 would break the page.
+    club: club && club.length <= maxClubLength ? club : undefined,
     country: /^[A-Z]{2}$/.test(country) ? country : undefined,
   };
 }
