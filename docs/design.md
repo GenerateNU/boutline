@@ -430,7 +430,7 @@ different roles in different tournaments.
 ## 4. Browsing tournaments
 
 **Status:** Partial. The tournament screens are wired to the real API. The event
-tabs for pools, tableau and results are placeholders until chapters 11–13.
+tabs for pools, tableau and results run on placeholder data until chapters 11–13.
 
 **What it is:** the public face of Boutline. Anyone can find a tournament by name
 or date, open a private one by its code, and look through its events, fencers and
@@ -528,8 +528,9 @@ replace the tournament's tabs rather than stacking under them.
   from the dropdown or typed text committed with Enter. It lists every fencer in the tournament, since
   competitors don't belong to an event yet (§8.4). Rows link to a fencer page,
   which is placeholder text.
-- **Pooling** and **Tableau** (Placeholder): a bout list from a hardcoded fixture,
-  the same for every event. Replaced in §11.6 and §12.5.
+- **Pooling** (Partial): see §11.6 for its current state.
+- **Tableau** (Placeholder): a bout list from a hardcoded fixture, the same for every
+  event. Replaced in §12.5.
 - **Results** (Placeholder): static text. Replaced in §13.3.
 - **Bout page** (`…/bout/[boutId]`, Placeholder): two score tiles, a "Referee
   view" button and a touch log, from the fixture. Only its referee link reaches
@@ -1243,14 +1244,24 @@ results, stored on the DE entry (§12.1).
 
 ### 11.6 Pooling tab and pool screen
 
-**Status:** Planned. Issue: #127.
+**Status:** Partial. Issue: #127. Each part below is built to the hi-fi design on
+placeholder data (`pooling/_services/pools.ts`) unless marked Planned. Wiring them
+to the API (§11.3) remains.
 
-The Pooling tab lists the event's pools with their fencers, referee, strip and
-progress, each linking to a pool screen. The pool screen shows the classic grid
-(fencer × fencer, `V5` / `D3` cells) plus the summary columns from §11.3, and the
-pool's bouts in order. Today the tab is the shared fixture (§4.4). A branch
-(`claude/boutline-frontend-setup-e6b230`) has a draft pool list, pool page and
-filter sheet.
+- **Pool list:** a "Search pools" field. Each pool is a collapsible card, collapsed
+  one at a time or with Collapse all / Expand all. A card has a Bouts | Standings
+  toggle that shows the V/D grid or the standings table (# · Fencer · V · V/M · TS ·
+  TR · Ind, by place), and a View pool link. Pool pins are not built yet (§6.3).
+- **Filter sheet** (Planned): a filter button beside the search opens Fencer and
+  Club search, Pool Status and Pool Number chips, and Sort by Pool Number, Start
+  time or Strip, with Clear All and Show pools.
+- **Pool page** (Planned): a back button to the list, the status pill and fencer count, and
+  the V/D grid (`V5` / `D3` cells). Below it sits the standings table. Tapping a
+  bout cell outlines it in navy and swaps the standings for "Showing the bout you
+  tapped" and a bout card: Bout N of M, "Pool bout", an All bouts link, winner and
+  loser rows with V/D tiles and scores, Status / Pool / Strip, and links to both
+  fencers.
+- Club short codes and fencer country are not shown yet, since the data has neither.
 
 ---
 
@@ -1631,8 +1642,9 @@ Network code must survive retries and races:
 
 ## Appendix C. Visual language
 
-The UI is a **lofi** pass: monochrome, outlined, light mode only. Polish comes later
-through the tokens, so components use tokens, never raw colors.
+The hi-fi pass is underway: a navy brand, a palette of tokens, and status colors,
+light mode only. Screens move over one at a time, and the rest still look like the
+earlier outlined set. Components use tokens, never raw colors.
 
 ### C.1 Layout
 - Mobile-first, one column:
@@ -1652,15 +1664,16 @@ through the tokens, so components use tokens, never raw colors.
 | `selected` (blue) | only a chosen state: filled button, toggle on, active tab |
 | `destructive` | errors and destructive actions; hi-fi destructive actions (Button `destructive` variant) use `red-dark` |
 | `border`, `input`, `ring` | hairlines, field borders, focus rings |
+| `brand` | alias of the hi-fi navy `blue` (#21358b), kept for existing uses |
+| `green` (#32944b) | the V tile on the pool bout card |
 
-No Tailwind palette colors. The tournament status badge breaks this today
-(`bg-amber-600`, `bg-emerald-600`); status colors become tokens next time it is
-touched.
+No Tailwind palette colors. Status pills (tournament, pool and event status) go
+through the `StatusBadge` primitive, which maps a status to one of the status pairs.
 
 ### C.3 Type
 Geist Sans; Geist Mono for aligned numbers. Hi-fi screens (global nav, tournament
-browser, filter sheet) use Manrope (`font-manrope`), and the BOUTLINE wordmark uses
-Special Gothic Expanded One (`font-wordmark`). Body and controls `text-sm`, metadata
+browser, filter sheet, Pools tab) use Manrope (`font-manrope`), and the BOUTLINE
+wordmark uses Special Gothic Expanded One (`font-wordmark`). Body and controls `text-sm`, metadata
 `text-xs text-muted-foreground`, at most `font-medium`. Sizes from `text-2xl` up are
 reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 
@@ -1669,6 +1682,9 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   use `rounded-md`; pills (tab nav, icon buttons, avatars) use `rounded-full`. 1px
   `border-foreground`, no shadows, except floating surfaces (select menu, dropdown,
   date field popover, upload dialog, modal, filter sheet, toast) which use `shadow-md`.
+- Hi-fi pool cards and the pool search field are white with a `border-outline`
+  border, `rounded-[12px]` and `shadow-sm`; pool grid cells and their header pills
+  use a 4px radius.
 - Focus `focus-visible:ring-2 ring-ring`; hover `bg-muted`; disabled `opacity-50`.
 - Icons are Material's Outlined set from `@mui/icons-material`, imported by path
   (`@mui/icons-material/SearchOutlined`), at `size-4`, `aria-hidden` when
@@ -1718,7 +1734,7 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 
 ## Appendix D. Open questions
 
-- Hi-fi design: brand color, dark mode, and whether `selected` stays blue.
+- Hi-fi design: dark mode, and whether `selected` stays blue.
 - Desktop layouts for the organizer console, which may outgrow 440px.
 - Team events (relay scoring to 45) are in the form but have no model.
 - Do spectators need accounts (to follow fencers across devices) or stay
