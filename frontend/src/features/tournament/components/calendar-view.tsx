@@ -36,7 +36,7 @@ function CalendarView() {
 
       {today && month && (
         <>
-          <div className="flex items-center justify-center gap-2.5 px-2.5 py-1.5">
+          <div className="flex items-center justify-center gap-4 py-1.5">
             <Stepper
               label={format(month, "MMMM")}
               unit="month"
@@ -60,12 +60,7 @@ function CalendarView() {
             }}
             onMonthChange={setMonth}
             components={{ MonthCaption: NoCaption }}
-            className="mx-auto w-fit border border-brand p-4"
-            classNames={{
-              weekday: "flex-1 text-xs font-light text-brand select-none",
-              day: "relative aspect-square p-0.5 text-center select-none [&_button]:text-sm [&_button]:text-brand [&_button[data-selected=true]]:border-brand",
-              outside: "[&_button]:text-chip",
-            }}
+            className="mx-auto w-fit"
           />
         </>
       )}
@@ -81,27 +76,27 @@ interface StepperProps {
 
 function Stepper({ label, unit, onStep }: StepperProps) {
   return (
-    <div className="flex w-38.5 items-center justify-center gap-2.5 px-5.5">
+    <div className="flex items-center gap-1">
       <Button
         type="button"
         variant="text"
         size="icon"
         aria-label={`Previous ${unit}`}
         onClick={() => onStep(-1)}
-        className="-m-2.5"
+        className="size-8"
       >
-        <ChevronLeft className="size-5!" />
+        <ChevronLeft className="text-neutral-secondary" />
       </Button>
-      <p className="w-20 text-center leading-5 font-medium">{label}</p>
+      <p className="w-24 text-center text-sm font-medium text-obsidian">{label}</p>
       <Button
         type="button"
         variant="text"
         size="icon"
         aria-label={`Next ${unit}`}
         onClick={() => onStep(1)}
-        className="-m-2.5"
+        className="size-8"
       >
-        <ChevronRight className="size-5!" />
+        <ChevronRight className="text-neutral-secondary" />
       </Button>
     </div>
   );

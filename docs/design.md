@@ -1492,7 +1492,8 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 ### C.4 Shape and interaction
 - `--radius` 0.625rem, with `rounded-sm`…`rounded-xl` derived from it. List cards
   use `rounded-md`; pills (tab nav, icon buttons, avatars) use `rounded-full`. 1px
-  `border-foreground`, no shadows.
+  `border-foreground`, no shadows, except floating surfaces (select menu, dropdown,
+  date field popover, upload dialog) which use `shadow-md`.
 - Focus `focus-visible:ring-2 ring-ring`; hover `bg-muted`; disabled `opacity-50`.
 - Icons from `lucide-react` at `size-4`, `aria-hidden` when decorative.
 - Referee touch targets are large (`h-32`), because they are pressed under time
@@ -1501,10 +1502,16 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 ### C.5 Components
 - Primitives live in `src/components/primitives/`: shadcn-generated, restyled, with
   `cva` variants, `cn`, `data-slot`, and behavior from `radix-ui`.
-- The set includes the global nav, tab nav, section, list, card, chip, button,
-  segmented button, text field, select, checkbox, radio, toggle, slider, date
-  picker, calendar, dropzone, dialogs and filter sheet, pagination, toast,
-  tooltip, and progress indicators.
+- The set includes the global nav, tab nav, section, list, card, chip (the filter
+  tag), label, button, segmented button, search bar, dropdown, text field,
+  select, date field, checkbox, radio, toggle, slider, calendar,
+  dropzone and upload dialog, dialogs and filter sheet, pagination, toast, tooltip,
+  and progress indicators.
+- Form fields (text field, select, date field) share one hi-fi frame: a `text-xs`
+  label above a `rounded-md border-outline` box that turns `border-blue` with a
+  `ring-blue-lighter` halo on focus or open, `border-red-dark` when `aria-invalid`,
+  and `bg-disabled` when disabled. Select is Radix Select; the date field opens the
+  calendar in a Radix Popover.
 - Many are only used by the `/` showcase so far.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.

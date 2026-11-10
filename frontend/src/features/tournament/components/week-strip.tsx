@@ -1,7 +1,7 @@
 "use client";
 
 import { addDays, format, isSameDay } from "date-fns";
-import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "cn";
 import { useState } from "react";
 
@@ -44,7 +44,7 @@ function WeekStrip() {
         aria-label="Earlier days"
         onClick={() => page(-visibleDays)}
       >
-        <ArrowLeft className="size-5!" />
+        <ChevronLeft className="size-5! text-neutral-secondary" />
       </Button>
       <div className="flex flex-1 justify-between">
         {days.map((day) => {
@@ -57,8 +57,9 @@ function WeekStrip() {
               aria-pressed={isSelected}
               onClick={() => select(isSelected ? undefined : day)}
               className={cn(
-                "h-auto rounded-none border-b-2 border-transparent px-0 pb-1.5 text-base leading-5 text-muted-foreground hover:bg-transparent",
-                isSelected && "border-foreground font-semibold text-foreground",
+                "h-auto rounded-none border-b-2 border-transparent px-0 pb-1.5 text-sm text-neutral-muted hover:bg-transparent",
+                isSelected &&
+                  "border-accent-green font-semibold text-obsidian",
               )}
             >
               {format(day, "MMM d")}
@@ -73,7 +74,7 @@ function WeekStrip() {
         aria-label="Later days"
         onClick={() => page(visibleDays)}
       >
-        <ArrowRight className="size-5!" />
+        <ChevronRight className="size-5! text-neutral-secondary" />
       </Button>
       <Button
         type="button"
@@ -82,7 +83,7 @@ function WeekStrip() {
         aria-label="Calendar view"
         onClick={() => setFilters({ view: "calendar" })}
       >
-        <CalendarDays className="size-8!" />
+        <CalendarDays className="size-8! text-neutral-secondary" />
       </Button>
     </div>
   );

@@ -1,7 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { Ellipsis, EllipsisVertical, House, Reply, Settings, Shapes, Swords } from "lucide-react";
+import { Suspense, useState } from "react";
+import {
+  CloudUpload,
+  Ellipsis,
+  EllipsisVertical,
+  Globe,
+  House,
+  Reply,
+  Settings,
+  Shapes,
+  Swords,
+  CircleUserRound,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { BackButton } from "@/components/primitives/back-button";
@@ -14,19 +28,28 @@ import {
   CardMedia,
   CardTitle,
 } from "@/components/primitives/card";
+import { Calendar } from "@/components/primitives/calendar";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Chip } from "@/components/primitives/chip";
+import { DateField } from "@/components/primitives/date-field";
+import { Dropzone } from "@/components/primitives/dropzone";
 import { FilterButton } from "@/components/primitives/filter-button";
+import { Label } from "@/components/primitives/label";
 import { List, ListItem } from "@/components/primitives/list";
 import { Menu, MenuItem } from "@/components/primitives/menu";
 import { CircularProgress } from "@/components/primitives/circular-progress";
-import { DatePicker } from "@/components/primitives/date-picker";
 import { LinearProgress } from "@/components/primitives/linear-progress";
 import { PinButton } from "@/components/primitives/pin-button";
 import { Radio, RadioItem } from "@/components/primitives/radio";
 import { RatingBadge } from "@/components/primitives/rating-badge";
 import { Section } from "@/components/primitives/section";
 import { SearchBar } from "@/components/primitives/search-bar";
+import {
+  Dropdown,
+  DropdownItem,
+  DropdownSection,
+} from "@/components/primitives/dropdown";
+import { SelectField } from "@/components/primitives/select-field";
 import { SegmentItem } from "@/components/primitives/segment-item";
 import {
   SegmentedButton,
@@ -39,6 +62,7 @@ import { StatusBadge } from "@/components/primitives/status-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/primitives/tabs";
 import { Tag } from "@/components/primitives/tag";
 import { TextField } from "@/components/primitives/text-field";
+import { UploadDialog, uploadAccept, type UploadFile } from "@/components/primitives/upload-dialog";
 import { useToast } from "@/components/primitives/toast";
 import { Toggle } from "@/components/primitives/toggle";
 import {
@@ -53,6 +77,7 @@ import { NavigationBar } from "@/components/primitives/navigation/navigation-bar
 import { NavigationDrawer } from "@/components/primitives/navigation/navigation-drawer";
 import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
 import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+import { WeekStrip } from "@/features/tournament/components/week-strip";
 
 const buttonVariantNames = ["filled", "outline", "tonal", "text"] as const;
 const buttonSizes = ["sm", "default", "lg"] as const;
@@ -70,6 +95,8 @@ const barItems = Array.from({ length: 5 }, (_, index) => ({
   label: "Label",
   icon: <Shapes />,
 }));
+
+const dropdownOptions = ["Fencer", "Country", "Club"];
 
 const drawerItems = Array.from({ length: 7 }, (_, index) => ({
   id: `drawer-${index}`,
@@ -107,6 +134,124 @@ function DialogList() {
         </ListItem>
       ))}
     </List>
+  );
+}
+
+const searchSamples = [
+  {
+    title: "Clubs",
+    icon: <UsersRound aria-hidden />,
+    rows: ["Northeastern Fencing Club", "NYAC Fencing", "North Shore Fencing", "Allez Fencing"],
+  },
+  {
+    title: "Countries",
+    icon: <Globe aria-hidden />,
+    rows: ["Netherlands", "New Zealand", "Norway", "United States of America"],
+  },
+  {
+    title: "Fencers",
+    icon: <UserRound aria-hidden />,
+    rows: ["Nathan Lee", "Nadia Okafor", "Noah Park", "Eric Kitagawa"],
+  },
+];
+
+interface SearchSampleSectionProps {
+  title: string;
+  icon: React.ReactNode;
+  rows: string[];
+}
+
+function SearchSampleSection({ title, icon, rows }: SearchSampleSectionProps) {
+  return (
+    <DropdownSection title={title} icon={icon}>
+      {rows.map((row) => (
+        <DropdownItem key={row}>{row}</DropdownItem>
+      ))}
+    </DropdownSection>
+  );
+}
+
+// Filters sample data in place of a real search request.
+function SearchDemo() {
+  const [query, setQuery] = useState("N");
+  const term = query.trim().toLowerCase();
+  const matches = searchSamples
+    .map((section) => ({
+      ...section,
+      rows: section.rows.filter((row) => row.toLowerCase().includes(term)),
+    }))
+    .filter((section) => section.rows.length > 0);
+
+  return (
+    <div className="flex min-h-80 items-start gap-2">
+      <SearchBar
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        expanded={term !== "" && matches.length > 0}
+        placeholder="Search tournaments and clubs"
+        aria-label="Search"
+        className="flex-1"
+      >
+        <Dropdown>
+          {matches.map((section) => (
+            <SearchSampleSection key={section.title} {...section} />
+          ))}
+        </Dropdown>
+      </SearchBar>
+      <FilterButton aria-label="Filter" />
+    </div>
+  );
+}
+
+const sampleEventDates = [new Date(2026, 9, 9), new Date(2026, 9, 16), new Date(2026, 9, 23)];
+
+function CalendarDemo() {
+  const [selected, setSelected] = useState(new Date(2026, 9, 5));
+
+  return (
+    <Calendar
+      mode="single"
+      required
+      selected={selected}
+      onSelect={setSelected}
+      defaultMonth={selected}
+      today={new Date(2026, 9, 1)}
+      modifiers={{ hasEvent: sampleEventDates }}
+    />
+  );
+}
+
+// There's no upload backend yet, so the demo just lists what was picked; the
+// second seeded file shows the in-progress row.
+function UploadDialogDemo() {
+  const [open, setOpen] = useState(false);
+  const [files, setFiles] = useState<UploadFile[]>(() => [
+    { id: "cv", file: new File(["cv"], "my-cv.pdf", { type: "application/pdf" }) },
+    {
+      id: "certificate",
+      file: new File(["certificate"], "certificate.pdf", { type: "application/pdf" }),
+      progress: 60,
+    },
+  ]);
+
+  return (
+    <>
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        Open upload dialog
+      </Button>
+      <UploadDialog
+        open={open}
+        onOpenChange={setOpen}
+        files={files}
+        onAddFiles={(added) =>
+          setFiles((current) => [
+            ...current,
+            ...added.map((file) => ({ id: crypto.randomUUID(), file })),
+          ])
+        }
+        onRemoveFile={(id) => setFiles((current) => current.filter((entry) => entry.id !== id))}
+      />
+    </>
   );
 }
 
@@ -291,21 +436,29 @@ export default function Home() {
         </Radio>
       </Section>
 
-      <Section title="Chip">
+      <Section title="Filter Tag">
         <div className="flex flex-wrap items-center gap-3">
-          <Chip>Label</Chip>
-          <Chip icon={<Ellipsis />}>Label</Chip>
-          <Chip dismissible>Label</Chip>
-          <Chip dropdown>Label</Chip>
+          <Chip dismissible>Default</Chip>
+          <Chip dismissible className="bg-surface">
+            Hover
+          </Chip>
+          <Chip dismissible selected>
+            Selected
+          </Chip>
+        </div>
+      </Section>
+
+      <Section title="Label">
+        <div className="flex flex-col gap-1">
+          <Label icon={<CircleUserRound aria-hidden />}>Eric Kitagawa</Label>
+          <Label tone="subtle" icon={<Globe aria-hidden />}>
+            United States of America
+          </Label>
         </div>
       </Section>
 
       <Section title="Slider">
-        <div className="flex flex-col gap-6">
-          <Slider defaultValue={[0]} aria-label="Empty" />
-          <Slider defaultValue={[50]} aria-label="Half" />
-          <Slider defaultValue={[100]} aria-label="Full" />
-        </div>
+        <Slider unit="MI" showValue defaultValue={[50]} aria-label="Distance" className="pt-10" />
       </Section>
 
       <Section title="Segment items">
@@ -369,10 +522,6 @@ export default function Home() {
             </TooltipContent>
           </Tooltip>
         </div>
-      </Section>
-
-      <Section title="Date picker">
-        <DatePicker />
       </Section>
 
       <Section title="Navigation item">
@@ -444,32 +593,9 @@ export default function Home() {
         </Menu>
       </Section>
 
-      <Section title="Search bar">
-        <div className="flex flex-col gap-6">
-          <SearchBar
-            placeholder="Enter search text"
-            aria-label="Search"
-            trailing={
-              <Avatar className="size-8">
-                <AvatarFallback />
-              </Avatar>
-            }
-          />
-
-          <SearchBar expanded defaultValue="Input" aria-label="Search">
-            <div className="h-24" />
-          </SearchBar>
-
-          <SearchBar expanded defaultValue="Input" aria-label="Search">
-            <List className="border-0">
-              {Array.from({ length: 4 }, (_, index) => (
-                <ListItem key={index} leading={<DialogAvatar />}>
-                  Dialog title
-                </ListItem>
-              ))}
-            </List>
-          </SearchBar>
-        </div>
+      <Section title="Search Bar and Dropdown">
+        <SearchBar placeholder="Search fencers, clubs, events" aria-label="Search fencers" />
+        <SearchDemo />
       </Section>
 
       <Section title="Linear progress">
@@ -557,16 +683,55 @@ export default function Home() {
         </div>
       </Section>
 
-      <Section title="Textfield">
+      <Section title="Text Field">
         <div className="flex flex-col gap-6">
-          <TextField
-            label="Label"
-            placeholder="Placeholder text"
-            supportingText="Supporting text"
-            leading={<Ellipsis aria-hidden />}
-            trailing={<Ellipsis aria-hidden />}
-          />
+          <TextField label="Label" placeholder="Placeholder text" />
+          <TextField label="Disabled" placeholder="Placeholder text" disabled />
         </div>
+      </Section>
+
+      <Section title="Dropdown Selection">
+        <div className="flex flex-col gap-6">
+          <SelectField label="Label" options={dropdownOptions} />
+          <SelectField label="Disabled" options={dropdownOptions} disabled />
+        </div>
+      </Section>
+
+      <Section title="Date Field">
+        <div className="flex flex-col gap-6">
+          <DateField label="Date" defaultValue={new Date(2026, 9, 5)} eventDates={sampleEventDates} />
+          <DateField label="Error" aria-invalid />
+          <DateField label="Disabled" disabled />
+        </div>
+      </Section>
+
+      <Section title="Date Scroller">
+        {/* WeekStrip reads the URL's filters, which needs a Suspense boundary to prerender. */}
+        <Suspense>
+          <WeekStrip />
+        </Suspense>
+      </Section>
+
+      <Section title="Calendar">
+        <CalendarDemo />
+      </Section>
+
+      <Section title="Upload File">
+        <Dropzone accept={uploadAccept} className="gap-3 px-6 py-8">
+          {(open) => (
+            <>
+              <CloudUpload aria-hidden className="size-8 text-neutral-secondary" />
+              <p className="text-base font-semibold text-obsidian">Already have file?</p>
+              <Button type="button" className="w-full" onClick={open}>
+                Upload
+              </Button>
+            </>
+          )}
+        </Dropzone>
+      </Section>
+
+      <Section title="Upload Dialog">
+        <UploadDialogDemo />
       </Section>
     </main>
   );

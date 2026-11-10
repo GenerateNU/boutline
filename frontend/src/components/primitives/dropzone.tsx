@@ -1,26 +1,40 @@
 "use client";
 
 import { cn } from "cn";
-import { Upload } from "lucide-react";
+import { CloudUpload } from "lucide-react";
 import { type Accept, useDropzone } from "react-dropzone";
 
-type DropzoneProps = {
+interface DropzoneProps {
   label?: string;
   accept: Accept;
   onFile?: (file: File) => void;
+  multiple?: boolean;
+  onFiles?: (files: File[]) => void;
+  maxSize?: number;
   onReject?: (message: string) => void;
   className?: string;
   children?: React.ReactNode | ((open: () => void) => React.ReactNode);
-};
+}
 
-function Dropzone({ label, accept, onFile, onReject, className, children }: DropzoneProps) {
+function Dropzone({
+  label,
+  accept,
+  onFile,
+  multiple = false,
+  onFiles,
+  maxSize,
+  onReject,
+  className,
+  children,
+}: DropzoneProps) {
   const triggered = typeof children === "function";
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     accept,
-    multiple: false,
+    multiple,
+    maxSize,
     noClick: triggered,
     noKeyboard: triggered,
-    onDropAccepted: ([file]) => onFile?.(file),
+    onDropAccepted: (files) => (multiple ? onFiles?.(files) : onFile?.(files[0])),
     onDropRejected: ([rejection]) => onReject?.(rejection.errors[0].message),
   });
 
@@ -28,21 +42,23 @@ function Dropzone({ label, accept, onFile, onReject, className, children }: Drop
     <div
       {...getRootProps({
         className: cn(
-          "flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-foreground px-4 py-6 text-center text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-          !triggered && "cursor-pointer hover:bg-muted",
-          isDragActive && "bg-muted",
+          "flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-outline bg-background px-4 py-6 text-center text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-blue-lighter",
+          !triggered && "cursor-pointer hover:bg-blue-lightest",
+          isDragActive && "border-blue bg-blue-lightest",
           className,
         ),
       })}
       data-slot="dropzone"
     >
       <input {...getInputProps()} />
-      {typeof children === "function" ? children(open) : (children ?? (
-        <>
-          <Upload aria-hidden className="size-5" />
-          <span>{label}</span>
-        </>
-      ))}
+      {triggered
+        ? children(open)
+        : (children ?? (
+            <>
+              <CloudUpload aria-hidden className="size-5" />
+              <p>{label}</p>
+            </>
+          ))}
     </div>
   );
 }

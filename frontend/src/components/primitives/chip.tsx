@@ -1,12 +1,13 @@
 import { cn } from "cn";
 import { ChevronDown, X } from "lucide-react";
 
-type ChipProps = React.ComponentProps<"div"> & {
+interface ChipProps extends React.ComponentProps<"div"> {
   icon?: React.ReactNode;
   dismissible?: boolean;
   onDismiss?: () => void;
   dropdown?: boolean;
-};
+  selected?: boolean;
+}
 
 function Chip({
   className,
@@ -14,14 +15,19 @@ function Chip({
   dismissible,
   onDismiss,
   dropdown,
+  selected,
   children,
   ...props
 }: ChipProps) {
+  const removable = dismissible || onDismiss !== undefined;
+
   return (
     <div
       data-slot="chip"
       className={cn(
-        "inline-flex items-center gap-2 border border-foreground px-3 py-1.5 text-sm [&_svg]:size-4 [&_svg]:shrink-0",
+        "inline-flex items-center gap-1 rounded-md border border-outline bg-background px-2.5 py-1.5 text-xs font-medium text-obsidian [&_svg]:size-3.5 [&_svg]:shrink-0",
+        removable && "hover:bg-surface",
+        selected && "border-blue-light bg-blue-lightest text-blue",
         className,
       )}
       {...props}
@@ -29,7 +35,7 @@ function Chip({
       {icon}
       {children}
       {dropdown ? <ChevronDown aria-hidden /> : null}
-      {dismissible || onDismiss ? (
+      {removable ? (
         <button
           type="button"
           aria-label="Remove"

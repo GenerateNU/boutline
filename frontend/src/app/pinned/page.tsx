@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
 import { fetchPinnedItems } from "@/features/pinning/services/pinned-items-query";
 import { fetchAvailableItems } from "@/features/pinning/services/available-items-query";
-import { Select } from "@/components/primitives/select";
+import { Select, SelectItem } from "@/components/primitives/select";
 import { Competitor } from "@/types/competitor";
 import { Bout } from "@/types/bout";
 
@@ -54,12 +54,12 @@ export default function PinnedPage() {
           <Select
             className="max-w-xs"
             value={selectedFencerId}
-            onChange={(e) => setSelectedFencerId(e.target.value)}
+            onValueChange={setSelectedFencerId}
           >
             {availableFencers.map((fencer) => (
-              <option key={fencer.id} value={fencer.id}>
+              <SelectItem key={fencer.id} value={fencer.id}>
                 {fencer.firstName} {fencer.lastName} ({fencer.team})
-              </option>
+              </SelectItem>
             ))}
           </Select>
           <button
@@ -82,12 +82,12 @@ export default function PinnedPage() {
           <Select
             className="max-w-xs"
             value={selectedBoutId}
-            onChange={(e) => setSelectedBoutId(e.target.value)}
+            onValueChange={setSelectedBoutId}
           >
             {availableBouts.map((bout) => (
-              <option key={bout.id} value={bout.id}>
+              <SelectItem key={bout.id} value={bout.id}>
                 {bout.competitor_1_id} vs {bout.competitor_2_id} ({bout.status})
-              </option>
+              </SelectItem>
             ))}
           </Select>
           <button
