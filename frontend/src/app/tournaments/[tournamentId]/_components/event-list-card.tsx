@@ -1,11 +1,16 @@
-import { ExternalLink } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-import { Button } from "@/components/primitives/button";
-import { Card, CardHeader, CardTitle } from "@/components/primitives/card";
-import { Chip } from "@/components/primitives/chip";
-import type { TournamentEvent } from "@/features/event/types/event";
-import { eventStatusLabel, formatTimeLabel } from "@/lib/event-schedule";
+import { Card, CardTitle } from "@/components/primitives/card";
+import { StatusBadge, type Status } from "@/components/primitives/status-badge";
+import type { EventStatus, TournamentEvent } from "@/features/event/types/event";
+import { formatTimeLabel } from "@/lib/event-schedule";
+
+const badgeStatus: Record<EventStatus, Status> = {
+  upcoming: "not-started",
+  active: "in-progress",
+  ended: "completed",
+};
 
 interface EventListCardProps {
   title: string;
@@ -15,34 +20,31 @@ interface EventListCardProps {
 
 function EventListCard({ title, events, emptyMessage }: EventListCardProps) {
   return (
-    <Card className="rounded-lg">
-      <CardHeader>
-        <CardTitle role="heading" aria-level={2} className="text-lg font-normal">
-          {title}
-        </CardTitle>
-      </CardHeader>
+    <Card className="gap-1 rounded-lg px-1 py-3">
+      <CardTitle role="heading" aria-level={2} className="px-3.5 text-xl text-obsidian">
+        {title}
+      </CardTitle>
       {events.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+        <p className="px-3.5 text-sm text-neutral-secondary">{emptyMessage}</p>
       ) : (
-        <ul className="flex flex-col">
+        <ul>
           {events.map((event) => (
-            <li key={event.id}>
-              <Button
-                asChild
-                variant="text"
-                className="h-auto w-full justify-start gap-3 px-0 py-2 font-normal"
+            <li key={event.id} className="border-b border-outline">
+              <Link
+                href={`/tournaments/${event.tournament_id}/events/${event.id}`}
+                className="flex items-center gap-3 py-3 pr-2 pl-4 transition-colors hover:bg-blue-lightest"
               >
-                <Link href={`/tournaments/${event.tournament_id}/events/${event.id}`}>
-                  <p className="w-24 shrink-0 tabular-nums">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <p className="text-xs font-medium text-neutral-secondary">
                     {event.start_time ? formatTimeLabel(event.start_time) : "TBC"}
                   </p>
-                  <p className="min-w-0 flex-1 truncate">{event.name}</p>
-                  <Chip className="bg-foreground text-xs text-background">
-                    {eventStatusLabel[event.status]}
-                    <ExternalLink aria-hidden />
-                  </Chip>
-                </Link>
-              </Button>
+                  <p className="truncate text-sm font-semibold text-obsidian uppercase">
+                    {event.name}
+                  </p>
+                </div>
+                <StatusBadge status={badgeStatus[event.status]} />
+                <ChevronRight aria-hidden className="size-6 shrink-0 text-neutral-muted" />
+              </Link>
             </li>
           ))}
         </ul>
