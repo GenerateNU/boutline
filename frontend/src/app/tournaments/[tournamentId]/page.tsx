@@ -1,11 +1,7 @@
+import { Calendar, MapPin, User } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/primitives/card";
+import { Card, CardDescription, CardTitle } from "@/components/primitives/card";
 import { getEvents } from "@/features/event/services/getEvents";
 import { getTournament } from "@/features/tournament/services/getTournament";
 import { eventsWithStatus, formatEventDateRange } from "@/lib/event-schedule";
@@ -30,16 +26,23 @@ export default async function OverviewTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="rounded-lg">
-        <CardHeader>
-          <CardTitle role="heading" aria-level={1} className="font-normal">
-            {tournament.name}
-          </CardTitle>
-          {dates && <CardDescription className="text-sm">{dates}</CardDescription>}
-          {/* The backend has no venue or organizer fields yet. */}
-          <CardDescription className="text-sm">Location - TBC</CardDescription>
-          <CardDescription className="text-sm">Organizer Contact - TBC</CardDescription>
-        </CardHeader>
+      <Card className="gap-2.5">
+        <CardTitle role="heading" aria-level={1} className="text-xl text-obsidian uppercase">
+          {tournament.name}
+        </CardTitle>
+        {[
+          { icon: Calendar, text: dates },
+          { icon: MapPin, text: "Location - TBC" },
+          { icon: User, text: "Organizer Contact - TBC" },
+        ].map(
+          ({ icon: Icon, text }) =>
+            text && (
+              <CardDescription key={text} className="flex items-center gap-2 text-sm text-obsidian">
+                <Icon aria-hidden className="size-4 shrink-0 text-neutral-secondary" />
+                {text}
+              </CardDescription>
+            ),
+        )}
       </Card>
       <EventListCard
         title="Ongoing Events"
