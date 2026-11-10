@@ -46,9 +46,19 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
+import { EventListCard } from "@/app/tournaments/[tournamentId]/_components/event-list-card";
+import { EventRow } from "@/app/tournaments/[tournamentId]/_components/event-row";
 import { ClubCard } from "@/features/competitor/components/club-card";
 import { FencerCard } from "@/features/competitor/components/fencer-card";
+import { EventCard } from "@/features/event/components/event-card";
+import type { TournamentEvent } from "@/features/event/types/event";
+import { RefereeCard } from "@/features/referee/components/referee-card";
 import { RefereeRow } from "@/features/referee/components/referee-row";
+import { CreateTournamentCard } from "@/features/tournament/components/create-tournament-card";
+import { TournamentCard } from "@/features/tournament/components/tournament-card";
+import { TournamentInfoCard } from "@/features/tournament/components/tournament-info-card";
+import { TournamentResultsCard } from "@/features/tournament/components/tournament-results-card";
+import type { Tournament } from "@/features/tournament/types/tournament";
 import { ProfileTopAppBar } from "@/components/primitives/profile-top-app-bar";
 import { SubTopAppBar } from "@/components/primitives/sub-top-app-bar";
 
@@ -67,6 +77,51 @@ const hoverClasses: Record<(typeof buttonVariantNames)[number], string> = {
   tonal: "bg-blue-light",
   text: "bg-blue-lighter",
 };
+
+const demoTournament: Tournament = {
+  id: "demo",
+  name: "Northeastern Open",
+  visibility: "public",
+  code: "DEMO01",
+  status: "active",
+  created_by: "demo",
+  start_time: "2026-10-19T08:00:00Z",
+  city: "Oakland",
+  country: "US",
+  started_at: null,
+  completed_at: null,
+  created_at: "2026-10-06T00:00:00Z",
+  updated_at: "2026-10-06T00:00:00Z",
+};
+const demoResultsTournament: Tournament = {
+  ...demoTournament,
+  name: "Generate Fencing Open",
+  status: "ended",
+  city: "Boston",
+};
+
+const demoEvents: TournamentEvent[] = [
+  ["Y-12 Men's Sabre", "08:00"],
+  ["Cadet Men's Épée", "08:00"],
+  ["Junior Women's Foil", "10:00"],
+  ["Cadet Women's Épée", "10:00"],
+].map(([name, time], index) => ({
+  id: `demo-${index}`,
+  tournament_id: "demo",
+  format: "pool_then_direct_elimination",
+  name,
+  status: "active",
+  start_time: `2026-10-19T${time}:00Z`,
+  started_at: null,
+  completed_at: null,
+  created_at: "2026-10-06T00:00:00Z",
+  updated_at: "2026-10-06T00:00:00Z",
+}));
+
+const demoReferees = [
+  { id: "1", name: "Yan Wang", occupied: true, pool: "Pool 1" },
+  { id: "2", name: "Yan Wang", occupied: false, pool: "Pool 1" },
+];
 
 const demoFencer = {
   id: "demo",
@@ -282,14 +337,34 @@ export default function Home() {
       </Section>
 
       <Section title="Cards">
-        <FencerCard competitor={demoFencer} href="/" />
-        <FencerCard competitor={demoFencer} pinned={false} />
-        <FencerCard competitor={demoFencer} pinned />
-        <ClubCard team={demoClub} href="/" />
-        <ClubCard team={demoClub} pinned={false} />
-        <ClubCard team={demoClub} pinned />
-        <RefereeRow name="Yan Wang" occupied pool="Pool 1" />
-        <RefereeRow name="Yan Wang" occupied={false} pool="Pool 1" />
+        <div className="contents" onClickCapture={(event) => event.preventDefault()}>
+          <TournamentCard tournament={demoTournament} />
+          <TournamentCard tournament={{ ...demoTournament, status: "pending" }} admin />
+          <EventCard event={{ ...demoEvents[0], name: "U15 Mixed Épée", status: "ended" }} competitorCount={5} />
+          <TournamentResultsCard tournament={demoResultsTournament} eventCount={12} resultsHref="/" />
+          <CreateTournamentCard />
+          <TournamentInfoCard name="Boston Championships" dates="October 5 – October 7, 2026" />
+          <EventRow event={demoEvents[0]} />
+          <RefereeCard referees={demoReferees} />
+          <EventListCard title="Ongoing Events" events={demoEvents} emptyMessage="" />
+          <EventListCard
+            title="Upcoming Events"
+            events={demoEvents.map((event) => ({ ...event, status: "upcoming" }))}
+            emptyMessage=""
+          />
+          <EventListCard
+            title="Completed Events"
+            events={demoEvents.map((event) => ({ ...event, status: "ended" }))}
+            emptyMessage=""
+          />
+          <FencerCard competitor={demoFencer} href="/" />
+          <FencerCard competitor={demoFencer} pinned={false} />
+          <FencerCard competitor={demoFencer} pinned />
+          <ClubCard team={demoClub} href="/" />
+          <ClubCard team={demoClub} pinned={false} />
+          <ClubCard team={demoClub} pinned />
+          <RefereeRow name="Yan Wang" occupied pool="Pool 1" />
+        </div>
       </Section>
 
       <Section title="Checkbox">
