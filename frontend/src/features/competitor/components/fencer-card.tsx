@@ -10,17 +10,20 @@ import type { Competitor } from "@/types/competitor";
 
 interface FencerCardProps {
   competitor: Competitor;
-  href?: string;
   pinned?: boolean;
   // Pinning from fencer rows comes in the dashboard tickets; until a page
   // passes this, the pin is there but does nothing.
   onTogglePin?: () => void;
 }
 
-function FencerCard({ competitor, href, pinned = false, onTogglePin }: FencerCardProps) {
-  const { firstName, lastName, rating, ratingYear, team } = competitor;
+function FencerCard({ competitor, pinned = false, onTogglePin }: FencerCardProps) {
+  const { id, eventId, tournamentId, firstName, lastName, rating, ratingYear, team } = competitor;
   const name = `${firstName} ${lastName}`;
   const year = ratingYear === null ? "" : String(ratingYear).padStart(2, "0");
+  // A fencer not entered in a tournament yet has no page to link to.
+  const href =
+    tournamentId &&
+    `/tournaments/${encodeURIComponent(tournamentId)}/events/${encodeURIComponent(eventId)}/fencers/${encodeURIComponent(id)}`;
 
   const details = (
     <CardHeader className="gap-0.5">

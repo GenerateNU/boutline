@@ -43,10 +43,7 @@ export default async function FencersTab({
         <ul className="flex flex-col gap-2">
           {data.map((competitor) => (
             <li key={competitor.id}>
-              <FencerCard
-                competitor={competitor}
-                href={`/tournaments/${tournamentId}/events/${competitor.eventId}/fencers/${competitor.id}`}
-              />
+              <FencerCard competitor={competitor} />
             </li>
           ))}
         </ul>

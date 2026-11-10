@@ -26,14 +26,15 @@ describe("FencerCard", () => {
   });
 
   it.each([
-    { name: "with an href", href: "/tournaments/t1/events/e1/fencers/c-1", wantLink: true },
-    { name: "without one", href: undefined, wantLink: false },
-  ])("links $name", ({ href, wantLink }) => {
-    render(<FencerCard competitor={yan} href={href} />);
+    { name: "in a tournament", tournamentId: "t1", want: "/tournaments/t1/events/e1/fencers/c-1" },
+    { name: "with an empty tournament id", tournamentId: "", want: null },
+    { name: "without a tournament", tournamentId: undefined, want: null },
+  ])("links to the fencer's page $name", ({ tournamentId, want }) => {
+    render(<FencerCard competitor={{ ...yan, tournamentId }} />);
 
     const link = screen.queryByRole("link");
-    if (wantLink) {
-      expect(link).toHaveAttribute("href", href);
+    if (want) {
+      expect(link).toHaveAttribute("href", want);
     } else {
       expect(link).toBeNull();
     }

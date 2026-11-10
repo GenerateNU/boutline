@@ -2,17 +2,8 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/primitives/tabs";
 import { FencerCard } from "@/features/competitor/components/fencer-card";
-import { usePinnedItemsQuery } from "@/features/pinning/hooks/use-pinned-items-query";
-import type { PinnedItems } from "@/features/pinning/types/pinning";
+import { usePinnedFencers } from "@/features/pinning/hooks/use-pinned-fencers";
 import type { Competitor } from "@/types/competitor";
-
-// A fencer not entered in a tournament yet has no page to link to.
-function fencerPage({ id, eventId, tournamentId }: Competitor) {
-  if (!tournamentId) {
-    return undefined;
-  }
-  return `/tournaments/${encodeURIComponent(tournamentId)}/events/${encodeURIComponent(eventId)}/fencers/${encodeURIComponent(id)}`;
-}
 
 interface PinnedSectionProps {
   title: string;
@@ -31,25 +22,20 @@ function PinnedSection({ title, children }: PinnedSectionProps) {
 }
 
 interface FencerSectionProps {
-  items: PinnedItems;
+  fencers: Competitor[];
   onUnpin: (id: string) => void;
 }
 
-function FencerSection({ items, onUnpin }: FencerSectionProps) {
+function FencerSection({ fencers, onUnpin }: FencerSectionProps) {
   return (
     <PinnedSection title="Fencers">
-      {items.fencers.length === 0 ? (
+      {fencers.length === 0 ? (
         <p className="text-sm text-neutral-secondary">No pinned fencers yet</p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {items.fencers.map((fencer) => (
+          {fencers.map((fencer) => (
             <li key={fencer.id}>
-              <FencerCard
-                competitor={fencer}
-                href={fencerPage(fencer)}
-                pinned
-                onTogglePin={() => onUnpin(fencer.id)}
-              />
+              <FencerCard competitor={fencer} pinned onTogglePin={() => onUnpin(fencer.id)} />
             </li>
           ))}
         </ul>
@@ -76,7 +62,7 @@ interface PinnedItemsViewProps {
 }
 
 function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
-  const { items, error, unpinFencer } = usePinnedItemsQuery(tournamentId);
+  const { fencers, error, unpinFencer } = usePinnedFencers(tournamentId);
 
   if (error) {
     return (
@@ -85,7 +71,7 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
       </p>
     );
   }
-  if (!items) {
+  if (!fencers) {
     return <p className="text-sm text-neutral-secondary">Loading pins…</p>;
   }
 
@@ -98,12 +84,12 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
         <TabsTrigger value="pools">Pools</TabsTrigger>
       </TabsList>
       <TabsContent value="all" className="flex flex-col gap-6 pt-4">
-        <FencerSection items={items} onUnpin={unpinFencer} />
+        <FencerSection fencers={fencers} onUnpin={unpinFencer} />
         <EmptySection title="Clubs" />
         <EmptySection title="Pools" />
       </TabsContent>
       <TabsContent value="fencers" className="pt-4">
-        <FencerSection items={items} onUnpin={unpinFencer} />
+        <FencerSection fencers={fencers} onUnpin={unpinFencer} />
       </TabsContent>
       <TabsContent value="clubs" className="pt-4">
         <EmptySection title="Clubs" />
