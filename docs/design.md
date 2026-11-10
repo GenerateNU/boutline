@@ -148,7 +148,7 @@ how to test it.
   through the real app: routing, OpenAPI security and the auth middleware, plus
   DB-backed login, search and list-filter tests. Those skip without Postgres;
   `REQUIRE_DB=1` makes them fail instead, as CI does.
-- **Frontend:** Jest with Testing Library, 39 test files. They cover the proxy,
+- **Frontend:** Jest with Testing Library, 38 test files. They cover the proxy,
   `apiRequest`, the API services, auth actions, the search and filter components,
   pagination, pinning and the referee screen. No browser end-to-end tests yet.
 
@@ -466,11 +466,13 @@ Tabs: Overview · Fencers · Clubs · Events.
 - **Overview:** name, the date range (from its events, else `start_time`), and
   Ongoing and Upcoming event cards. Location and organizer contact read "TBC" until
   §10.1 adds them. An unknown ID is a 404.
-- **Fencers:** a searchable, paginated table of name, club and rating, from
-  `GET /competitors?tournament_id=`. The country flag is a placeholder showing US
-  for everyone.
+- **Fencers:** a searchable, paginated list of fencer cards (name, country · club,
+  rating), from `GET /competitors?tournament_id=`, each linking to the fencer's
+  page. The country is a placeholder showing US for everyone.
 - **Clubs:** a searchable, paginated table of clubs and their fencer counts, from
   `GET /tournaments/{id}/teams`.
+- Fencer cards, club rows and each pool on an event's Pooling tab have a pin
+  button that does nothing yet; the dashboard tickets wire it to pinning (§6.3).
 - **Events:** every event grouped by start time, with an accent-insensitive name
   search and a day strip that opens on today, the next day with events, or the
   last one. The strip's calendar button is disabled.

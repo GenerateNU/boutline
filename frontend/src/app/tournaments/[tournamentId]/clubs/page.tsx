@@ -1,4 +1,7 @@
+import { Pin } from "lucide-react";
+
 import { Pagination } from "@/components/primitives/pagination";
+import { PinButton } from "@/components/primitives/pin-button";
 import { Section } from "@/components/primitives/section";
 import { getTeams } from "@/features/competitor/services/getTeams";
 import { SearchForm } from "@/features/tournament/components/search-form";
@@ -53,6 +56,9 @@ export default async function ClubsTab({
               <th scope="col" className="py-2 text-right font-medium">
                 Fencers
               </th>
+              <th scope="col" className="w-10">
+                <p className="sr-only">Pin</p>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -66,6 +72,12 @@ export default async function ClubsTab({
                 </td>
                 <td className="py-3 text-right tabular-nums text-muted-foreground">
                   {competitorCount}
+                </td>
+                <td className="py-1 pl-2 text-right">
+                  {/* Pinning clubs comes in the dashboard tickets; for now the pin does nothing. */}
+                  <PinButton variant="plain" size="xs" active={false} aria-label={`Pin ${name}`}>
+                    <Pin aria-hidden />
+                  </PinButton>
                 </td>
               </tr>
             ))}

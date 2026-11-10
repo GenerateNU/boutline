@@ -1,9 +1,18 @@
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/primitives/tabs";
-import { PinnedFencerCard } from "@/features/pinning/components/pinned-fencer-card";
+import { FencerCard } from "@/features/competitor/components/fencer-card";
 import { usePinnedItemsQuery } from "@/features/pinning/hooks/use-pinned-items-query";
 import type { PinnedItems } from "@/features/pinning/types/pinning";
+import type { Competitor } from "@/types/competitor";
+
+// A fencer not entered in a tournament yet has no page to link to.
+function fencerPage({ id, eventId, tournamentId }: Competitor) {
+  if (!tournamentId) {
+    return undefined;
+  }
+  return `/tournaments/${encodeURIComponent(tournamentId)}/events/${encodeURIComponent(eventId)}/fencers/${encodeURIComponent(id)}`;
+}
 
 interface PinnedSectionProps {
   title: string;
@@ -35,7 +44,12 @@ function FencerSection({ items, onUnpin }: FencerSectionProps) {
         <ul className="flex flex-col gap-2">
           {items.fencers.map((fencer) => (
             <li key={fencer.id}>
-              <PinnedFencerCard competitor={fencer} onUnpin={() => onUnpin(fencer.id)} />
+              <FencerCard
+                competitor={fencer}
+                href={fencerPage(fencer)}
+                pinned
+                onTogglePin={() => onUnpin(fencer.id)}
+              />
             </li>
           ))}
         </ul>

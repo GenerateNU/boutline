@@ -4,7 +4,7 @@ import { Pin } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Button } from "@/components/primitives/button";
+import { PinButton } from "@/components/primitives/pin-button";
 
 interface PinsLinkButtonProps {
   tournamentId: string;
@@ -19,18 +19,14 @@ function PinsLinkButton({ tournamentId }: PinsLinkButtonProps) {
   }
 
   return (
-    <Button
-      asChild
-      size="icon"
-      className="fixed right-4 bottom-4 z-30 size-11.5 rounded-[12px] shadow-md [&_svg]:size-6"
-    >
+    <PinButton asChild variant="primary" size="sm" className="fixed right-4 bottom-4 z-30">
       <Link
         href={`/pinned?tournamentId=${encodeURIComponent(tournamentId)}`}
         aria-label="View pins"
       >
         <Pin aria-hidden />
       </Link>
-    </Button>
+    </PinButton>
   );
 }
 
