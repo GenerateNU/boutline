@@ -9,7 +9,7 @@ describe("FencerCard", () => {
   ])("renders rating $rating with club '$team'", ({ rating, team, wantClub }) => {
     render(
       <FencerCard
-        competitor={{ id: "c-1", firstName: "Yan", lastName: "Wang", rating, team }}
+        competitor={{ id: "c-1", eventId: "e1", firstName: "Yan", lastName: "Wang", rating, ratingYear: null, team }}
         href="/tournaments/t1/events/e1/fencers/c-1"
       />,
     );

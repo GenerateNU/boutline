@@ -148,7 +148,7 @@ how to test it.
   through the real app: routing, OpenAPI security and the auth middleware, plus
   DB-backed login, search and list-filter tests. Those skip without Postgres;
   `REQUIRE_DB=1` makes them fail instead, as CI does.
-- **Frontend:** Jest with Testing Library, 31 test files. They cover the proxy,
+- **Frontend:** Jest with Testing Library, 39 test files. They cover the proxy,
   `apiRequest`, the API services, auth actions, the search and filter components,
   pagination, pinning and the referee screen. No browser end-to-end tests yet.
 
@@ -559,8 +559,8 @@ can score any bout.**
 
 ## 6. Pinning
 
-**Status:** Partial. The state and the batch fetch are built; no real page has a
-pin control yet.
+**Status:** Partial. The state, the batch fetch and the pinned view are built; no
+page has a pin control yet.
 
 **What it is:** a spectator pins the fencers and bouts they care about (their
 child, their clubmates, the bout on strip 4) and sees them together, without
@@ -571,16 +571,37 @@ creating an account.
 **Status:** Completed.
 
 Pins live in the browser's `sessionStorage` (`boutline:pinned`, up to 100 fencers
-and 100 bouts), never in the database. The pinned view fetches each type in one
-request with the `ids` filter on `/competitors` and `/bouts` (§B.1).
+and 100 bouts), never in the database. The pinned view fetches the pinned fencers
+in one request with the `ids` filter on `/competitors` (§B.1). The design pins
+fencers, clubs and pools, not bouts, so pinned bouts are stored but not shown;
+whether `boutIds` should become `clubIds` and `poolIds` is open.
 
-### 6.2 Pin controls and the pinned view
+### 6.2 The pinned view
+
+**Status:** Completed.
+
+`/pinned` is "View Pins": a Back link, then tabs All / Fencers / Clubs / Pools, as
+in the Figma, with loading, empty and error states. All lists Fencers, Clubs and
+Pools in that order, under black sentence-case headings.
+
+- A fencer card is a light blue card with the name, country · club and rating,
+  linking to `/tournaments/{tournamentId}/events/{eventId}/fencers/{id}`. Fencers
+  sort by name, and the card's navy pin unpins the fencer.
+- Clubs and Pools show an empty state until clubs and pools can be pinned.
+- Every tournament page except the referee screen has a fixed pin button in the
+  bottom-right corner linking to `/pinned?tournamentId=…`, which Back returns to.
+
+Pins are stored for every tournament together, so the page shows only the pins of
+the tournament in `?tournamentId=` (the floating button always passes it), or
+every pin when it's opened without one.
+
+### 6.3 Pin controls
 
 **Status:** Planned.
 
-`/pinned` is a scaffold for testing the state: dropdowns of every fencer and bout
-with Pin/Unpin buttons. The planned version puts a pin control on fencer rows and
-bout cards, and turns `/pinned` into the viewer's list of pinned fencers and bouts.
+A pin toggle on each fencer row (pinned rows turn light blue with a navy rating
+badge and pin), on clubs and on pools, and listing pinned clubs and pools (the
+Figma's Club and Pool cards).
 
 ---
 
