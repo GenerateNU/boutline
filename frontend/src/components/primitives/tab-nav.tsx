@@ -23,9 +23,11 @@ function TabNav({ label, basePath, tabs }: TabNavProps) {
       aria-label={label}
       className="flex overflow-hidden rounded-full border border-foreground"
     >
+      {/* Tabs replace the history entry so Back leaves the page instead of stepping through tabs. */}
       {tabs.map(({ label, segment }) => (
         <Link
           key={label}
+          replace
           href={segment ? `${basePath}/${segment}` : basePath}
           aria-current={segment === activeSegment ? "page" : undefined}
           className="flex-1 border-l border-foreground px-5 py-2 text-center text-sm whitespace-nowrap outline-none transition-colors first:border-l-0 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset aria-[current=page]:text-selected"

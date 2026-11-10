@@ -431,6 +431,9 @@ from the venue floor.
 
 - **Global nav** (every page): a "Boutline" header opens a drawer with Admin Login,
   Find Private Tournament, Search Tournaments, and Settings (inert).
+- **Tabs** (tournament and event pages): each tab has its own URL, but switching
+  tabs replaces the history entry, so the browser's Back button leaves the page
+  rather than stepping back through tabs.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
 - **`/`**: quick links to login, tournaments and pinned items, then a showcase of
