@@ -4,8 +4,14 @@ import { ChevronDown, Funnel } from "lucide-react";
 import { ToggleGroup } from "radix-ui";
 import { useRef, useState } from "react";
 
-import { chipVariants } from "@/components/primitives/chip";
+import { Chip, chipVariants } from "@/components/primitives/chip";
 
+import {
+  Dropdown,
+  DropdownMessage,
+  DropdownOption,
+  DropdownSection,
+} from "@/components/primitives/dropdown";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
 import { SegmentedButton } from "@/components/primitives/segmented-button";
@@ -57,17 +63,21 @@ function FilterSheet({ visibility }: FilterSheetProps) {
   const [selectedCountry, setSelectedCountry] = useState("");
   const [countries, setCountries] = useState<Country[] | null>(null);
   const [countriesFailed, setCountriesFailed] = useState(false);
-  const [countryTerm, setCountryTerm] = useState("");
+  const [countryQuery, setCountryQuery] = useState("");
+  const [clubQuery, setClubQuery] = useState("");
   const latestRequestId = useRef(0);
 
   async function searchClubs(term: string) {
     // Typing fires overlapping requests whose responses can arrive out of
     // order, so each gets an id and only the newest one may update the list.
     const requestId = ++latestRequestId.current;
-    const query = new URLSearchParams({ limit: String(clubResultLimit) });
-    if (term) {
-      query.set("q", term);
+    // Suggestions only show while searching, so an empty box clears them.
+    if (!term) {
+      setClubs(null);
+      setClubsFailed(false);
+      return;
     }
+    const query = new URLSearchParams({ limit: String(clubResultLimit), q: term });
     try {
       const result = await apiRequest<TeamListResult>(`/clubs?${query}`);
       if (requestId !== latestRequestId.current) {
@@ -98,17 +108,11 @@ function FilterSheet({ visibility }: FilterSheetProps) {
 
   const [debouncedSearchClubs, cancelClubSearch] = useDebouncedCallback(searchClubs, debounceMs);
 
-  // The active club may not be in the current results, and it needs a chip so
-  // it can be seen and cleared. ClubOptions only reads the name.
-  const selectedClubMissing =
-    clubs !== null && selectedClub !== "" && !clubs.some(({ name }) => name === selectedClub);
-  const shownClubs = selectedClubMissing
-    ? [{ name: selectedClub, competitorCount: 0 }, ...clubs]
-    : clubs;
-
+  const countryTerm = countryQuery.trim().toLowerCase();
   const shownCountries =
-    countries &&
-    countries.filter(({ code }) => countryName(code).toLowerCase().includes(countryTerm));
+    countries && countryTerm
+      ? countries.filter(({ code }) => countryName(code).toLowerCase().includes(countryTerm))
+      : null;
 
   return (
     <FilterSheetDialog
@@ -118,7 +122,8 @@ function FilterSheet({ visibility }: FilterSheetProps) {
           setStatus(searchParams.get("status") ?? "");
           setSelectedClub(searchParams.get("club") ?? "");
           setSelectedCountry(searchParams.get("country") ?? "");
-          setCountryTerm("");
+          setCountryQuery("");
+          setClubQuery("");
           void searchClubs("");
           void loadCountries();
         }
@@ -138,7 +143,8 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         setDistance("");
         setSelectedClub("");
         setSelectedCountry("");
-        setCountryTerm("");
+        setCountryQuery("");
+        setClubQuery("");
         // The form reset empties the club searchbox, so the list must match it.
         cancelClubSearch();
         void searchClubs("");
@@ -152,27 +158,58 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         setOpen(false);
       }}
     >
+      {(selectedCountry || selectedClub) && (
+        <div className="flex flex-wrap gap-2">
+          {selectedCountry && (
+            <Chip
+              onDismiss={() => setSelectedCountry("")}
+              dismissLabel={`Remove ${countryName(selectedCountry)}`}
+            >
+              {countryName(selectedCountry)}
+            </Chip>
+          )}
+          {selectedClub && (
+            <Chip onDismiss={() => setSelectedClub("")} dismissLabel={`Remove ${selectedClub}`}>
+              {selectedClub}
+            </Chip>
+          )}
+        </div>
+      )}
+
       <FilterSearchField
-        label="Club"
-        onChange={(event) => debouncedSearchClubs(event.target.value.trim())}
+        label="Country"
+        value={countryQuery}
+        onChange={(event) => setCountryQuery(event.target.value)}
       >
-        <ClubOptions
-          clubs={shownClubs}
-          failed={clubsFailed}
-          selectedClub={selectedClub}
-          onToggleClub={(name) => setSelectedClub(name === selectedClub ? "" : name)}
+        <CountryOptions
+          countries={shownCountries}
+          failed={countriesFailed && countryTerm !== ""}
+          selectedCountry={selectedCountry}
+          onPickCountry={(code) => {
+            setSelectedCountry(code);
+            setCountryQuery("");
+          }}
         />
       </FilterSearchField>
 
       <FilterSearchField
-        label="Country"
-        onChange={(event) => setCountryTerm(event.target.value.trim().toLowerCase())}
+        label="Club"
+        value={clubQuery}
+        onChange={(event) => {
+          setClubQuery(event.target.value);
+          debouncedSearchClubs(event.target.value.trim());
+        }}
       >
-        <CountryOptions
-          countries={shownCountries}
-          failed={countriesFailed}
-          selectedCountry={selectedCountry}
-          onSelectCountry={setSelectedCountry}
+        <ClubOptions
+          clubs={clubs}
+          failed={clubsFailed}
+          selectedClub={selectedClub}
+          onPickClub={(name) => {
+            setSelectedClub(name);
+            setClubQuery("");
+            cancelClubSearch();
+            void searchClubs("");
+          }}
         />
       </FilterSearchField>
 
@@ -199,33 +236,37 @@ interface CountryOptionsProps {
   countries: Country[] | null;
   failed: boolean;
   selectedCountry: string;
-  onSelectCountry: (code: string) => void;
+  onPickCountry: (code: string) => void;
 }
 
-function CountryOptions({ countries, failed, selectedCountry, onSelectCountry }: CountryOptionsProps) {
+function CountryOptions({ countries, failed, selectedCountry, onPickCountry }: CountryOptionsProps) {
   if (failed) {
-    return <p className="text-sm text-muted-foreground">Couldn’t load countries.</p>;
+    return (
+      <Dropdown>
+        <DropdownMessage>Couldn’t load countries.</DropdownMessage>
+      </Dropdown>
+    );
   }
   if (countries === null) {
     return null;
   }
   if (countries.length === 0) {
-    return <p className="text-sm text-muted-foreground">No countries match.</p>;
+    return (
+      <Dropdown>
+        <DropdownMessage>No countries match.</DropdownMessage>
+      </Dropdown>
+    );
   }
   return (
-    <SegmentedButton
-      type="single"
-      aria-label="Countries"
-      value={selectedCountry}
-      onValueChange={onSelectCountry}
-      className="flex flex-wrap gap-2 overflow-visible rounded-none border-0 pt-1"
-    >
-      {countries.map(({ code }) => (
-        <ToggleGroup.Item key={code} value={code} className={optionClassName}>
-          {countryName(code)}
-        </ToggleGroup.Item>
-      ))}
-    </SegmentedButton>
+    <Dropdown>
+      <DropdownSection>
+        {countries.map(({ code }) => (
+          <DropdownOption key={code} selected={code === selectedCountry} onClick={() => onPickCountry(code)}>
+            {countryName(code)}
+          </DropdownOption>
+        ))}
+      </DropdownSection>
+    </Dropdown>
   );
 }
 

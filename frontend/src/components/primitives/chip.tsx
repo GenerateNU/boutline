@@ -19,6 +19,7 @@ interface ChipProps extends React.ComponentProps<"div"> {
   icon?: React.ReactNode;
   dismissible?: boolean;
   onDismiss?: () => void;
+  dismissLabel?: string;
   dropdown?: boolean;
   selected?: boolean;
 }
@@ -28,6 +29,7 @@ function Chip({
   icon,
   dismissible,
   onDismiss,
+  dismissLabel = "Remove",
   dropdown,
   selected,
   children,
@@ -52,7 +54,7 @@ function Chip({
       {removable ? (
         <button
           type="button"
-          aria-label="Remove"
+          aria-label={dismissLabel}
           onClick={onDismiss}
           className="cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >

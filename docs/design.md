@@ -450,7 +450,9 @@ from the venue floor.
 - **Filter sheet:** Status, Club and Country work; Distance is inert, since
   tournaments have no coordinates (#122). Club suggests names from `GET /clubs` and
   sets `?club=`; Country offers only countries that have tournaments, from
-  `GET /countries`, and sets `?country=` to the code.
+  `GET /countries`, and sets `?country=` to the code. Suggestions appear only while
+  typing, in a dropdown under the search bar, and picked values show as removable filter tags at the top of the sheet.
+  Sections follow the Figma order: Country, Club, Distance, Tournament Status.
 - A "Create tournament" card links to the creation form when the viewer has a
   session cookie.
 - Each card shows the tournament's city and country code (e.g. "Boston, US"), or
@@ -1512,7 +1514,7 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   `ring-blue-lighter` halo on focus or open, `border-red-dark` when `aria-invalid`,
   and `bg-disabled` when disabled. Select is Radix Select; the date field opens the
   calendar in a Radix Popover.
-- Overlays: Modal is a `rounded-xl p-4` card with a title and close (X) header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a filled or `destructive` action). The filter sheet is a bottom sheet whose sections are a label above a SearchBar-styled `FilterSearchField` or a row of chip-styled options (`chipVariants({ variant: "option" })`), with a full-width Clear All (`blue-lightest`) and a filled submit. The toast is a single obsidian row with white `text-sm`, a leading icon, an `accent-green` action, and no close button.
+- Overlays: Modal is a `rounded-xl p-4` card with a title and close (X) header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a filled or `destructive` action). The filter sheet is a bottom sheet whose sections are a label above a `FilterSearchField` (a SearchBar whose suggestions open in a `Dropdown` of `DropdownOption` rows) or a row of chip-styled options (`chipVariants({ variant: "option" })`), with a full-width Clear All (`blue-lightest`) and a filled submit. The toast is a single obsidian row with white `text-sm`, a leading icon, an `accent-green` action, and no close button.
 - Many are only used by the `/` showcase so far.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.

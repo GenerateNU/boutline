@@ -1,39 +1,47 @@
-import { chipVariants } from "@/components/primitives/chip";
+import {
+  Dropdown,
+  DropdownMessage,
+  DropdownOption,
+  DropdownSection,
+} from "@/components/primitives/dropdown";
 import type { Team } from "@/types/competitor";
 
 interface ClubOptionsProps {
   clubs: Team[] | null;
   failed: boolean;
   selectedClub: string;
-  onToggleClub: (name: string) => void;
+  onPickClub: (name: string) => void;
 }
 
-function ClubOptions({ clubs, failed, selectedClub, onToggleClub }: ClubOptionsProps) {
+function ClubOptions({ clubs, failed, selectedClub, onPickClub }: ClubOptionsProps) {
   if (failed) {
-    return <p className="text-sm text-muted-foreground">Couldn’t load clubs.</p>;
+    return (
+      <Dropdown>
+        <DropdownMessage>Couldn’t load clubs.</DropdownMessage>
+      </Dropdown>
+    );
   }
   // null until the first search answers, so nothing flashes "No clubs match."
   if (clubs === null) {
     return null;
   }
   if (clubs.length === 0) {
-    return <p className="text-sm text-muted-foreground">No clubs match.</p>;
+    return (
+      <Dropdown>
+        <DropdownMessage>No clubs match.</DropdownMessage>
+      </Dropdown>
+    );
   }
   return (
-    <ul className="flex flex-wrap gap-2 pt-1">
-      {clubs.map(({ name }) => (
-        <li key={name}>
-          <button
-            type="button"
-            aria-pressed={name === selectedClub}
-            onClick={() => onToggleClub(name)}
-            className={chipVariants({ variant: "option" })}
-          >
+    <Dropdown>
+      <DropdownSection>
+        {clubs.map(({ name }) => (
+          <DropdownOption key={name} selected={name === selectedClub} onClick={() => onPickClub(name)}>
             {name}
-          </button>
-        </li>
-      ))}
-    </ul>
+          </DropdownOption>
+        ))}
+      </DropdownSection>
+    </Dropdown>
   );
 }
 

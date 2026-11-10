@@ -33,6 +33,12 @@ function respond(path: string) {
   };
 }
 
+function typeInto(name: string, value: string) {
+  const box = screen.getByRole("searchbox", { name });
+  fireEvent.focus(box);
+  fireEvent.change(box, { target: { value } });
+}
+
 async function openSheet(visibility?: "public" | "private") {
   render(<FilterSheet visibility={visibility} />);
   await act(async () => {
@@ -48,25 +54,55 @@ describe("FilterSheet", () => {
     currentParams = new URLSearchParams();
   });
 
-  it("loads clubs and visibility-scoped countries on open", async () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("loads countries on open but shows no suggestions until typing", async () => {
     await openSheet("public");
 
-    expect(apiRequestMock).toHaveBeenCalledWith("/clubs?limit=10");
-    expect(apiRequestMock).toHaveBeenCalledWith("/countries?visibility=public");
-    expect(screen.getByRole("button", { name: "Salle Nord" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "France" })).toBeInTheDocument();
+    expect(apiRequestMock.mock.calls.map(([path]) => path)).toEqual(["/countries?visibility=public"]);
+    expect(screen.queryByRole("button", { name: "Salle Nord" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "France" })).not.toBeInTheDocument();
+  });
+
+  it("lists Country before Club, as in the Figma", async () => {
+    await openSheet();
+
+    expect(screen.getAllByRole("searchbox").map((box) => box.getAttribute("aria-label"))).toEqual([
+      "Country",
+      "Club",
+    ]);
   });
 
   it("sets club and country params on submit", async () => {
+    jest.useFakeTimers();
     await openSheet();
 
+    typeInto("Club", "sal");
+    await act(async () => {
+      jest.advanceTimersByTime(300);
+    });
     fireEvent.click(screen.getByRole("button", { name: "Salle Nord" }));
-    fireEvent.click(screen.getByRole("radio", { name: "France" }));
+    typeInto("Country", "fran");
+    fireEvent.click(screen.getByRole("button", { name: "France" }));
     fireEvent.click(screen.getByRole("button", { name: "Show Tournaments" }));
 
     expect(replace).toHaveBeenLastCalledWith("/tournaments?club=Salle+Nord&country=FR", {
       scroll: false,
     });
+  });
+
+  it("shows picked filters as tags that can be removed", async () => {
+    currentParams = new URLSearchParams("club=Tokyo+Fencing+Club&country=FR");
+    await openSheet();
+
+    expect(screen.getByText("France")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove Tokyo Fencing Club" }));
+    expect(screen.queryByText("Tokyo Fencing Club")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show Tournaments" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/tournaments?country=FR", { scroll: false });
   });
 
   it("clears club and country on Clear All", async () => {
@@ -79,34 +115,19 @@ describe("FilterSheet", () => {
     expect(replace).toHaveBeenLastCalledWith("/tournaments?query=open", { scroll: false });
   });
 
-  it("cancels a pending club search and reloads all clubs on Clear All", async () => {
+  it("cancels a pending club search on Clear All", async () => {
     jest.useFakeTimers();
     await openSheet();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Club" }), {
-      target: { value: "Sal" },
-    });
+    typeInto("Club", "Sal");
     apiRequestMock.mockClear();
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
       jest.advanceTimersByTime(300);
     });
 
-    expect(apiRequestMock.mock.calls.map(([path]) => path)).toEqual(["/clubs?limit=10"]);
-    jest.useRealTimers();
-  });
-
-  it("shows the active club even when it is not in the search results", async () => {
-    currentParams = new URLSearchParams("club=Tokyo+Fencing+Club");
-    await openSheet();
-
-    const chip = screen.getByRole("button", { name: "Tokyo Fencing Club" });
-    expect(chip).toHaveAttribute("aria-pressed", "true");
-
-    fireEvent.click(chip);
-    fireEvent.click(screen.getByRole("button", { name: "Show Tournaments" }));
-
-    expect(replace).toHaveBeenLastCalledWith("/tournaments", { scroll: false });
+    expect(apiRequestMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Salle Nord" })).not.toBeInTheDocument();
   });
 
   it("skips malformed country codes instead of crashing", async () => {
@@ -116,8 +137,9 @@ describe("FilterSheet", () => {
         : respond(String(path))) as never,
     );
     await openSheet();
+    typeInto("Country", "fr");
 
-    expect(screen.getByRole("radio", { name: "France" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "France" })).toBeInTheDocument();
     expect(screen.queryByText("USA")).not.toBeInTheDocument();
   });
 
@@ -127,13 +149,11 @@ describe("FilterSheet", () => {
   ])("filters country chips by $term", async ({ term, want, hidden }) => {
     await openSheet();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Country" }), {
-      target: { value: term },
-    });
+    typeInto("Country", term);
 
-    expect(screen.getByRole("radio", { name: want })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: want })).toBeInTheDocument();
     for (const name of hidden) {
-      expect(screen.queryByRole("radio", { name })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
   });
 });

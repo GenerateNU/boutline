@@ -77,6 +77,24 @@ interface ToastOptions {
   duration?: number;
 }
 
+interface ToastItemProps extends React.ComponentProps<typeof ToastPrimitive.Root> {
+  options: ToastOptions;
+}
+
+function ToastItem({ options: { description, icon, action }, ...props }: ToastItemProps) {
+  return (
+    <Toast {...props}>
+      {icon}
+      <ToastDescription>{description}</ToastDescription>
+      {action && (
+        <ToastAction altText={action.altText} onClick={action.onClick}>
+          {action.label}
+        </ToastAction>
+      )}
+    </Toast>
+  );
+}
+
 interface QueuedToast extends ToastOptions {
   id: number;
 }
@@ -106,28 +124,38 @@ function Toaster({ children }: ToasterProps) {
     <ToastContext value={toast}>
       <ToastPrimitive.Provider>
         {children}
-        {toasts.map(({ id, description, icon, action, duration }) => (
-          <Toast
-            key={id}
-            duration={duration}
+        {toasts.map((queued) => (
+          <ToastItem
+            key={queued.id}
+            options={queued}
+            duration={queued.duration}
             onOpenChange={(open) => {
               if (!open) {
-                dismiss(id);
+                dismiss(queued.id);
               }
             }}
-          >
-            {icon}
-            <ToastDescription>{description}</ToastDescription>
-            {action && (
-              <ToastAction altText={action.altText} onClick={action.onClick}>
-                {action.label}
-              </ToastAction>
-            )}
-          </Toast>
+          />
         ))}
         <ToastViewport />
       </ToastPrimitive.Provider>
     </ToastContext>
+  );
+}
+
+interface ToastPreviewProps {
+  toasts: ToastOptions[];
+}
+
+// Keeps toasts open in the page (e.g. the gallery) instead of popping them up at
+// the bottom of the screen.
+function ToastPreview({ toasts }: ToastPreviewProps) {
+  return (
+    <ToastPrimitive.Provider>
+      {toasts.map((options, index) => (
+        <ToastItem key={index} options={options} open duration={Infinity} />
+      ))}
+      <ToastViewport className="static w-full translate-x-0 p-0" />
+    </ToastPrimitive.Provider>
   );
 }
 
@@ -139,4 +167,4 @@ function useToast() {
   return { toast };
 }
 
-export { Toaster, useToast, type ToastOptions };
+export { Toaster, ToastPreview, useToast, type ToastOptions };

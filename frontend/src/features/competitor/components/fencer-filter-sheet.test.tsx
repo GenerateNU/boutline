@@ -24,6 +24,15 @@ function teams(...names: string[]) {
   };
 }
 
+async function search(term: string) {
+  const box = screen.getByRole("searchbox", { name: "Club" });
+  fireEvent.focus(box);
+  fireEvent.change(box, { target: { value: term } });
+  await act(async () => {
+    jest.advanceTimersByTime(300);
+  });
+}
+
 async function openSheet() {
   render(<FencerFilterSheet tournamentId="t 1" />);
   await act(async () => {
@@ -44,16 +53,18 @@ describe("FencerFilterSheet", () => {
     jest.useRealTimers();
   });
 
+  it("shows no club suggestions until typing", async () => {
+    await openSheet();
+
+    expect(apiRequestMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Salle Nord" })).not.toBeInTheDocument();
+  });
+
   it("filters by a club found through search", async () => {
     await openSheet();
     apiRequestMock.mockResolvedValue(teams("Salle Nord"));
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Club" }), {
-      target: { value: "nord" },
-    });
-    await act(async () => {
-      jest.advanceTimersByTime(300);
-    });
+    await search("nord");
     fireEvent.click(screen.getByRole("button", { name: "Salle Nord" }));
     fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
 
@@ -61,33 +72,26 @@ describe("FencerFilterSheet", () => {
     expect(replace).toHaveBeenLastCalledWith("/fencers?team=Salle+Nord", { scroll: false });
   });
 
-  it("drops the club from the URL after Clear All", async () => {
+  it("shows the picked club as a tag and drops it after Clear All", async () => {
     currentParams = new URLSearchParams("team=Salle+Nord&q=wang");
     await openSheet();
-    expect(screen.getByRole("button", { name: "Salle Nord" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(screen.getByRole("button", { name: "Remove Salle Nord" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
-    expect(screen.getByRole("button", { name: "Salle Nord" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    expect(screen.queryByText("Salle Nord")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
 
     expect(replace).toHaveBeenLastCalledWith("/fencers?q=wang", { scroll: false });
   });
 
-  it("deselects a selected club when clicked again", async () => {
+  it("picking a club adds a tag and clears the search", async () => {
     await openSheet();
-    const club = screen.getByRole("button", { name: "Boston Blade Club" });
+    await search("b");
 
-    fireEvent.click(club);
-    expect(club).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(club);
+    fireEvent.click(screen.getByRole("button", { name: "Boston Blade Club" }));
 
-    expect(club).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Remove Boston Blade Club" })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Club" })).toHaveValue("");
   });
 
   it.each([
@@ -104,6 +108,7 @@ describe("FencerFilterSheet", () => {
   ])("shows a message for $name", async ({ setup, want }) => {
     setup();
     await openSheet();
+    await search("x");
 
     expect(screen.getByText(want)).toBeInTheDocument();
   });

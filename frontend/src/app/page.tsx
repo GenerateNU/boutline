@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { Suspense, useRef, useState } from "react";
 import {
-  CircleCheck,
-  CircleX,
+  Check,
+  CircleUserRound,
   CloudUpload,
   Ellipsis,
   EllipsisVertical,
@@ -15,9 +15,9 @@ import {
   Settings,
   Shapes,
   Swords,
-  CircleUserRound,
   UserRound,
   UsersRound,
+  X,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
@@ -67,7 +67,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/primitives/tabs";
 import { Tag } from "@/components/primitives/tag";
 import { TextField } from "@/components/primitives/text-field";
 import { UploadDialog, uploadAccept, type UploadFile } from "@/components/primitives/upload-dialog";
-import { useToast } from "@/components/primitives/toast";
+import { ToastPreview, useToast } from "@/components/primitives/toast";
 import { Toggle } from "@/components/primitives/toggle";
 import {
   Tooltip,
@@ -264,9 +264,9 @@ function UploadDialogDemo() {
 const undo = { label: "Undo", altText: "Undo" };
 
 const sampleToasts = [
-  { description: "Pins saved", icon: <CircleCheck className="text-accent-green" />, action: undo },
-  { description: "Pinned Pool 1 · Strip 3", icon: <Pin />, action: undo },
-  { description: "Code not found", icon: <CircleX className="fill-red-dark text-white" /> },
+  { description: "Pins saved", icon: <Check className="text-accent-green" />, action: undo },
+  { description: "Pinned Pool 1 · Strip 3", icon: <Pin className="text-blue-light" />, action: undo },
+  { description: "Code not found", icon: <X className="text-red-dark" />, action: undo },
 ];
 
 function PrivateTournamentDemo() {
@@ -708,17 +708,10 @@ export default function Home() {
       </Section>
 
       <Section title="Toast">
-        <div className="flex flex-wrap gap-3">
-          {sampleToasts.map((options) => (
-            <Button
-              key={options.description}
-              variant="outline"
-              onClick={() => toast(options)}
-            >
-              {options.description}
-            </Button>
-          ))}
-        </div>
+        <ToastPreview toasts={sampleToasts} />
+        <Button variant="outline" className="self-start" onClick={() => toast(sampleToasts[0])}>
+          Show a toast
+        </Button>
       </Section>
 
       <Section title="Modal">

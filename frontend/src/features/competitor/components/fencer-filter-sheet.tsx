@@ -3,6 +3,7 @@
 import { Funnel } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { Chip } from "@/components/primitives/chip";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
 import { ClubOptions } from "@/features/competitor/components/club-options";
@@ -22,6 +23,7 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
   const { searchParams, setFilters } = useTournamentFilters();
   const [open, setOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState("");
+  const [clubQuery, setClubQuery] = useState("");
   const [clubs, setClubs] = useState<Team[] | null>(null);
   const [clubsFailed, setClubsFailed] = useState(false);
   const latestRequestId = useRef(0);
@@ -30,10 +32,13 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
     // Typing fires overlapping requests whose responses can arrive out of
     // order, so each gets an id and only the newest one may update the list.
     const requestId = ++latestRequestId.current;
-    const query = new URLSearchParams({ limit: String(clubResultLimit) });
-    if (term) {
-      query.set("q", term);
+    // Suggestions only show while searching, so an empty box clears them.
+    if (!term) {
+      setClubs(null);
+      setClubsFailed(false);
+      return;
     }
+    const query = new URLSearchParams({ limit: String(clubResultLimit), q: term });
     try {
       const result = await apiRequest<TeamListResult>(
         `/tournaments/${encodeURIComponent(tournamentId)}/teams?${query}`,
@@ -51,7 +56,7 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
     }
   }
 
-  const [debouncedSearchClubs] = useDebouncedCallback(searchClubs, debounceMs);
+  const [debouncedSearchClubs, cancelClubSearch] = useDebouncedCallback(searchClubs, debounceMs);
 
   return (
     <FilterSheetDialog
@@ -61,6 +66,7 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         // "Show Fencers" throws the unsaved pick away.
         if (next) {
           setSelectedClub(searchParams.get("team") ?? "");
+          setClubQuery("");
           void searchClubs("");
         }
         setOpen(next);
@@ -69,15 +75,33 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
       triggerIcon={<Funnel className="size-5! text-brand" />}
       description="Narrow the fencer list"
       submitLabel="Show Fencers"
-      onReset={() => setSelectedClub("")}
+      onReset={() => {
+        setSelectedClub("");
+        setClubQuery("");
+        // The form reset empties the club searchbox, so the list must match it.
+        cancelClubSearch();
+        void searchClubs("");
+      }}
       onSubmit={() => {
         setFilters({ team: selectedClub || undefined });
         setOpen(false);
       }}
     >
+      {selectedClub && (
+        <div className="flex flex-wrap gap-2">
+          <Chip onDismiss={() => setSelectedClub("")} dismissLabel={`Remove ${selectedClub}`}>
+            {selectedClub}
+          </Chip>
+        </div>
+      )}
+
       <FilterSearchField
         label="Club"
-        onChange={(event) => debouncedSearchClubs(event.target.value.trim())}
+        value={clubQuery}
+        onChange={(event) => {
+          setClubQuery(event.target.value);
+          debouncedSearchClubs(event.target.value.trim());
+        }}
       >
         {/* The fencer list's team filter is an exact match, so a club has to
             be picked from these fuzzy matches rather than typed in. */}
@@ -85,7 +109,12 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
           clubs={clubs}
           failed={clubsFailed}
           selectedClub={selectedClub}
-          onToggleClub={(name) => setSelectedClub(name === selectedClub ? "" : name)}
+          onPickClub={(name) => {
+            setSelectedClub(name);
+            setClubQuery("");
+            cancelClubSearch();
+            void searchClubs("");
+          }}
         />
       </FilterSearchField>
     </FilterSheetDialog>

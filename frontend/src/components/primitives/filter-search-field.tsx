@@ -5,7 +5,7 @@ interface FilterSearchFieldProps extends Omit<React.ComponentProps<"input">, "ty
   children?: React.ReactNode;
 }
 
-// children render under the input, e.g. the matches for what was typed.
+// children open in the search bar's dropdown, e.g. the matches for what was typed.
 function FilterSearchField({ label, children, ...inputProps }: FilterSearchFieldProps) {
   return (
     <div data-slot="filter-search-field" className="flex flex-col gap-2">
@@ -14,10 +14,10 @@ function FilterSearchField({ label, children, ...inputProps }: FilterSearchField
         type="search"
         aria-label={label}
         placeholder={`Search ${label.toLowerCase()}`}
-        expanded={false}
         {...inputProps}
-      />
-      {children}
+      >
+        {children}
+      </SearchBar>
     </div>
   );
 }
