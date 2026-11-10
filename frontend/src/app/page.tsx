@@ -46,6 +46,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
+import { ClubCard } from "@/features/competitor/components/club-card";
+import { FencerCard } from "@/features/competitor/components/fencer-card";
+import { RefereeRow } from "@/features/referee/components/referee-row";
 import { ProfileTopAppBar } from "@/components/primitives/profile-top-app-bar";
 import { SubTopAppBar } from "@/components/primitives/sub-top-app-bar";
 
@@ -64,6 +67,15 @@ const hoverClasses: Record<(typeof buttonVariantNames)[number], string> = {
   tonal: "bg-blue-light",
   text: "bg-blue-lighter",
 };
+
+const demoFencer = {
+  id: "demo",
+  firstName: "Annika",
+  lastName: "Kim",
+  rating: "A26",
+  team: "Boston Blade Club",
+};
+const demoClub = { name: "Boston Blade Club", competitorCount: 12 };
 
 const barItems = Array.from({ length: 5 }, (_, index) => ({
   id: `bar-${index}`,
@@ -267,6 +279,17 @@ export default function Home() {
           <Stat value="1" label="Pool" />
           <Stat value="3" label="Strip" />
         </StatRow>
+      </Section>
+
+      <Section title="Cards">
+        <FencerCard competitor={demoFencer} href="/" />
+        <FencerCard competitor={demoFencer} pinned={false} />
+        <FencerCard competitor={demoFencer} pinned />
+        <ClubCard team={demoClub} href="/" />
+        <ClubCard team={demoClub} pinned={false} />
+        <ClubCard team={demoClub} pinned />
+        <RefereeRow name="Yan Wang" occupied pool="Pool 1" />
+        <RefereeRow name="Yan Wang" occupied={false} pool="Pool 1" />
       </Section>
 
       <Section title="Checkbox">
