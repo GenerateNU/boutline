@@ -433,7 +433,8 @@ from the venue floor.
   Find Private Tournament, Search Tournaments, and Settings (inert).
 - **Tabs** (tournament and event pages): each tab has its own URL, but switching
   tabs replaces the history entry, so the browser's Back button leaves the page
-  rather than stepping back through tabs.
+  rather than stepping back through tabs. The exception is the active tab clicked
+  from a page nested under it (an event's Events tab), which adds an entry.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
 - **`/`**: quick links to login, tournaments and pinned items, then a showcase of
