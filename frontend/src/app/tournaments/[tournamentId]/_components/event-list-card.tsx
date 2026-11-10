@@ -1,16 +1,7 @@
-import { ChevronRight } from "lucide-react";
-import Link from "next/link";
-
 import { Card, CardTitle } from "@/components/primitives/card";
-import { StatusBadge, type Status } from "@/components/primitives/status-badge";
-import type { EventStatus, TournamentEvent } from "@/features/event/types/event";
-import { formatTimeLabel } from "@/lib/event-schedule";
+import type { TournamentEvent } from "@/features/event/types/event";
 
-const badgeStatus: Record<EventStatus, Status> = {
-  upcoming: "not-started",
-  active: "in-progress",
-  ended: "completed",
-};
+import { EventRow } from "./event-row";
 
 interface EventListCardProps {
   title: string;
@@ -29,22 +20,8 @@ function EventListCard({ title, events, emptyMessage }: EventListCardProps) {
       ) : (
         <ul>
           {events.map((event) => (
-            <li key={event.id} className="border-b border-outline">
-              <Link
-                href={`/tournaments/${event.tournament_id}/events/${event.id}`}
-                className="flex items-center gap-3 py-3 pr-2 pl-4 transition-colors hover:bg-blue-lightest"
-              >
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <p className="text-xs font-medium text-neutral-secondary">
-                    {event.start_time ? formatTimeLabel(event.start_time) : "TBC"}
-                  </p>
-                  <p className="truncate text-sm font-semibold text-obsidian uppercase">
-                    {event.name}
-                  </p>
-                </div>
-                <StatusBadge status={badgeStatus[event.status]} />
-                <ChevronRight aria-hidden className="size-6 shrink-0 text-neutral-muted" />
-              </Link>
+            <li key={event.id}>
+              <EventRow event={event} />
             </li>
           ))}
         </ul>
