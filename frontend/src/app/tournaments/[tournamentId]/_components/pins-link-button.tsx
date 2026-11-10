@@ -22,7 +22,7 @@ function PinsLinkButton({ tournamentId }: PinsLinkButtonProps) {
     <Button
       asChild
       size="icon"
-      className="fixed right-4 bottom-4 z-30 shadow-md"
+      className="fixed right-4 bottom-4 z-30 size-11.5 rounded-[12px] shadow-md [&_svg]:size-6"
     >
       <Link
         href={`/pinned?tournamentId=${encodeURIComponent(tournamentId)}`}
