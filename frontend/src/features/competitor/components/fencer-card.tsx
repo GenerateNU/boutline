@@ -16,9 +16,9 @@ function FencerCard({ competitor, ...props }: FencerCardProps) {
     <ListCard
       title={`${firstName} ${lastName}`}
       description={
-        <span className="uppercase">
+        <p className="truncate uppercase">
           <MockCountry /> · {team || "No club"}
-        </span>
+        </p>
       }
       badge={<RatingBadge tone={props.pinned ? "filled" : "subtle"}>{rating}</RatingBadge>}
       {...props}
