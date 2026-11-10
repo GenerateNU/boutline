@@ -483,8 +483,8 @@ Tabs: Overview · Fencers · Clubs · Events.
 
 Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers.
 
-- **Fencers** (Completed): search, pagination, and a club filter sheet whose picker
-  searches the tournament's clubs. It lists every fencer in the tournament, since
+- **Fencers** (Completed): search, pagination, and a filter sheet with Fencer (sets
+  `?q=`) and Club (sets `?team=`) searches, each picked from a dropdown of matches. It lists every fencer in the tournament, since
   competitors don't belong to an event yet (§8.4). Rows link to a fencer page,
   which is placeholder text.
 - **Pooling** and **Tableau** (Placeholder): a bout list from a hardcoded fixture,

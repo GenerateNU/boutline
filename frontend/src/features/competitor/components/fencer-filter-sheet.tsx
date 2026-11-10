@@ -1,19 +1,17 @@
 "use client";
 
 import { Funnel } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import { Chip } from "@/components/primitives/chip";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
-import { ClubOptions } from "@/features/competitor/components/club-options";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
-import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
+import { useSearchSuggestions } from "@/lib/hooks/use-search-suggestions";
 import { apiRequest } from "@/services/api-request";
-import type { Team, TeamListResult } from "@/types/competitor";
+import type { CompetitorListResult, TeamListResult } from "@/types/competitor";
 
-const debounceMs = 300;
-const clubResultLimit = 10;
+const suggestionLimit = 10;
 
 interface FencerFilterSheetProps {
   tournamentId: string;
@@ -22,52 +20,40 @@ interface FencerFilterSheetProps {
 function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
   const { searchParams, setFilters } = useTournamentFilters();
   const [open, setOpen] = useState(false);
+  const [selectedFencer, setSelectedFencer] = useState("");
   const [selectedClub, setSelectedClub] = useState("");
-  const [clubQuery, setClubQuery] = useState("");
-  const [clubs, setClubs] = useState<Team[] | null>(null);
-  const [clubsFailed, setClubsFailed] = useState(false);
-  const latestRequestId = useRef(0);
 
-  async function searchClubs(term: string) {
-    // Typing fires overlapping requests whose responses can arrive out of
-    // order, so each gets an id and only the newest one may update the list.
-    const requestId = ++latestRequestId.current;
-    // Suggestions only show while searching, so an empty box clears them.
-    if (!term) {
-      setClubs(null);
-      setClubsFailed(false);
-      return;
-    }
-    const query = new URLSearchParams({ limit: String(clubResultLimit), q: term });
-    try {
-      const result = await apiRequest<TeamListResult>(
-        `/tournaments/${encodeURIComponent(tournamentId)}/teams?${query}`,
-      );
-      if (requestId !== latestRequestId.current) {
-        return;
-      }
-      setClubs(result.data);
-      setClubsFailed(false);
-    } catch {
-      if (requestId !== latestRequestId.current) {
-        return;
-      }
-      setClubsFailed(true);
-    }
-  }
-
-  const [debouncedSearchClubs, cancelClubSearch] = useDebouncedCallback(searchClubs, debounceMs);
+  const fencerSearch = useSearchSuggestions(async (term) => {
+    const query = new URLSearchParams({
+      tournament_id: tournamentId,
+      limit: String(suggestionLimit),
+      q: term,
+    });
+    const result = await apiRequest<CompetitorListResult>(`/competitors?${query}`);
+    return result.data.map(({ firstName, lastName }) => {
+      const name = `${firstName} ${lastName}`;
+      return { value: name, label: name };
+    });
+  });
+  const clubSearch = useSearchSuggestions(async (term) => {
+    const query = new URLSearchParams({ limit: String(suggestionLimit), q: term });
+    const result = await apiRequest<TeamListResult>(
+      `/tournaments/${encodeURIComponent(tournamentId)}/teams?${query}`,
+    );
+    return result.data.map(({ name }) => ({ value: name, label: name }));
+  });
 
   return (
     <FilterSheetDialog
       open={open}
       onOpenChange={(next) => {
-        // Each open starts from the club in the URL, so closing without
-        // "Show Fencers" throws the unsaved pick away.
+        // Each open starts from the filters in the URL, so closing without
+        // "Show Fencers" throws the unsaved picks away.
         if (next) {
+          setSelectedFencer(searchParams.get("q") ?? "");
           setSelectedClub(searchParams.get("team") ?? "");
-          setClubQuery("");
-          void searchClubs("");
+          fencerSearch.clear();
+          clubSearch.clear();
         }
         setOpen(next);
       }}
@@ -76,47 +62,60 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
       description="Narrow the fencer list"
       submitLabel="Show Fencers"
       onReset={() => {
+        setSelectedFencer("");
         setSelectedClub("");
-        setClubQuery("");
-        // The form reset empties the club searchbox, so the list must match it.
-        cancelClubSearch();
-        void searchClubs("");
+        fencerSearch.clear();
+        clubSearch.clear();
       }}
       onSubmit={() => {
-        setFilters({ team: selectedClub || undefined });
+        setFilters({ q: selectedFencer || undefined, team: selectedClub || undefined });
         setOpen(false);
       }}
     >
-      {selectedClub && (
+      {(selectedFencer || selectedClub) && (
         <div className="flex flex-wrap gap-2">
-          <Chip onDismiss={() => setSelectedClub("")} dismissLabel={`Remove ${selectedClub}`}>
-            {selectedClub}
-          </Chip>
+          {selectedFencer && (
+            <Chip onDismiss={() => setSelectedFencer("")} dismissLabel={`Remove ${selectedFencer}`}>
+              {selectedFencer}
+            </Chip>
+          )}
+          {selectedClub && (
+            <Chip onDismiss={() => setSelectedClub("")} dismissLabel={`Remove ${selectedClub}`}>
+              {selectedClub}
+            </Chip>
+          )}
         </div>
       )}
 
       <FilterSearchField
-        label="Club"
-        value={clubQuery}
-        onChange={(event) => {
-          setClubQuery(event.target.value);
-          debouncedSearchClubs(event.target.value.trim());
+        label="Fencer"
+        value={fencerSearch.query}
+        onChange={(event) => fencerSearch.change(event.target.value)}
+        suggestions={fencerSearch.suggestions}
+        failed={fencerSearch.failed}
+        selected={selectedFencer}
+        onPick={(name) => {
+          setSelectedFencer(name);
+          fencerSearch.clear();
         }}
-      >
-        {/* The fencer list's team filter is an exact match, so a club has to
-            be picked from these fuzzy matches rather than typed in. */}
-        <ClubOptions
-          clubs={clubs}
-          failed={clubsFailed}
-          selectedClub={selectedClub}
-          onPickClub={(name) => {
-            setSelectedClub(name);
-            setClubQuery("");
-            cancelClubSearch();
-            void searchClubs("");
-          }}
-        />
-      </FilterSearchField>
+        noun="fencers"
+      />
+
+      {/* The fencer list's team filter is an exact match, so a club has to
+          be picked from these fuzzy matches rather than typed in. */}
+      <FilterSearchField
+        label="Club"
+        value={clubSearch.query}
+        onChange={(event) => clubSearch.change(event.target.value)}
+        suggestions={clubSearch.suggestions}
+        failed={clubSearch.failed}
+        selected={selectedClub}
+        onPick={(name) => {
+          setSelectedClub(name);
+          clubSearch.clear();
+        }}
+        noun="clubs"
+      />
     </FilterSheetDialog>
   );
 }

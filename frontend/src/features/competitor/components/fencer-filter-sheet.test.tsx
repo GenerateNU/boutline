@@ -24,8 +24,8 @@ function teams(...names: string[]) {
   };
 }
 
-async function search(term: string) {
-  const box = screen.getByRole("searchbox", { name: "Club" });
+async function search(term: string, field = "Club") {
+  const box = screen.getByRole("searchbox", { name: field });
   fireEvent.focus(box);
   fireEvent.change(box, { target: { value: term } });
   await act(async () => {
@@ -60,6 +60,20 @@ describe("FencerFilterSheet", () => {
     expect(screen.queryByRole("button", { name: "Salle Nord" })).not.toBeInTheDocument();
   });
 
+  it("filters by a fencer found through search", async () => {
+    await openSheet();
+    apiRequestMock.mockResolvedValue({
+      data: [{ id: "c1", firstName: "Yan", lastName: "Wang", rating: "A", team: "" }],
+    });
+
+    await search("wan", "Fencer");
+    fireEvent.click(screen.getByRole("button", { name: "Yan Wang" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
+
+    expect(apiRequestMock).toHaveBeenLastCalledWith("/competitors?tournament_id=t+1&limit=10&q=wan");
+    expect(replace).toHaveBeenLastCalledWith("/fencers?q=Yan+Wang", { scroll: false });
+  });
+
   it("filters by a club found through search", async () => {
     await openSheet();
     apiRequestMock.mockResolvedValue(teams("Salle Nord"));
@@ -72,16 +86,26 @@ describe("FencerFilterSheet", () => {
     expect(replace).toHaveBeenLastCalledWith("/fencers?team=Salle+Nord", { scroll: false });
   });
 
-  it("shows the picked club as a tag and drops it after Clear All", async () => {
-    currentParams = new URLSearchParams("team=Salle+Nord&q=wang");
+  it("shows the picked fencer and club as tags and drops them after Clear All", async () => {
+    currentParams = new URLSearchParams("team=Salle+Nord&q=Yan+Wang&offset=20");
     await openSheet();
+    expect(screen.getByRole("button", { name: "Remove Yan Wang" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remove Salle Nord" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
     expect(screen.queryByText("Salle Nord")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
 
-    expect(replace).toHaveBeenLastCalledWith("/fencers?q=wang", { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith("/fencers", { scroll: false });
+  });
+
+  it("lists Fencer before Club, as in the Figma", async () => {
+    await openSheet();
+
+    expect(screen.getAllByRole("searchbox").map((box) => box.getAttribute("aria-label"))).toEqual([
+      "Fencer",
+      "Club",
+    ]);
   });
 
   it("picking a club adds a tag and clears the search", async () => {
