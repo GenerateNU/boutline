@@ -1477,7 +1477,7 @@ through the tokens, so components use tokens, never raw colors.
 | `background` / `foreground` | page and text; `foreground` is also the outline color |
 | `muted` / `muted-foreground` | hover fills, secondary text, empty states |
 | `selected` (blue) | only a chosen state: filled button, toggle on, active tab |
-| `destructive` | errors and destructive actions |
+| `destructive` | errors and destructive actions; hi-fi destructive actions (Button `destructive` variant) use `red-dark` |
 | `border`, `input`, `ring` | hairlines, field borders, focus rings |
 
 No Tailwind palette colors. The tournament status badge breaks this today
@@ -1493,7 +1493,7 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - `--radius` 0.625rem, with `rounded-sm`…`rounded-xl` derived from it. List cards
   use `rounded-md`; pills (tab nav, icon buttons, avatars) use `rounded-full`. 1px
   `border-foreground`, no shadows, except floating surfaces (select menu, dropdown,
-  date field popover, upload dialog) which use `shadow-md`.
+  date field popover, upload dialog, modal, filter sheet, toast) which use `shadow-md`.
 - Focus `focus-visible:ring-2 ring-ring`; hover `bg-muted`; disabled `opacity-50`.
 - Icons from `lucide-react` at `size-4`, `aria-hidden` when decorative.
 - Referee touch targets are large (`h-32`), because they are pressed under time
@@ -1505,13 +1505,14 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - The set includes the global nav, tab nav, section, list, card, chip (the filter
   tag), label, button, segmented button, search bar, dropdown, text field,
   select, date field, checkbox, radio, toggle, slider, calendar,
-  dropzone and upload dialog, dialogs and filter sheet, pagination, toast, tooltip,
+  dropzone and upload dialog, modal, filter sheet, pagination, toast, tooltip,
   and progress indicators.
 - Form fields (text field, select, date field) share one hi-fi frame: a `text-xs`
   label above a `rounded-md border-outline` box that turns `border-blue` with a
   `ring-blue-lighter` halo on focus or open, `border-red-dark` when `aria-invalid`,
   and `bg-disabled` when disabled. Select is Radix Select; the date field opens the
   calendar in a Radix Popover.
+- Overlays: Modal is a `rounded-xl p-4` card with a title and close (X) header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a filled or `destructive` action). The filter sheet is a bottom sheet whose sections are a label above a SearchBar-styled `FilterSearchField` or a row of chip-styled options (`chipVariants({ variant: "option" })`), with a full-width Clear All (`blue-lightest`) and a filled submit. The toast is a single obsidian row with white `text-sm`, a leading icon, an `accent-green` action, and no close button.
 - Many are only used by the `/` showcase so far.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.

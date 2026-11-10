@@ -69,17 +69,17 @@ describe("FilterSheet", () => {
     });
   });
 
-  it("clears club and country on Clear all", async () => {
+  it("clears club and country on Clear All", async () => {
     currentParams = new URLSearchParams("club=Salle+Nord&country=FR&query=open");
     await openSheet();
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
     fireEvent.click(screen.getByRole("button", { name: "Show Tournaments" }));
 
     expect(replace).toHaveBeenLastCalledWith("/tournaments?query=open", { scroll: false });
   });
 
-  it("cancels a pending club search and reloads all clubs on Clear all", async () => {
+  it("cancels a pending club search and reloads all clubs on Clear All", async () => {
     jest.useFakeTimers();
     await openSheet();
 
@@ -88,7 +88,7 @@ describe("FilterSheet", () => {
     });
     apiRequestMock.mockClear();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
+      fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
       jest.advanceTimersByTime(300);
     });
 

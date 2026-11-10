@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import {
+  CircleCheck,
+  CircleX,
   CloudUpload,
   Ellipsis,
   EllipsisVertical,
   Globe,
   House,
+  Pin,
   Reply,
   Settings,
   Shapes,
@@ -35,6 +38,7 @@ import { DateField } from "@/components/primitives/date-field";
 import { Dropzone } from "@/components/primitives/dropzone";
 import { FilterButton } from "@/components/primitives/filter-button";
 import { Label } from "@/components/primitives/label";
+import { Modal, ModalFooter } from "@/components/primitives/modal";
 import { List, ListItem } from "@/components/primitives/list";
 import { Menu, MenuItem } from "@/components/primitives/menu";
 import { CircularProgress } from "@/components/primitives/circular-progress";
@@ -77,6 +81,8 @@ import { NavigationBar } from "@/components/primitives/navigation/navigation-bar
 import { NavigationDrawer } from "@/components/primitives/navigation/navigation-drawer";
 import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
 import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+import { PrivateTournamentDialog } from "@/features/tournament/components/private-tournament-dialog";
+import { FilterSheet } from "@/features/tournament/components/filter-sheet";
 import { WeekStrip } from "@/features/tournament/components/week-strip";
 
 const buttonVariantNames = ["filled", "outline", "tonal", "text"] as const;
@@ -251,6 +257,55 @@ function UploadDialogDemo() {
         }
         onRemoveFile={(id) => setFiles((current) => current.filter((entry) => entry.id !== id))}
       />
+    </>
+  );
+}
+
+const undo = { label: "Undo", altText: "Undo" };
+
+const sampleToasts = [
+  { description: "Pins saved", icon: <CircleCheck className="text-accent-green" />, action: undo },
+  { description: "Pinned Pool 1 · Strip 3", icon: <Pin />, action: undo },
+  { description: "Code not found", icon: <CircleX className="fill-red-dark text-white" /> },
+];
+
+function PrivateTournamentDemo() {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <>
+      <Button ref={triggerRef} type="button" variant="outline" onClick={() => setOpen(true)}>
+        Private tournament
+      </Button>
+      <PrivateTournamentDialog open={open} onOpenChange={setOpen} returnFocusTo={triggerRef} />
+    </>
+  );
+}
+
+function LogoutModalDemo() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        Log out
+      </Button>
+      <Modal
+        open={open}
+        onOpenChange={setOpen}
+        title="Log out?"
+        description="You will need to sign in again to manage your tournaments."
+      >
+        <ModalFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="button" variant="destructive" onClick={() => setOpen(false)}>
+            Yes, log out
+          </Button>
+        </ModalFooter>
+      </Modal>
     </>
   );
 }
@@ -653,18 +708,31 @@ export default function Home() {
       </Section>
 
       <Section title="Toast">
-        <Button
-          onClick={() =>
-            toast({
-              description:
-                "Toasts provide brief messages about app processes at the bottom of the screen",
-              action: { label: "Label", altText: "Label" },
-              stacked: true,
-            })
-          }
-        >
-          Show toast
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          {sampleToasts.map((options) => (
+            <Button
+              key={options.description}
+              variant="outline"
+              onClick={() => toast(options)}
+            >
+              {options.description}
+            </Button>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Modal">
+        <div className="flex flex-wrap gap-3">
+          <PrivateTournamentDemo />
+          <LogoutModalDemo />
+        </div>
+      </Section>
+
+      <Section title="Filter Sheet">
+        {/* FilterSheet reads the URL's filters, which needs a Suspense boundary to prerender. */}
+        <Suspense>
+          <FilterSheet />
+        </Suspense>
       </Section>
 
       <Section title="Tabs">

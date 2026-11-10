@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "cn";
-import { X } from "lucide-react";
 import { Toast as ToastPrimitive } from "radix-ui";
 import { createContext, useContext, useRef, useState } from "react";
 
@@ -21,17 +20,15 @@ function ToastViewport({
   );
 }
 
-interface ToastProps extends React.ComponentProps<typeof ToastPrimitive.Root> {
-  stacked?: boolean;
-}
-
-function Toast({ className, stacked, ...props }: ToastProps) {
+function Toast({
+  className,
+  ...props
+}: React.ComponentProps<typeof ToastPrimitive.Root>) {
   return (
     <ToastPrimitive.Root
       data-slot="toast"
       className={cn(
-        "flex gap-4 rounded-lg border border-foreground bg-background px-6 py-4 text-base",
-        stacked ? "flex-col" : "items-center",
+        "flex items-center gap-3 rounded-lg bg-obsidian px-4 py-3 text-sm text-white shadow-md [&_svg]:size-5 [&_svg]:shrink-0",
         className,
       )}
       {...props}
@@ -39,26 +36,15 @@ function Toast({ className, stacked, ...props }: ToastProps) {
   );
 }
 
-function ToastDescription({
-  className,
-  ...props
-}: React.ComponentProps<typeof ToastPrimitive.Description>) {
+function ToastDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
-    <ToastPrimitive.Description
-      data-slot="toast-description"
-      className={cn("flex-1", className)}
-      {...props}
-    />
-  );
-}
-
-function ToastFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="toast-footer"
-      className={cn("flex items-center justify-end gap-6", className)}
-      {...props}
-    />
+    <ToastPrimitive.Description asChild>
+      <p
+        data-slot="toast-description"
+        className={cn("flex-1", className)}
+        {...props}
+      />
+    </ToastPrimitive.Description>
   );
 }
 
@@ -70,7 +56,7 @@ function ToastAction({
     <ToastPrimitive.Action
       data-slot="toast-action"
       className={cn(
-        "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "cursor-pointer text-sm font-medium text-accent-green outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className,
       )}
       {...props}
@@ -78,29 +64,16 @@ function ToastAction({
   );
 }
 
-function ToastClose({
-  className,
-  ...props
-}: React.ComponentProps<typeof ToastPrimitive.Close>) {
-  return (
-    <ToastPrimitive.Close
-      data-slot="toast-close"
-      aria-label="Dismiss"
-      className={cn(
-        "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        className,
-      )}
-      {...props}
-    >
-      <X aria-hidden className="size-6" />
-    </ToastPrimitive.Close>
-  );
+interface ToastActionOptions {
+  label: React.ReactNode;
+  altText: string;
+  onClick?: () => void;
 }
 
 interface ToastOptions {
   description: React.ReactNode;
-  action?: { label: React.ReactNode; altText: string; onClick?: () => void };
-  stacked?: boolean;
+  icon?: React.ReactNode;
+  action?: ToastActionOptions;
   duration?: number;
 }
 
@@ -112,7 +85,11 @@ const ToastContext = createContext<((options: ToastOptions) => void) | null>(
   null,
 );
 
-function Toaster({ children }: { children: React.ReactNode }) {
+interface ToasterProps {
+  children: React.ReactNode;
+}
+
+function Toaster({ children }: ToasterProps) {
   const [toasts, setToasts] = useState<QueuedToast[]>([]);
   const nextId = useRef(0);
 
@@ -122,17 +99,16 @@ function Toaster({ children }: { children: React.ReactNode }) {
   }
 
   function dismiss(id: number) {
-    setToasts((current) => current.filter((t) => t.id !== id));
+    setToasts((current) => current.filter((queued) => queued.id !== id));
   }
 
   return (
     <ToastContext value={toast}>
       <ToastPrimitive.Provider>
         {children}
-        {toasts.map(({ id, description, action, stacked, duration }) => (
+        {toasts.map(({ id, description, icon, action, duration }) => (
           <Toast
             key={id}
-            stacked={stacked}
             duration={duration}
             onOpenChange={(open) => {
               if (!open) {
@@ -140,15 +116,13 @@ function Toaster({ children }: { children: React.ReactNode }) {
               }
             }}
           >
+            {icon}
             <ToastDescription>{description}</ToastDescription>
-            <ToastFooter>
-              {action ? (
-                <ToastAction altText={action.altText} onClick={action.onClick}>
-                  {action.label}
-                </ToastAction>
-              ) : null}
-              <ToastClose />
-            </ToastFooter>
+            {action && (
+              <ToastAction altText={action.altText} onClick={action.onClick}>
+                {action.label}
+              </ToastAction>
+            )}
           </Toast>
         ))}
         <ToastViewport />
@@ -165,14 +139,4 @@ function useToast() {
   return { toast };
 }
 
-export {
-  Toaster,
-  useToast,
-  ToastViewport,
-  Toast,
-  ToastDescription,
-  ToastFooter,
-  ToastAction,
-  ToastClose,
-};
-export type { ToastOptions };
+export { Toaster, useToast, type ToastOptions };

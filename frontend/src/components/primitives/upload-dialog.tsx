@@ -8,6 +8,7 @@ import type { Accept } from "react-dropzone";
 import { Button } from "@/components/primitives/button";
 import { Dropzone } from "@/components/primitives/dropzone";
 import { LinearProgress } from "@/components/primitives/linear-progress";
+import { ModalClose } from "@/components/primitives/modal";
 
 interface UploadFile {
   id: string;
@@ -120,17 +121,7 @@ function UploadDialog({
                 Select and upload the files of your choice
               </Dialog.Description>
             </div>
-            <Dialog.Close asChild>
-              <Button
-                type="button"
-                variant="text"
-                size="icon"
-                aria-label="Close"
-                className="size-8 text-neutral-secondary"
-              >
-                <X aria-hidden />
-              </Button>
-            </Dialog.Close>
+            <ModalClose />
           </div>
 
           <Dropzone

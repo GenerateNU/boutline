@@ -55,13 +55,13 @@ describe("FencerFilterSheet", () => {
       jest.advanceTimersByTime(300);
     });
     fireEvent.click(screen.getByRole("button", { name: "Salle Nord" }));
-    fireEvent.click(screen.getByRole("button", { name: "Show fencers" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
 
     expect(apiRequestMock).toHaveBeenLastCalledWith("/tournaments/t%201/teams?limit=10&q=nord");
     expect(replace).toHaveBeenLastCalledWith("/fencers?team=Salle+Nord", { scroll: false });
   });
 
-  it("drops the club from the URL after Clear all", async () => {
+  it("drops the club from the URL after Clear All", async () => {
     currentParams = new URLSearchParams("team=Salle+Nord&q=wang");
     await openSheet();
     expect(screen.getByRole("button", { name: "Salle Nord" })).toHaveAttribute(
@@ -69,12 +69,12 @@ describe("FencerFilterSheet", () => {
       "true",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
     expect(screen.getByRole("button", { name: "Salle Nord" })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Show fencers" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
 
     expect(replace).toHaveBeenLastCalledWith("/fencers?q=wang", { scroll: false });
   });

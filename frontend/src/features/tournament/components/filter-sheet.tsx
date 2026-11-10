@@ -1,14 +1,14 @@
 "use client";
 
 import { ChevronDown, Funnel } from "lucide-react";
+import { ToggleGroup } from "radix-ui";
 import { useRef, useState } from "react";
+
+import { chipVariants } from "@/components/primitives/chip";
 
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
-import {
-  SegmentedButton,
-  SegmentedButtonItem,
-} from "@/components/primitives/segmented-button";
+import { SegmentedButton } from "@/components/primitives/segmented-button";
 import { ClubOptions } from "@/features/competitor/components/club-options";
 import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
@@ -21,15 +21,13 @@ import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
 import { apiRequest } from "@/services/api-request";
 import type { Team, TeamListResult } from "@/types/competitor";
 
-const distances = ["10 miles", "25 miles", "50 miles", "100 miles"];
+const distances = ["10 mi", "25 mi", "50 mi", "100 mi"];
+const optionClassName = chipVariants({ variant: "option" });
 const statusOrder: TournamentStatus[] = ["ended", "active", "pending"];
 
 const debounceMs = 300;
 const clubResultLimit = 10;
 const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
-
-const chipClassName =
-  "flex-none rounded-sm border border-brand px-3.5 py-1.5 text-brand first:border-l data-[state=on]:bg-brand data-[state=on]:text-background";
 
 interface Country {
   code: string;
@@ -180,17 +178,17 @@ function FilterSheet({ visibility }: FilterSheetProps) {
 
       <ChipGroup label="Distance" value={distance} onValueChange={setDistance}>
         {distances.map((value) => (
-          <SegmentedButtonItem key={value} value={value} className={chipClassName}>
+          <ToggleGroup.Item key={value} value={value} className={optionClassName}>
             {value}
-          </SegmentedButtonItem>
+          </ToggleGroup.Item>
         ))}
       </ChipGroup>
 
-      <ChipGroup label="Status" value={status} onValueChange={setStatus}>
+      <ChipGroup label="Tournament Status" value={status} onValueChange={setStatus}>
         {statusOrder.map((value) => (
-          <SegmentedButtonItem key={value} value={value} className={chipClassName}>
+          <ToggleGroup.Item key={value} value={value} className={optionClassName}>
             {statusLabels[value]}
-          </SegmentedButtonItem>
+          </ToggleGroup.Item>
         ))}
       </ChipGroup>
     </FilterSheetDialog>
@@ -223,9 +221,9 @@ function CountryOptions({ countries, failed, selectedCountry, onSelectCountry }:
       className="flex flex-wrap gap-2 overflow-visible rounded-none border-0 pt-1"
     >
       {countries.map(({ code }) => (
-        <SegmentedButtonItem key={code} value={code} className={chipClassName}>
+        <ToggleGroup.Item key={code} value={code} className={optionClassName}>
           {countryName(code)}
-        </SegmentedButtonItem>
+        </ToggleGroup.Item>
       ))}
     </SegmentedButton>
   );
@@ -240,14 +238,14 @@ interface ChipGroupProps {
 
 function ChipGroup({ label, value, onValueChange, children }: ChipGroupProps) {
   return (
-    <div className="flex flex-col gap-1">
-      <p className="text-sm font-bold">{label}</p>
+    <div className="flex flex-col gap-2">
+      <p className="text-sm font-medium text-obsidian">{label}</p>
       <SegmentedButton
         type="single"
         aria-label={label}
         value={value}
         onValueChange={onValueChange}
-        className="flex flex-wrap gap-2 overflow-visible rounded-none border-0"
+        className="flex gap-2 overflow-visible rounded-none border-0 *:flex-1"
       >
         {children}
       </SegmentedButton>

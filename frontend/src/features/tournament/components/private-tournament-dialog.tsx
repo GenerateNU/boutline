@@ -1,20 +1,19 @@
 "use client";
 
-import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
-import { Input } from "@/components/primitives/input";
+import { Modal, ModalFooter } from "@/components/primitives/modal";
+import { TextField } from "@/components/primitives/text-field";
 import type { Tournament } from "@/features/tournament/types/tournament";
 import { apiRequest } from "@/services/api-request";
 
-type PrivateTournamentDialogProps = {
+interface PrivateTournamentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   returnFocusTo: React.RefObject<HTMLElement | null>;
-};
+}
 
 function PrivateTournamentDialog({
   open,
@@ -55,41 +54,38 @@ function PrivateTournamentDialog({
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-foreground/20" />
-        <Dialog.Content
-          aria-describedby={undefined}
-          // There's no Dialog.Trigger to return focus to, so Radix would drop it on <body>.
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            returnFocusTo.current?.focus();
-          }}
-          className="fixed inset-x-4 top-1/2 z-50 mx-auto flex max-w-88 -translate-y-1/2 flex-col gap-5 rounded-xl border border-foreground bg-background px-5 pt-5 pb-8"
-        >
-          <Dialog.Close asChild>
-            <Button variant="text" size="icon" aria-label="Close" className="-m-2">
-              <X className="size-6!" />
-            </Button>
-          </Dialog.Close>
-          <Dialog.Title className="text-center text-xl">Enter Private Tournament Code:</Dialog.Title>
-          <form onSubmit={handleSubmit} className="flex flex-col items-center gap-5">
-            <Input
-              name="code"
-              aria-label="Tournament code"
-              required
-              minLength={6}
-              autoComplete="off"
-              className="rounded-none uppercase"
-            />
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" disabled={pending} className="rounded-lg">
-              Submit
-            </Button>
-          </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <Modal
+      open={open}
+      onOpenChange={handleOpenChange}
+      title="Private tournament"
+      description="Enter the code from your tournament organizer."
+      // There's no Dialog.Trigger to return focus to, so Radix would drop it on <body>.
+      onCloseAutoFocus={(event) => {
+        event.preventDefault();
+        returnFocusTo.current?.focus();
+      }}
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <TextField
+          name="code"
+          aria-label="Tournament code"
+          placeholder="Tournament code"
+          required
+          minLength={6}
+          autoComplete="off"
+          aria-invalid={error !== null}
+          supportingText={error}
+        />
+        <ModalFooter>
+          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={pending}>
+            Submit
+          </Button>
+        </ModalFooter>
+      </form>
+    </Modal>
   );
 }
 

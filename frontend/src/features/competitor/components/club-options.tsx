@@ -1,4 +1,4 @@
-import { Button } from "@/components/primitives/button";
+import { chipVariants } from "@/components/primitives/chip";
 import type { Team } from "@/types/competitor";
 
 interface ClubOptionsProps {
@@ -23,15 +23,14 @@ function ClubOptions({ clubs, failed, selectedClub, onToggleClub }: ClubOptionsP
     <ul className="flex flex-wrap gap-2 pt-1">
       {clubs.map(({ name }) => (
         <li key={name}>
-          <Button
+          <button
             type="button"
-            variant="outline"
             aria-pressed={name === selectedClub}
             onClick={() => onToggleClub(name)}
-            className="h-auto rounded-sm border-brand px-3.5 py-1.5 font-normal text-brand aria-pressed:bg-brand aria-pressed:text-background"
+            className={chipVariants({ variant: "option" })}
           >
             {name}
-          </Button>
+          </button>
         </li>
       ))}
     </ul>

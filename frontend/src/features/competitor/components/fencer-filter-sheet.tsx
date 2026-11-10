@@ -58,7 +58,7 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
       open={open}
       onOpenChange={(next) => {
         // Each open starts from the club in the URL, so closing without
-        // "Show fencers" throws the unsaved pick away.
+        // "Show Fencers" throws the unsaved pick away.
         if (next) {
           setSelectedClub(searchParams.get("team") ?? "");
           void searchClubs("");
@@ -68,7 +68,7 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
       triggerLabel="Filter fencers"
       triggerIcon={<Funnel className="size-5! text-brand" />}
       description="Narrow the fencer list"
-      submitLabel="Show fencers"
+      submitLabel="Show Fencers"
       onReset={() => setSelectedClub("")}
       onSubmit={() => {
         setFilters({ team: selectedClub || undefined });
