@@ -1,66 +1,120 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { CircleUserRound, Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { cn } from "cn";
+import { CircleUserRound, KeyRound, Menu, Search, Settings } from "lucide-react";
 import { useRef, useState } from "react";
 import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
 import { PrivateTournamentDialog } from "@/features/tournament/components/private-tournament-dialog";
 
+function sidebarItemClassName(selected = false) {
+  return cn(
+    "relative ml-2.25 flex h-11 cursor-pointer items-center gap-6 rounded-[10px] p-2 text-left text-sm font-semibold text-obsidian [&_svg]:size-6",
+    "before:absolute before:-left-2.25 before:h-8 before:w-0.75 before:rounded-full",
+    selected ? "bg-blue-lighter text-blue before:bg-accent-green" : "hover:bg-blue-lighter/60",
+  );
+}
+
 function GlobalNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [codeOpen, setCodeOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const pathname = usePathname();
+  const onTournaments = pathname.startsWith("/tournaments");
 
   return (
     <>
       <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
-        <header className="flex h-12 items-center gap-3 border border-foreground pr-3 pl-2">
+        <header className="relative flex h-10 items-center overflow-hidden bg-obsidian">
+          <Image
+            src="/brand/nav-plate.svg"
+            alt=""
+            width={297}
+            height={57}
+            className="absolute top-1/2 left-0 -translate-y-1/2"
+          />
+          <Image
+            src="/brand/nav-blade.svg"
+            alt=""
+            width={28}
+            height={55}
+            className="absolute top-1/2 left-69.75 -translate-y-1/2"
+          />
           <Dialog.Trigger asChild>
-            <Button ref={menuButton} variant="text" size="icon" aria-label="Open menu">
-              <Menu className="size-6!" />
+            <Button
+              ref={menuButton}
+              variant="text"
+              size="icon"
+              aria-label="Open menu"
+              className="relative ml-2.5 text-white hover:bg-background/10 [&_svg]:size-6"
+            >
+              <Menu />
             </Button>
           </Dialog.Trigger>
-          <p className="flex-1 pr-10 text-center text-xl">Boutline</p>
+          <Link href="/" className="relative ml-2.5 flex items-center gap-2.5">
+            <Image src="/brand/logo-mark.svg" alt="" width={21} height={24} />
+            <span className="font-wordmark text-[17px] tracking-[1.02px] text-white">
+              BOUTLINE
+            </span>
+          </Link>
         </header>
 
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-40 bg-foreground/20" />
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40" />
           <Dialog.Content
             aria-describedby={undefined}
             onCloseAutoFocus={(event) => codeOpen && event.preventDefault()}
-            className="fixed inset-y-0 left-0 z-50 flex w-56 flex-col gap-4 rounded-r-xl bg-background p-5"
+            className="fixed inset-y-0 left-0 z-50 flex w-73 flex-col justify-between bg-fencing-white pb-10 font-manrope shadow-lg"
           >
-            <Dialog.Title className="sr-only">Menu</Dialog.Title>
-            <Dialog.Close asChild>
-              <Button variant="text" size="icon" aria-label="Close menu" className="-m-2">
-                <X className="size-6!" />
-              </Button>
-            </Dialog.Close>
-            <nav aria-label="Main" className="flex flex-col gap-4">
-              <Dialog.Close asChild>
-                <Link href="/login" className="flex items-center gap-2.5 border-b border-foreground pb-4">
-                  <CircleUserRound className="size-7.5" strokeWidth={1.5} />
-                  Admin Login
-                </Link>
-              </Dialog.Close>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setCodeOpen(true);
-                }}
-                className="cursor-pointer text-left"
-              >
-                Find Private Tournament
-              </button>
-              <Dialog.Close asChild>
-                <Link href="/tournaments">Search Tournaments</Link>
-              </Dialog.Close>
-              {/* No settings page yet, so clicking will yield nothing. */}
-              <span>Settings</span>
-            </nav>
+            <div className="flex flex-col gap-6">
+              <div className="flex h-18.5 items-center gap-3 bg-obsidian px-6">
+                <Image src="/brand/logo-mark-sidebar.svg" alt="" width={27} height={31} />
+                <Dialog.Title className="font-wordmark text-2xl tracking-[1.44px] text-white">
+                  BOUTLINE
+                </Dialog.Title>
+              </div>
+              <nav aria-label="Main" className="flex flex-col gap-3 px-6">
+                <Dialog.Close asChild>
+                  <Link
+                    href="/login"
+                    aria-current={pathname === "/login" ? "page" : undefined}
+                    className={sidebarItemClassName(pathname === "/login")}
+                  >
+                    <CircleUserRound aria-hidden />
+                    Admin Login
+                  </Link>
+                </Dialog.Close>
+                <Dialog.Close asChild>
+                  <Link
+                    href="/tournaments"
+                    aria-current={onTournaments ? "page" : undefined}
+                    className={sidebarItemClassName(onTournaments)}
+                  >
+                    <Search aria-hidden />
+                    Search Tournaments
+                  </Link>
+                </Dialog.Close>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setCodeOpen(true);
+                  }}
+                  className={sidebarItemClassName()}
+                >
+                  <KeyRound aria-hidden />
+                  Find Private Tournament
+                </button>
+              </nav>
+            </div>
+            <span className="flex h-11 items-center gap-6 px-6 text-sm font-medium text-obsidian">
+              <Settings aria-hidden className="size-6" />
+              Settings
+            </span>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
