@@ -12,8 +12,24 @@ interface ListCardProps {
   pinned?: boolean;
 }
 
-function ListCard({ title, description, badge, href, pinned }: ListCardProps) {
-  const card = (
+function ListCard({ href, ...props }: ListCardProps) {
+  if (!href) {
+    return <ListCardBody {...props} />;
+  }
+
+  return (
+    <Link href={href} className="block rounded-[12px]">
+      <ListCardBody {...props} linked />
+    </Link>
+  );
+}
+
+interface ListCardBodyProps extends Omit<ListCardProps, "href"> {
+  linked?: boolean;
+}
+
+function ListCardBody({ title, description, badge, pinned, linked }: ListCardBodyProps) {
+  return (
     <Card
       orientation="horizontal"
       className={cn(
@@ -32,17 +48,9 @@ function ListCard({ title, description, badge, href, pinned }: ListCardProps) {
           className={cn("size-5 shrink-0", pinned ? "fill-blue text-blue" : "text-neutral-muted")}
         />
       ) : (
-        href && <ChevronRight aria-hidden className="size-6 shrink-0 text-neutral-muted" />
+        linked && <ChevronRight aria-hidden className="size-6 shrink-0 text-neutral-muted" />
       )}
     </Card>
-  );
-
-  return href ? (
-    <Link href={href} className="block rounded-[12px]">
-      {card}
-    </Link>
-  ) : (
-    card
   );
 }
 
