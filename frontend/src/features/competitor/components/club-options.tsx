@@ -1,4 +1,5 @@
 import { Button } from "@/components/primitives/button";
+import { Loading } from "@/components/primitives/loading";
 import type { Team } from "@/types/competitor";
 
 interface ClubOptionsProps {
@@ -14,7 +15,7 @@ function ClubOptions({ clubs, failed, selectedClub, onToggleClub }: ClubOptionsP
   }
   // null until the first search answers, so nothing flashes "No clubs match."
   if (clubs === null) {
-    return null;
+    return <Loading className="py-2" />;
   }
   if (clubs.length === 0) {
     return <p className="text-sm text-muted-foreground">No clubs match.</p>;

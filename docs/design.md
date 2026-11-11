@@ -1540,7 +1540,9 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - The set includes the global nav, tab nav, section, list, card, chip, button,
   segmented button, text field, select, checkbox, radio, toggle, slider, date
   picker, calendar, dropzone, dialogs and filter sheet, pagination, toast,
-  tooltip, and progress indicators.
+  tooltip, progress indicators, and a loading spinner.
+- Fetched content shows `Loading` until it arrives: a route's `loading.tsx` sits
+  under its tab bar, and client fetches render it in place of their first result.
 - Many are only used by the `/` showcase so far.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.

@@ -22,6 +22,7 @@ import { Menu, MenuItem } from "@/components/primitives/menu";
 import { CircularProgress } from "@/components/primitives/circular-progress";
 import { DatePicker } from "@/components/primitives/date-picker";
 import { LinearProgress } from "@/components/primitives/linear-progress";
+import { Loading } from "@/components/primitives/loading";
 import { PinButton } from "@/components/primitives/pin-button";
 import { Radio, RadioItem } from "@/components/primitives/radio";
 import { RatingBadge } from "@/components/primitives/rating-badge";
@@ -588,6 +589,10 @@ export default function Home() {
             />
           ))}
         </div>
+      </Section>
+
+      <Section title="Loading">
+        <Loading />
       </Section>
 
       <Section title="Card">
