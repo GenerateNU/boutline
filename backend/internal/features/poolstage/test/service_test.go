@@ -73,9 +73,9 @@ func TestCreatePoolStage(t *testing.T) {
 			lookup: NewFakeEventLookup(parent),
 			input: &poolstage.PoolStageCreateInput{Body: poolstage.PoolStageCreateBody{
 				EventID:              parent.ID.String(),
-				MaxCompetitorPerPool: 2,
+				MaxCompetitorPerPool: 4,
 			}},
-			wantMax: 2,
+			wantMax: 4,
 		},
 		{
 			name:   "rejects an event_id that does not exist",
@@ -89,14 +89,14 @@ func TestCreatePoolStage(t *testing.T) {
 			wantNoStage: true,
 		},
 		{
-			name:   "rejects a pool size below two",
+			name:   "rejects a pool size below four",
 			lookup: NewFakeEventLookup(parent),
 			input: &poolstage.PoolStageCreateInput{Body: poolstage.PoolStageCreateBody{
 				EventID:              parent.ID.String(),
-				MaxCompetitorPerPool: 1,
+				MaxCompetitorPerPool: 3,
 			}},
 			wantCode:    http.StatusBadRequest,
-			wantDetail:  "max_competitor_per_pool must be at least 2",
+			wantDetail:  "max_competitor_per_pool must be at least 4",
 			wantNoStage: true,
 		},
 		{
@@ -306,11 +306,11 @@ func TestUpdatePoolStageByID(t *testing.T) {
 			wantDetail: "provide at least one field to update",
 		},
 		{
-			name:       "rejects a pool size below two",
+			name:       "rejects a pool size below four",
 			status:     poolstage.PoolStageStatusUpcoming,
-			body:       poolstage.PoolStageUpdateBody{MaxCompetitorPerPool: ptr(1)},
+			body:       poolstage.PoolStageUpdateBody{MaxCompetitorPerPool: ptr(3)},
 			wantCode:   http.StatusBadRequest,
-			wantDetail: "max_competitor_per_pool must be at least 2",
+			wantDetail: "max_competitor_per_pool must be at least 4",
 		},
 		{
 			name:      "reports an unknown id as not found",

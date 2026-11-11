@@ -61,10 +61,10 @@ func TestCreateEndpoint(t *testing.T) {
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
-			name: "rejects a pool size below two before the handler runs",
+			name: "rejects a pool size below four before the handler runs",
 			body: map[string]any{
 				"event_id":                parent.ID.String(),
-				"max_competitor_per_pool": 1,
+				"max_competitor_per_pool": 3,
 			},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
@@ -158,11 +158,11 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 		assert.InDelta(t, 4, body["max_competitor_per_pool"], 0)
 	})
 
-	t.Run("rejects a pool size below two before the handler runs", func(t *testing.T) {
+	t.Run("rejects a pool size below four before the handler runs", func(t *testing.T) {
 		t.Parallel()
 
 		resp := newTestAPI(t, NewFakePoolStageRepository(stored), NewFakeEventLookup()).
-			Patch(base+stored.ID.String(), map[string]any{"max_competitor_per_pool": 1})
+			Patch(base+stored.ID.String(), map[string]any{"max_competitor_per_pool": 3})
 
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})

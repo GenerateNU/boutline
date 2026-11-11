@@ -14,9 +14,11 @@ import (
 )
 
 type PoolRepository interface {
-	CreatePool(ctx context.Context, pool *Pool) error
+	WithLockedPoolStage(ctx context.Context, poolStageID uuid.UUID, fn func(repo PoolRepository, stage LockedPoolStage) error) error
+	CreatePoolsWithBouts(ctx context.Context, lineups []PoolLineup) error
 	GetPoolByID(ctx context.Context, id uuid.UUID) (*Pool, error)
 	GetPoolTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
+	ListPoolEntrants(ctx context.Context, poolStageID uuid.UUID, competitorIDs []uuid.UUID) ([]PoolEntrant, error)
 	ListPools(ctx context.Context, filter PoolListFilter) ([]Pool, int64, error)
 	UpdatePoolByID(ctx context.Context, id uuid.UUID, update PoolUpdate) error
 	StartPoolByID(ctx context.Context, id uuid.UUID, startedAt time.Time) error
@@ -88,12 +90,30 @@ func NewPoolRepository(db *gorm.DB) PoolRepository {
 	return &poolRepository{db: db}
 }
 
-func (r *poolRepository) CreatePool(ctx context.Context, pool *Pool) error {
-	if err := r.db.WithContext(ctx).Create(pool).Error; err != nil {
-		return translatePoolWriteError("create pool", err)
-	}
+func (r *poolRepository) CreatePoolsWithBouts(ctx context.Context, lineups []PoolLineup) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for i := range lineups {
+			if err := tx.Create(&lineups[i].Pool).Error; err != nil {
+				return translatePoolWriteError("create pools", err)
+			}
 
-	return nil
+			for j := range lineups[i].Bouts {
+				lineups[i].Bouts[j].PoolID = lineups[i].Pool.ID
+			}
+			if err := tx.Create(&lineups[i].Bouts).Error; err != nil {
+				// The pool insert already proved the referee exists, and the tournament is
+				// share-locked, so a foreign key failure here is a competitor deleted since
+				// create checked it.
+				if errors.Is(err, gorm.ErrForeignKeyViolated) {
+					return fmt.Errorf("create pools: %w",
+						errs.Public("every fencer must reference an existing competitor", errs.ErrInvalidInput))
+				}
+				return fmt.Errorf("create pools: %w", err)
+			}
+		}
+
+		return nil
+	})
 }
 
 func (r *poolRepository) GetPoolByID(ctx context.Context, id uuid.UUID) (*Pool, error) {
@@ -129,6 +149,61 @@ func (r *poolRepository) GetPoolTournamentID(ctx context.Context, id uuid.UUID) 
 	}
 
 	return tournamentID, nil
+}
+
+// WithLockedPoolStage runs fn in one transaction holding the pool stage row lock
+// that pool edits and pool-bout creates also take (design §11.2). fn gets a
+// repository bound to that transaction and must do all its reads through it:
+// a read on another connection while the transaction holds one can starve the
+// connection pool. The tournament row is share-locked too, so the tournament
+// can't end between fn's active check and its insert.
+func (r *poolRepository) WithLockedPoolStage(
+	ctx context.Context,
+	poolStageID uuid.UUID,
+	fn func(repo PoolRepository, stage LockedPoolStage) error,
+) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var stage LockedPoolStage
+		result := tx.Raw(`
+			SELECT ps.status, ps.max_competitor_per_pool, ps.event_id, e.tournament_id, t.status AS tournament_status
+			FROM pool_stages ps
+			JOIN events e ON e.id = ps.event_id
+			JOIN tournaments t ON t.id = e.tournament_id
+			WHERE ps.id = ? FOR UPDATE OF ps FOR SHARE OF t`, poolStageID).
+			Scan(&stage)
+		if result.Error != nil {
+			return fmt.Errorf("lock pool stage %s: %w", poolStageID, result.Error)
+		}
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("lock pool stage %s: %w", poolStageID, errs.ErrNotFound)
+		}
+
+		return fn(&poolRepository{db: tx}, stage)
+	})
+}
+
+func (r *poolRepository) ListPoolEntrants(
+	ctx context.Context,
+	poolStageID uuid.UUID,
+	competitorIDs []uuid.UUID,
+) ([]PoolEntrant, error) {
+	var entrants []PoolEntrant
+
+	// Each requested competitor's event, and whether they already fence a bout in one of this stage's pools.
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT c.id, c.event_id, EXISTS (
+			SELECT 1 FROM bouts b
+			JOIN pools p ON p.id = b.pool_id
+			WHERE p.pool_stage_id = ? AND (b.competitor_1_id = c.id OR b.competitor_2_id = c.id)
+		) AS seated
+		FROM competitors c
+		WHERE c.id IN ?`, poolStageID, competitorIDs).
+		Scan(&entrants).Error
+	if err != nil {
+		return nil, fmt.Errorf("select competitors: %w", err)
+	}
+
+	return entrants, nil
 }
 
 func (r *poolRepository) ListPools(ctx context.Context, filter PoolListFilter) ([]Pool, int64, error) {
@@ -194,7 +269,8 @@ func (r *poolRepository) UpdatePoolByID(ctx context.Context, id uuid.UUID, updat
 	})
 }
 
-// LockPoolStage locks a pool's stage row until tx ends. Pool edits and pool-bout creates share it.
+// LockPoolStage locks a pool's stage row until tx ends. Pool edits, pool-bout
+// creates and pool create (WithLockedPoolStage) share it.
 func LockPoolStage(tx *gorm.DB, poolID uuid.UUID) error {
 	err := tx.Exec("SELECT 1 FROM pool_stages WHERE id = (SELECT pool_stage_id FROM pools WHERE id = ?) FOR UPDATE",
 		poolID).Error
@@ -268,7 +344,7 @@ func translatePoolWriteError(op string, err error) error {
 	}
 	if errors.Is(err, gorm.ErrForeignKeyViolated) {
 		return fmt.Errorf("%s: %w", op,
-			errs.Public("pool_stage_id or referee_id does not reference an existing record", errs.ErrInvalidInput))
+			errs.Public("referee_id does not reference an existing record", errs.ErrInvalidInput))
 	}
 
 	return fmt.Errorf("%s: %w", op, err)
