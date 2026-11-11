@@ -81,6 +81,7 @@ func TestProposePoolsSplitsTheField(t *testing.T) {
 	}{
 		{name: "one pool when the field fits", count: 5, maxPerPool: 6, wantSizes: []int{5}},
 		{name: "the fewest pools, balanced", count: 13, maxPerPool: 6, wantSizes: []int{5, 4, 4}},
+		{name: "pools of exactly the minimum", count: 8, maxPerPool: 6, wantSizes: []int{4, 4}},
 		{name: "never more than ten per pool, whatever the stage allows", count: 12, maxPerPool: 12, wantSizes: []int{6, 6}},
 	}
 
@@ -158,6 +159,23 @@ func TestProposePoolsRejects(t *testing.T) {
 			ids:        []string{entrant(1).String(), entrant(9).String()},
 			wantCode:   http.StatusBadRequest,
 			wantDetail: fmt.Sprintf("competitor %s is not entered in this pool stage's event", entrant(9)),
+		},
+		{
+			name:       "too few competitors for one pool",
+			ids:        entrantIDs(1, 3),
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "3 competitors cannot be split into pools of 4 to 6 fencers",
+		},
+		{
+			name: "a field that would leave a pool under the minimum",
+			prepare: func(f *proposalFixture) {
+				for n := 5; n <= 7; n++ {
+					f.enter(n, f.event.ID, "A", fmt.Sprintf("Club %d", n))
+				}
+			},
+			ids:        entrantIDs(1, 7),
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "7 competitors cannot be split into pools of 4 to 6 fencers",
 		},
 		{
 			name: "a pool stage that is no longer upcoming",

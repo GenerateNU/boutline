@@ -39,6 +39,10 @@ func (s *poolStageService) ProposePools(ctx context.Context, input *PoolStagePro
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
+	maxPerPool := min(stage.MaxCompetitorPerPool, proposedPoolMaxFencers)
+	if err := checkProposalSize(len(competitorIDs), maxPerPool); err != nil {
+		return nil, errs.HumaError(err)
+	}
 
 	entries := make([]SeedEntry, 0, len(competitorIDs))
 	for _, competitorID := range competitorIDs {
@@ -46,12 +50,26 @@ func (s *poolStageService) ProposePools(ctx context.Context, input *PoolStagePro
 		entries = append(entries, SeedEntry{CompetitorID: entrant.ID, Rating: entrant.Rating, Club: entrant.Team})
 	}
 	rng := rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())) //nolint:gosec // a fair draw, not a secret
-	pools, err := GenerateSeed(entries, min(stage.MaxCompetitorPerPool, proposedPoolMaxFencers), rng)
+	pools, err := GenerateSeed(entries, maxPerPool, rng)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
 
 	return &PoolStageProposalOutput{Body: newPoolStageProposalResult(pools, entrants)}, nil
+}
+
+// checkProposalSize rejects a field that cannot fill pools of MinCompetitorsPerPool to
+// maxPerPool, which pool creation would refuse. Seeding makes the fewest pools that fit,
+// which also has the largest smallest pool, so if that pool is too small no split works.
+func checkProposalSize(count, maxPerPool int) error {
+	pools := 1 + (count-1)/maxPerPool
+	if count < pools*MinCompetitorsPerPool {
+		return errs.Public(
+			fmt.Sprintf("%d competitors cannot be split into pools of %d to %d fencers", count, MinCompetitorsPerPool, maxPerPool),
+			errs.ErrInvalidInput)
+	}
+
+	return nil
 }
 
 func parseProposalCompetitors(raw []string) ([]uuid.UUID, error) {

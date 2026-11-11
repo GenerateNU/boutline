@@ -1007,7 +1007,9 @@ pools are generated after the tournament starts.
    - Rank by rating, then by rating year (more recent first), with a random draw
      between equals.
    - Make the fewest pools of at most `max_competitor_per_pool`, with sizes as
-     equal as possible (e.g. 20 fencers, max 7: pools of 7-7-6).
+     equal as possible (e.g. 20 fencers, max 7: pools of 7-7-6). A field that
+     cannot fill pools of 4 up to that maximum (e.g. 7 fencers, max 6) is refused,
+     since create would reject the pools.
    - Deal the ranking out in a snake (1→A, 2→B, 3→C, 4→C, 5→B, …).
    - Keep clubmates apart, as FIE o.68.2 keeps compatriots apart. Each slot takes
      the best remaining seed with no clubmate in that pool. A fencer passed over

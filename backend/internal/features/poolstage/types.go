@@ -78,7 +78,7 @@ type PoolStageListOutput struct {
 }
 
 type PoolStageProposalBody struct {
-	CompetitorIDs []string `json:"competitor_ids" format:"uuid" minItems:"2" maxItems:"1000" doc:"Competitors to split into pools; each must be entered in the pool stage's event"`
+	CompetitorIDs []string `json:"competitor_ids" format:"uuid" minItems:"4" maxItems:"1000" doc:"Competitors to split into pools; each must be entered in the pool stage's event"`
 }
 
 type PoolStageProposalInput struct {
