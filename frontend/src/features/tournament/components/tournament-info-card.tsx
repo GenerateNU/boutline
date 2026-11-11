@@ -8,16 +8,18 @@ interface TournamentInfoCardProps {
 }
 
 function TournamentInfoCard({ name, dates }: TournamentInfoCardProps) {
+  const infoRows = [
+    { icon: Calendar, text: dates },
+    { icon: MapPin, text: "Location - TBC" },
+    { icon: User, text: "Organizer Contact - TBC" },
+  ];
+
   return (
     <Card className="gap-2.5">
       <CardTitle role="heading" aria-level={1} className="text-xl text-obsidian uppercase">
         {name}
       </CardTitle>
-      {[
-        { icon: Calendar, text: dates },
-        { icon: MapPin, text: "Location - TBC" },
-        { icon: User, text: "Organizer Contact - TBC" },
-      ].map(
+      {infoRows.map(
         ({ icon: Icon, text }) =>
           text && (
             <CardDescription key={text} className="flex items-center gap-2 text-sm text-obsidian">
