@@ -30,7 +30,7 @@ func newPoolStageResponse(stage PoolStage) PoolStageResponse {
 
 type PoolStageCreateBody struct {
 	EventID              string     `json:"event_id" format:"uuid" doc:"Event this pool stage belongs to"`
-	MaxCompetitorPerPool int        `json:"max_competitor_per_pool" minimum:"2" doc:"Largest number of competitors placed in one pool"`
+	MaxCompetitorPerPool int        `json:"max_competitor_per_pool" minimum:"4" doc:"Largest number of competitors placed in one pool"`
 	StartTime            *time.Time `json:"start_time,omitempty" doc:"Scheduled start"`
 }
 
@@ -43,7 +43,7 @@ type PoolStageIDInput struct {
 }
 
 type PoolStageUpdateBody struct {
-	MaxCompetitorPerPool *int       `json:"max_competitor_per_pool,omitempty" minimum:"2" doc:"New largest number of competitors in one pool"`
+	MaxCompetitorPerPool *int       `json:"max_competitor_per_pool,omitempty" minimum:"4" doc:"New largest number of competitors in one pool"`
 	StartTime            *time.Time `json:"start_time,omitempty" doc:"New scheduled start"`
 }
 

@@ -269,7 +269,7 @@ chapter 11.
 A pool stage is an event's round-robin round. A pool is one group of fencers in it,
 each with a referee.
 
-- `pool_stages`: `event_id`, `max_competitor_per_pool` (≥ 2), `status`,
+- `pool_stages`: `event_id`, `max_competitor_per_pool` (≥ 4), `status`,
   `start_time`. `pools`: `pool_stage_id`, `referee_id`, `number`, `strip`,
   `start_time` (scheduled), `started_at`, `completed_at` (§11.1). `bouts.pool_id`
   links a pool's bouts to it.

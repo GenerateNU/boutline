@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/poolstage"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -95,9 +96,9 @@ func checkNoRepeatedCompetitor(requests []poolRequest) error {
 func checkFencerCounts(requests []poolRequest, limit int) error {
 	for _, request := range requests {
 		n := len(request.fencers)
-		if n < poolMinFencers {
+		if n < poolstage.MinCompetitorsPerPool {
 			return errs.Public(
-				fmt.Sprintf("pool %d must have at least %d fencers", request.pool.Number, poolMinFencers),
+				fmt.Sprintf("pool %d must have at least %d fencers", request.pool.Number, poolstage.MinCompetitorsPerPool),
 				errs.ErrInvalidInput)
 		}
 		if n > limit {
