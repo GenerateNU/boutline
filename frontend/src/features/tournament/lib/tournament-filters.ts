@@ -4,6 +4,7 @@ import { readOffsetParam, type SearchParams, readStringParam } from "@/lib/searc
 
 const statuses: TournamentStatus[] = ["pending", "active", "ended"];
 const maxClubLength = 120;
+export const tournamentPageSize = 20;
 export const countryCodePattern = /^[A-Z]{2}$/;
 
 export function parseTournamentFilters(query: SearchParams) {
