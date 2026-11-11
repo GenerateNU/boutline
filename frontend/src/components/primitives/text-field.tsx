@@ -33,24 +33,33 @@ function TextField({
   return (
     <div
       data-slot="text-field"
-      className={cn("flex flex-col gap-1", className)}
+      className={cn("flex flex-col", variant === "filled" ? "gap-1" : "gap-1.5", className)}
     >
-      <label htmlFor={inputId} className="text-base">
+      <label
+        htmlFor={inputId}
+        className={variant === "filled" ? "text-base" : "text-sm font-medium text-obsidian"}
+      >
         {label}
       </label>
       <div
         role="group"
         className={cn(
-          "flex h-12 items-center gap-3 px-4 focus-within:ring-2 focus-within:ring-ring has-disabled:opacity-50 [&_svg]:size-5 [&_svg]:shrink-0",
-          variant === "filled" && "h-10 rounded-full bg-chip",
-          variant !== "filled" && "border border-foreground bg-background",
+          "flex items-center gap-3 px-4 focus-within:ring-2 focus-within:ring-ring has-disabled:opacity-50 [&_svg]:size-5 [&_svg]:shrink-0",
+          variant === "filled"
+            ? "h-10 rounded-full bg-chip"
+            : "rounded-[12px] border border-outline bg-background py-3 shadow-sm",
         )}
       >
         {leading}
         <Input
           id={inputId}
           aria-describedby={describedBy}
-          className="h-auto flex-1 rounded-none border-0 bg-transparent px-0 text-base focus-visible:ring-0 disabled:opacity-100"
+          className={cn(
+            "h-auto flex-1 rounded-none border-0 bg-transparent px-0 focus-visible:ring-0 disabled:opacity-100",
+            variant === "filled"
+              ? "text-base"
+              : "text-xs text-obsidian placeholder:text-neutral-secondary",
+          )}
           {...props}
         />
         {trailing}

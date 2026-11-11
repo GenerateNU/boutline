@@ -52,7 +52,9 @@
   --color-green-dark: var(--green-dark);
   --color-mint-light: var(--mint-light);
   --color-mint-dark: var(--mint-dark);
+  --color-red: var(--red);
   --color-red-light: var(--red-light);
+  --color-mint: var(--mint);
   --color-red-dark: var(--red-dark);
 
   --radius-sm: calc(var(--radius) * 0.6);
@@ -120,7 +122,9 @@
   --green-dark: #076127;
   --mint-light: #d5f7e1;
   --mint-dark: #046e41;
+  --red: #d90036;
   --red-light: #fee5e4;
+  --mint: #00cf7f;
   --red-dark: #ad032a;
 }
 
