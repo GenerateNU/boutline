@@ -11,15 +11,12 @@ function TbaBout({ dimmed = false }: TbaBoutProps) {
       role="group"
       aria-label="Bout to be announced"
       className={cn(
-        "w-full rounded-md border border-dashed border-foreground px-3 py-1 text-muted-foreground",
+        "w-full divide-y divide-muted-foreground/40 rounded-md border border-dashed border-foreground px-3 py-1 text-muted-foreground",
         {"opacity-40": dimmed}
       )}
     >
       {[0, 1].map((side) => (
-        <div
-          key={side}
-          className={cn("py-2", {"border-b border-muted-foreground/40": side === 0})}
-        >
+        <div key={side} className="py-2">
           <p>TBA</p>
           <p className="text-xs">TBA</p>
         </div>
