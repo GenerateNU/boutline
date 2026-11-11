@@ -503,6 +503,12 @@ export default function Home() {
           <NavbarTab href="#" label="Fencers" />
           <NavbarTab href="#" label="Fencers" active />
         </div>
+        <div className="flex rounded-xl bg-obsidian">
+          <NavbarTab href="#" label="Overview" />
+          <NavbarTab href="#" label="Fencers" active />
+          <NavbarTab href="#" label="Clubs" />
+          <NavbarTab href="#" label="Events" />
+        </div>
       </Section>
 
       <Section title="Navigation drawer item">
