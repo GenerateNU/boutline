@@ -1,14 +1,16 @@
 "use client";
 
-import { ChevronDown, Funnel } from "lucide-react";
+import { cn } from "cn";
 import { useRef, useState } from "react";
 
+import { buttonVariants } from "@/components/primitives/button";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
 import {
   SegmentedButton,
   SegmentedButtonItem,
 } from "@/components/primitives/segmented-button";
+import { Slider } from "@/components/primitives/slider";
 import { ClubOptions } from "@/features/competitor/components/club-options";
 import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
@@ -21,15 +23,17 @@ import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
 import { apiRequest } from "@/services/api-request";
 import type { Team, TeamListResult } from "@/types/competitor";
 
-const distances = ["10 miles", "25 miles", "50 miles", "100 miles"];
+const maxDistance = 100;
 const statusOrder: TournamentStatus[] = ["ended", "active", "pending"];
 
 const debounceMs = 300;
 const clubResultLimit = 10;
 const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
 
-const chipClassName =
-  "flex-none rounded-sm border border-brand px-3.5 py-1.5 text-brand first:border-l data-[state=on]:bg-brand data-[state=on]:text-background";
+const chipClassName = cn(
+  buttonVariants({ variant: "outline", size: "sm" }),
+  "flex-none rounded-lg first:border-l data-[state=on]:bg-blue data-[state=on]:text-white data-[state=on]:hover:bg-blue-dark",
+);
 
 interface Country {
   code: string;
@@ -52,7 +56,6 @@ function FilterSheet({ visibility }: FilterSheetProps) {
   const { searchParams, setFilters } = useTournamentFilters();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState("");
-  const [distance, setDistance] = useState("");
   const [selectedClub, setSelectedClub] = useState("");
   const [clubs, setClubs] = useState<Team[] | null>(null);
   const [clubsFailed, setClubsFailed] = useState(false);
@@ -127,17 +130,10 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         setOpen(next);
       }}
       triggerLabel="Filter tournaments"
-      triggerIcon={
-        <>
-          <Funnel className="size-5! text-brand" />
-          <ChevronDown />
-        </>
-      }
       description="Narrow the tournament list"
       submitLabel="Show Tournaments"
       onReset={() => {
         setStatus("");
-        setDistance("");
         setSelectedClub("");
         setSelectedCountry("");
         setCountryTerm("");
@@ -155,18 +151,6 @@ function FilterSheet({ visibility }: FilterSheetProps) {
       }}
     >
       <FilterSearchField
-        label="Club"
-        onChange={(event) => debouncedSearchClubs(event.target.value.trim())}
-      >
-        <ClubOptions
-          clubs={shownClubs}
-          failed={clubsFailed}
-          selectedClub={selectedClub}
-          onToggleClub={(name) => setSelectedClub(name === selectedClub ? "" : name)}
-        />
-      </FilterSearchField>
-
-      <FilterSearchField
         label="Country"
         onChange={(event) => setCountryTerm(event.target.value.trim().toLowerCase())}
       >
@@ -178,17 +162,36 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         />
       </FilterSearchField>
 
-      <ChipGroup label="Distance" value={distance} onValueChange={setDistance}>
-        {distances.map((value) => (
-          <SegmentedButtonItem key={value} value={value} className={chipClassName}>
-            {value}
-          </SegmentedButtonItem>
-        ))}
-      </ChipGroup>
+      <FilterSearchField
+        label="Club"
+        onChange={(event) => debouncedSearchClubs(event.target.value.trim())}
+      >
+        <ClubOptions
+          clubs={shownClubs}
+          failed={clubsFailed}
+          selectedClub={selectedClub}
+          onToggleClub={(name) => setSelectedClub(name === selectedClub ? "" : name)}
+        />
+      </FilterSearchField>
 
-      <ChipGroup label="Status" value={status} onValueChange={setStatus}>
+      <div className="flex flex-col gap-2">
+        <p className="text-sm text-obsidian">Distance</p>
+        <div className="flex flex-col gap-2 px-5 py-2">
+          <Slider
+            aria-label="Distance"
+            max={maxDistance}
+            defaultValue={[maxDistance / 2]}
+          />
+          <p className="flex justify-between text-[11px] leading-4 font-semibold tracking-[0.88px] text-obsidian uppercase">
+            <span>0 mi</span>
+            <span>{maxDistance} mi</span>
+          </p>
+        </div>
+      </div>
+
+      <ChipGroup label="Tournament Status" value={status} onValueChange={setStatus}>
         {statusOrder.map((value) => (
-          <SegmentedButtonItem key={value} value={value} className={chipClassName}>
+          <SegmentedButtonItem key={value} value={value} className={cn(chipClassName, "flex-1")}>
             {statusLabels[value]}
           </SegmentedButtonItem>
         ))}
@@ -240,14 +243,14 @@ interface ChipGroupProps {
 
 function ChipGroup({ label, value, onValueChange, children }: ChipGroupProps) {
   return (
-    <div className="flex flex-col gap-1">
-      <p className="text-sm font-bold">{label}</p>
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-obsidian">{label}</p>
       <SegmentedButton
         type="single"
         aria-label={label}
         value={value}
         onValueChange={onValueChange}
-        className="flex flex-wrap gap-2 overflow-visible rounded-none border-0"
+        className="flex gap-3 overflow-visible rounded-none border-0 shadow-none"
       >
         {children}
       </SegmentedButton>
@@ -255,4 +258,4 @@ function ChipGroup({ label, value, onValueChange, children }: ChipGroupProps) {
   );
 }
 
-export { FilterSheet };
+export { FilterSheet, countryName };

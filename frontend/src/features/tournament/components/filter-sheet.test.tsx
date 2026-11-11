@@ -73,7 +73,7 @@ describe("FilterSheet", () => {
     currentParams = new URLSearchParams("club=Salle+Nord&country=FR&query=open");
     await openSheet();
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
     fireEvent.click(screen.getByRole("button", { name: "Show Tournaments" }));
 
     expect(replace).toHaveBeenLastCalledWith("/tournaments?query=open", { scroll: false });
@@ -88,7 +88,7 @@ describe("FilterSheet", () => {
     });
     apiRequestMock.mockClear();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
+      fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
       jest.advanceTimersByTime(300);
     });
 
