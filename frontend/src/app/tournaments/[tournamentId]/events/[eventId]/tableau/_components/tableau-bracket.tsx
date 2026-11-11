@@ -5,8 +5,6 @@ import * as React from "react";
 import type { TableauRound } from "../../_types/tableau";
 import { BracketRound } from "./bracket-round";
 
-const SLOT_HEIGHT = 140;
-
 interface TableauBracketProps {
   rounds: TableauRound[];
   focusedRoundId: string;
@@ -36,11 +34,9 @@ function TableauBracket({ rounds, focusedRoundId, query, boutBasePath }: Tableau
     });
   }, [focusedRoundId, firstRoundId]);
 
-  const height = (rounds[0].size / 2) * SLOT_HEIGHT;
-
   return (
     <div className="overflow-x-auto pb-2">
-      <div className="flex gap-8" style={{ height }}>
+      <div className="flex gap-8">
         {rounds.map((round, roundIndex) => (
           <BracketRound
             key={round.id}

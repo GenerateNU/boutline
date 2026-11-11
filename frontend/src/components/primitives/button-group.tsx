@@ -32,20 +32,17 @@ function ButtonGroup({
       aria-label={ariaLabel}
       className={cn("flex gap-2", className)}
     >
-      {options.map((option) => {
-        const selected = option.value === value;
-        return (
-          <Button
-            key={option.value}
-            variant={selected ? "filled" : "outline"}
-            aria-pressed={selected}
-            className="flex-1 rounded-md px-2"
-            onClick={() => onValueChange(option.value)}
-          >
-            {option.label}
-          </Button>
-        );
-      })}
+      {options.map((option) => (
+        <Button
+          key={option.value}
+          variant={option.value === value ? "filled" : "outline"}
+          aria-pressed={option.value === value}
+          className="flex-1 rounded-md px-2"
+          onClick={() => onValueChange(option.value)}
+        >
+          {option.label}
+        </Button>
+      ))}
     </div>
   );
 }
