@@ -2,10 +2,10 @@ package pool
 
 import "github.com/google/uuid"
 
-func poolBoardStandings(fencers []PoolBoardFencerRow, bouts []PoolBoardBoutRow) map[uuid.UUID]PoolBoardStanding {
-	standings := make(map[uuid.UUID]PoolBoardStanding, len(fencers))
+func poolStandings(fencers []PoolSheetFencerRow, bouts []PoolSheetBoutRow) map[uuid.UUID]PoolStanding {
+	standings := make(map[uuid.UUID]PoolStanding, len(fencers))
 	for _, fencer := range fencers {
-		standings[fencer.CompetitorID] = PoolBoardStanding{}
+		standings[fencer.CompetitorID] = PoolStanding{}
 	}
 
 	for _, bout := range bouts {
@@ -25,7 +25,7 @@ func poolBoardStandings(fencers []PoolBoardFencerRow, bouts []PoolBoardBoutRow) 
 	}
 
 	// Places are read from a snapshot so ranking one fencer never sees another's updated place.
-	ranked := make(map[uuid.UUID]PoolBoardStanding, len(standings))
+	ranked := make(map[uuid.UUID]PoolStanding, len(standings))
 	for id, standing := range standings {
 		standing.Place = 1
 		for _, other := range standings {
@@ -39,7 +39,7 @@ func poolBoardStandings(fencers []PoolBoardFencerRow, bouts []PoolBoardBoutRow) 
 	return ranked
 }
 
-func recordBoutSide(standings map[uuid.UUID]PoolBoardStanding, id uuid.UUID, scored, received int) {
+func recordBoutSide(standings map[uuid.UUID]PoolStanding, id uuid.UUID, scored, received int) {
 	standing, ok := standings[id]
 	if !ok {
 		return
@@ -58,7 +58,7 @@ func recordBoutSide(standings map[uuid.UUID]PoolBoardStanding, id uuid.UUID, sco
 // ratios are compared by cross-multiplying, so equal fractions are always equal; a
 // fencer with no matches has no victories, so counting their matches as 1 keeps
 // their ratio at 0.
-func strictlyBetter(a, b PoolBoardStanding) bool {
+func strictlyBetter(a, b PoolStanding) bool {
 	left, right := a.Victories*max(b.Matches, 1), b.Victories*max(a.Matches, 1)
 	if left != right {
 		return left > right
@@ -70,7 +70,7 @@ func strictlyBetter(a, b PoolBoardStanding) bool {
 	return a.TouchesScored > b.TouchesScored
 }
 
-func poolBoardWinnerID(bout PoolBoardBoutRow) *uuid.UUID {
+func poolSheetWinnerID(bout PoolSheetBoutRow) *uuid.UUID {
 	if bout.Status != endedBoutStatus {
 		return nil
 	}

@@ -6,15 +6,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type PoolBoardStatus string
+type PoolSheetStatus string
 
 const (
-	PoolBoardStatusUpcoming PoolBoardStatus = "upcoming"
-	PoolBoardStatusActive   PoolBoardStatus = "active"
-	PoolBoardStatusEnded    PoolBoardStatus = "ended"
+	PoolSheetStatusUpcoming PoolSheetStatus = "upcoming"
+	PoolSheetStatusActive   PoolSheetStatus = "active"
+	PoolSheetStatusEnded    PoolSheetStatus = "ended"
 )
 
-type PoolBoardPoolRow struct {
+type PoolSheetPoolRow struct {
 	ID          uuid.UUID
 	PoolStageID uuid.UUID
 	Number      int
@@ -24,21 +24,21 @@ type PoolBoardPoolRow struct {
 	CompletedAt *time.Time
 }
 
-func (p PoolBoardPoolRow) Status() PoolBoardStatus {
+func (p PoolSheetPoolRow) Status() PoolSheetStatus {
 	switch {
 	case p.CompletedAt != nil:
-		return PoolBoardStatusEnded
+		return PoolSheetStatusEnded
 	case p.StartedAt != nil:
-		return PoolBoardStatusActive
+		return PoolSheetStatusActive
 	default:
-		return PoolBoardStatusUpcoming
+		return PoolSheetStatusUpcoming
 	}
 }
 
-// PoolBoardFencerRow is one fencer as a pool's board shows them: name, team and
+// PoolSheetFencerRow is one fencer as a pool's sheet shows them: name, team and
 // grid position. It is read from the pool's bouts and the competitors table, not
 // stored anywhere of its own.
-type PoolBoardFencerRow struct {
+type PoolSheetFencerRow struct {
 	PoolID       uuid.UUID
 	CompetitorID uuid.UUID
 	Position     int
@@ -47,11 +47,11 @@ type PoolBoardFencerRow struct {
 	Team         string
 }
 
-// PoolBoardBoutRow is a read-only view of one bout in the bouts table, with each
-// side's score summed from its scorings. The board query scans into a slice of
+// PoolSheetBoutRow is a read-only view of one bout in the bouts table, with each
+// side's score summed from its scorings. The sheet query scans into a slice of
 // these, like a SQL view, so it is not a second copy of the bout. It exists
 // because bout imports pool and scoring imports bout, so pool can't use their types.
-type PoolBoardBoutRow struct {
+type PoolSheetBoutRow struct {
 	ID               uuid.UUID
 	PoolID           uuid.UUID
 	Status           string

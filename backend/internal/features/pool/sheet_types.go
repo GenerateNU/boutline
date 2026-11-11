@@ -1,6 +1,6 @@
 package pool
 
-type PoolBoardStanding struct {
+type PoolStanding struct {
 	Place           int     `json:"place" doc:"Shared by fencers tied on victory ratio, indicator, and touches scored"`
 	Victories       int     `json:"victories"`
 	Matches         int     `json:"matches" doc:"Ended bouts fenced"`

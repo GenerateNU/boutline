@@ -12,17 +12,17 @@ func competitorID(n int) uuid.UUID {
 	return uuid.MustParse(fmt.Sprintf("d0000000-0000-4000-8000-%012d", n))
 }
 
-func fencersOf(ns ...int) []PoolBoardFencerRow {
-	rows := make([]PoolBoardFencerRow, 0, len(ns))
+func fencersOf(ns ...int) []PoolSheetFencerRow {
+	rows := make([]PoolSheetFencerRow, 0, len(ns))
 	for i, n := range ns {
-		rows = append(rows, PoolBoardFencerRow{CompetitorID: competitorID(n), Position: i + 1})
+		rows = append(rows, PoolSheetFencerRow{CompetitorID: competitorID(n), Position: i + 1})
 	}
 
 	return rows
 }
 
-func boutOf(status string, c1, score1, c2, score2 int) PoolBoardBoutRow {
-	return PoolBoardBoutRow{
+func boutOf(status string, c1, score1, c2, score2 int) PoolSheetBoutRow {
+	return PoolSheetBoutRow{
 		ID:               uuid.New(),
 		Status:           status,
 		Competitor1ID:    competitorID(c1),
@@ -32,8 +32,8 @@ func boutOf(status string, c1, score1, c2, score2 int) PoolBoardBoutRow {
 	}
 }
 
-func standingOf(place, victories, matches, scored, received int) PoolBoardStanding {
-	standing := PoolBoardStanding{
+func standingOf(place, victories, matches, scored, received int) PoolStanding {
+	standing := PoolStanding{
 		Place:           place,
 		Victories:       victories,
 		Matches:         matches,
@@ -48,19 +48,19 @@ func standingOf(place, victories, matches, scored, received int) PoolBoardStandi
 	return standing
 }
 
-func TestPoolBoardStandings(t *testing.T) {
+func TestPoolStandings(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name    string
-		fencers []PoolBoardFencerRow
-		bouts   []PoolBoardBoutRow
-		want    map[int]PoolBoardStanding
+		fencers []PoolSheetFencerRow
+		bouts   []PoolSheetBoutRow
+		want    map[int]PoolStanding
 	}{
 		{
 			name:    "pool 1 ranks by ratio, then indicator, then touches scored, ignoring unfinished bouts",
 			fencers: fencersOf(1, 2, 3, 4),
-			bouts: []PoolBoardBoutRow{
+			bouts: []PoolSheetBoutRow{
 				boutOf("ended", 1, 5, 2, 2),
 				boutOf("ended", 3, 5, 4, 3),
 				boutOf("ended", 1, 5, 3, 4),
@@ -68,7 +68,7 @@ func TestPoolBoardStandings(t *testing.T) {
 				boutOf("active", 1, 2, 4, 2),
 				boutOf("upcoming", 2, 0, 3, 0),
 			},
-			want: map[int]PoolBoardStanding{
+			want: map[int]PoolStanding{
 				1: standingOf(1, 2, 2, 10, 6),
 				3: standingOf(2, 1, 2, 9, 8),
 				4: standingOf(3, 1, 2, 8, 7),
@@ -78,11 +78,11 @@ func TestPoolBoardStandings(t *testing.T) {
 		{
 			name:    "pool 2 ranks by indicator when ratios are equal",
 			fencers: fencersOf(5, 6, 7, 8),
-			bouts: []PoolBoardBoutRow{
+			bouts: []PoolSheetBoutRow{
 				boutOf("ended", 5, 5, 6, 1),
 				boutOf("ended", 7, 4, 8, 5),
 			},
-			want: map[int]PoolBoardStanding{
+			want: map[int]PoolStanding{
 				5: standingOf(1, 1, 1, 5, 1),
 				8: standingOf(2, 1, 1, 5, 4),
 				7: standingOf(3, 0, 1, 4, 5),
@@ -92,7 +92,7 @@ func TestPoolBoardStandings(t *testing.T) {
 		{
 			name:    "no bouts leaves every fencer tied for first with zeros",
 			fencers: fencersOf(1, 2, 3),
-			want: map[int]PoolBoardStanding{
+			want: map[int]PoolStanding{
 				1: standingOf(1, 0, 0, 0, 0),
 				2: standingOf(1, 0, 0, 0, 0),
 				3: standingOf(1, 0, 0, 0, 0),
@@ -101,11 +101,11 @@ func TestPoolBoardStandings(t *testing.T) {
 		{
 			name:    "exact ties share a place and the next place is skipped",
 			fencers: fencersOf(1, 2, 3),
-			bouts: []PoolBoardBoutRow{
+			bouts: []PoolSheetBoutRow{
 				boutOf("ended", 1, 5, 3, 0),
 				boutOf("ended", 2, 5, 3, 0),
 			},
-			want: map[int]PoolBoardStanding{
+			want: map[int]PoolStanding{
 				1: standingOf(1, 1, 1, 5, 0),
 				2: standingOf(1, 1, 1, 5, 0),
 				3: standingOf(3, 0, 2, 0, 10),
@@ -114,8 +114,8 @@ func TestPoolBoardStandings(t *testing.T) {
 		{
 			name:    "a fencer with no finished bouts has a ratio of 0 and ranks by indicator",
 			fencers: fencersOf(1, 2, 3),
-			bouts:   []PoolBoardBoutRow{boutOf("ended", 1, 5, 2, 3)},
-			want: map[int]PoolBoardStanding{
+			bouts:   []PoolSheetBoutRow{boutOf("ended", 1, 5, 2, 3)},
+			want: map[int]PoolStanding{
 				1: standingOf(1, 1, 1, 5, 3),
 				3: standingOf(2, 0, 0, 0, 0),
 				2: standingOf(3, 0, 1, 3, 5),
@@ -124,13 +124,13 @@ func TestPoolBoardStandings(t *testing.T) {
 		{
 			name:    "ratios with different match counts compare as exact fractions",
 			fencers: fencersOf(1, 2, 3, 4),
-			bouts: []PoolBoardBoutRow{
+			bouts: []PoolSheetBoutRow{
 				boutOf("ended", 1, 5, 2, 0),
 				boutOf("ended", 1, 5, 3, 0),
 				boutOf("ended", 4, 5, 1, 0),
 				boutOf("ended", 2, 5, 3, 0),
 			},
-			want: map[int]PoolBoardStanding{
+			want: map[int]PoolStanding{
 				4: standingOf(1, 1, 1, 5, 0),
 				1: standingOf(2, 2, 3, 10, 5),
 				2: standingOf(3, 1, 2, 5, 5),
@@ -140,8 +140,8 @@ func TestPoolBoardStandings(t *testing.T) {
 		{
 			name:    "an ended tied score is a match for both and a victory for neither",
 			fencers: fencersOf(1, 2),
-			bouts:   []PoolBoardBoutRow{boutOf("ended", 1, 3, 2, 3)},
-			want: map[int]PoolBoardStanding{
+			bouts:   []PoolSheetBoutRow{boutOf("ended", 1, 3, 2, 3)},
+			want: map[int]PoolStanding{
 				1: standingOf(1, 0, 1, 3, 3),
 				2: standingOf(1, 0, 1, 3, 3),
 			},
@@ -149,8 +149,8 @@ func TestPoolBoardStandings(t *testing.T) {
 		{
 			name:    "a bout side that is not a fencer in the pool is ignored",
 			fencers: fencersOf(1),
-			bouts:   []PoolBoardBoutRow{boutOf("ended", 1, 5, 9, 1)},
-			want: map[int]PoolBoardStanding{
+			bouts:   []PoolSheetBoutRow{boutOf("ended", 1, 5, 9, 1)},
+			want: map[int]PoolStanding{
 				1: standingOf(1, 1, 1, 5, 1),
 			},
 		},
@@ -160,7 +160,7 @@ func TestPoolBoardStandings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := poolBoardStandings(tt.fencers, tt.bouts)
+			got := poolStandings(tt.fencers, tt.bouts)
 
 			assert.Len(t, got, len(tt.want))
 			for n, want := range tt.want {
@@ -170,14 +170,14 @@ func TestPoolBoardStandings(t *testing.T) {
 	}
 }
 
-func TestPoolBoardWinnerID(t *testing.T) {
+func TestPoolSheetWinnerID(t *testing.T) {
 	t.Parallel()
 
 	one, two := competitorID(1), competitorID(2)
 
 	tests := []struct {
 		name string
-		bout PoolBoardBoutRow
+		bout PoolSheetBoutRow
 		want *uuid.UUID
 	}{
 		{name: "ended with competitor 1 ahead", bout: boutOf("ended", 1, 5, 2, 3), want: &one},
@@ -191,7 +191,7 @@ func TestPoolBoardWinnerID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(t, tt.want, poolBoardWinnerID(tt.bout))
+			assert.Equal(t, tt.want, poolSheetWinnerID(tt.bout))
 		})
 	}
 }
