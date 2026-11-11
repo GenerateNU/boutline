@@ -19,10 +19,10 @@ function BoutCard({ bout, title, nextLabel, href }: BoutCardProps) {
       className="block rounded-md border border-foreground px-4 py-3 transition-colors hover:bg-muted"
     >
       <p className="border-b border-muted-foreground/40 pb-2">{title}</p>
-      <div className="border-b border-muted-foreground/40">
+      <div className="divide-y divide-muted-foreground/40">
         <FencerRow fencer={bout.top} score={bout.topScore} showSeed />
+        <FencerRow fencer={bout.bottom} score={bout.bottomScore} showSeed />
       </div>
-      <FencerRow fencer={bout.bottom} score={bout.bottomScore} showSeed />
       {bout.status === "active" && <LiveBadge />}
       {nextLabel && (
         <p className="flex items-center gap-1 border-t border-muted-foreground/40 pt-2 text-sm">
