@@ -177,10 +177,10 @@ function FilterSheet({ visibility }: FilterSheetProps) {
             max={maxDistance}
             defaultValue={[maxDistance / 2]}
           />
-          <p className="flex justify-between text-[11px] leading-4 font-semibold tracking-[0.88px] text-obsidian uppercase">
-            <span>0 mi</span>
-            <span>{maxDistance} mi</span>
-          </p>
+          <div className="flex justify-between text-[11px] leading-4 font-semibold tracking-[0.88px] text-obsidian uppercase">
+            <p>0 mi</p>
+            <p>{maxDistance} mi</p>
+          </div>
         </div>
       </div>
 
