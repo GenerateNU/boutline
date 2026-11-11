@@ -17,7 +17,7 @@ function FencerCard({ competitor, ...props }: FencerCardProps) {
       title={`${firstName} ${lastName}`}
       description={
         <p className="truncate uppercase">
-          <MockCountry /> · {team || "No club"}
+          <MockCountry /> &middot; {team || "No club"}
         </p>
       }
       badge={<RatingBadge tone={props.pinned ? "filled" : "subtle"}>{rating}</RatingBadge>}

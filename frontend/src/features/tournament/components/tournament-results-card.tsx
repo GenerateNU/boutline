@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle } from "@/components/primitives/card";
 import { TournamentStatusBadge } from "@/features/tournament/components/tournament-status-badge";
 import { formatShortDate } from "@/features/tournament/lib/format-short-date";
 import type { Tournament } from "@/features/tournament/types/tournament";
+import { pluralize } from "@/lib/pluralize";
 
 interface TournamentResultsCardProps {
   tournament: Tournament;
@@ -26,7 +27,8 @@ function TournamentResultsCard({ tournament, eventCount, resultsHref }: Tourname
           </CardTitle>
           <p className="flex items-center gap-1 text-xs text-neutral-secondary">
             <Calendar aria-hidden className="size-3.5 shrink-0" />
-            {[date, `${eventCount} events`].filter(Boolean).join(" · ")}
+            {date && <>{date} &middot; </>}
+            {pluralize(eventCount, "event")}
           </p>
           {location && (
             <p className="flex items-center gap-1 text-xs text-neutral-secondary">

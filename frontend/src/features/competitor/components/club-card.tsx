@@ -1,5 +1,6 @@
 import { MockCountry } from "@/app/tournaments/[tournamentId]/_components/mock-country";
 import { ListCard } from "@/components/primitives/list-card";
+import { pluralize } from "@/lib/pluralize";
 import type { Team } from "@/types/competitor";
 
 interface ClubCardProps {
@@ -14,8 +15,7 @@ function ClubCard({ team, ...props }: ClubCardProps) {
       title={team.name}
       description={
         <>
-          <MockCountry /> · {team.competitorCount}{" "}
-          {team.competitorCount === 1 ? "fencer" : "fencers"}
+          <MockCountry /> &middot; {pluralize(team.competitorCount, "fencer")}
         </>
       }
       {...props}
