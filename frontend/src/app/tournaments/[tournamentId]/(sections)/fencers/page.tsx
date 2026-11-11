@@ -4,7 +4,7 @@ import { getCompetitors } from "@/features/competitor/services/getCompetitors";
 import { SearchForm } from "@/features/tournament/components/search-form";
 import { readOffsetParam, readStringParam } from "@/lib/search-params";
 
-import { MockCountry } from "../_components/mock-country";
+import { MockCountry } from "../../_components/mock-country";
 
 const PAGE_SIZE = 20;
 

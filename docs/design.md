@@ -488,7 +488,8 @@ Tabs: Overview · Fencers · Clubs · Events.
 
 **Status:** Partial.
 
-Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers.
+Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers. These
+replace the tournament's tabs rather than stacking under them.
 
 - **Fencers** (Completed): search, pagination, and a club filter sheet whose picker
   searches the tournament's clubs. It lists every fencer in the tournament, since

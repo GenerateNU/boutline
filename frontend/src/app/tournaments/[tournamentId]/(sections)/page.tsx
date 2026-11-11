@@ -5,7 +5,7 @@ import { TournamentInfoCard } from "@/features/tournament/components/tournament-
 import { getTournament } from "@/features/tournament/services/getTournament";
 import { eventsWithStatus, formatEventDateRange } from "@/lib/event-schedule";
 
-import { EventListCard } from "./_components/event-list-card";
+import { EventListCard } from "../_components/event-list-card";
 
 export default async function OverviewTab({
   params,
