@@ -5,13 +5,13 @@ function CreateTournamentCard() {
   return (
     <Link
       href="/admin/tournament/new"
-      className="flex h-24 items-center gap-3 border border-brand px-5 text-brand transition-colors hover:bg-muted"
+      className="flex items-center gap-3 rounded-[12px] border-[1.5px] border-dashed border-blue bg-blue-lightest p-4.5 transition-colors hover:bg-blue-lighter"
     >
-      <div className="flex flex-1 flex-col gap-1">
-        <p className="text-xl leading-6 font-medium">CREATE TOURNAMENT</p>
-        <p className="text-sm leading-5">Start a new tournament</p>
+      <div className="flex flex-1 flex-col gap-0.5">
+        <p className="font-medium text-blue">Create tournament</p>
+        <p className="text-xs text-neutral-secondary">Upload a file or set it up manually</p>
       </div>
-      <Plus className="size-10 shrink-0 rounded-full border border-brand bg-chip p-2" />
+      <Plus className="size-10 shrink-0 rounded-full bg-blue p-2.5 text-white" />
     </Link>
   );
 }

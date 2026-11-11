@@ -42,9 +42,9 @@ describe("EventListCard", () => {
         makeEvent({ id: "e3", name: "Open Sabre", status: "upcoming" }),
       ],
       rows: [
-        ["9:00 AM", "Mixed Épée", "Live"],
-        ["1:30 PM", "Women's Foil", "Upcoming"],
-        ["TBC", "Open Sabre", "Upcoming"],
+        ["9:00 AM", "Mixed Épée", "In Progress"],
+        ["1:30 PM", "Women's Foil", "Not Started"],
+        ["TBC", "Open Sabre", "Not Started"],
       ],
     },
     { name: "no events", title: "Upcoming Events", events: [], rows: [] },

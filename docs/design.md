@@ -429,8 +429,10 @@ from the venue floor.
 
 **Status:** Completed.
 
-- **Global nav** (every page): a "Boutline" header opens a drawer with Admin Login,
-  Find Private Tournament, Search Tournaments, and Settings (inert).
+- **Global nav** (every page): an obsidian bar with the slanted blue plate and the
+  BOUTLINE wordmark. The menu opens a light sidebar with Admin Login, Search
+  Tournaments, Find Private Tournament, and Settings (inert); the current route's
+  item is highlighted.
 - **Tabs** (tournament and event pages): each tab has its own URL, but switching
   tabs replaces the history entry, so the browser's Back button leaves the page
   rather than stepping back through tabs. The exception is the active tab clicked
@@ -449,9 +451,13 @@ from the venue floor.
   Active / Ended), empty states, and Previous/Next pagination, 20 per page.
 - **Search:** a plain GET form that works without JS; with JS it updates `?q=`
   after a 300 ms debounce.
-- **Dates:** a week strip of four days with paging and a day toggle, or a calendar
-  view with month and year steppers. Both filter by `start_time`.
-- **Filter sheet:** Status, Club and Country work; Distance is inert, since
+- **Dates:** five day tabs in a dark row under the global nav, with paging and a
+  day toggle. The icon beside the title toggles a month calendar (with month and
+  year steppers) open above the search bar, on the same screen. Both filter by
+  `start_time`.
+- **Active filters:** each applied Status, Club or Country filter shows as a pill
+  under the search bar; its × removes just that filter.
+- **Filter sheet:** Status, Club and Country work; the Distance slider is inert, since
   tournaments have no coordinates (#122). Club suggests names from `GET /clubs` and
   sets `?club=`; Country offers only countries that have tournaments, from
   `GET /countries`, and sets `?country=` to the code.
@@ -1489,7 +1495,9 @@ No Tailwind palette colors. The tournament status badge breaks this today
 touched.
 
 ### C.3 Type
-Geist Sans; Geist Mono for aligned numbers. Body and controls `text-sm`, metadata
+Geist Sans; Geist Mono for aligned numbers. Hi-fi screens (global nav, tournament
+browser, filter sheet) use Manrope (`font-manrope`), and the BOUTLINE wordmark uses
+Special Gothic Expanded One (`font-wordmark`). Body and controls `text-sm`, metadata
 `text-xs text-muted-foreground`, at most `font-medium`. Sizes from `text-2xl` up are
 reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 

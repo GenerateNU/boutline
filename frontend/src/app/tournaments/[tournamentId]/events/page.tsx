@@ -1,21 +1,14 @@
 import Link from "next/link";
 
 import { Button } from "@/components/primitives/button";
-import {
-  Card,
-  CardAction,
-  CardHeader,
-  CardTitle,
-} from "@/components/primitives/card";
-import { Chip } from "@/components/primitives/chip";
 import { Section } from "@/components/primitives/section";
 import { getSessionToken } from "@/features/auth/services/session";
+import { EventCard } from "@/features/event/components/event-card";
 import { getEvents } from "@/features/event/services/getEvents";
 import { SearchForm } from "@/features/tournament/components/search-form";
 import {
   eventDay,
   eventDays,
-  eventStatusLabel,
   formatDayLabel,
   formatTimeLabel,
   scheduleForDay,
@@ -98,23 +91,7 @@ export default async function EventsTab({
           <ul className="flex flex-col gap-3">
             {grouped.map((event) => (
               <li key={event.id}>
-                <Link href={`${basePath}/${event.id}`} className="block">
-                  <Card
-                    orientation="horizontal"
-                    className="transition-colors hover:bg-muted"
-                  >
-                    <CardHeader>
-                      <CardTitle className="text-sm font-medium">
-                        {event.name}
-                      </CardTitle>
-                      <CardAction>
-                        <Chip className="text-xs">
-                          {eventStatusLabel[event.status]}
-                        </Chip>
-                      </CardAction>
-                    </CardHeader>
-                  </Card>
-                </Link>
+                <EventCard event={event} />
               </li>
             ))}
           </ul>
