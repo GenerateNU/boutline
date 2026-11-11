@@ -117,6 +117,7 @@ function Stepper({ label, unit, onStep }: StepperProps) {
   return (
     <div className="flex items-center gap-3">
       <Button
+        type="button"
         variant="text"
         size="icon"
         aria-label={`Previous ${unit}`}
@@ -127,6 +128,7 @@ function Stepper({ label, unit, onStep }: StepperProps) {
       </Button>
       <p className="min-w-10 text-center">{label}</p>
       <Button
+        type="button"
         variant="text"
         size="icon"
         aria-label={`Next ${unit}`}

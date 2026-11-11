@@ -91,7 +91,7 @@ function GlobalNav() {
                 <Dialog.Close asChild>
                   <Link
                     href="/tournaments"
-                    aria-current={onTournaments ? "page" : undefined}
+                    aria-current={pathname === "/tournaments" ? "page" : undefined}
                     className={sidebarItemClassName(onTournaments)}
                   >
                     <Search aria-hidden />

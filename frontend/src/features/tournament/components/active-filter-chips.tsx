@@ -1,9 +1,9 @@
 "use client";
 
 import { Chip } from "@/components/primitives/chip";
-import { countryName } from "@/features/tournament/components/filter-sheet";
 import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
+import { countryName } from "@/features/tournament/lib/country-name";
 import type { TournamentStatus } from "@/features/tournament/types/tournament";
 
 interface ActiveFilterChipsProps {

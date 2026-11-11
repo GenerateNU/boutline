@@ -14,6 +14,7 @@ import { Slider } from "@/components/primitives/slider";
 import { ClubOptions } from "@/features/competitor/components/club-options";
 import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
+import { countryName } from "@/features/tournament/lib/country-name";
 import { countryCodePattern } from "@/features/tournament/lib/tournament-filters";
 import type {
   TournamentStatus,
@@ -28,8 +29,6 @@ const statusOrder: TournamentStatus[] = ["ended", "active", "pending"];
 
 const debounceMs = 300;
 const clubResultLimit = 10;
-const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
-
 const chipClassName = cn(
   buttonVariants({ variant: "outline", size: "sm" }),
   "flex-none rounded-lg first:border-l data-[state=on]:bg-blue data-[state=on]:text-white data-[state=on]:hover:bg-blue-dark",
@@ -42,10 +41,6 @@ interface Country {
 
 interface CountryListResult {
   data: Country[];
-}
-
-function countryName(code: string) {
-  return countryNames.of(code) ?? code;
 }
 
 interface FilterSheetProps {
@@ -258,4 +253,4 @@ function ChipGroup({ label, value, onValueChange, children }: ChipGroupProps) {
   );
 }
 
-export { FilterSheet, countryName };
+export { FilterSheet };
