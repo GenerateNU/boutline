@@ -20,10 +20,10 @@ function BracketMatch({ bout, href, dimmed = false }: BracketMatchProps) {
         {"opacity-40": dimmed}
       )}
     >
-      <div className="border-b border-muted-foreground/40">
+      <div className="divide-y divide-muted-foreground/40">
         <FencerRow fencer={bout.top} score={bout.topScore} />
+        <FencerRow fencer={bout.bottom} score={bout.bottomScore} />
       </div>
-      <FencerRow fencer={bout.bottom} score={bout.bottomScore} />
       {bout.status === "active" && <LiveBadge />}
     </Link>
   );
