@@ -113,7 +113,7 @@ func TestPoolSheetsAgainstRealDatabase(t *testing.T) {
 		})
 	}
 
-	t.Run("bouts follow their group slots", func(t *testing.T) {
+	t.Run("bouts follow their slots", func(t *testing.T) {
 		for _, pool := range []struct {
 			sheet   pool.PoolSheetResponse
 			firstID int
@@ -121,8 +121,7 @@ func TestPoolSheetsAgainstRealDatabase(t *testing.T) {
 			require.Len(t, pool.sheet.Bouts, 6)
 			for i, bout := range pool.sheet.Bouts {
 				assert.Equal(t, fmt.Sprintf("e0000000-0000-4000-8000-%012d", pool.firstID+i), bout.ID)
-				require.NotNil(t, bout.GroupSlot)
-				assert.Equal(t, i+1, *bout.GroupSlot)
+				assert.Equal(t, i+1, bout.Slot)
 			}
 		}
 	})

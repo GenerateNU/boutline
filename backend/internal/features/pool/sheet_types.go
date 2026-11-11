@@ -39,7 +39,7 @@ type PoolSheetFencer struct {
 
 type PoolSheetBout struct {
 	ID               string     `json:"id" format:"uuid"`
-	GroupSlot        *int       `json:"group_slot" doc:"Slot in the pool's bout order, from 1; null for a bout added by hand"`
+	Slot             int        `json:"slot" doc:"Position in the pool's bout order, from 1"`
 	Status           string     `json:"status" enum:"upcoming,active,ended"`
 	Competitor1ID    string     `json:"competitor_1_id" format:"uuid"`
 	Competitor2ID    string     `json:"competitor_2_id" format:"uuid"`
@@ -60,7 +60,7 @@ type PoolSheetResponse struct {
 	StartedAt   *time.Time        `json:"started_at"`
 	CompletedAt *time.Time        `json:"completed_at"`
 	Fencers     []PoolSheetFencer `json:"fencers" doc:"Ordered by position"`
-	Bouts       []PoolSheetBout   `json:"bouts" doc:"Ordered by group_slot, then scheduled start"`
+	Bouts       []PoolSheetBout   `json:"bouts" doc:"Ordered by slot"`
 }
 
 type PoolSheetOutput struct {
@@ -97,7 +97,7 @@ func newPoolSheetResponse(pool PoolSheetPoolRow, fencers []PoolSheetFencerRow, b
 	for _, bout := range bouts {
 		wireBouts = append(wireBouts, PoolSheetBout{
 			ID:               bout.ID.String(),
-			GroupSlot:        bout.GroupSlot,
+			Slot:             bout.Slot,
 			Status:           bout.Status,
 			Competitor1ID:    bout.Competitor1ID.String(),
 			Competitor2ID:    bout.Competitor2ID.String(),

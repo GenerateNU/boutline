@@ -55,17 +55,11 @@ func TestListPoolSheetsEndpoint(t *testing.T) {
 		require.True(t, ok)
 		ended, active := bouts[0].(map[string]any), bouts[4].(map[string]any)
 		assert.EqualValues(t, 5, ended["competitor_1_score"])
-		assert.Equal(t, float64(1), ended["group_slot"])
+		assert.Equal(t, float64(1), ended["slot"])
 		assert.Equal(t, competitorID(1).String(), ended["winner_id"])
 		assert.Contains(t, active, "winner_id")
 		assert.Nil(t, active["winner_id"])
 
-		pool2, ok := data[1].(map[string]any)
-		require.True(t, ok)
-		unordered, ok := pool2["bouts"].([]any)[0].(map[string]any)
-		require.True(t, ok)
-		assert.Contains(t, unordered, "group_slot")
-		assert.Nil(t, unordered["group_slot"])
 	})
 
 	t.Run("an empty pool serialises fencers and bouts as empty arrays", func(t *testing.T) {

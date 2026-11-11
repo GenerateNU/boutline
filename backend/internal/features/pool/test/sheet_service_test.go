@@ -48,17 +48,11 @@ func fencersOf(poolID uuid.UUID, first int, names ...string) []pool.PoolSheetFen
 	return rows
 }
 
-// order 0 leaves GroupSlot nil, like a bout added by hand.
-func boutOf(n, order int, poolID uuid.UUID, status string, c1, score1, c2, score2 int) pool.PoolSheetBoutRow {
-	var groupSlot *int
-	if order > 0 {
-		groupSlot = &order
-	}
-
+func boutOf(n, slot int, poolID uuid.UUID, status string, c1, score1, c2, score2 int) pool.PoolSheetBoutRow {
 	return pool.PoolSheetBoutRow{
 		ID:               boutID(n),
 		PoolID:           poolID,
-		GroupSlot:        groupSlot,
+		Slot:             slot,
 		Status:           status,
 		Competitor1ID:    competitorID(c1),
 		Competitor2ID:    competitorID(c2),
@@ -93,8 +87,8 @@ func seededSheetRepository() *FakePoolSheetRepository {
 			boutOf(4, 4, sheetPool1ID, "ended", 2, 2, 4, 5),
 			boutOf(5, 5, sheetPool1ID, "active", 1, 2, 4, 2),
 			boutOf(6, 6, sheetPool1ID, "upcoming", 2, 0, 3, 0),
-			boutOf(7, 0, sheetPool2ID, "ended", 5, 5, 6, 1),
-			boutOf(8, 0, sheetPool2ID, "ended", 7, 4, 8, 5),
+			boutOf(7, 1, sheetPool2ID, "ended", 5, 5, 6, 1),
+			boutOf(8, 2, sheetPool2ID, "ended", 7, 4, 8, 5),
 		},
 	}
 }
@@ -297,15 +291,12 @@ func TestListPoolSheetsContent(t *testing.T) {
 		assert.Equal(t, 2, active.Competitor2Score)
 	})
 
-	t.Run("bouts carry their group slot, nil for a bout added by hand", func(t *testing.T) {
+	t.Run("bouts carry their slot", func(t *testing.T) {
 		t.Parallel()
 
 		require.Len(t, pool2.Bouts, 2)
-		require.NotNil(t, pool1.Bouts[0].GroupSlot)
-		assert.Equal(t, 1, *pool1.Bouts[0].GroupSlot)
-		for _, bout := range pool2.Bouts {
-			assert.Nil(t, bout.GroupSlot)
-		}
+		assert.Equal(t, 1, pool1.Bouts[0].Slot)
+		assert.Equal(t, 2, pool2.Bouts[1].Slot)
 	})
 
 	t.Run("a pool without fencers or bouts serialises empty lists", func(t *testing.T) {

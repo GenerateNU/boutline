@@ -29,14 +29,14 @@ ORDER BY m.pool_id, position`
 
 // SUM(bigint) is numeric in Postgres, hence the casts back to bigint.
 const poolSheetBoutsQuery = `
-SELECT b.id, b.pool_id, b.group_slot, b.status, b.competitor_1_id, b.competitor_2_id, b.location, b.start_time,
+SELECT b.id, b.pool_id, b.slot, b.status, b.competitor_1_id, b.competitor_2_id, b.location, b.start_time,
        COALESCE(SUM(s.points) FILTER (WHERE s.competitor_id = b.competitor_1_id), 0)::bigint AS competitor_1_score,
        COALESCE(SUM(s.points) FILTER (WHERE s.competitor_id = b.competitor_2_id), 0)::bigint AS competitor_2_score
 FROM bouts b
 LEFT JOIN scorings s ON s.bout_id = b.id AND s.revoked_at IS NULL
 WHERE b.pool_id IN ?
 GROUP BY b.id
-ORDER BY b.group_slot ASC NULLS LAST, b.start_time ASC NULLS LAST, b.id`
+ORDER BY b.pool_id, b.slot`
 
 type PoolSheetListFilter struct {
 	EventID *uuid.UUID
