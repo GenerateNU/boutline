@@ -19,7 +19,7 @@ function AuthScreen({ title, children }: AuthScreenProps) {
       <p className="font-wordmark text-5xl leading-14 tracking-[-0.96px] text-blue">
         BOUTLINE
       </p>
-      <div className="flex w-65 flex-col items-center gap-8">
+      <div className="flex w-full max-w-65 flex-col items-center gap-8">
         <h1 className="text-xl font-semibold text-obsidian">{title}</h1>
         {children}
       </div>

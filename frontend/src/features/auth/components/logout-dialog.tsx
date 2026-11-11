@@ -2,7 +2,7 @@
 
 import { CircleUserRound, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
@@ -10,17 +10,24 @@ import { logout } from "@/features/auth/services/auth-actions";
 
 function LogoutDialog() {
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function handleLogout() {
+    setError(null);
     startTransition(async () => {
-      await logout();
+      try {
+        await logout();
+      } catch {
+        setError("Couldn't log out. Try again in a moment.");
+        return;
+      }
       router.push("/login");
     });
   }
 
   return (
-    <Dialog.Root>
+    <Dialog.Root onOpenChange={() => setError(null)}>
       <Dialog.Trigger asChild>
         <Button
           variant="text"
@@ -50,6 +57,11 @@ function LogoutDialog() {
           <Dialog.Description className="text-sm text-neutral-secondary">
             You will need to sign in again to manage your tournaments.
           </Dialog.Description>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <div className="flex gap-2.5">
             <Dialog.Close asChild>
               <Button variant="outline" className="flex-1 rounded-lg">
