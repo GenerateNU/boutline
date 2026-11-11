@@ -1,12 +1,7 @@
 import { notFound } from "next/navigation";
 
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/primitives/card";
 import { getEvents } from "@/features/event/services/getEvents";
+import { TournamentInfoCard } from "@/features/tournament/components/tournament-info-card";
 import { getTournament } from "@/features/tournament/services/getTournament";
 import { eventsWithStatus, formatEventDateRange } from "@/lib/event-schedule";
 
@@ -30,17 +25,7 @@ export default async function OverviewTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="rounded-lg">
-        <CardHeader>
-          <CardTitle role="heading" aria-level={1} className="font-normal">
-            {tournament.name}
-          </CardTitle>
-          {dates && <CardDescription className="text-sm">{dates}</CardDescription>}
-          {/* The backend has no venue or organizer fields yet. */}
-          <CardDescription className="text-sm">Location - TBC</CardDescription>
-          <CardDescription className="text-sm">Organizer Contact - TBC</CardDescription>
-        </CardHeader>
-      </Card>
+      <TournamentInfoCard name={tournament.name} dates={dates} />
       <EventListCard
         title="Ongoing Events"
         events={eventsWithStatus(events, "active")}
@@ -50,6 +35,11 @@ export default async function OverviewTab({
         title="Upcoming Events"
         events={eventsWithStatus(events, "upcoming")}
         emptyMessage={ended ? "Tournament has ended." : "No upcoming events."}
+      />
+      <EventListCard
+        title="Completed Events"
+        events={eventsWithStatus(events, "ended")}
+        emptyMessage="No events have finished yet."
       />
     </div>
   );

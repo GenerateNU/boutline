@@ -5,12 +5,6 @@ export interface EventTimeGroup {
   events: TournamentEvent[];
 }
 
-export const eventStatusLabel: Record<EventStatus, string> = {
-  upcoming: "Upcoming",
-  active: "Live",
-  ended: "Past",
-};
-
 // Every formatter uses UTC so a day label matches eventDay(), which slices the
 // UTC ISO string. Formatting in local time could put a late-evening event on
 // the next or previous day.
