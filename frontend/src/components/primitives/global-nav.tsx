@@ -111,10 +111,10 @@ function GlobalNav() {
                 </button>
               </nav>
             </div>
-            <span className="flex h-11 items-center gap-6 px-6 text-sm font-medium text-obsidian">
+            <p className="flex h-11 items-center gap-6 px-6 text-sm font-medium text-obsidian">
               <Settings aria-hidden className="size-6" />
               Settings
-            </span>
+            </p>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
