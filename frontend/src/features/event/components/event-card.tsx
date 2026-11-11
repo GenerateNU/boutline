@@ -23,7 +23,7 @@ function EventCard({ event, competitorCount }: EventCardProps) {
           </CardTitle>
           {competitorCount !== undefined && (
             <CardDescription className="text-xs text-neutral-secondary">
-              {pluralize(competitorCount, "competitor")}
+              {competitorCount} {pluralize(competitorCount, "competitor")}
             </CardDescription>
           )}
         </CardHeader>

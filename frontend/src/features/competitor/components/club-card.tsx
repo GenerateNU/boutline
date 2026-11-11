@@ -15,7 +15,7 @@ function ClubCard({ team, ...props }: ClubCardProps) {
       title={team.name}
       description={
         <>
-          <MockCountry /> &middot; {pluralize(team.competitorCount, "fencer")}
+          <MockCountry /> &middot; {team.competitorCount} {pluralize(team.competitorCount, "fencer")}
         </>
       }
       {...props}

@@ -28,7 +28,7 @@ function TournamentResultsCard({ tournament, eventCount, resultsHref }: Tourname
           <p className="flex items-center gap-1 text-xs text-neutral-secondary">
             <Calendar aria-hidden className="size-3.5 shrink-0" />
             {date && <>{date} &middot; </>}
-            {pluralize(eventCount, "event")}
+            {eventCount} {pluralize(eventCount, "event")}
           </p>
           {location && (
             <p className="flex items-center gap-1 text-xs text-neutral-secondary">
