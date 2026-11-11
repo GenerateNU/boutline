@@ -286,6 +286,8 @@ each with a referee.
     writes `started_at`.
   - `POST /pools/{id}/end`: needs every bout in the pool ended; writes
     `completed_at`.
+- Pool sheet routes (§11.3): `GET /pool-sheets` (by `event_id`, `ids` or both,
+  paginated) and `GET /pool-sheets/{id}`, read-only and public.
 - `poolstage.GenerateSeed` already implements pool seeding (§11.2), with tests, but
   no route calls it.
 
@@ -957,8 +959,8 @@ generates the DE once pools end.
 
 ## 11. Pools
 
-**Status:** Partial. Seeding and the manual pool and stage transitions are built;
-generation, results and the screens are planned.
+**Status:** Partial. Seeding, the manual pool and stage transitions and the pool
+sheet are built; generation, stage results and the screens are planned.
 
 **What it is:** the first round of an event. Fencers are split into pools of about
 six or seven, equally strong and with clubmates apart, and everyone in a pool
@@ -1030,11 +1032,26 @@ fencer in two pools, or re-seat a pool that has just started.
 
 ### 11.3 Pool results
 
-**Status:** Planned.
+**Status:** Partial. The pool sheet is built; the stage results endpoint is
+planned.
 
-`GET /pool-stages/{id}/results` returns each pool's grid and standings plus the
-overall ranking, computed from ended bouts. It is also the read the Pools tab
-uses, so there is no separate pool-board resource.
+Two reads share one standings function (`pool/standings.go`):
+
+- **Pool sheet** (built): `GET /pool-sheets` and `GET /pool-sheets/{id}` return,
+  per pool, its number, strip and status, its fencers with their standings, and
+  every bout in slot order with each side's score. This is what the Pools tab and
+  the pool screen read (§11.6). The list takes `event_id`, `ids` (up to 100 pools,
+  which may span events, for pinned pools, §6), or both, and is paginated.
+  - It is a read-only view over `pools`, `bouts`, `scorings` and `competitors`,
+    not a stored resource. It lives in the pool feature but reads those tables
+    with its own SQL, because `bout` imports `pool` and `scoring` imports `bout`.
+  - Still to do: fencers come from the pool's bouts and are positioned by
+    registration order, which can differ from the order create seats them in
+    (§11.2). Until `bouts.winner_id` exists (§9.2), the higher score wins, so a
+    priority win at a tied score shows no winner.
+- **Stage results** (planned): `GET /pool-stages/{id}/results` returns the
+  stage's overall ranking, computed from ended bouts, which seeds the DE. Each
+  pool's grid comes from the pool sheet.
 
 | Column | Meaning |
 | --- | --- |
