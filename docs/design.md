@@ -1500,7 +1500,7 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 ### C.4 Shape and interaction
 - `--radius` 0.625rem, with `rounded-sm`…`rounded-xl` derived from it. List cards
   use `rounded-md`; pills (tab nav, icon buttons, avatars) use `rounded-full`. 1px
-  `border-foreground`, no shadows.
+  `border-foreground`, no shadows, except the hi-fi navbar, which uses `shadow-md`.
 - Focus `focus-visible:ring-2 ring-ring`; hover `bg-muted`; disabled `opacity-50`.
 - Icons from `lucide-react` at `size-4`, `aria-hidden` when decorative.
 - Referee touch targets are large (`h-32`), because they are pressed under time
@@ -1513,6 +1513,9 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   segmented button, text field, select, checkbox, radio, toggle, slider, date
   picker, calendar, dropzone, dialogs and filter sheet, pagination, toast,
   tooltip, and progress indicators.
+- The hi-fi navigation set (`logo`, `navbar`, `navbar-tab`, `navbar-tabs`) sits beside
+  the lofi `global-nav` and `tab-nav` and is only used by the `/` showcase so far. The
+  logo takes its tone from the text colour (`text-white` or `text-blue`).
 - Many are only used by the `/` showcase so far.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.

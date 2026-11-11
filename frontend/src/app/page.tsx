@@ -66,6 +66,9 @@ import { NavigationBar } from "@/components/primitives/navigation/navigation-bar
 import { NavigationDrawer } from "@/components/primitives/navigation/navigation-drawer";
 import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
 import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+import { Logo } from "@/components/primitives/logo";
+import { Navbar } from "@/components/primitives/navbar";
+import { NavbarTab } from "@/components/primitives/navbar-tab";
 
 const buttonVariantNames = ["filled", "outline", "tonal", "text"] as const;
 const buttonSizes = ["sm", "default", "lg"] as const;
@@ -479,6 +482,26 @@ export default function Home() {
           <NavigationItem icon={<Shapes />} aria-label="Label" />
           <NavigationItem icon={<Shapes />} label="Label" selected />
           <NavigationItem icon={<Shapes />} aria-label="Label" selected />
+        </div>
+      </Section>
+
+      <Section title="Logo">
+        <div className="flex flex-col gap-4">
+          <Logo />
+          <div className="bg-blue p-4">
+            <Logo className="text-white" />
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Navbar">
+        <Navbar />
+      </Section>
+
+      <Section title="Navbar tab">
+        <div className="flex rounded-xl bg-obsidian">
+          <NavbarTab href="#" label="Fencers" />
+          <NavbarTab href="#" label="Fencers" active />
         </div>
       </Section>
 
