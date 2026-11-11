@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/primitives/card";
 import { EventStatusBadge } from "@/features/event/components/event-status-badge";
 import type { TournamentEvent } from "@/features/event/types/event";
+import { pluralize } from "@/lib/pluralize";
 
 interface EventCardProps {
   event: TournamentEvent;
@@ -22,7 +23,7 @@ function EventCard({ event, competitorCount }: EventCardProps) {
           </CardTitle>
           {competitorCount !== undefined && (
             <CardDescription className="text-xs text-neutral-secondary">
-              {competitorCount} competitors
+              {pluralize(competitorCount, "competitor")}
             </CardDescription>
           )}
         </CardHeader>
