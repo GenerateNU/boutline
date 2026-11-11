@@ -57,35 +57,54 @@ function PrivateTournamentDialog({
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-foreground/20" />
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40" />
         <Dialog.Content
-          aria-describedby={undefined}
           // There's no Dialog.Trigger to return focus to, so Radix would drop it on <body>.
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             returnFocusTo.current?.focus();
           }}
-          className="fixed inset-x-4 top-1/2 z-50 mx-auto flex max-w-88 -translate-y-1/2 flex-col gap-5 rounded-xl border border-foreground bg-background px-5 pt-5 pb-8"
+          className="fixed inset-x-2 top-1/2 z-50 mx-auto flex max-w-86.25 -translate-y-1/2 flex-col gap-5 rounded-3xl bg-background p-5 pt-6 font-manrope shadow-lg"
         >
-          <Dialog.Close asChild>
-            <Button variant="text" size="icon" aria-label="Close" className="-m-2">
-              <X className="size-6!" />
-            </Button>
-          </Dialog.Close>
-          <Dialog.Title className="text-center text-xl">Enter Private Tournament Code:</Dialog.Title>
-          <form onSubmit={handleSubmit} className="flex flex-col items-center gap-5">
+          <div className="flex items-center justify-between">
+            <Dialog.Title className="text-xl font-semibold text-obsidian">
+              Private tournament
+            </Dialog.Title>
+            <Dialog.Close asChild>
+              <Button
+                variant="text"
+                size="icon"
+                aria-label="Close"
+                className="-m-2 text-obsidian [&_svg]:size-6"
+              >
+                <X />
+              </Button>
+            </Dialog.Close>
+          </div>
+          <Dialog.Description className="-mt-1 text-sm text-neutral-secondary">
+            Enter the code from your tournament organizer.
+          </Dialog.Description>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
             <Input
               name="code"
               aria-label="Tournament code"
+              placeholder="Tournament code"
               required
               minLength={6}
               autoComplete="off"
-              className="rounded-none uppercase"
+              className="h-11.5 rounded-[12px] border-outline px-4 text-obsidian uppercase shadow-sm placeholder:text-neutral-secondary placeholder:normal-case"
             />
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" disabled={pending} className="rounded-lg">
-              Submit
-            </Button>
+            <div className="flex gap-2.5 pt-1.5">
+              <Dialog.Close asChild>
+                <Button type="button" variant="outline" className="flex-1 rounded-lg">
+                  Cancel
+                </Button>
+              </Dialog.Close>
+              <Button type="submit" disabled={pending} className="flex-1 rounded-lg">
+                Submit
+              </Button>
+            </div>
           </form>
         </Dialog.Content>
       </Dialog.Portal>

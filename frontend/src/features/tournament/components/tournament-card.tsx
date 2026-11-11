@@ -33,7 +33,7 @@ function TournamentCard({ tournament, admin }: TournamentCardProps) {
             </p>
           )}
         </CardHeader>
-        <TournamentStatusBadge status={tournament.status} />
+        <TournamentStatusBadge status={tournament.status} className="shrink-0" />
       </Card>
     </Link>
   );

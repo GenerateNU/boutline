@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Manrope, Special_Gothic_Expanded_One } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -13,6 +13,17 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const manrope = Manrope({
+  variable: "--font-manrope-face",
+  subsets: ["latin"],
+});
+
+const wordmark = Special_Gothic_Expanded_One({
+  variable: "--font-wordmark-face",
+  weight: "400",
   subsets: ["latin"],
 });
 
@@ -30,7 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${satoshi.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${satoshi.variable} ${manrope.variable} ${wordmark.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Toaster>

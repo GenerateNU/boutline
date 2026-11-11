@@ -10,17 +10,17 @@ interface FilterSearchFieldProps extends Omit<React.ComponentProps<"input">, "ty
 // children render under the input, e.g. the matches for what was typed.
 function FilterSearchField({ label, children, ...inputProps }: FilterSearchFieldProps) {
   return (
-    <div className="flex flex-col gap-1">
-      <p className="text-sm font-bold">{label}</p>
-      <div className="flex items-center gap-3 border border-brand py-3 pr-3 pl-4 focus-within:ring-2 focus-within:ring-ring">
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-obsidian">{label}</p>
+      <div className="flex items-center gap-3 rounded-[12px] border border-outline bg-background px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-ring">
         <Input
           type="search"
           aria-label={label}
           placeholder={`Search ${label.toLowerCase()}`}
           {...inputProps}
-          className="h-auto flex-1 rounded-none border-0 px-0 text-brand placeholder:text-brand focus-visible:ring-0"
+          className="h-5 flex-1 rounded-none border-0 px-0 text-obsidian shadow-none placeholder:text-neutral-secondary focus-visible:ring-0"
         />
-        <Search aria-hidden className="size-6 shrink-0" />
+        <Search aria-hidden className="size-4.5 shrink-0 text-neutral-secondary" />
       </div>
       {children}
     </div>
