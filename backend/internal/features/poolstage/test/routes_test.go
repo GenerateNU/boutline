@@ -229,9 +229,10 @@ func TestProposePoolsEndpoint(t *testing.T) {
 		}
 	})
 
-	for name, ids := range map[string][]string{
+	for name, ids := range map[string]any{
 		"rejects fewer than four competitors before the handler runs": entrantIDs(1, 3),
-		"rejects a malformed competitor before the handler runs":      {"nope", entrant(1).String()},
+		"rejects a malformed competitor before the handler runs":      append([]string{"nope"}, entrantIDs(1, 3)...),
+		"rejects a null list before the handler runs":                 nil,
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

@@ -59,7 +59,7 @@ func (f *proposalFixture) propose(t *testing.T, ids ...string) (*poolstage.PoolS
 		&poolstage.PoolStageProposalInput{ID: f.stage.ID.String(), Body: poolstage.PoolStageProposalBody{CompetitorIDs: ids}})
 }
 
-func entrant(n int) uuid.UUID { return uuid.UUID{15: byte(n)} }
+func entrant(n int) uuid.UUID { return uuid.UUID{14: byte(n >> 8), 15: byte(n)} }
 
 func entrantIDs(from, to int) []string {
 	ids := make([]string, 0, to-from+1)
@@ -176,6 +176,26 @@ func TestProposePoolsRejects(t *testing.T) {
 			ids:        entrantIDs(1, 7),
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "7 competitors cannot be split into pools of 4 to 6 fencers",
+		},
+		{
+			name: "a field that needs more pools than one create takes",
+			prepare: func(f *proposalFixture) {
+				f.stage.MaxCompetitorPerPool = 4
+				f.repo.PoolStages[f.stage.ID] = f.stage
+				for n := 5; n <= 404; n++ {
+					f.enter(n, f.event.ID, "A", fmt.Sprintf("Club %d", n))
+				}
+			},
+			ids:        entrantIDs(1, 404),
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "404 competitors need 101 pools of at most 4 fencers, but at most 100 pools can be created at once",
+		},
+		{
+			name:       "a pool stage that already has pools",
+			prepare:    func(f *proposalFixture) { f.repo.PoolCounts[f.stage.ID] = PoolCount{Total: 1} },
+			ids:        entrantIDs(1, 4),
+			wantCode:   http.StatusConflict,
+			wantDetail: "pools can only be proposed for a pool stage with no pools yet",
 		},
 		{
 			name: "a pool stage that is no longer upcoming",

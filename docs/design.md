@@ -1003,7 +1003,8 @@ pools are generated after the tournament starts.
    `{competitor_ids}` (4 to 1,000, 422 otherwise) and returns
    `{pools: [{number, fencers: [{competitor_id, first_name, last_name, rating,
    team}]}]}` without saving anything, each pool's fencers in seed order. The
-   stage must exist (404) and be `upcoming` (409). Every competitor must exist
+   stage must exist (404), be `upcoming` and have no pools yet (409); existing
+   pools are changed by re-seating. Every competitor must exist
    and be entered in the stage's event, and none may be listed twice (400), so
    any proposal can be sent to Create as is. Pools are capped at the smaller of
    `max_competitor_per_pool` and 10, Create's limit. `poolstage.GenerateSeed`
@@ -1012,8 +1013,9 @@ pools are generated after the tournament starts.
      between equals.
    - Make the fewest pools of at most `max_competitor_per_pool`, with sizes as
      equal as possible (e.g. 20 fencers, max 7: pools of 7-7-6). A field that
-     cannot fill pools of 4 up to that maximum (e.g. 7 fencers, max 6) is a 400,
-     since Create would reject the pools.
+     cannot fill pools of 4 up to that maximum (e.g. 7 fencers, max 6), or needs
+     more than the 100 pools Create takes at once, is a 400, since Create would
+     reject the pools.
    - Deal the ranking out in a snake (1→A, 2→B, 3→C, 4→C, 5→B, …).
    - Keep clubmates apart, as FIE o.68.2 keeps compatriots apart. Each slot takes
      the best remaining seed with no clubmate in that pool. A fencer passed over

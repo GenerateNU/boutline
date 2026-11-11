@@ -18,6 +18,8 @@ func TestProposePoolsAgainstRealDatabase(t *testing.T) {
 	app := testkit.GetDBTestApp(t)
 	headers := map[string]string{"Authorization": "Bearer " + poolCreateToken(t, app)}
 	route := "/api/v1/pool-stages/" + poolCreateStageID + "/proposed-pools"
+	// Propose refuses a stage that already has pools, so don't depend on test order.
+	poolCreateEmptyStage(t, app, headers)
 
 	t.Run("splits the field into balanced pools without saving them", func(t *testing.T) {
 		before := poolCreateStageTotal(t, app, headers)
@@ -62,7 +64,9 @@ func TestProposePoolsAgainstRealDatabase(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := testkit.New(t).
 				Request(testkit.Request{App: app, Route: route, Method: testkit.POST, Headers: headers,
-					Body: map[string]any{"competitor_ids": []string{poolCreateCompetitorID(1), tt.other}}}).
+					Body: map[string]any{"competitor_ids": []string{
+						poolCreateCompetitorID(1), poolCreateCompetitorID(2), poolCreateCompetitorID(3), tt.other,
+					}}}).
 				AssertStatus(http.StatusBadRequest)
 			assert.Contains(t, result.GetBody()["detail"], "is not entered in this pool stage's event")
 		})

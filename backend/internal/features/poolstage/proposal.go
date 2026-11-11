@@ -15,6 +15,9 @@ import (
 // accepts, the largest with a standard bout order, so every proposal can be created as is.
 const proposedPoolMaxFencers = 10
 
+// proposedMaxPools is the most pools batch pool creation takes in one request.
+const proposedMaxPools = 100
+
 // ProposePools splits the competitors into pools without saving anything. Rating years
 // are not stored yet, so ties within a rating letter fall to the seeding's random draw.
 func (s *poolStageService) ProposePools(ctx context.Context, input *PoolStageProposalInput) (*PoolStageProposalOutput, error) {
@@ -31,8 +34,8 @@ func (s *poolStageService) ProposePools(ctx context.Context, input *PoolStagePro
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("get pool stage: %w", err))
 	}
-	if stage.Status != PoolStageStatusUpcoming {
-		return nil, errs.HumaError(errs.Public("pools can only be proposed for an upcoming pool stage", errs.ErrConflict))
+	if err := s.checkProposalStage(ctx, *stage); err != nil {
+		return nil, errs.HumaError(err)
 	}
 
 	entrants, err := s.loadProposalEntrants(ctx, *stage, competitorIDs)
@@ -58,14 +61,40 @@ func (s *poolStageService) ProposePools(ctx context.Context, input *PoolStagePro
 	return &PoolStageProposalOutput{Body: newPoolStageProposalResult(pools, entrants)}, nil
 }
 
-// checkProposalSize rejects a field that cannot fill pools of MinCompetitorsPerPool to
-// maxPerPool, which pool creation would refuse. Seeding makes the fewest pools that fit,
-// which also has the largest smallest pool, so if that pool is too small no split works.
+// checkProposalStage refuses a stage that isn't upcoming or already has pools. A proposal
+// numbers its pools from 1, so creation would reject it next to existing pools; those are
+// changed by re-seating instead.
+func (s *poolStageService) checkProposalStage(ctx context.Context, stage PoolStage) error {
+	if stage.Status != PoolStageStatusUpcoming {
+		return errs.Public("pools can only be proposed for an upcoming pool stage", errs.ErrConflict)
+	}
+
+	total, _, err := s.repo.CountPoolStagePools(ctx, stage.ID)
+	if err != nil {
+		return fmt.Errorf("count pool stage pools: %w", err)
+	}
+	if total > 0 {
+		return errs.Public("pools can only be proposed for a pool stage with no pools yet", errs.ErrConflict)
+	}
+
+	return nil
+}
+
+// checkProposalSize rejects a field that pool creation would refuse: one that cannot fill
+// pools of MinCompetitorsPerPool to maxPerPool, or needs more pools than one request takes.
+// Seeding makes the fewest pools that fit, which also has the largest smallest pool, so if
+// that pool is too small no split works.
 func checkProposalSize(count, maxPerPool int) error {
 	pools := 1 + (count-1)/maxPerPool
 	if count < pools*MinCompetitorsPerPool {
 		return errs.Public(
 			fmt.Sprintf("%d competitors cannot be split into pools of %d to %d fencers", count, MinCompetitorsPerPool, maxPerPool),
+			errs.ErrInvalidInput)
+	}
+	if pools > proposedMaxPools {
+		return errs.Public(
+			fmt.Sprintf("%d competitors need %d pools of at most %d fencers, but at most %d pools can be created at once",
+				count, pools, maxPerPool, proposedMaxPools),
 			errs.ErrInvalidInput)
 	}
 
