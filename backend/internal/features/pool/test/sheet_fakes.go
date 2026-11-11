@@ -57,6 +57,11 @@ func (f *FakePoolSheetRepository) ListPoolSheets(
 	return pools, total, nil
 }
 
+// ReadSnapshot runs read directly: the fake has no concurrent writers to isolate from.
+func (f *FakePoolSheetRepository) ReadSnapshot(_ context.Context, read func(repo pool.PoolSheetRepository) error) error {
+	return read(f)
+}
+
 func (f *FakePoolSheetRepository) GetPoolSheetByID(_ context.Context, id uuid.UUID) (*pool.PoolSheetPoolRow, error) {
 	if f.Err != nil {
 		return nil, f.Err

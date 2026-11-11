@@ -2,6 +2,7 @@ package pool
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -50,6 +51,10 @@ type PoolSheetRepository interface {
 	GetPoolSheetByID(ctx context.Context, id uuid.UUID) (*PoolSheetPoolRow, error)
 	ListPoolSheetFencers(ctx context.Context, poolIDs []uuid.UUID) ([]PoolSheetFencerRow, error)
 	ListPoolSheetBouts(ctx context.Context, poolIDs []uuid.UUID) ([]PoolSheetBoutRow, error)
+	// ReadSnapshot runs read against one read-only, repeatable-read transaction, so
+	// a sheet's pools, fencers and bouts all come from the same moment. Under the
+	// default read-committed level each query would see edits made in between.
+	ReadSnapshot(ctx context.Context, read func(repo PoolSheetRepository) error) error
 }
 
 type poolSheetRepository struct {
@@ -58,6 +63,12 @@ type poolSheetRepository struct {
 
 func NewPoolSheetRepository(db *gorm.DB) PoolSheetRepository {
 	return &poolSheetRepository{db: db}
+}
+
+func (r *poolSheetRepository) ReadSnapshot(ctx context.Context, read func(repo PoolSheetRepository) error) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return read(&poolSheetRepository{db: tx})
+	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 }
 
 func (r *poolSheetRepository) ListPoolSheets(ctx context.Context, filter PoolSheetListFilter) ([]PoolSheetPoolRow, int64, error) {

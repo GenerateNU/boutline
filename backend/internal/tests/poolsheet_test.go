@@ -155,6 +155,23 @@ func TestPoolSheetsAgainstRealDatabase(t *testing.T) {
 			AssertField("total", float64(1))
 	})
 
+	t.Run("counts a pool pinned twice once", func(t *testing.T) {
+		body := testkit.New(t).
+			Request(testkit.Request{
+				App:    app,
+				Route:  "/api/v1/pool-sheets",
+				Method: testkit.GET,
+				Query:  map[string]string{"ids": pool2ID + "," + pool2ID},
+			}).
+			AssertStatus(http.StatusOK).
+			AssertField("total", float64(1)).
+			GetBody()
+
+		data, ok := body["data"].([]any)
+		require.True(t, ok, "data is not a list: %v", body)
+		assert.Len(t, data, 1)
+	})
+
 	t.Run("an unknown pool is not found", func(t *testing.T) {
 		testkit.New(t).
 			Request(testkit.Request{App: app, Route: "/api/v1/pool-sheets/" + uuid.NewString(), Method: testkit.GET}).

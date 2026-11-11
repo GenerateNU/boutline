@@ -36,14 +36,19 @@ func (s *poolSheetService) ListPoolSheets(ctx context.Context, input *PoolSheetL
 		return nil, errs.HumaError(err)
 	}
 
-	pools, total, err := s.repo.ListPoolSheets(ctx, filter)
+	var data []PoolSheetResponse
+	var total int64
+	err = s.repo.ReadSnapshot(ctx, func(repo PoolSheetRepository) error {
+		pools, count, err := repo.ListPoolSheets(ctx, filter)
+		if err != nil {
+			return fmt.Errorf("list pool sheets: %w", err)
+		}
+		total = count
+		data, err = assemblePoolSheets(ctx, repo, pools)
+		return err
+	})
 	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("list pool sheets: %w", err))
-	}
-
-	data, err := s.assemblePoolSheets(ctx, pools)
-	if err != nil {
-		return nil, err
+		return nil, errs.HumaError(err)
 	}
 
 	return &PoolSheetListOutput{Body: PoolSheetListBody{
@@ -97,22 +102,29 @@ func (s *poolSheetService) GetPoolSheetByID(ctx context.Context, input *PoolShee
 		return nil, errs.HumaError(err)
 	}
 
-	pool, err := s.repo.GetPoolSheetByID(ctx, id)
+	var sheet PoolSheetResponse
+	err = s.repo.ReadSnapshot(ctx, func(repo PoolSheetRepository) error {
+		pool, err := repo.GetPoolSheetByID(ctx, id)
+		if err != nil {
+			return fmt.Errorf("get pool sheet: %w", err)
+		}
+		fencers, bouts, err := loadSheetRows(ctx, repo, []uuid.UUID{id})
+		if err != nil {
+			return err
+		}
+		sheet = newPoolSheetResponse(*pool, fencers, bouts)
+		return nil
+	})
 	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("get pool sheet: %w", err))
+		return nil, errs.HumaError(err)
 	}
 
-	fencers, bouts, err := s.loadSheetRows(ctx, []uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-
-	return &PoolSheetOutput{Body: newPoolSheetResponse(*pool, fencers, bouts)}, nil
+	return &PoolSheetOutput{Body: sheet}, nil
 }
 
 // assemblePoolSheets loads every listed pool's fencers and bouts in one query each
 // and groups them back onto their pools, keeping the pools' order.
-func (s *poolSheetService) assemblePoolSheets(ctx context.Context, pools []PoolSheetPoolRow) ([]PoolSheetResponse, error) {
+func assemblePoolSheets(ctx context.Context, repo PoolSheetRepository, pools []PoolSheetPoolRow) ([]PoolSheetResponse, error) {
 	data := make([]PoolSheetResponse, 0, len(pools))
 	if len(pools) == 0 {
 		return data, nil
@@ -122,7 +134,7 @@ func (s *poolSheetService) assemblePoolSheets(ctx context.Context, pools []PoolS
 	for _, pool := range pools {
 		ids = append(ids, pool.ID)
 	}
-	fencers, bouts, err := s.loadSheetRows(ctx, ids)
+	fencers, bouts, err := loadSheetRows(ctx, repo, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -142,15 +154,15 @@ func (s *poolSheetService) assemblePoolSheets(ctx context.Context, pools []PoolS
 	return data, nil
 }
 
-func (s *poolSheetService) loadSheetRows(ctx context.Context, poolIDs []uuid.UUID) ([]PoolSheetFencerRow, []PoolSheetBoutRow, error) {
-	fencers, err := s.repo.ListPoolSheetFencers(ctx, poolIDs)
+func loadSheetRows(ctx context.Context, repo PoolSheetRepository, poolIDs []uuid.UUID) ([]PoolSheetFencerRow, []PoolSheetBoutRow, error) {
+	fencers, err := repo.ListPoolSheetFencers(ctx, poolIDs)
 	if err != nil {
-		return nil, nil, errs.HumaError(fmt.Errorf("list pool sheet fencers: %w", err))
+		return nil, nil, fmt.Errorf("list pool sheet fencers: %w", err)
 	}
 
-	bouts, err := s.repo.ListPoolSheetBouts(ctx, poolIDs)
+	bouts, err := repo.ListPoolSheetBouts(ctx, poolIDs)
 	if err != nil {
-		return nil, nil, errs.HumaError(fmt.Errorf("list pool sheet bouts: %w", err))
+		return nil, nil, fmt.Errorf("list pool sheet bouts: %w", err)
 	}
 
 	return fencers, bouts, nil
