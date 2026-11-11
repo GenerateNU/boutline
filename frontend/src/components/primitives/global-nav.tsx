@@ -9,6 +9,7 @@ import { useRef, useState } from "react";
 import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
+import { LogoutDialog } from "@/features/auth/components/logout-dialog";
 import { PrivateTournamentDialog } from "@/features/tournament/components/private-tournament-dialog";
 
 function sidebarItemClassName(selected = false) {
@@ -57,10 +58,9 @@ function GlobalNav() {
           </Dialog.Trigger>
           <Link href="/" className="relative ml-2.5 flex items-center gap-2.5">
             <Image src="/brand/logo-mark.svg" alt="" width={21} height={24} />
-            <span className="font-wordmark text-[17px] tracking-[1.02px] text-white">
-              BOUTLINE
-            </span>
+            <p className="font-wordmark text-[17px] tracking-[1.02px] text-white">BOUTLINE</p>
           </Link>
+          {pathname.startsWith("/admin") && <LogoutDialog />}
         </header>
 
         <Dialog.Portal>
@@ -111,10 +111,16 @@ function GlobalNav() {
                 </button>
               </nav>
             </div>
-            <p className="flex h-11 items-center gap-6 px-6 text-sm font-medium text-obsidian">
-              <Settings aria-hidden className="size-6" />
-              Settings
-            </p>
+            <Dialog.Close asChild>
+              <Link
+                href="/settings"
+                aria-current={pathname === "/settings" ? "page" : undefined}
+                className="flex h-11 items-center gap-6 px-6 text-sm font-medium text-obsidian hover:text-blue aria-[current=page]:text-blue"
+              >
+                <Settings aria-hidden className="size-6" />
+                Settings
+              </Link>
+            </Dialog.Close>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
