@@ -57,12 +57,12 @@ function BracketRound({ round, isLast, query, boutBasePath, ref }: BracketRoundP
           {group.length === 2 && (
             <>
               {/* ⊐ shape joining the centers of the two bouts */}
-              <span
+              <p
                 aria-hidden
                 className="absolute top-1/4 -right-4 h-1/2 w-4 border-y border-r border-foreground"
               />
               {/* line from the middle of ⊐ to the next round */}
-              <span
+              <p
                 aria-hidden
                 className="absolute top-1/2 -right-8 w-4 border-t border-foreground"
               />
