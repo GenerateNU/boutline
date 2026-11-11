@@ -5,6 +5,7 @@ type ChipProps = React.ComponentProps<"div"> & {
   icon?: React.ReactNode;
   dismissible?: boolean;
   onDismiss?: () => void;
+  dismissLabel?: string;
   dropdown?: boolean;
 };
 
@@ -13,6 +14,7 @@ function Chip({
   icon,
   dismissible,
   onDismiss,
+  dismissLabel = "Remove",
   dropdown,
   children,
   ...props
@@ -32,7 +34,7 @@ function Chip({
       {dismissible || onDismiss ? (
         <button
           type="button"
-          aria-label="Remove"
+          aria-label={dismissLabel}
           onClick={onDismiss}
           className="cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >

@@ -39,6 +39,7 @@
   --color-disabled-border: var(--disabled-border);
   --color-disabled-foreground: var(--disabled-foreground);
   --color-obsidian: var(--obsidian);
+  --color-fencing-white: var(--fencing-white);
   --color-blue-lightest: var(--blue-lightest);
   --color-neutral-secondary: var(--neutral-secondary);
   --color-neutral-muted: var(--neutral-muted);
@@ -62,6 +63,8 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-satoshi: var(--font-satoshi-face);
+  --font-manrope: var(--font-manrope-face);
+  --font-wordmark: var(--font-wordmark-face);
 
   --container-mobile: 440px;
 }
@@ -104,6 +107,7 @@
   --disabled-border: #ccd1d9;
   --disabled-foreground: #6e7582;
   --obsidian: #010d21;
+  --fencing-white: #fafafa;
   --blue-lightest: #f2f6fe;
   --neutral-secondary: #586472;
   --neutral-muted: #969da5;

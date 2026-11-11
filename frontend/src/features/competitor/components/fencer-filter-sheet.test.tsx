@@ -69,7 +69,7 @@ describe("FencerFilterSheet", () => {
       "true",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
     expect(screen.getByRole("button", { name: "Salle Nord" })).toHaveAttribute(
       "aria-pressed",
       "false",
