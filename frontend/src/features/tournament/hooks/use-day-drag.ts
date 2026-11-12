@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 
+import { clamp } from "@/utils/clamp";
+
 // Movement under this many pixels is a tap on a day, not a drag.
 const DRAG_THRESHOLD = 5;
 // A drag past this share of the strip turns the page; a shorter one springs back.
@@ -19,10 +21,6 @@ interface Drag {
 // page, so it's shifted left by a third to show the middle one.
 function rowTransform(offset: number) {
   return `translateX(calc(-100% / 3 + ${offset}px))`;
-}
-
-function clamp(value: number, limit: number) {
-  return Math.max(-limit, Math.min(limit, value));
 }
 
 function useDayDrag(visibleDays: number, onShift: (days: number) => void) {
@@ -72,7 +70,7 @@ function useDayDrag(visibleDays: number, onShift: (days: number) => void) {
       current.dragging = true;
       event.currentTarget.setPointerCapture(event.pointerId);
     }
-    setOffset(clamp(dx, current.pageWidth));
+    setOffset(clamp(dx, -current.pageWidth, current.pageWidth));
   }
 
   function finish(event: React.PointerEvent<HTMLDivElement>, canShift: boolean) {
