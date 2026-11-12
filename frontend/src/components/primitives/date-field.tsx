@@ -43,7 +43,7 @@ function DateField({
         htmlFor={triggerId}
         className={cn(
           "text-xs font-medium text-neutral-secondary",
-          disabled && "text-neutral-muted",
+          { "text-neutral-muted": disabled },
         )}
       >
         {label}

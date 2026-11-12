@@ -97,7 +97,7 @@ function UploadDialog({
   onRemoveFile,
   onReject,
   accept = uploadAccept,
-  maxSize = 50 * 1024 * 1024,
+  maxSize,
 }: UploadDialogProps) {
   const [rejection, setRejection] = useState<string>();
 

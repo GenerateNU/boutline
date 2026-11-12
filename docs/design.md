@@ -148,7 +148,7 @@ how to test it.
   through the real app: routing, OpenAPI security and the auth middleware, plus
   DB-backed login, search and list-filter tests. Those skip without Postgres;
   `REQUIRE_DB=1` makes them fail instead, as CI does.
-- **Frontend:** Jest with Testing Library, 31 test files. They cover the proxy,
+- **Frontend:** Jest with Testing Library, 58 test files. They cover the proxy,
   `apiRequest`, the API services, auth actions, the search and filter components,
   pagination, pinning and the referee screen. No browser end-to-end tests yet.
 

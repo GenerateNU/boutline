@@ -4,6 +4,9 @@ import { cn } from "cn";
 import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
 import { type Accept, useDropzone } from "react-dropzone";
 
+// 50MB, the limit the upload designs show.
+const defaultMaxSize = 50 * 1024 * 1024;
+
 interface DropzoneProps {
   label?: string;
   accept: Accept;
@@ -22,7 +25,7 @@ function Dropzone({
   onFile,
   multiple = false,
   onFiles,
-  maxSize,
+  maxSize = defaultMaxSize,
   onReject,
   className,
   children,
@@ -43,8 +46,10 @@ function Dropzone({
       {...getRootProps({
         className: cn(
           "flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-outline bg-background px-4 py-6 text-center text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-blue-lighter",
-          !triggered && "cursor-pointer hover:bg-blue-lightest",
-          isDragActive && "border-blue bg-blue-lightest",
+          {
+            "cursor-pointer hover:bg-blue-lightest": !triggered,
+            "border-blue bg-blue-lightest": isDragActive,
+          },
           className,
         ),
       })}

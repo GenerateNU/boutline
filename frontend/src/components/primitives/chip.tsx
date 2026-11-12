@@ -29,8 +29,10 @@ function Chip({
       data-slot="chip"
       className={cn(
         "inline-flex items-center gap-1 rounded-md border border-outline bg-background px-2.5 py-1.5 text-xs font-medium text-obsidian [&_svg]:size-3.5 [&_svg]:shrink-0",
-        removable && "hover:bg-surface",
-        selected && "border-blue-light bg-blue-lightest text-blue",
+        {
+          "hover:bg-surface": removable,
+          "border-blue-light bg-blue-lightest text-blue": selected,
+        },
         className,
       )}
       {...props}
