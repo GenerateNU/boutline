@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { CloudUpload } from "lucide-react";
+import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
 import { type Accept, useDropzone } from "react-dropzone";
 
 interface DropzoneProps {
@@ -55,7 +55,7 @@ function Dropzone({
         ? children(open)
         : (children ?? (
             <>
-              <CloudUpload aria-hidden className="size-5" />
+              <CloudUploadOutlined aria-hidden className="size-5" />
               <p>{label}</p>
             </>
           ))}

@@ -1,10 +1,9 @@
 import { Pagination } from "@/components/primitives/pagination";
 import { Section } from "@/components/primitives/section";
+import { ClubCard } from "@/features/competitor/components/club-card";
 import { getTeams } from "@/features/competitor/services/getTeams";
 import { SearchForm } from "@/features/tournament/components/search-form";
 import { readOffsetParam, readStringParam } from "@/lib/search-params";
-
-import { MockCountry } from "../_components/mock-country";
 
 const PAGE_SIZE = 20;
 
@@ -41,36 +40,13 @@ export default async function ClubsTab({
             : "No clubs are competing in this tournament yet."}
         </p>
       ) : (
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-foreground text-xs text-muted-foreground uppercase">
-              <th scope="col" className="w-6 py-2 text-left font-medium">
-                C
-              </th>
-              <th scope="col" className="py-2 text-left font-medium">
-                Club Name
-              </th>
-              <th scope="col" className="py-2 text-right font-medium">
-                Fencers
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map(({ name, competitorCount }) => (
-              <tr key={name} className="border-b border-border">
-                <td className="py-3 pr-2">
-                  <MockCountry />
-                </td>
-                <td className="max-w-0 truncate py-3 pr-3 font-medium">
-                  {name}
-                </td>
-                <td className="py-3 text-right tabular-nums text-muted-foreground">
-                  {competitorCount}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ul className="flex flex-col gap-3">
+          {data.map((team) => (
+            <li key={team.name}>
+              <ClubCard team={team} />
+            </li>
+          ))}
+        </ul>
       )}
 
       <Pagination

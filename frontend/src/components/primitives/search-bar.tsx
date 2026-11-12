@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { Search } from "lucide-react";
+import SearchOutlined from "@mui/icons-material/SearchOutlined";
 import { useState } from "react";
 
 import { Input } from "@/components/primitives/input";
@@ -43,7 +43,7 @@ function SearchBar({
           className="h-auto w-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-sm text-obsidian placeholder:text-neutral-muted focus-visible:ring-0"
           {...props}
         />
-        <Search aria-hidden className="size-4 text-neutral-secondary" />
+        <SearchOutlined aria-hidden className="size-4 text-neutral-secondary" />
         {trailing}
       </div>
       {open ? (

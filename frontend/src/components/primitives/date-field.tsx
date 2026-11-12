@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { cn } from "cn";
-import { Calendar as CalendarIcon } from "lucide-react";
+import CalendarTodayOutlined from "@mui/icons-material/CalendarTodayOutlined";
 import { Popover } from "radix-ui";
 import { useId, useState } from "react";
 
@@ -62,7 +62,7 @@ function DateField({
             )}
           >
             <p>{date ? format(date, "MMM d, yyyy") : placeholder}</p>
-            <CalendarIcon aria-hidden className="size-4 text-neutral-secondary" />
+            <CalendarTodayOutlined aria-hidden className="size-4 text-neutral-secondary" />
           </button>
         </Popover.Trigger>
         <Popover.Portal>

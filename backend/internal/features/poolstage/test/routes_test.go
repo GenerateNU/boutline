@@ -61,10 +61,10 @@ func TestCreateEndpoint(t *testing.T) {
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
-			name: "rejects a pool size below two before the handler runs",
+			name: "rejects a pool size below four before the handler runs",
 			body: map[string]any{
 				"event_id":                parent.ID.String(),
-				"max_competitor_per_pool": 1,
+				"max_competitor_per_pool": 3,
 			},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
@@ -158,11 +158,11 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 		assert.InDelta(t, 4, body["max_competitor_per_pool"], 0)
 	})
 
-	t.Run("rejects a pool size below two before the handler runs", func(t *testing.T) {
+	t.Run("rejects a pool size below four before the handler runs", func(t *testing.T) {
 		t.Parallel()
 
 		resp := newTestAPI(t, NewFakePoolStageRepository(stored), NewFakeEventLookup()).
-			Patch(base+stored.ID.String(), map[string]any{"max_competitor_per_pool": 1})
+			Patch(base+stored.ID.String(), map[string]any{"max_competitor_per_pool": 3})
 
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
@@ -203,4 +203,42 @@ func TestDeleteEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, api.Get(base).Code)
 	assert.Equal(t, http.StatusNotFound, api.Delete(base).Code)
+}
+
+func TestProposePoolsEndpoint(t *testing.T) {
+	t.Parallel()
+
+	f := newProposalFixture(5, 6, nil)
+	path := "/api/v1/pool-stages/" + f.stage.ID.String() + "/proposed-pools"
+	api := func(t *testing.T) humatest.TestAPI { return newTestAPI(t, f.repo, NewFakeEventLookup(f.event)) }
+
+	t.Run("returns the proposal with snake_case keys", func(t *testing.T) {
+		t.Parallel()
+
+		resp := api(t).Post(path, map[string]any{"competitor_ids": competitorIDs(1, 5)})
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+		pools := decodeBody(t, resp.Body.Bytes())["pools"].([]any)
+		require.Len(t, pools, 1)
+		first := pools[0].(map[string]any)
+		assert.InDelta(t, 1, first["number"], 0)
+		fencers := first["fencers"].([]any)
+		require.Len(t, fencers, 5)
+		for _, key := range []string{"competitor_id", "first_name", "last_name", "rating", "team"} {
+			assert.Contains(t, fencers[0], key)
+		}
+	})
+
+	for name, ids := range map[string]any{
+		"rejects fewer than four competitors before the handler runs": competitorIDs(1, 3),
+		"rejects a malformed competitor before the handler runs":      append([]string{"nope"}, competitorIDs(1, 3)...),
+		"rejects a null list before the handler runs":                 nil,
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := api(t).Post(path, map[string]any{"competitor_ids": ids})
+			assert.Equal(t, http.StatusUnprocessableEntity, resp.Code, "body: %s", resp.Body)
+		})
+	}
 }

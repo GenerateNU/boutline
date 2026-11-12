@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import { ChevronRight } from "lucide-react";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
 
 import { Button } from "@/components/primitives/button";
 
@@ -33,7 +33,7 @@ function MenuItem({ className, icon, children, ...props }: MenuItemProps) {
       >
         {icon}
         <p className="flex-1 truncate">{children}</p>
-        <ChevronRight aria-hidden />
+        <ChevronRightOutlined aria-hidden />
       </Button>
     </li>
   );

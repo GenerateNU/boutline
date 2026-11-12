@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { X } from "lucide-react";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
 import { Toast as ToastPrimitive } from "radix-ui";
 import { createContext, useContext, useRef, useState } from "react";
 
@@ -92,7 +92,7 @@ function ToastClose({
       )}
       {...props}
     >
-      <X aria-hidden className="size-6" />
+      <CloseOutlined aria-hidden className="size-6" />
     </ToastPrimitive.Close>
   );
 }

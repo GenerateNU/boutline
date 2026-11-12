@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { ChevronDown } from "lucide-react";
+import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
 import { Select as SelectPrimitive } from "radix-ui";
 
 // Shared with DateField, whose trigger looks the same.
@@ -37,7 +37,7 @@ function Select({
       >
         <SelectPrimitive.Value placeholder={placeholder} />
         <SelectPrimitive.Icon asChild>
-          <ChevronDown className="size-4 shrink-0 text-neutral-secondary transition-transform group-data-[state=open]:rotate-180" />
+          <ExpandMoreOutlined className="size-4 shrink-0 text-neutral-secondary transition-transform group-data-[state=open]:rotate-180" />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>

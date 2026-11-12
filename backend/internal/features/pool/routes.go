@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"boutline/internal/features/poolstage"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -12,18 +13,25 @@ import (
 const poolBasePath = "/api/v1/pools"
 
 func RegisterPoolRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterPoolService(api, NewPoolService(NewPoolRepository(params.DB), poolstage.NewPoolStageRepository(params.DB)))
+	RegisterPoolService(api, NewPoolService(
+		NewPoolRepository(params.DB),
+		poolstage.NewPoolStageRepository(params.DB),
+		tournamentuser.NewTournamentUserRepository(params.DB),
+	))
 }
 
 func RegisterPoolService(api huma.API, service PoolService) {
 	huma.Register(api, huma.Operation{
-		OperationID:   "createPool",
-		Method:        http.MethodPost,
-		Path:          poolBasePath,
-		Summary:       "Create a pool",
+		OperationID: "createPools",
+		Method:      http.MethodPost,
+		Path:        poolBasePath,
+		Summary:     "Create pools with their bouts",
+		Description: "Creates every pool in one transaction, seats each pool's fencers in the order listed " +
+			"and schedules its bouts in the standard pool order. " +
+			"Every pool must belong to the same upcoming pool stage.",
 		Tags:          []string{"Pools"},
 		DefaultStatus: http.StatusCreated,
-	}, service.CreatePool)
+	}, service.CreatePools)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listPools",

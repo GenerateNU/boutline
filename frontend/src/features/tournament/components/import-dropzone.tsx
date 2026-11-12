@@ -1,6 +1,6 @@
 "use client";
 
-import { CloudUpload } from "lucide-react";
+import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
 import { Button } from "@/components/primitives/button";
 import { Dropzone } from "@/components/primitives/dropzone";
 
@@ -19,7 +19,7 @@ function ImportDropzone({ onFile }: ImportDropzoneProps) {
     <Dropzone accept={importAccept} onFile={onFile} className="gap-3 px-6 py-8">
       {(open) => (
         <>
-          <CloudUpload aria-hidden className="size-8 text-neutral-secondary" />
+          <CloudUploadOutlined aria-hidden className="size-8 text-neutral-secondary" />
           <p className="text-base font-semibold text-obsidian">Already have file?</p>
           <Button type="button" className="w-full" onClick={open}>
             Upload

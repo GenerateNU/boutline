@@ -160,7 +160,7 @@ func TestListCompetitorTeamsByTournament(t *testing.T) {
 	}
 }
 
-// Allez Fencing has 5 seeded competitors, one of whom (Grace) lists it as both
+// Allez Fencing has 9 seeded competitors, one of whom (Grace) lists it as both
 // her primary and secondary club; she must not be counted twice.
 func TestListClubsCountsEachCompetitorOnce(t *testing.T) {
 	app := testkit.GetDBTestApp(t)
@@ -176,7 +176,7 @@ func TestListClubsCountsEachCompetitorOnce(t *testing.T) {
 		AssertStatus(http.StatusOK).
 		GetBody()
 
-	assert.Equal(t, int64(5), competitorCount(t, body, "Allez Fencing"))
+	assert.Equal(t, int64(9), competitorCount(t, body, "Allez Fencing"))
 }
 
 // seeds/seed.sql holds exactly 3 real tournaments plus 22 bare "Pagination

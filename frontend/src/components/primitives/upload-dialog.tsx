@@ -1,6 +1,9 @@
 "use client";
 
-import { CloudUpload, File as FileIcon, LoaderCircle, X } from "lucide-react";
+import AutorenewOutlined from "@mui/icons-material/AutorenewOutlined";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
+import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
+import InsertDriveFileOutlined from "@mui/icons-material/InsertDriveFileOutlined";
 import { useState } from "react";
 import { Dialog } from "radix-ui";
 import type { Accept } from "react-dropzone";
@@ -53,7 +56,7 @@ function UploadFileRow({ item, onRemove }: UploadFileRowProps) {
   return (
     <li className="flex items-center gap-3 rounded-lg bg-blue-lightest p-3">
       <div className="relative shrink-0">
-        <FileIcon aria-hidden className="size-8 text-neutral-secondary" />
+        <InsertDriveFileOutlined aria-hidden className="size-8 text-neutral-secondary" />
         <p className="absolute bottom-1 left-0 rounded-xs bg-red-dark px-0.5 text-[8px] leading-tight font-bold text-white">
           {extension}
         </p>
@@ -63,7 +66,7 @@ function UploadFileRow({ item, onRemove }: UploadFileRowProps) {
         {uploading ? (
           <>
             <p className="flex items-center gap-1 text-xs text-neutral-secondary">
-              <LoaderCircle aria-hidden className="size-3 animate-spin" />
+              <AutorenewOutlined aria-hidden className="size-3 animate-spin" />
               Uploading...
             </p>
             <LinearProgress value={progress} className="bg-outline [&>*]:bg-blue" />
@@ -80,7 +83,7 @@ function UploadFileRow({ item, onRemove }: UploadFileRowProps) {
         className="size-8 text-neutral-secondary"
         onClick={onRemove}
       >
-        <X aria-hidden />
+        <CloseOutlined aria-hidden />
       </Button>
     </li>
   );
@@ -110,7 +113,7 @@ function UploadDialog({
           className="fixed top-1/2 left-1/2 flex max-h-dvh w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-5 overflow-y-auto rounded-2xl bg-background p-6 font-satoshi">
           <div className="flex items-start gap-3 border-b border-outline pb-4">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-outline">
-              <CloudUpload aria-hidden className="size-5 text-obsidian" />
+              <CloudUploadOutlined aria-hidden className="size-5 text-obsidian" />
             </div>
             <div className="flex-1">
               <Dialog.Title className="text-base font-semibold text-obsidian">
@@ -128,7 +131,7 @@ function UploadDialog({
                 aria-label="Close"
                 className="size-8 text-neutral-secondary"
               >
-                <X aria-hidden />
+                <CloseOutlined aria-hidden />
               </Button>
             </Dialog.Close>
           </div>
@@ -146,7 +149,7 @@ function UploadDialog({
           >
             {(browse) => (
               <>
-                <CloudUpload aria-hidden className="size-8 text-neutral-secondary" />
+                <CloudUploadOutlined aria-hidden className="size-8 text-neutral-secondary" />
                 <p className="text-base font-semibold text-obsidian">
                   Choose a file or drag &amp; drop it here
                 </p>

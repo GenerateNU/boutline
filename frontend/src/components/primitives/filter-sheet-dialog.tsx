@@ -1,15 +1,16 @@
 "use client";
 
-import { X } from "lucide-react";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
 import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
+import { FilterButton } from "@/components/primitives/filter-button";
 
 interface FilterSheetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   triggerLabel: string;
-  triggerIcon: React.ReactNode;
+  triggerIcon?: React.ReactNode;
   description: string;
   submitLabel: string;
   onReset: () => void;
@@ -31,34 +32,33 @@ function FilterSheetDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Trigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          aria-label={triggerLabel}
-          className="h-12 gap-1 rounded-lg bg-background px-2.5"
-        >
+        <FilterButton aria-label={triggerLabel}>
           {triggerIcon}
-        </Button>
+        </FilterButton>
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-foreground/40" />
-        <Dialog.Content className="fixed inset-x-0 bottom-0 mx-auto flex max-h-dvh w-full max-w-mobile flex-col gap-5 overflow-y-auto rounded-t-3xl bg-background px-4 pt-4 pb-8 font-satoshi">
-          <Dialog.Title className="text-xl font-semibold">Filter</Dialog.Title>
+        <Dialog.Overlay className="fixed inset-0 bg-obsidian/40" />
+        <Dialog.Content className="fixed inset-x-0 bottom-0 mx-auto flex max-h-dvh w-full max-w-mobile flex-col gap-4 overflow-y-auto rounded-t-3xl bg-background px-4 pt-4 pb-8 font-manrope">
+          <div className="flex items-center justify-between">
+            <Dialog.Title className="text-xl font-semibold text-obsidian">
+              Filter
+            </Dialog.Title>
+            <Dialog.Close asChild>
+              <Button
+                type="button"
+                variant="text"
+                size="icon"
+                aria-label="Close"
+                className="-m-2 text-obsidian [&_svg]:size-6"
+              >
+                <CloseOutlined />
+              </Button>
+            </Dialog.Close>
+          </div>
           <Dialog.Description className="sr-only">{description}</Dialog.Description>
-          <Dialog.Close asChild>
-            <Button
-              type="button"
-              variant="text"
-              size="icon"
-              aria-label="Close"
-              className="absolute top-2 right-2"
-            >
-              <X aria-hidden className="size-5!" />
-            </Button>
-          </Dialog.Close>
 
           <form
-            className="flex flex-col gap-5"
+            className="flex flex-col gap-4"
             onReset={onReset}
             onSubmit={(event) => {
               event.preventDefault();
@@ -67,18 +67,11 @@ function FilterSheetDialog({
           >
             {children}
 
-            <div className="flex items-center justify-between gap-4">
-              <Button
-                type="reset"
-                variant="text"
-                className="h-auto px-0 font-bold underline hover:bg-transparent"
-              >
-                Clear all
+            <div className="flex flex-col gap-3">
+              <Button type="reset" variant="tonal" className="w-full">
+                Clear All
               </Button>
-              <Button
-                type="submit"
-                className="w-69 rounded-sm bg-brand font-normal text-background hover:bg-brand/90"
-              >
+              <Button type="submit" className="w-full">
                 {submitLabel}
               </Button>
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Funnel } from "lucide-react";
+import FilterAltOutlined from "@mui/icons-material/FilterAltOutlined";
 import { useRef, useState } from "react";
 
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
@@ -66,7 +66,7 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         setOpen(next);
       }}
       triggerLabel="Filter fencers"
-      triggerIcon={<Funnel className="size-5! text-brand" />}
+      triggerIcon={<FilterAltOutlined className="size-5! text-brand" />}
       description="Narrow the fencer list"
       submitLabel="Show fencers"
       onReset={() => setSelectedClub("")}

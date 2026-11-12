@@ -69,7 +69,7 @@ describe("FencerFilterSheet", () => {
       "true",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
     expect(screen.getByRole("button", { name: "Salle Nord" })).toHaveAttribute(
       "aria-pressed",
       "false",
@@ -88,6 +88,13 @@ describe("FencerFilterSheet", () => {
     fireEvent.click(club);
 
     expect(club).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("shows a spinner until the first club search answers", async () => {
+    apiRequestMock.mockReturnValue(new Promise(() => {}));
+    await openSheet();
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading");
   });
 
   it.each([
