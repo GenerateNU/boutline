@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 
-import { Navbar } from "@/components/primitives/navbar";
+import { Navbar } from "@/components/primitives/navigation/navbar";
 
 describe("Navbar", () => {
   it("links the wordmark home", () => {

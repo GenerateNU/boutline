@@ -8,7 +8,7 @@ import { CircleUserRound, KeyRound, Search, Settings } from "lucide-react";
 import { useRef, useState } from "react";
 import { Dialog } from "radix-ui";
 
-import { Navbar } from "@/components/primitives/navbar";
+import { Navbar } from "@/components/primitives/navigation/navbar";
 import { PrivateTournamentDialog } from "@/features/tournament/components/private-tournament-dialog";
 
 function sidebarItemClassName(selected = false) {

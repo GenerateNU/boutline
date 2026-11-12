@@ -67,7 +67,7 @@ import { NavigationDrawer } from "@/components/primitives/navigation/navigation-
 import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
 import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
 import { Logo } from "@/components/primitives/logo";
-import { Navbar } from "@/components/primitives/navbar";
+import { Navbar } from "@/components/primitives/navigation/navbar";
 
 const buttonVariantNames = ["filled", "outline", "tonal", "text"] as const;
 const buttonSizes = ["sm", "default", "lg"] as const;
