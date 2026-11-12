@@ -215,7 +215,7 @@ func TestProposePoolsEndpoint(t *testing.T) {
 	t.Run("returns the proposal with snake_case keys", func(t *testing.T) {
 		t.Parallel()
 
-		resp := api(t).Post(path, map[string]any{"competitor_ids": entrantIDs(1, 5)})
+		resp := api(t).Post(path, map[string]any{"competitor_ids": competitorIDs(1, 5)})
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 
 		pools := decodeBody(t, resp.Body.Bytes())["pools"].([]any)
@@ -230,8 +230,8 @@ func TestProposePoolsEndpoint(t *testing.T) {
 	})
 
 	for name, ids := range map[string]any{
-		"rejects fewer than four competitors before the handler runs": entrantIDs(1, 3),
-		"rejects a malformed competitor before the handler runs":      append([]string{"nope"}, entrantIDs(1, 3)...),
+		"rejects fewer than four competitors before the handler runs": competitorIDs(1, 3),
+		"rejects a malformed competitor before the handler runs":      append([]string{"nope"}, competitorIDs(1, 3)...),
 		"rejects a null list before the handler runs":                 nil,
 	} {
 		t.Run(name, func(t *testing.T) {

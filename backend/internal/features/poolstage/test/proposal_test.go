@@ -42,8 +42,8 @@ func newProposalFixture(count, maxPerPool int, clubs map[int]string) *proposalFi
 }
 
 func (f *proposalFixture) enter(n int, eventID uuid.UUID, rating competitor.Rating, club string) {
-	f.repo.Entrants[entrant(n)] = poolstage.PoolStageEntrant{
-		ID:        entrant(n),
+	f.repo.Competitors[competitorID(n)] = poolstage.PoolStageCompetitor{
+		ID:        competitorID(n),
 		EventID:   eventID,
 		FirstName: fmt.Sprintf("Fencer%d", n),
 		LastName:  "Test",
@@ -59,12 +59,12 @@ func (f *proposalFixture) propose(t *testing.T, ids ...string) (*poolstage.PoolS
 		&poolstage.PoolStageProposalInput{ID: f.stage.ID.String(), Body: poolstage.PoolStageProposalBody{CompetitorIDs: ids}})
 }
 
-func entrant(n int) uuid.UUID { return uuid.UUID{14: byte(n >> 8), 15: byte(n)} }
+func competitorID(n int) uuid.UUID { return uuid.UUID{14: byte(n >> 8), 15: byte(n)} }
 
-func entrantIDs(from, to int) []string {
+func competitorIDs(from, to int) []string {
 	ids := make([]string, 0, to-from+1)
 	for n := from; n <= to; n++ {
-		ids = append(ids, entrant(n).String())
+		ids = append(ids, competitorID(n).String())
 	}
 
 	return ids
@@ -90,7 +90,7 @@ func TestProposePoolsSplitsTheField(t *testing.T) {
 			t.Parallel()
 
 			f := newProposalFixture(tt.count, tt.maxPerPool, nil)
-			out, err := f.propose(t, entrantIDs(1, tt.count)...)
+			out, err := f.propose(t, competitorIDs(1, tt.count)...)
 			require.NoError(t, err)
 
 			seen := map[string]bool{}
@@ -102,7 +102,7 @@ func TestProposePoolsSplitsTheField(t *testing.T) {
 					assert.False(t, seen[fencer.CompetitorID], "competitor %s proposed twice", fencer.CompetitorID)
 					seen[fencer.CompetitorID] = true
 
-					stored := f.repo.Entrants[uuid.MustParse(fencer.CompetitorID)]
+					stored := f.repo.Competitors[uuid.MustParse(fencer.CompetitorID)]
 					assert.Equal(t, stored.FirstName, fencer.FirstName)
 					assert.Equal(t, stored.LastName, fencer.LastName)
 					assert.Equal(t, string(stored.Rating), fencer.Rating)
@@ -119,7 +119,7 @@ func TestProposePoolsKeepsClubmatesApart(t *testing.T) {
 	t.Parallel()
 
 	f := newProposalFixture(8, 4, map[int]string{1: "Allez", 2: "Allez"})
-	out, err := f.propose(t, entrantIDs(1, 8)...)
+	out, err := f.propose(t, competitorIDs(1, 8)...)
 	require.NoError(t, err)
 
 	poolOf := map[string]int{}
@@ -128,7 +128,7 @@ func TestProposePoolsKeepsClubmatesApart(t *testing.T) {
 			poolOf[fencer.CompetitorID] = proposed.Number
 		}
 	}
-	assert.NotEqual(t, poolOf[entrant(1).String()], poolOf[entrant(2).String()])
+	assert.NotEqual(t, poolOf[competitorID(1).String()], poolOf[competitorID(2).String()])
 }
 
 func TestProposePoolsRejects(t *testing.T) {
@@ -143,26 +143,26 @@ func TestProposePoolsRejects(t *testing.T) {
 	}{
 		{
 			name:       "a competitor listed twice",
-			ids:        []string{entrant(1).String(), entrant(2).String(), entrant(1).String()},
+			ids:        []string{competitorID(1).String(), competitorID(2).String(), competitorID(1).String()},
 			wantCode:   http.StatusBadRequest,
-			wantDetail: fmt.Sprintf("competitor %s is listed more than once", entrant(1)),
+			wantDetail: fmt.Sprintf("competitor %s is listed more than once", competitorID(1)),
 		},
 		{
 			name:       "a competitor that does not exist",
-			ids:        []string{entrant(1).String(), entrant(99).String()},
+			ids:        []string{competitorID(1).String(), competitorID(99).String()},
 			wantCode:   http.StatusBadRequest,
-			wantDetail: fmt.Sprintf("competitor %s does not exist", entrant(99)),
+			wantDetail: fmt.Sprintf("competitor %s does not exist", competitorID(99)),
 		},
 		{
 			name:       "a competitor entered in another event",
 			prepare:    func(f *proposalFixture) { f.enter(9, uuid.New(), "A", "Elsewhere") },
-			ids:        []string{entrant(1).String(), entrant(9).String()},
+			ids:        []string{competitorID(1).String(), competitorID(9).String()},
 			wantCode:   http.StatusBadRequest,
-			wantDetail: fmt.Sprintf("competitor %s is not entered in this pool stage's event", entrant(9)),
+			wantDetail: fmt.Sprintf("competitor %s is not entered in this pool stage's event", competitorID(9)),
 		},
 		{
 			name:       "too few competitors for one pool",
-			ids:        entrantIDs(1, 3),
+			ids:        competitorIDs(1, 3),
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "3 competitors cannot be split into pools of 4 to 6 fencers",
 		},
@@ -173,7 +173,7 @@ func TestProposePoolsRejects(t *testing.T) {
 					f.enter(n, f.event.ID, "A", fmt.Sprintf("Club %d", n))
 				}
 			},
-			ids:        entrantIDs(1, 7),
+			ids:        competitorIDs(1, 7),
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "7 competitors cannot be split into pools of 4 to 6 fencers",
 		},
@@ -186,14 +186,14 @@ func TestProposePoolsRejects(t *testing.T) {
 					f.enter(n, f.event.ID, "A", fmt.Sprintf("Club %d", n))
 				}
 			},
-			ids:        entrantIDs(1, 404),
+			ids:        competitorIDs(1, 404),
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "404 competitors need 101 pools of at most 4 fencers, but at most 100 pools can be created at once",
 		},
 		{
 			name:       "a pool stage that already has pools",
 			prepare:    func(f *proposalFixture) { f.repo.PoolCounts[f.stage.ID] = PoolCount{Total: 1} },
-			ids:        entrantIDs(1, 4),
+			ids:        competitorIDs(1, 4),
 			wantCode:   http.StatusConflict,
 			wantDetail: "pools can only be proposed for a pool stage with no pools yet",
 		},
@@ -203,21 +203,21 @@ func TestProposePoolsRejects(t *testing.T) {
 				f.stage.Status = poolstage.PoolStageStatusActive
 				f.repo.PoolStages[f.stage.ID] = f.stage
 			},
-			ids:        entrantIDs(1, 4),
+			ids:        competitorIDs(1, 4),
 			wantCode:   http.StatusConflict,
 			wantDetail: "pools can only be proposed for an upcoming pool stage",
 		},
 		{
 			name:       "an unknown pool stage",
 			prepare:    func(f *proposalFixture) { delete(f.repo.PoolStages, f.stage.ID) },
-			ids:        entrantIDs(1, 4),
+			ids:        competitorIDs(1, 4),
 			wantCode:   http.StatusNotFound,
 			wantDetail: "not found",
 		},
 		{
 			name:       "a repository failure",
 			prepare:    func(f *proposalFixture) { f.repo.Err = errors.New("connection refused") },
-			ids:        entrantIDs(1, 4),
+			ids:        competitorIDs(1, 4),
 			wantCode:   http.StatusInternalServerError,
 			wantDetail: "internal server error",
 		},

@@ -50,8 +50,8 @@ func (PoolStage) TableName() string {
 	return "pool_stages"
 }
 
-// PoolStageEntrant is a competitor as a pool proposal needs them.
-type PoolStageEntrant struct {
+// PoolStageCompetitor is a competitor as a pool proposal needs them.
+type PoolStageCompetitor struct {
 	ID        uuid.UUID
 	EventID   uuid.UUID
 	FirstName string

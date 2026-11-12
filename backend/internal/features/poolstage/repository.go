@@ -20,7 +20,7 @@ type PoolStageRepository interface {
 	TransitionPoolStageByID(ctx context.Context, id uuid.UUID, transition PoolStageTransition) error
 	CountPoolStagePools(ctx context.Context, id uuid.UUID) (total, open int64, err error)
 	DeletePoolStageByID(ctx context.Context, id uuid.UUID) error
-	ListPoolStageEntrants(ctx context.Context, competitorIDs []uuid.UUID) ([]PoolStageEntrant, error)
+	ListPoolStageCompetitors(ctx context.Context, competitorIDs []uuid.UUID) ([]PoolStageCompetitor, error)
 }
 
 type PoolStageUpdate struct {
@@ -178,19 +178,19 @@ func (r *poolStageRepository) CountPoolStagePools(ctx context.Context, id uuid.U
 	return total, open, nil
 }
 
-func (r *poolStageRepository) ListPoolStageEntrants(ctx context.Context, competitorIDs []uuid.UUID) ([]PoolStageEntrant, error) {
-	var entrants []PoolStageEntrant
+func (r *poolStageRepository) ListPoolStageCompetitors(ctx context.Context, competitorIDs []uuid.UUID) ([]PoolStageCompetitor, error) {
+	var competitors []PoolStageCompetitor
 
 	err := r.db.WithContext(ctx).
 		Table("competitors").
 		Select("id, event_id, first_name, last_name, rating, team").
 		Where("id IN ?", competitorIDs).
-		Scan(&entrants).Error
+		Scan(&competitors).Error
 	if err != nil {
 		return nil, fmt.Errorf("select competitors: %w", err)
 	}
 
-	return entrants, nil
+	return competitors, nil
 }
 
 func (r *poolStageRepository) DeletePoolStageByID(ctx context.Context, id uuid.UUID) error {

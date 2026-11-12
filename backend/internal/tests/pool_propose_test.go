@@ -13,7 +13,7 @@ import (
 )
 
 // Proposes pools for the seeded upcoming Women's Foil stage from real competitors, so the
-// entrant query and the event check run against Postgres. Nothing is saved.
+// competitor query and the event check run against Postgres. Nothing is saved.
 func TestProposePoolsAgainstRealDatabase(t *testing.T) {
 	app := testkit.GetDBTestApp(t)
 	headers := map[string]string{"Authorization": "Bearer " + poolCreateToken(t, app)}

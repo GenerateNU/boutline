@@ -38,7 +38,7 @@ func (s *poolStageService) ProposePools(ctx context.Context, input *PoolStagePro
 		return nil, errs.HumaError(err)
 	}
 
-	entrants, err := s.loadProposalEntrants(ctx, *stage, competitorIDs)
+	competitors, err := s.loadProposalCompetitors(ctx, *stage, competitorIDs)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -49,8 +49,8 @@ func (s *poolStageService) ProposePools(ctx context.Context, input *PoolStagePro
 
 	entries := make([]SeedEntry, 0, len(competitorIDs))
 	for _, competitorID := range competitorIDs {
-		entrant := entrants[competitorID]
-		entries = append(entries, SeedEntry{CompetitorID: entrant.ID, Rating: entrant.Rating, Club: entrant.Team})
+		competitor := competitors[competitorID]
+		entries = append(entries, SeedEntry{CompetitorID: competitor.ID, Rating: competitor.Rating, Club: competitor.Team})
 	}
 	rng := rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())) //nolint:gosec // a fair draw, not a secret
 	pools, err := GenerateSeed(entries, maxPerPool, rng)
@@ -58,7 +58,7 @@ func (s *poolStageService) ProposePools(ctx context.Context, input *PoolStagePro
 		return nil, errs.HumaError(err)
 	}
 
-	return &PoolStageProposalOutput{Body: newPoolStageProposalResult(pools, entrants)}, nil
+	return &PoolStageProposalOutput{Body: newPoolStageProposalResult(pools, competitors)}, nil
 }
 
 // checkProposalStage refuses a stage that isn't upcoming or already has pools. A proposal
@@ -119,49 +119,49 @@ func parseProposalCompetitors(raw []string) ([]uuid.UUID, error) {
 	return ids, nil
 }
 
-// loadProposalEntrants returns every competitor by id after checking each exists and is
+// loadProposalCompetitors returns every competitor by id after checking each exists and is
 // entered in the stage's event, the rule pool creation applies, so a proposal can be
 // created as is. The first failure is reported in request order.
-func (s *poolStageService) loadProposalEntrants(
+func (s *poolStageService) loadProposalCompetitors(
 	ctx context.Context,
 	stage PoolStage,
 	competitorIDs []uuid.UUID,
-) (map[uuid.UUID]PoolStageEntrant, error) {
-	listed, err := s.repo.ListPoolStageEntrants(ctx, competitorIDs)
+) (map[uuid.UUID]PoolStageCompetitor, error) {
+	listed, err := s.repo.ListPoolStageCompetitors(ctx, competitorIDs)
 	if err != nil {
 		return nil, fmt.Errorf("list competitors: %w", err)
 	}
-	entrants := make(map[uuid.UUID]PoolStageEntrant, len(listed))
-	for _, entrant := range listed {
-		entrants[entrant.ID] = entrant
+	competitors := make(map[uuid.UUID]PoolStageCompetitor, len(listed))
+	for _, competitor := range listed {
+		competitors[competitor.ID] = competitor
 	}
 
 	for _, id := range competitorIDs {
-		entrant, ok := entrants[id]
+		competitor, ok := competitors[id]
 		if !ok {
 			return nil, errs.Public(fmt.Sprintf("competitor %s does not exist", id), errs.ErrInvalidInput)
 		}
-		if entrant.EventID != stage.EventID {
+		if competitor.EventID != stage.EventID {
 			return nil, errs.Public(
 				fmt.Sprintf("competitor %s is not entered in this pool stage's event", id), errs.ErrInvalidInput)
 		}
 	}
 
-	return entrants, nil
+	return competitors, nil
 }
 
-func newPoolStageProposalResult(pools [][]uuid.UUID, entrants map[uuid.UUID]PoolStageEntrant) PoolStageProposalResult {
+func newPoolStageProposalResult(pools [][]uuid.UUID, competitors map[uuid.UUID]PoolStageCompetitor) PoolStageProposalResult {
 	result := PoolStageProposalResult{Pools: make([]PoolStageProposedPool, 0, len(pools))}
 	for i, ids := range pools {
 		fencers := make([]PoolStageProposedFencer, 0, len(ids))
 		for _, id := range ids {
-			entrant := entrants[id]
+			competitor := competitors[id]
 			fencers = append(fencers, PoolStageProposedFencer{
-				CompetitorID: entrant.ID.String(),
-				FirstName:    entrant.FirstName,
-				LastName:     entrant.LastName,
-				Rating:       string(entrant.Rating),
-				Team:         entrant.Team,
+				CompetitorID: competitor.ID.String(),
+				FirstName:    competitor.FirstName,
+				LastName:     competitor.LastName,
+				Rating:       string(competitor.Rating),
+				Team:         competitor.Team,
 			})
 		}
 		result.Pools = append(result.Pools, PoolStageProposedPool{Number: i + 1, Fencers: fencers})
