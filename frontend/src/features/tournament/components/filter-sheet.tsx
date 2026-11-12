@@ -166,8 +166,8 @@ function FilterSheet({ visibility }: FilterSheetProps) {
 
       <div className="flex flex-col gap-2">
         <p className="text-sm text-obsidian">Distance</p>
-        <div className="px-5 py-2">
-          <Slider aria-label="Distance" unit="mi" max={maxDistance} defaultValue={[maxDistance / 2]} />
+        <div className="px-5 pt-10 pb-2">
+          <Slider aria-label="Distance" unit="mi" showValue max={maxDistance} defaultValue={[maxDistance / 2]} />
         </div>
       </div>
 
