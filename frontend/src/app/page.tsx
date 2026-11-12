@@ -158,6 +158,9 @@ const demoReferees = [
 
 const demoFencer = {
   id: "demo",
+  eventId: "demo-event",
+  tournamentId: "demo-tournament",
+  ratingYear: 26,
   firstName: "Annika",
   lastName: "Kim",
   rating: "A26",
@@ -572,7 +575,7 @@ export default function Home() {
             events={demoEvents.map((event) => ({ ...event, status: "ended" }))}
             emptyMessage=""
           />
-          <FencerCard competitor={demoFencer} href="/" />
+          <FencerCard competitor={demoFencer} />
           <FencerCard competitor={demoFencer} pinned={false} />
           <FencerCard competitor={demoFencer} pinned />
           <ClubCard team={demoClub} href="/" />

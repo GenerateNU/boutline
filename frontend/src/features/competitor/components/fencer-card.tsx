@@ -5,12 +5,16 @@ import type { Competitor } from "@/types/competitor";
 
 interface FencerCardProps {
   competitor: Competitor;
-  href?: string;
   pinned?: boolean;
+  onTogglePin?: () => void;
 }
 
-function FencerCard({ competitor, ...props }: FencerCardProps) {
-  const { firstName, lastName, rating, team } = competitor;
+function FencerCard({ competitor, pinned, onTogglePin }: FencerCardProps) {
+  const { id, eventId, tournamentId, firstName, lastName, rating, team } = competitor;
+  // A fencer not entered in a tournament yet has no page to link to.
+  const href =
+    tournamentId &&
+    `/tournaments/${encodeURIComponent(tournamentId)}/events/${encodeURIComponent(eventId)}/fencers/${encodeURIComponent(id)}`;
 
   return (
     <ListCard
@@ -20,8 +24,10 @@ function FencerCard({ competitor, ...props }: FencerCardProps) {
           <MockCountry /> &middot; {team || "No club"}
         </p>
       }
-      badge={<RatingBadge tone={props.pinned ? "filled" : "subtle"}>{rating}</RatingBadge>}
-      {...props}
+      badge={<RatingBadge tone={pinned ? "filled" : "subtle"}>{rating}</RatingBadge>}
+      href={href || undefined}
+      pinned={pinned}
+      onTogglePin={onTogglePin}
     />
   );
 }

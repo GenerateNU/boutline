@@ -5,55 +5,64 @@ import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
 import Link from "next/link";
 
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/primitives/card";
+import { PinButton } from "@/components/primitives/pin-button";
 
 interface ListCardProps {
-  title: React.ReactNode;
+  title: string;
   description: React.ReactNode;
   badge?: React.ReactNode;
   href?: string;
   pinned?: boolean;
+  // Rows can't pin yet (the dashboard tickets wire this up), so without it the
+  // pin button shows the state and does nothing.
+  onTogglePin?: () => void;
 }
 
-function ListCard({ href, ...props }: ListCardProps) {
-  if (!href) {
-    return <ListCardBody {...props} />;
-  }
-
-  return (
-    <Link href={href} className="block rounded-[12px]">
-      <ListCardBody {...props} linked />
-    </Link>
-  );
-}
-
-interface ListCardBodyProps extends Omit<ListCardProps, "href"> {
-  linked?: boolean;
-}
-
-function ListCardBody({ title, description, badge, pinned, linked }: ListCardBodyProps) {
+function ListCard({ title, description, badge, href, pinned, onTogglePin }: ListCardProps) {
   // Material marks a pin as set with its filled glyph rather than by filling the outline.
   const PinIcon = pinned ? PushPin : PushPinOutlined;
+
+  const header = (
+    <CardHeader className="gap-0.5">
+      <CardTitle className="text-sm text-obsidian uppercase">{title}</CardTitle>
+      <CardDescription className="text-xs text-neutral-secondary">{description}</CardDescription>
+    </CardHeader>
+  );
 
   return (
     <Card
       orientation="horizontal"
-      className={cn(
-        "gap-2.5 py-3.5 pr-3 transition-colors hover:bg-blue-lightest",
-        pinned && "border-blue-light bg-blue-lightest",
-      )}
+      className={cn("relative gap-2.5 py-3.5 pr-3 transition-colors hover:bg-blue-lightest", {
+        "border-blue-light bg-blue-lightest": pinned,
+      })}
     >
-      <CardHeader className="gap-0.5">
-        <CardTitle className="text-sm text-obsidian uppercase">{title}</CardTitle>
-        <CardDescription className="text-xs text-neutral-secondary">{description}</CardDescription>
-      </CardHeader>
-      {badge}
-      {pinned !== undefined ? (
-        <PinIcon
-          aria-hidden
-          className={cn("size-5 shrink-0", pinned ? "text-blue" : "text-neutral-muted")}
-        />
+      {href ? (
+        // The link stretches over the whole card, so all of it opens the page
+        // while the pin button still sits on top as its own control.
+        <Link
+          href={href}
+          className="min-w-0 flex-1 outline-none after:absolute after:inset-0 after:rounded-[12px] focus-visible:after:ring-2 focus-visible:after:ring-ring"
+        >
+          {header}
+        </Link>
       ) : (
-        linked && <ChevronRightOutlined aria-hidden className="size-6 shrink-0 text-neutral-muted" />
+        <div className="min-w-0 flex-1">{header}</div>
+      )}
+      {badge}
+      {pinned !== undefined && (
+        <PinButton
+          variant="plain"
+          size="xs"
+          active={pinned}
+          aria-label={`${pinned ? "Unpin" : "Pin"} ${title}`}
+          onClick={onTogglePin}
+          className="relative z-10 [&_svg]:size-5"
+        >
+          <PinIcon aria-hidden />
+        </PinButton>
+      )}
+      {pinned === undefined && href && (
+        <ChevronRightOutlined aria-hidden className="size-6 shrink-0 text-neutral-muted" />
       )}
     </Card>
   );
