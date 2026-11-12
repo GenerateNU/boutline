@@ -68,7 +68,6 @@ import { NavigationDrawerItem } from "@/components/primitives/navigation/navigat
 import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
 import { Logo } from "@/components/primitives/logo";
 import { Navbar } from "@/components/primitives/navbar";
-import { NavbarTab } from "@/components/primitives/navbar-tab";
 
 const buttonVariantNames = ["filled", "outline", "tonal", "text"] as const;
 const buttonSizes = ["sm", "default", "lg"] as const;
@@ -135,10 +134,10 @@ const demoFencer = {
 };
 const demoClub = { name: "Boston Blade Club", competitorCount: 12 };
 
-const barItems = Array.from({ length: 5 }, (_, index) => ({
-  id: `bar-${index}`,
-  label: "Label",
-  icon: <Shapes />,
+const barItems = ["Overview", "Fencers", "Clubs", "Events"].map((label) => ({
+  label,
+  href: "#",
+  active: label === "Fencers",
 }));
 
 const drawerItems = Array.from({ length: 7 }, (_, index) => ({
@@ -477,11 +476,9 @@ export default function Home() {
       </Section>
 
       <Section title="Navigation item">
-        <div className="flex items-center gap-4">
-          <NavigationItem icon={<Shapes />} label="Label" />
-          <NavigationItem icon={<Shapes />} aria-label="Label" />
-          <NavigationItem icon={<Shapes />} label="Label" selected />
-          <NavigationItem icon={<Shapes />} aria-label="Label" selected />
+        <div className="flex rounded-xl bg-obsidian">
+          <NavigationItem href="#" label="Fencers" />
+          <NavigationItem href="#" label="Fencers" active />
         </div>
       </Section>
 
@@ -498,19 +495,6 @@ export default function Home() {
         <Navbar />
       </Section>
 
-      <Section title="Navbar tab">
-        <div className="flex rounded-xl bg-obsidian">
-          <NavbarTab href="#" label="Fencers" />
-          <NavbarTab href="#" label="Fencers" active />
-        </div>
-        <div className="flex rounded-xl bg-obsidian">
-          <NavbarTab href="#" label="Overview" />
-          <NavbarTab href="#" label="Fencers" active />
-          <NavbarTab href="#" label="Clubs" />
-          <NavbarTab href="#" label="Events" />
-        </div>
-      </Section>
-
       <Section title="Navigation drawer item">
         <div className="flex flex-col gap-2">
           <NavigationDrawerItem icon={<Shapes />} label="Label" badge="100+" />
@@ -524,7 +508,8 @@ export default function Home() {
       </Section>
 
       <Section title="Navigation bar">
-        <NavigationBar items={barItems} />
+        <NavigationBar aria-label="Sections" items={barItems.slice(0, 2)} />
+        <NavigationBar aria-label="Sections" items={barItems} />
       </Section>
 
       <Section title="Navigation drawer">

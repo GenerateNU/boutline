@@ -1530,9 +1530,10 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   segmented button, text field, select, checkbox, radio, toggle, slider, date
   picker, calendar, dropzone, dialogs and filter sheet, pagination, toast,
   tooltip, and progress indicators.
-- The hi-fi navigation set is `logo`, `navbar` and `navbar-tab`. `global-nav` renders
-  `navbar` as its header, and `tab-nav` renders `navbar-tab` for each tab. The logo
-  takes its tone from the text colour (`text-white` or `text-blue`).
+- The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and `navigation-item`.
+  `global-nav` renders `navbar` as its header. `navigation-bar` is the obsidian row of
+  `navigation-item` tabs, and `tab-nav` renders it with the active tab taken from the
+  route. The logo takes its tone from the text colour (`text-white` or `text-blue`).
 - Many are only used by the `/` showcase so far.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.

@@ -1,35 +1,33 @@
 import { cn } from "cn";
+import Link from "next/link";
 
-import { Button } from "@/components/primitives/button";
-
-interface NavigationItemProps extends React.ComponentProps<"button"> {
-  icon: React.ReactNode;
-  label?: string; // leave out for an icon-only item, and pass aria-label instead
-  selected?: boolean;
+interface NavigationItemProps extends Omit<React.ComponentProps<typeof Link>, "children"> {
+  label: string;
+  active?: boolean;
 }
 
-function NavigationItem({
-  icon,
-  label,
-  selected = false,
-  className,
-  ...props
-}: NavigationItemProps) {
+function NavigationItem({ label, active = false, className, ...props }: NavigationItemProps) {
   return (
-    <Button
-      type="button"
-      variant="text"
-      aria-current={selected ? "page" : undefined}
+    <Link
+      data-slot="navigation-item"
+      aria-current={active ? "page" : undefined}
       className={cn(
-        "size-16 flex-col gap-1 border px-0 text-xs font-normal [&_svg]:size-5",
-        selected ? "border-foreground" : "border-transparent",
+        "flex h-12 flex-1 items-center justify-center font-manrope rounded-xl px-4 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+        active ? "text-white" : "text-neutral-muted hover:text-white",
         className,
       )}
       {...props}
     >
-      {icon}
-      {label && <p>{label}</p>}
-    </Button>
+      <span className="relative flex h-full items-center">
+        {label}
+        <span
+          aria-hidden
+          className={cn("absolute inset-x-0 bottom-2 h-0.75 rounded-t-sm bg-accent-green", {
+            hidden: !active,
+          })}
+        />
+      </span>
+    </Link>
   );
 }
 
