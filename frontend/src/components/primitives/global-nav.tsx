@@ -44,14 +44,13 @@ function GlobalNav() {
             height={55}
             className="absolute top-1/2 left-69.75 -translate-y-1/2"
           />
-          {/* Stays above the open drawer (and the body's modal pointer-events: none) so it also closes it. */}
           <Dialog.Trigger asChild>
             <Button
               ref={menuButton}
               variant="text"
               size="icon"
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
-              className="pointer-events-auto relative z-60 ml-2.5 text-white hover:bg-background/10 [&_svg]:size-6"
+              aria-label="Open menu"
+              className="relative ml-2.5 text-white hover:bg-background/10 [&_svg]:size-6"
             >
               <Menu />
             </Button>
@@ -70,23 +69,14 @@ function GlobalNav() {
           <Dialog.Content
             aria-describedby={undefined}
             onCloseAutoFocus={(event) => codeOpen && event.preventDefault()}
-            // Otherwise pressing the hamburger dismisses the drawer as an outside click and its click reopens it.
-            onPointerDownOutside={(event) => {
-              if (menuButton.current?.contains(event.target as Node)) {
-                event.preventDefault();
-              }
-            }}
             className="fixed inset-y-0 left-0 z-50 flex w-73 flex-col justify-between bg-fencing-white pb-10 font-manrope shadow-lg motion-safe:data-open:animate-drawer-in motion-safe:data-closed:animate-drawer-out"
           >
             <div className="flex flex-col gap-6">
-              {/* The pinned hamburger covers the first 50px of the drawer's first 40px row. */}
-              <div className="h-18.5 bg-obsidian pl-15">
-                <div className="flex h-10 items-center gap-3">
-                  <Image src="/brand/logo-mark-sidebar.svg" alt="" width={27} height={31} />
-                  <Dialog.Title className="font-wordmark text-2xl tracking-[1.44px] text-white">
-                    BOUTLINE
-                  </Dialog.Title>
-                </div>
+              <div className="flex h-18.5 items-center gap-3 bg-obsidian px-6">
+                <Image src="/brand/logo-mark-sidebar.svg" alt="" width={27} height={31} />
+                <Dialog.Title className="font-wordmark text-2xl tracking-[1.44px] text-white">
+                  BOUTLINE
+                </Dialog.Title>
               </div>
               <nav aria-label="Main" className="flex flex-col gap-3 px-6">
                 <Dialog.Close asChild>
