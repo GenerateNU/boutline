@@ -1,8 +1,8 @@
 import { cn } from "cn";
 
-const radius = 16;
-const circumference = 2 * Math.PI * radius;
-const ring = { cx: 20, cy: 20, r: radius, fill: "none", strokeWidth: 4 };
+const RADIUS = 16;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const RING = { cx: 20, cy: 20, r: RADIUS, fill: "none", strokeWidth: 4 };
 
 interface CircularProgressProps extends React.ComponentProps<"svg"> {
   value: number;
@@ -26,12 +26,12 @@ function CircularProgress({
       className={cn("size-10 -rotate-90", className)}
       {...props}
     >
-      <circle {...ring} className="stroke-border" />
+      <circle {...RING} className="stroke-border" />
       <circle
-        {...ring}
+        {...RING}
         strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={circumference * (1 - clamped / 100)}
+        strokeDasharray={CIRCUMFERENCE}
+        strokeDashoffset={CIRCUMFERENCE * (1 - clamped / 100)}
         className="stroke-foreground"
       />
     </svg>

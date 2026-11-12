@@ -16,8 +16,8 @@ import {
 const IDS: [string, string] = ["a", "b"];
 const touch = (competitor_id: string, points = 1) => ({ competitor_id, points });
 const tap = (competitorId: string): ScoringAction => ({ kind: "touch", competitorId });
-const undo: ScoringAction = { kind: "undo" };
-const end: ScoringAction = { kind: "end", touchCount: 5 };
+const UNDO: ScoringAction = { kind: "undo" };
+const END: ScoringAction = { kind: "end", touchCount: 5 };
 
 describe("tally", () => {
   it.each([
@@ -49,16 +49,16 @@ describe("tally", () => {
 describe("optimisticTouches", () => {
   it.each([
     { name: "a pending touch is appended", confirmed: [touch("a")], pending: [tap("b")], expected: [touch("a"), touch("b")] },
-    { name: "a pending undo pops a confirmed touch", confirmed: [touch("a"), touch("b")], pending: [undo], expected: [touch("a")] },
-    { name: "a pending undo pops a pending touch", confirmed: [touch("a")], pending: [tap("b"), undo], expected: [touch("a")] },
-    { name: "start and end are ignored", confirmed: [touch("a")], pending: [{ kind: "start" } as const, end], expected: [touch("a")] },
+    { name: "a pending undo pops a confirmed touch", confirmed: [touch("a"), touch("b")], pending: [UNDO], expected: [touch("a")] },
+    { name: "a pending undo pops a pending touch", confirmed: [touch("a")], pending: [tap("b"), UNDO], expected: [touch("a")] },
+    { name: "start and end are ignored", confirmed: [touch("a")], pending: [{ kind: "start" } as const, END], expected: [touch("a")] },
   ])("$name", ({ confirmed, pending, expected }) => {
     expect(optimisticTouches(confirmed, pending)).toEqual(expected);
   });
 
   it("does not mutate the confirmed list", () => {
     const confirmed = [touch("a")];
-    optimisticTouches(confirmed, [undo]);
+    optimisticTouches(confirmed, [UNDO]);
     expect(confirmed).toEqual([touch("a")]);
   });
 });
@@ -87,7 +87,7 @@ describe("historyRows", () => {
   });
 
   it("a pending undo hides nothing", () => {
-    expect(historyRows(entries, [undo]).map((row) => row.key)).toEqual(["2", "1"]);
+    expect(historyRows(entries, [UNDO]).map((row) => row.key)).toEqual(["2", "1"]);
   });
 
   it.each([
@@ -120,8 +120,8 @@ describe("scoringPhase", () => {
       phase: { kind: "scoring", onMatchPoint: ["a"] },
     },
     { name: "won", status: "active", tally: result("a"), pending: [], phase: { kind: "confirming", winnerId: "a" } },
-    { name: "won and ending", status: "active", tally: result("a"), pending: [end], phase: { kind: "over", winnerId: "a" } },
-    { name: "ending", status: "active", tally: result(null), pending: [end], phase: { kind: "over", winnerId: null } },
+    { name: "won and ending", status: "active", tally: result("a"), pending: [END], phase: { kind: "over", winnerId: "a" } },
+    { name: "ending", status: "active", tally: result(null), pending: [END], phase: { kind: "over", winnerId: null } },
     { name: "ended", status: "ended", tally: result(null), pending: [], phase: { kind: "over", winnerId: null } },
     { name: "ended with a winner", status: "ended", tally: result("a"), pending: [], phase: { kind: "over", winnerId: "a" } },
   ])("$name -> $phase.kind", ({ status, tally, pending, phase }) => {

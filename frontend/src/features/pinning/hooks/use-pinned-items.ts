@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useSessionStorage } from "@/lib/hooks/use-session-storage";
 import { PINNED_MAX_IDS, PINNED_STORAGE_KEY, PinnedIds } from "@/features/pinning/types/pinning";
 
-const initialPinnedIds: PinnedIds = { fencerIds: [], boutIds: [] };
+const INITIAL_PINNED_IDS: PinnedIds = { fencerIds: [], boutIds: [] };
 
 function isPinnedIds(value: unknown): value is PinnedIds {
   if (typeof value !== "object" || value === null) {
@@ -28,8 +28,8 @@ function unpin(ids: string[], id: string): string[] {
 // TODO: nothing currently removes stale pinneg IDS from the session storage (if they no longer
 // exist in the database). Something to address once the pinning frontend is more clarified.
 function usePinnedItems() {
-  const [stored, setPinned] = useSessionStorage<unknown>(PINNED_STORAGE_KEY, initialPinnedIds);
-  const pinned = isPinnedIds(stored) ? stored : initialPinnedIds;
+  const [stored, setPinned] = useSessionStorage<unknown>(PINNED_STORAGE_KEY, INITIAL_PINNED_IDS);
+  const pinned = isPinnedIds(stored) ? stored : INITIAL_PINNED_IDS;
 
   const pinFencer = useCallback(
     (id: string) => setPinned({ ...pinned, fencerIds: pin(pinned.fencerIds, id) }),

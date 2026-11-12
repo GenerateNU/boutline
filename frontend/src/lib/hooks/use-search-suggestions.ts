@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 
 import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
 
-const debounceMs = 300;
+const DEBOUNCE_MS = 300;
 
 // Search-as-you-type: holds the box's text and the suggestions for it, which
 // stay null while the box is empty so nothing shows until the user types.
@@ -39,7 +39,7 @@ function useSearchSuggestions<T>(fetchSuggestions: (term: string) => Promise<T[]
     }
   }
 
-  const [debouncedSearch, cancelSearch] = useDebouncedCallback(search, debounceMs);
+  const [debouncedSearch, cancelSearch] = useDebouncedCallback(search, DEBOUNCE_MS);
 
   function change(value: string) {
     setQuery(value);

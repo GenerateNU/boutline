@@ -15,7 +15,7 @@ import { Slider } from "@/components/primitives/slider";
 import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { countryName } from "@/features/tournament/lib/country-name";
-import { countryCodePattern } from "@/features/tournament/lib/tournament-filters";
+import { COUNTRY_CODE_PATTERN } from "@/features/tournament/lib/tournament-filters";
 import type {
   TournamentStatus,
   TournamentVisibility,
@@ -24,11 +24,11 @@ import { useSearchSuggestions } from "@/lib/hooks/use-search-suggestions";
 import { apiRequest } from "@/services/api-request";
 import type { TeamListResult } from "@/types/competitor";
 
-const maxDistance = 100;
-const statusOrder: TournamentStatus[] = ["ended", "active", "pending"];
+const MAX_DISTANCE = 100;
+const STATUS_ORDER: TournamentStatus[] = ["ended", "active", "pending"];
 
-const clubResultLimit = 10;
-const chipClassName = cn(
+const CLUB_RESULT_LIMIT = 10;
+const CHIP_CLASS_NAME = cn(
   buttonVariants({ variant: "outline", size: "sm" }),
   "flex-none rounded-lg first:border-l data-[state=on]:bg-blue data-[state=on]:text-white data-[state=on]:hover:bg-blue-dark",
 );
@@ -56,7 +56,7 @@ function FilterSheet({ visibility }: FilterSheetProps) {
   const [countriesFailed, setCountriesFailed] = useState(false);
   const [countryQuery, setCountryQuery] = useState("");
   const clubSearch = useSearchSuggestions(async (term) => {
-    const query = new URLSearchParams({ limit: String(clubResultLimit), q: term });
+    const query = new URLSearchParams({ limit: String(CLUB_RESULT_LIMIT), q: term });
     const result = await apiRequest<TeamListResult>(`/clubs?${query}`);
     return result.data.map(({ name }) => ({ value: name, label: name }));
   });
@@ -67,7 +67,7 @@ function FilterSheet({ visibility }: FilterSheetProps) {
       const result = await apiRequest<CountryListResult>(`/countries${query}`);
       // The column itself isn't constrained, and a malformed code would make
       // Intl.DisplayNames throw mid-render.
-      setCountries(result.data.filter(({ code }) => countryCodePattern.test(code)));
+      setCountries(result.data.filter(({ code }) => COUNTRY_CODE_PATTERN.test(code)));
       setCountriesFailed(false);
     } catch {
       setCountriesFailed(true);
@@ -167,13 +167,13 @@ function FilterSheet({ visibility }: FilterSheetProps) {
       <div className="flex flex-col gap-2">
         <p className="text-sm text-obsidian">Distance</p>
         <div className="px-5 pt-10 pb-2">
-          <Slider aria-label="Distance" unit="mi" showValue max={maxDistance} defaultValue={[maxDistance / 2]} />
+          <Slider aria-label="Distance" unit="mi" showValue max={MAX_DISTANCE} defaultValue={[MAX_DISTANCE / 2]} />
         </div>
       </div>
 
       <ChipGroup label="Tournament Status" value={status} onValueChange={setStatus}>
-        {statusOrder.map((value) => (
-          <SegmentedButtonItem key={value} value={value} className={cn(chipClassName, "flex-1")}>
+        {STATUS_ORDER.map((value) => (
+          <SegmentedButtonItem key={value} value={value} className={cn(CHIP_CLASS_NAME, "flex-1")}>
             {statusLabels[value]}
           </SegmentedButtonItem>
         ))}

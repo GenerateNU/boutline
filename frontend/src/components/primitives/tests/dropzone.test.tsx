@@ -2,7 +2,7 @@ import { fireEvent, render, waitFor } from "@testing-library/react";
 
 import { Dropzone } from "@/components/primitives/dropzone";
 
-const megabyte = 1024 * 1024;
+const MEGABYTE = 1024 * 1024;
 
 // Sizes this big would be slow to allocate, so the file reports a size instead.
 function pdfOfSize(bytes: number) {
@@ -13,8 +13,8 @@ function pdfOfSize(bytes: number) {
 
 describe("Dropzone", () => {
   it.each([
-    { name: "accepts a file under 50MB by default", size: 49 * megabyte, accepted: true },
-    { name: "rejects a file over 50MB by default", size: 51 * megabyte, accepted: false },
+    { name: "accepts a file under 50MB by default", size: 49 * MEGABYTE, accepted: true },
+    { name: "rejects a file over 50MB by default", size: 51 * MEGABYTE, accepted: false },
   ])("$name", async ({ size, accepted }) => {
     const onFile = jest.fn();
     const onReject = jest.fn();

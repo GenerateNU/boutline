@@ -9,7 +9,7 @@ import { TextField } from "@/components/primitives/text-field";
 import { ImportDropzone } from "@/features/tournament/components/import-dropzone";
 import { readTournamentDraft, restoreTournamentDraft, saveTournamentDraft } from "@/features/tournament/lib/tournament-draft";
 
-const authorities = ["askFRED", "USA Fencing", "FIE", "Other"];
+const AUTHORITIES = ["askFRED", "USA Fencing", "FIE", "Other"];
 
 const subscribe = () => () => {};
 
@@ -49,7 +49,7 @@ function NewTournamentForm() {
         key={authority}
         label="Authority"
         name="authority"
-        options={authorities}
+        options={AUTHORITIES}
         defaultValue={authority || undefined}
         required
       />

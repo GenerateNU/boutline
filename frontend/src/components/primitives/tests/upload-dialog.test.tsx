@@ -2,8 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { UploadDialog, type UploadFile } from "@/components/primitives/upload-dialog";
 
-const pdf = new File(["a"], "my-cv.pdf", { type: "application/pdf" });
-const png = new File(["b"], "photo.png", { type: "image/png" });
+const PDF = new File(["a"], "my-cv.pdf", { type: "application/pdf" });
+const PNG = new File(["b"], "photo.png", { type: "image/png" });
 
 function renderDialog(props: Partial<React.ComponentProps<typeof UploadDialog>> = {}) {
   const handlers = { onAddFiles: jest.fn(), onRemoveFile: jest.fn(), onOpenChange: jest.fn() };
@@ -26,8 +26,8 @@ describe("UploadDialog", () => {
 
   it("removes a file by id", () => {
     const files: UploadFile[] = [
-      { id: "1", file: pdf },
-      { id: "2", file: png },
+      { id: "1", file: PDF },
+      { id: "2", file: PNG },
     ];
     const { onRemoveFile } = renderDialog({ files });
     expect(screen.getByText("my-cv.pdf")).toBeInTheDocument();
@@ -40,15 +40,15 @@ describe("UploadDialog", () => {
     { progress: undefined, uploading: false },
     { progress: 100, uploading: false },
   ])("progress $progress shows uploading=$uploading", ({ progress, uploading }) => {
-    renderDialog({ files: [{ id: "1", file: pdf, progress }] });
+    renderDialog({ files: [{ id: "1", file: PDF, progress }] });
     expect(!!screen.queryByText("Uploading...")).toBe(uploading);
     expect(!!screen.queryByRole("progressbar")).toBe(uploading);
   });
 
   it("adds accepted files", async () => {
     const { onAddFiles } = renderDialog();
-    fireEvent.change(fileInput(), { target: { files: [pdf] } });
-    await waitFor(() => expect(onAddFiles).toHaveBeenCalledWith([pdf]));
+    fireEvent.change(fileInput(), { target: { files: [PDF] } });
+    await waitFor(() => expect(onAddFiles).toHaveBeenCalledWith([PDF]));
   });
 
   it("rejects wrong types inline when no onReject is given", async () => {

@@ -1,5 +1,5 @@
 // UTC, like the event-schedule formatters, so a date reads the same in every time zone.
-const shortDateFormat = new Intl.DateTimeFormat("en-US", {
+const SHORT_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
   year: "numeric",
@@ -7,5 +7,5 @@ const shortDateFormat = new Intl.DateTimeFormat("en-US", {
 });
 
 export function formatShortDate(iso: string): string {
-  return shortDateFormat.format(new Date(iso));
+  return SHORT_DATE_FORMAT.format(new Date(iso));
 }

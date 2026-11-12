@@ -10,7 +10,7 @@ type Status =
   | "occupied"
   | "available";
 
-const statuses: Record<Status, { label: string; className: string }> = {
+const STATUSES: Record<Status, { label: string; className: string }> = {
   "in-progress": {
     label: "In Progress",
     className: "bg-amber-light text-amber-dark",
@@ -53,12 +53,12 @@ function StatusBadge({ status, className, ...props }: StatusBadgeProps) {
       data-slot="status-badge"
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full py-0.75 pr-2.5 pl-2 text-xs font-medium whitespace-nowrap",
-        statuses[status].className,
+        STATUSES[status].className,
         className,
       )}
       {...props}
     >
-      {statuses[status].label}
+      {STATUSES[status].label}
     </div>
   );
 }

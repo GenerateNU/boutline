@@ -3,14 +3,14 @@ import Link from "next/link";
 import { Button } from "@/components/primitives/button";
 import { Section } from "@/components/primitives/section";
 
-const menu = ["tools", "reports", "view", "file (save)"];
+const MENU = ["tools", "reports", "view", "file (save)"];
 
 export default function AdminPage() {
   return (
     <main className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 py-10">
       <Section title="Admin">
         <ul className="flex flex-wrap gap-2">
-          {menu.map((item) => (
+          {MENU.map((item) => (
             <li key={item}>
               <Button variant="outline" className="rounded-full">
                 {item}

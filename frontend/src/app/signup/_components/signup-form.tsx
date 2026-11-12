@@ -9,7 +9,7 @@ import { TextField } from "@/components/primitives/text-field";
 import { signup } from "@/features/auth/services/auth-actions";
 
 const MAX_PASSWORD_BYTES = 72;
-const passwordRequirements = [
+const PASSWORD_REQUIREMENTS = [
   "At least 1 character",
   `At most ${MAX_PASSWORD_BYTES} bytes (accented and non-Latin characters take 2 to 4)`,
 ];
@@ -81,7 +81,7 @@ function SignupForm({ redirectTo, loginHref }: SignupFormProps) {
           <div className="px-3 text-sm">
             <p>Password Requirements:</p>
             <ul className="list-disc pl-6">
-              {passwordRequirements.map((rule) => (
+              {PASSWORD_REQUIREMENTS.map((rule) => (
                 <li key={rule}>{rule}</li>
               ))}
             </ul>

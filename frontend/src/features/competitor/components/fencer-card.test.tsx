@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { FencerCard } from "@/features/competitor/components/fencer-card";
 import type { Competitor } from "@/types/competitor";
 
-const yan: Competitor = {
+const YAN: Competitor = {
   id: "c-1",
   eventId: "e1",
   tournamentId: "t1",
@@ -19,7 +19,7 @@ describe("FencerCard", () => {
     { team: "Boston Blade Club", wantClub: "Boston Blade Club" },
     { team: "", wantClub: "No club" },
   ])("shows the name, rating and club '$wantClub'", ({ team, wantClub }) => {
-    render(<FencerCard competitor={{ ...yan, team }} />);
+    render(<FencerCard competitor={{ ...YAN, team }} />);
 
     expect(screen.getByText("Yan Wang")).toBeInTheDocument();
     expect(screen.getByText("A26")).toBeInTheDocument();
@@ -31,7 +31,7 @@ describe("FencerCard", () => {
     { name: "with an empty tournament id", tournamentId: "", want: null },
     { name: "without a tournament", tournamentId: undefined, want: null },
   ])("links to the fencer's page $name", ({ tournamentId, want }) => {
-    render(<FencerCard competitor={{ ...yan, tournamentId }} />);
+    render(<FencerCard competitor={{ ...YAN, tournamentId }} />);
 
     const link = screen.queryByRole("link");
     if (want) {
@@ -46,7 +46,7 @@ describe("FencerCard", () => {
     { pinned: false, label: "Pin Yan Wang" },
   ])("toggles a pin when pinned is $pinned", ({ pinned, label }) => {
     const onTogglePin = jest.fn();
-    render(<FencerCard competitor={yan} pinned={pinned} onTogglePin={onTogglePin} />);
+    render(<FencerCard competitor={YAN} pinned={pinned} onTogglePin={onTogglePin} />);
 
     const button = screen.getByRole("button", { name: label });
     expect(button).toHaveAttribute("aria-pressed", String(pinned));
@@ -55,7 +55,7 @@ describe("FencerCard", () => {
   });
 
   it("shows a pin button even before pinning is wired up", () => {
-    render(<FencerCard competitor={yan} pinned={false} />);
+    render(<FencerCard competitor={YAN} pinned={false} />);
 
     expect(screen.getByRole("button", { name: "Pin Yan Wang" })).toHaveAttribute("aria-pressed", "false");
   });

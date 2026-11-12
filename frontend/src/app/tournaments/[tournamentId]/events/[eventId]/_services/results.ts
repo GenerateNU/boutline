@@ -25,7 +25,7 @@ const MARCUS = fencer("marcus", "Marcus", "Johnson", "", "U");
 
 type PoolBout = [ResultFencer, number, ResultFencer, number];
 
-const poolBouts: PoolBout[] = [
+const POOL_BOUTS: PoolBout[] = [
   [MAYA, 5, LIAM, 2],
   [PRIYA, 3, MAYA, 5],
   [MAYA, 5, DIEGO, 1],
@@ -47,7 +47,7 @@ const poolBouts: PoolBout[] = [
 ];
 
 function boutsOf(subject: ResultFencer): PoolBoutResult[] {
-  return poolBouts
+  return POOL_BOUTS
     .filter(([left, , right]) => left === subject || right === subject)
     .map(([left, leftScore, right, rightScore]) =>
       left === subject
@@ -81,7 +81,7 @@ function standing(
 }
 
 // Overall ranking after pools; the top eight make the cut.
-const poolResults: PoolStanding[] = [
+const POOL_RESULTS: PoolStanding[] = [
   standing(MAYA, 1, 1, 3, 15, 6, true),
   standing(HANA, 2, 1, 3, 15, 8, true),
   standing(KENJI, 3, 1, 3, 15, 9, true),
@@ -96,7 +96,7 @@ const poolResults: PoolStanding[] = [
   standing(DIEGO, 1, 4, 0, 6, 15, false),
 ];
 
-const finalPlaces: [ResultFencer, number][] = [
+const FINAL_PLACES: [ResultFencer, number][] = [
   [MAYA, 1],
   [HANA, 2],
   [KENJI, 3],
@@ -112,12 +112,12 @@ const finalPlaces: [ResultFencer, number][] = [
 ];
 
 export function getPoolResults(): PoolStanding[] {
-  return poolResults;
+  return POOL_RESULTS;
 }
 
 export function getFinalPlacings(): FinalPlacing[] {
-  return finalPlaces.map(([subject, place]) => ({
+  return FINAL_PLACES.map(([subject, place]) => ({
     place,
-    standing: poolResults.find((result) => result.fencer.id === subject.id)!,
+    standing: POOL_RESULTS.find((result) => result.fencer.id === subject.id)!,
   }));
 }

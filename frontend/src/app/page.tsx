@@ -100,18 +100,18 @@ import { WeekStrip } from "@/features/tournament/components/week-strip";
 import { Logo } from "@/components/primitives/logo";
 import { Navbar } from "@/components/primitives/navigation/navbar";
 
-const buttonVariantNames = ["filled", "outline", "tonal", "text"] as const;
-const buttonSizes = ["sm", "default", "lg"] as const;
+const BUTTON_VARIANT_NAMES = ["filled", "outline", "tonal", "text"] as const;
+const BUTTON_SIZES = ["sm", "default", "lg"] as const;
 
 // Static stand-ins for each variant's hover fill, so the grid can show that state.
-const hoverClasses: Record<(typeof buttonVariantNames)[number], string> = {
+const HOVER_CLASSES: Record<(typeof BUTTON_VARIANT_NAMES)[number], string> = {
   filled: "bg-blue-dark",
   outline: "bg-blue-lighter",
   tonal: "bg-blue-light",
   text: "bg-blue-lighter",
 };
 
-const demoTournament: Tournament = {
+const DEMO_TOURNAMENT: Tournament = {
   id: "demo",
   name: "Northeastern Open",
   visibility: "public",
@@ -126,14 +126,14 @@ const demoTournament: Tournament = {
   created_at: "2026-10-06T00:00:00Z",
   updated_at: "2026-10-06T00:00:00Z",
 };
-const demoResultsTournament: Tournament = {
-  ...demoTournament,
+const DEMO_RESULTS_TOURNAMENT: Tournament = {
+  ...DEMO_TOURNAMENT,
   name: "Generate Fencing Open",
   status: "ended",
   city: "Boston",
 };
 
-const demoEvents: TournamentEvent[] = [
+const DEMO_EVENTS: TournamentEvent[] = [
   ["Y-12 Men's Sabre", "08:00"],
   ["Cadet Men's Épée", "08:00"],
   ["Junior Women's Foil", "10:00"],
@@ -151,12 +151,12 @@ const demoEvents: TournamentEvent[] = [
   updated_at: "2026-10-06T00:00:00Z",
 }));
 
-const demoReferees = [
+const DEMO_REFEREES = [
   { id: "1", name: "Yan Wang", occupied: true, pool: "Pool 1" },
   { id: "2", name: "Yan Wang", occupied: false, pool: "Pool 1" },
 ];
 
-const demoFencer = {
+const DEMO_FENCER = {
   id: "demo",
   eventId: "demo-event",
   tournamentId: "demo-tournament",
@@ -166,24 +166,24 @@ const demoFencer = {
   rating: "A26",
   team: "Boston Blade Club",
 };
-const demoClub = { name: "Boston Blade Club", competitorCount: 12 };
+const DEMO_CLUB = { name: "Boston Blade Club", competitorCount: 12 };
 
-const barItems = ["Overview", "Fencers", "Clubs", "Events"].map((label) => ({
+const BAR_ITEMS = ["Overview", "Fencers", "Clubs", "Events"].map((label) => ({
   label,
   href: "#",
   active: label === "Fencers",
 }));
 
-const dropdownOptions = ["Fencer", "Country", "Club"];
+const DROPDOWN_OPTIONS = ["Fencer", "Country", "Club"];
 
-const drawerItems = Array.from({ length: 7 }, (_, index) => ({
+const DRAWER_ITEMS = Array.from({ length: 7 }, (_, index) => ({
   id: `drawer-${index}`,
   label: "Label",
   icon: <CategoryOutlined />,
   badge: "100+",
 }));
 
-const drawerFooter = [{ id: "settings", label: "Settings", icon: <SettingsOutlined /> }];
+const DRAWER_FOOTER = [{ id: "settings", label: "Settings", icon: <SettingsOutlined /> }];
 function DialogAvatar() {
   return (
     <Avatar className="size-8">
@@ -215,7 +215,7 @@ function DialogList() {
   );
 }
 
-const searchSamples = [
+const SEARCH_SAMPLES = [
   {
     title: "Clubs",
     icon: <GroupsOutlined aria-hidden />,
@@ -253,7 +253,7 @@ function SearchSampleSection({ title, icon, rows }: SearchSampleSectionProps) {
 function SearchDemo() {
   const [query, setQuery] = useState("N");
   const term = query.trim().toLowerCase();
-  const matches = searchSamples
+  const matches = SEARCH_SAMPLES
     .map((section) => ({
       ...section,
       rows: section.rows.filter((row) => row.toLowerCase().includes(term)),
@@ -281,7 +281,7 @@ function SearchDemo() {
   );
 }
 
-const sampleEventDates = [new Date(2026, 9, 9), new Date(2026, 9, 16), new Date(2026, 9, 23)];
+const SAMPLE_EVENT_DATES = [new Date(2026, 9, 9), new Date(2026, 9, 16), new Date(2026, 9, 23)];
 
 function CalendarDemo() {
   const [selected, setSelected] = useState(new Date(2026, 9, 5));
@@ -294,7 +294,7 @@ function CalendarDemo() {
       onSelect={setSelected}
       defaultMonth={selected}
       today={new Date(2026, 9, 1)}
-      modifiers={{ hasEvent: sampleEventDates }}
+      modifiers={{ hasEvent: SAMPLE_EVENT_DATES }}
     />
   );
 }
@@ -333,12 +333,12 @@ function UploadDialogDemo() {
   );
 }
 
-const undo = { label: "Undo", altText: "Undo" };
+const UNDO = { label: "Undo", altText: "Undo" };
 
-const sampleToasts = [
-  { description: "Pins saved", icon: <CheckOutlined className="text-accent-green" />, action: undo },
-  { description: "Pinned Pool 1 · Strip 3", icon: <PushPinOutlined className="text-blue-light" />, action: undo },
-  { description: "Code not found", icon: <CloseOutlined className="text-red-dark" />, action: undo },
+const SAMPLE_TOASTS = [
+  { description: "Pins saved", icon: <CheckOutlined className="text-accent-green" />, action: UNDO },
+  { description: "Pinned Pool 1 · Strip 3", icon: <PushPinOutlined className="text-blue-light" />, action: UNDO },
+  { description: "Code not found", icon: <CloseOutlined className="text-red-dark" />, action: UNDO },
 ];
 
 // Keeps the sample toasts open in the page instead of popping them up at the
@@ -346,7 +346,7 @@ const sampleToasts = [
 function ToastPreview() {
   return (
     <ToastPrimitive.Provider>
-      {sampleToasts.map((options) => (
+      {SAMPLE_TOASTS.map((options) => (
         <ToastItem key={options.description} options={options} open duration={Infinity} />
       ))}
       <ToastViewport className="static w-full translate-x-0 p-0" />
@@ -428,8 +428,8 @@ export default function Home() {
 
       <Section title="Button">
         <div className="grid grid-cols-3 items-center justify-items-start gap-x-3 gap-y-4">
-          {buttonVariantNames.flatMap((variant) =>
-            buttonSizes.map((size) => [
+          {BUTTON_VARIANT_NAMES.flatMap((variant) =>
+            BUTTON_SIZES.map((size) => [
               <Button key={`${variant}-${size}`} variant={variant} size={size}>
                 Button
               </Button>,
@@ -437,7 +437,7 @@ export default function Home() {
                 key={`${variant}-${size}-hover`}
                 variant={variant}
                 size={size}
-                className={hoverClasses[variant]}
+                className={HOVER_CLASSES[variant]}
               >
                 Button
               </Button>,
@@ -451,7 +451,7 @@ export default function Home() {
 
       <Section title="Back Button">
         <div className="grid grid-cols-3 items-center justify-items-start gap-x-3 gap-y-4">
-          {buttonSizes.map((size) => [
+          {BUTTON_SIZES.map((size) => [
             <BackButton key={size} href="/" size={size} />,
             <BackButton key={`${size}-hover`} href="/" size={size} className="bg-blue-lighter" />,
             <BackButton key={`${size}-disabled`} href="/" size={size} disabled />,
@@ -556,31 +556,31 @@ export default function Home() {
 
       <Section title="Cards">
         <div className="contents" onClickCapture={(event) => event.preventDefault()}>
-          <TournamentCard tournament={demoTournament} />
-          <TournamentCard tournament={{ ...demoTournament, status: "pending" }} admin />
-          <EventCard event={{ ...demoEvents[0], name: "U15 Mixed Épée", status: "ended" }} competitorCount={5} />
-          <TournamentResultsCard tournament={demoResultsTournament} eventCount={12} resultsHref="/" />
+          <TournamentCard tournament={DEMO_TOURNAMENT} />
+          <TournamentCard tournament={{ ...DEMO_TOURNAMENT, status: "pending" }} admin />
+          <EventCard event={{ ...DEMO_EVENTS[0], name: "U15 Mixed Épée", status: "ended" }} competitorCount={5} />
+          <TournamentResultsCard tournament={DEMO_RESULTS_TOURNAMENT} eventCount={12} resultsHref="/" />
           <CreateTournamentCard />
           <TournamentInfoCard name="Boston Championships" dates="October 5 – October 7, 2026" />
-          <EventRow event={demoEvents[0]} />
-          <RefereeCard referees={demoReferees} />
-          <EventListCard title="Ongoing Events" events={demoEvents} emptyMessage="" />
+          <EventRow event={DEMO_EVENTS[0]} />
+          <RefereeCard referees={DEMO_REFEREES} />
+          <EventListCard title="Ongoing Events" events={DEMO_EVENTS} emptyMessage="" />
           <EventListCard
             title="Upcoming Events"
-            events={demoEvents.map((event) => ({ ...event, status: "upcoming" }))}
+            events={DEMO_EVENTS.map((event) => ({ ...event, status: "upcoming" }))}
             emptyMessage=""
           />
           <EventListCard
             title="Completed Events"
-            events={demoEvents.map((event) => ({ ...event, status: "ended" }))}
+            events={DEMO_EVENTS.map((event) => ({ ...event, status: "ended" }))}
             emptyMessage=""
           />
-          <FencerCard competitor={demoFencer} />
-          <FencerCard competitor={demoFencer} pinned={false} />
-          <FencerCard competitor={demoFencer} pinned />
-          <ClubCard team={demoClub} href="/" />
-          <ClubCard team={demoClub} pinned={false} />
-          <ClubCard team={demoClub} pinned />
+          <FencerCard competitor={DEMO_FENCER} />
+          <FencerCard competitor={DEMO_FENCER} pinned={false} />
+          <FencerCard competitor={DEMO_FENCER} pinned />
+          <ClubCard team={DEMO_CLUB} href="/" />
+          <ClubCard team={DEMO_CLUB} pinned={false} />
+          <ClubCard team={DEMO_CLUB} pinned />
           <RefereeRow name="Yan Wang" occupied pool="Pool 1" />
         </div>
       </Section>
@@ -728,15 +728,15 @@ export default function Home() {
       </Section>
 
       <Section title="Navigation bar">
-        <NavigationBar aria-label="Sections" items={barItems.slice(0, 2)} />
-        <NavigationBar aria-label="Sections" items={barItems} />
+        <NavigationBar aria-label="Sections" items={BAR_ITEMS.slice(0, 2)} />
+        <NavigationBar aria-label="Sections" items={BAR_ITEMS} />
       </Section>
 
       <Section title="Navigation drawer">
         <NavigationDrawer
           title="Title"
-          items={drawerItems}
-          footerItems={drawerFooter}
+          items={DRAWER_ITEMS}
+          footerItems={DRAWER_FOOTER}
           userName="User name"
           className="h-[950px]"
         />
@@ -841,7 +841,7 @@ export default function Home() {
 
       <Section title="Toast">
         <ToastPreview />
-        <Button variant="outline" className="self-start" onClick={() => toast(sampleToasts[0])}>
+        <Button variant="outline" className="self-start" onClick={() => toast(SAMPLE_TOASTS[0])}>
           Show a toast
         </Button>
       </Section>
@@ -885,14 +885,14 @@ export default function Home() {
 
       <Section title="Dropdown Selection">
         <div className="flex flex-col gap-6">
-          <SelectField label="Label" options={dropdownOptions} />
-          <SelectField label="Disabled" options={dropdownOptions} disabled />
+          <SelectField label="Label" options={DROPDOWN_OPTIONS} />
+          <SelectField label="Disabled" options={DROPDOWN_OPTIONS} disabled />
         </div>
       </Section>
 
       <Section title="Date Field">
         <div className="flex flex-col gap-6">
-          <DateField label="Date" defaultValue={new Date(2026, 9, 5)} eventDates={sampleEventDates} />
+          <DateField label="Date" defaultValue={new Date(2026, 9, 5)} eventDates={SAMPLE_EVENT_DATES} />
           <DateField label="Error" aria-invalid />
           <DateField label="Disabled" disabled />
         </div>
