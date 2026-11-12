@@ -34,6 +34,7 @@ const uploadAccept: Accept = {
   "image/png": [".png"],
   "application/pdf": [".pdf"],
   "video/mp4": [".mp4"],
+  "text/csv": [".csv"],
 };
 
 function formatSize(bytes: number) {
