@@ -1,4 +1,4 @@
-import { Play } from "lucide-react";
+import PlayArrowOutlined from "@mui/icons-material/PlayArrowOutlined";
 
 import { Button } from "@/components/primitives/button";
 
@@ -27,7 +27,7 @@ export function PhaseHeader({ phase, scores, competitorIds, starting, nameOf, on
           onClick={onStart}
           className="h-14 w-full touch-manipulation rounded-xl text-base"
         >
-          <Play />
+          <PlayArrowOutlined />
           {starting ? "Starting…" : "Start match"}
         </Button>
       );

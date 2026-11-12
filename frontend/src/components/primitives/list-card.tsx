@@ -1,5 +1,7 @@
 import { cn } from "cn";
-import { ChevronRight, Pin } from "lucide-react";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
+import PushPin from "@mui/icons-material/PushPin";
+import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
 import Link from "next/link";
 
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/primitives/card";
@@ -29,6 +31,9 @@ interface ListCardBodyProps extends Omit<ListCardProps, "href"> {
 }
 
 function ListCardBody({ title, description, badge, pinned, linked }: ListCardBodyProps) {
+  // Material marks a pin as set with its filled glyph rather than by filling the outline.
+  const PinIcon = pinned ? PushPin : PushPinOutlined;
+
   return (
     <Card
       orientation="horizontal"
@@ -43,12 +48,12 @@ function ListCardBody({ title, description, badge, pinned, linked }: ListCardBod
       </CardHeader>
       {badge}
       {pinned !== undefined ? (
-        <Pin
+        <PinIcon
           aria-hidden
-          className={cn("size-5 shrink-0", pinned ? "fill-blue text-blue" : "text-neutral-muted")}
+          className={cn("size-5 shrink-0", pinned ? "text-blue" : "text-neutral-muted")}
         />
       ) : (
-        linked && <ChevronRight aria-hidden className="size-6 shrink-0 text-neutral-muted" />
+        linked && <ChevronRightOutlined aria-hidden className="size-6 shrink-0 text-neutral-muted" />
       )}
     </Card>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Menu } from "lucide-react";
+import MenuOutlined from "@mui/icons-material/MenuOutlined";
 import { cn } from "cn";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
@@ -64,7 +64,7 @@ setExpanded(false);
           aria-expanded={expanded}
           onClick={() => setExpanded(true)}
         >
-          <Menu />
+          <MenuOutlined />
         </Button>
         <div className="mt-10 flex min-h-0 flex-1 flex-col items-center gap-3 overflow-y-auto">
           {items.map((item) => (
@@ -119,7 +119,7 @@ setExpanded(false);
             aria-label="Close menu"
             onClick={() => setExpanded(false)}
           >
-            <Menu />
+            <MenuOutlined />
           </Button>
           <span className="text-lg font-semibold">{title}</span>
         </div>

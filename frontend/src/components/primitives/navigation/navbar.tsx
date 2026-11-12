@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import { Menu } from "lucide-react";
+import MenuOutlined from "@mui/icons-material/MenuOutlined";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -40,7 +40,7 @@ function Navbar({ onMenuClick, menuRef, className, ...props }: NavbarProps) {
         onClick={onMenuClick}
         className="relative ml-2.5 text-white hover:bg-background/10 [&_svg]:size-6"
       >
-        <Menu aria-hidden />
+        <MenuOutlined aria-hidden />
       </Button>
       <Link href="/" className="relative ml-2.5 flex items-center gap-2.5">
         <Image src="/brand/logo-mark.svg" alt="" width={21} height={24} />

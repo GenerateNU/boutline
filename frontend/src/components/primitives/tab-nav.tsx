@@ -1,6 +1,6 @@
 "use client";
 
-import { useSelectedLayoutSegment } from "next/navigation";
+import { usePathname, useSelectedLayoutSegment } from "next/navigation";
 
 import { NavigationBar } from "@/components/primitives/navigation/navigation-bar";
 
@@ -18,16 +18,18 @@ interface TabNavProps {
 
 function TabNav({ label, basePath, tabs }: TabNavProps) {
   const activeSegment = useSelectedLayoutSegment();
+  const pathname = usePathname();
   const root = basePath.replace(/\/+$/, "");
 
   return (
     <NavigationBar
       aria-label={label}
-      items={tabs.map(({ label, segment }) => ({
-        label,
-        href: segment ? `${root}/${segment}` : basePath,
-        active: segment === activeSegment,
-      }))}
+      items={tabs.map(({ label, segment }) => {
+        const href = segment ? `${root}/${segment}` : basePath;
+        const active = segment === activeSegment;
+        // Tabs replace history so Back leaves the page; going up from a nested page (an event to Events) pushes.
+        return { label, href, active, replace: !(active && pathname !== href) };
+      })}
     />
   );
 }

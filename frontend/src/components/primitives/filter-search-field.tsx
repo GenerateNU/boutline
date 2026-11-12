@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import SearchOutlined from "@mui/icons-material/SearchOutlined";
 
 import { Input } from "@/components/primitives/input";
 
@@ -20,7 +20,7 @@ function FilterSearchField({ label, children, ...inputProps }: FilterSearchField
           {...inputProps}
           className="h-5 flex-1 rounded-none border-0 px-0 text-obsidian shadow-none placeholder:text-neutral-secondary focus-visible:ring-0"
         />
-        <Search aria-hidden className="size-4.5 shrink-0 text-neutral-secondary" />
+        <SearchOutlined aria-hidden className="size-4.5 shrink-0 text-neutral-secondary" />
       </div>
       {children}
     </div>

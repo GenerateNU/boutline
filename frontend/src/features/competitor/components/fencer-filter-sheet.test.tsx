@@ -90,6 +90,13 @@ describe("FencerFilterSheet", () => {
     expect(club).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("shows a spinner until the first club search answers", async () => {
+    apiRequestMock.mockReturnValue(new Promise(() => {}));
+    await openSheet();
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading");
+  });
+
   it.each([
     {
       name: "no clubs",

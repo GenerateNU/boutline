@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
 import { cn } from "cn";
 import {
   DayPicker,
@@ -124,7 +125,7 @@ function Stepper({ label, unit, onStep }: StepperProps) {
         onClick={() => onStep(-1)}
         className={stepClassName}
       >
-        <ChevronLeft />
+        <ChevronLeftOutlined />
       </Button>
       <p className="min-w-10 text-center">{label}</p>
       <Button
@@ -135,7 +136,7 @@ function Stepper({ label, unit, onStep }: StepperProps) {
         onClick={() => onStep(1)}
         className={stepClassName}
       >
-        <ChevronRight />
+        <ChevronRightOutlined />
       </Button>
     </div>
   );

@@ -6,6 +6,7 @@ interface NavigationBarItem {
   label: string;
   href: string;
   active?: boolean;
+  replace?: boolean;
 }
 
 interface NavigationBarProps extends React.ComponentProps<"nav"> {
@@ -19,8 +20,14 @@ function NavigationBar({ items, className, ...props }: NavigationBarProps) {
       className={cn("flex rounded-xl bg-obsidian", className)}
       {...props}
     >
-      {items.map(({ label, href, active }) => (
-        <NavigationItem key={label} label={label} href={href} active={active} />
+      {items.map(({ label, href, active, replace }) => (
+        <NavigationItem
+          key={label}
+          label={label}
+          href={href}
+          active={active}
+          replace={replace}
+        />
       ))}
     </nav>
   );
