@@ -26,6 +26,8 @@ const poolMaxFencers = 10
 const (
 	msgPoolStarted = "this pool has already started"
 	msgPoolEnded   = "this pool has already ended"
+
+	msgPoolFencersLocked = "a pool's fencers can only change before it starts and while every bout is upcoming"
 )
 
 // PoolStageLookup is the subset of the PoolStageRepository interface needed here.
@@ -73,7 +75,7 @@ func (s *poolService) CreatePools(ctx context.Context, input *PoolCreateInput) (
 			return err
 		}
 
-		if err := checkEntrants(ctx, repo, stageID, stage.EventID, requests); err != nil {
+		if err := checkEntrants(ctx, repo, stageID, stage.EventID, uuid.Nil, requests); err != nil {
 			return err
 		}
 
@@ -167,6 +169,9 @@ func (s *poolService) UpdatePoolByID(ctx context.Context, input *PoolUpdateInput
 		Number:    input.Body.Number,
 		Strip:     input.Body.Strip,
 		StartTime: input.Body.StartTime,
+	}
+	if input.Body.Fencers != nil {
+		return s.reseatPool(ctx, id, update, input.Body.Fencers)
 	}
 	if len(update.columns()) == 0 {
 		return nil, errs.HumaError(errs.Public("provide at least one field to update", errs.ErrInvalidInput))

@@ -96,6 +96,7 @@ func (f *FakePoolRepository) ListPoolEntrants(
 	_ context.Context,
 	poolStageID uuid.UUID,
 	competitorIDs []uuid.UUID,
+	exceptPoolID uuid.UUID,
 ) ([]pool.PoolEntrant, error) {
 	if f.Err != nil {
 		return nil, f.Err
@@ -104,7 +105,7 @@ func (f *FakePoolRepository) ListPoolEntrants(
 	var entrants []pool.PoolEntrant
 	for _, id := range competitorIDs {
 		if entrant, ok := f.Competitors[id]; ok {
-			entrant.Seated = f.seated(poolStageID, id)
+			entrant.Seated = f.seated(poolStageID, id, exceptPoolID)
 			entrants = append(entrants, entrant)
 		}
 	}
@@ -112,10 +113,10 @@ func (f *FakePoolRepository) ListPoolEntrants(
 	return entrants, nil
 }
 
-func (f *FakePoolRepository) seated(poolStageID, competitorID uuid.UUID) bool {
+func (f *FakePoolRepository) seated(poolStageID, competitorID, exceptPoolID uuid.UUID) bool {
 	for _, bout := range f.Bouts {
 		inBout := bout.Competitor1ID == competitorID || bout.Competitor2ID == competitorID
-		if inBout && f.Pools[bout.PoolID].PoolStageID == poolStageID {
+		if inBout && bout.PoolID != exceptPoolID && f.Pools[bout.PoolID].PoolStageID == poolStageID {
 			return true
 		}
 	}
@@ -226,6 +227,58 @@ func (f *FakePoolRepository) UpdatePoolByID(_ context.Context, id uuid.UUID, upd
 	}
 	stored.UpdatedAt = time.Now()
 	f.Pools[id] = stored
+
+	return nil
+}
+
+func (f *FakePoolRepository) GetPoolBoutSummary(_ context.Context, poolID uuid.UUID) (pool.PoolBoutSummary, error) {
+	if f.Err != nil {
+		return pool.PoolBoutSummary{}, f.Err
+	}
+
+	var summary pool.PoolBoutSummary
+	for _, bout := range f.Bouts {
+		if bout.PoolID != poolID {
+			continue
+		}
+		summary.Total++
+		if bout.Status != "upcoming" {
+			summary.Started++
+		}
+		summary.PointsToWin = bout.PointsToWin
+		summary.TimeLimitSeconds = bout.TimeLimitSeconds
+	}
+
+	return summary, nil
+}
+
+// ReplacePoolBouts swaps the pool's bouts. The started guards are the database's to
+// enforce under concurrency, and re-seat checks them first, so the fake trusts it.
+func (f *FakePoolRepository) ReplacePoolBouts(
+	ctx context.Context,
+	id uuid.UUID,
+	update pool.PoolUpdate,
+	bouts []pool.PoolBout,
+) error {
+	if err := f.UpdatePoolByID(ctx, id, update); err != nil {
+		return err
+	}
+
+	kept := make([]pool.PoolBout, 0, len(f.Bouts)+len(bouts))
+	for _, bout := range f.Bouts {
+		if bout.PoolID != id {
+			kept = append(kept, bout)
+		}
+	}
+	now := time.Now()
+	for i := range bouts {
+		bouts[i].ID = uuid.New()
+		bouts[i].PoolID = id
+		bouts[i].CreatedAt = now
+		bouts[i].UpdatedAt = now
+		kept = append(kept, bouts[i])
+	}
+	f.Bouts = kept
 
 	return nil
 }

@@ -18,9 +18,11 @@ type PoolRepository interface {
 	CreatePoolsWithBouts(ctx context.Context, lineups []PoolLineup) error
 	GetPoolByID(ctx context.Context, id uuid.UUID) (*Pool, error)
 	GetPoolTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
-	ListPoolEntrants(ctx context.Context, poolStageID uuid.UUID, competitorIDs []uuid.UUID) ([]PoolEntrant, error)
+	ListPoolEntrants(ctx context.Context, poolStageID uuid.UUID, competitorIDs []uuid.UUID, exceptPoolID uuid.UUID) ([]PoolEntrant, error)
+	GetPoolBoutSummary(ctx context.Context, poolID uuid.UUID) (PoolBoutSummary, error)
 	ListPools(ctx context.Context, filter PoolListFilter) ([]Pool, int64, error)
 	UpdatePoolByID(ctx context.Context, id uuid.UUID, update PoolUpdate) error
+	ReplacePoolBouts(ctx context.Context, id uuid.UUID, update PoolUpdate, bouts []PoolBout) error
 	StartPoolByID(ctx context.Context, id uuid.UUID, startedAt time.Time) error
 	EndPoolByID(ctx context.Context, id uuid.UUID, completedAt time.Time) error
 	CountOpenPoolBouts(ctx context.Context, id uuid.UUID) (int64, error)
@@ -186,18 +188,20 @@ func (r *poolRepository) ListPoolEntrants(
 	ctx context.Context,
 	poolStageID uuid.UUID,
 	competitorIDs []uuid.UUID,
+	exceptPoolID uuid.UUID,
 ) ([]PoolEntrant, error) {
 	var entrants []PoolEntrant
 
-	// Each requested competitor's event, and whether they already fence a bout in one of this stage's pools.
+	// Each requested competitor's event, and whether they already fence a bout in one of
+	// this stage's pools other than exceptPoolID.
 	err := r.db.WithContext(ctx).Raw(`
 		SELECT c.id, c.event_id, EXISTS (
 			SELECT 1 FROM bouts b
 			JOIN pools p ON p.id = b.pool_id
-			WHERE p.pool_stage_id = ? AND (b.competitor_1_id = c.id OR b.competitor_2_id = c.id)
+			WHERE p.pool_stage_id = ? AND p.id <> ? AND (b.competitor_1_id = c.id OR b.competitor_2_id = c.id)
 		) AS seated
 		FROM competitors c
-		WHERE c.id IN ?`, poolStageID, competitorIDs).
+		WHERE c.id IN ?`, poolStageID, exceptPoolID, competitorIDs).
 		Scan(&entrants).Error
 	if err != nil {
 		return nil, fmt.Errorf("select competitors: %w", err)
@@ -263,6 +267,82 @@ func (r *poolRepository) UpdatePoolByID(ctx context.Context, id uuid.UUID, updat
 			Updates(boutColumns).Error
 		if err != nil {
 			return fmt.Errorf("update upcoming bouts of pool %s: %w", id, err)
+		}
+
+		return nil
+	})
+}
+
+// PoolBoutSummary is what re-seating a pool needs to know about its current bouts.
+type PoolBoutSummary struct {
+	Total            int64
+	Started          int64
+	PointsToWin      int
+	TimeLimitSeconds int
+}
+
+func (r *poolRepository) GetPoolBoutSummary(ctx context.Context, poolID uuid.UUID) (PoolBoutSummary, error) {
+	var summary PoolBoutSummary
+
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT count(*) AS total,
+		       count(*) FILTER (WHERE status <> ?) AS started,
+		       COALESCE(max(points_to_win), 0) AS points_to_win,
+		       COALESCE(max(time_limit_seconds), 0) AS time_limit_seconds
+		FROM bouts WHERE pool_id = ?`, upcomingBoutStatus, poolID).
+		Scan(&summary).Error
+	if err != nil {
+		return PoolBoutSummary{}, fmt.Errorf("summarise bouts of pool %s: %w", poolID, err)
+	}
+
+	return summary, nil
+}
+
+// ReplacePoolBouts applies the update and swaps the pool's bouts in one transaction.
+// Re-seat checks the pool under the stage lock, but starting a pool or a bout doesn't
+// take that lock, so this refuses again if the pool has started, and deletes only
+// upcoming bouts, rolling back if any others remain.
+func (r *poolRepository) ReplacePoolBouts(ctx context.Context, id uuid.UUID, update PoolUpdate, bouts []PoolBout) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		locked := fmt.Errorf("replace bouts of pool %s: %w", id, errs.Public(msgPoolFencersLocked, errs.ErrConflict))
+
+		columns := update.columns()
+		columns["updated_at"] = time.Now()
+		result := tx.Model(&Pool{}).Where("id = ? AND started_at IS NULL", id).Updates(columns)
+		if result.Error != nil {
+			return translatePoolWriteError(fmt.Sprintf("update pool %s", id), result.Error)
+		}
+		if result.RowsAffected == 0 {
+			return locked
+		}
+
+		// A scoring still pointing at an upcoming bout blocks its delete (design §9.1).
+		err := tx.Where("pool_id = ? AND status = ?", id, upcomingBoutStatus).Delete(&PoolBout{}).Error
+		if errors.Is(err, gorm.ErrForeignKeyViolated) {
+			return locked
+		}
+		if err != nil {
+			return fmt.Errorf("delete bouts of pool %s: %w", id, err)
+		}
+		var remaining int64
+		if err := tx.Model(&PoolBout{}).Where("pool_id = ?", id).Count(&remaining).Error; err != nil {
+			return fmt.Errorf("count bouts of pool %s: %w", id, err)
+		}
+		if remaining > 0 {
+			return locked
+		}
+
+		for i := range bouts {
+			bouts[i].PoolID = id
+		}
+		if err := tx.Create(&bouts).Error; err != nil {
+			// As in create: the pool update proved the referee exists, so this is a
+			// competitor deleted since re-seat checked it.
+			if errors.Is(err, gorm.ErrForeignKeyViolated) {
+				return fmt.Errorf("insert bouts of pool %s: %w", id,
+					errs.Public("every fencer must reference an existing competitor", errs.ErrInvalidInput))
+			}
+			return fmt.Errorf("insert bouts of pool %s: %w", id, err)
 		}
 
 		return nil

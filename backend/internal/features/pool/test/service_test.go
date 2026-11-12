@@ -293,6 +293,7 @@ func TestCreatePools(t *testing.T) {
 // poolBoutPairs are the seat pairs of the standard bout order, by pool size.
 var poolBoutPairs = map[int][][2]int{
 	4: {{1, 4}, {2, 3}, {1, 3}, {2, 4}, {3, 4}, {1, 2}},
+	5: {{1, 2}, {3, 4}, {5, 1}, {2, 3}, {5, 4}, {1, 3}, {2, 5}, {4, 1}, {3, 5}, {4, 2}},
 }
 
 // Seating and the bout order itself are covered by newPoolLineup's tests; this checks the
