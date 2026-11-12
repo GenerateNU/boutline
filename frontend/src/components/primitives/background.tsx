@@ -2,7 +2,7 @@ import Image from "next/image";
 
 import { cn } from "cn";
 
-type BackgroundVersion = 1 | 2 | 3 | 4 | 5 | 6;
+type BackgroundVersion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 const backgrounds: Record<
   BackgroundVersion,
@@ -14,6 +14,8 @@ const backgrounds: Record<
   4: { frame: [396, 857], size: [802.078, 1019.43], center: [303.9, 440.8], rotate: 0 },
   5: { frame: [396, 857], size: [534.257, 726.074], center: [197.8, 577.4], rotate: 4.88 },
   6: { frame: [396, 857], size: [451.441, 1036.84], center: [135.1, 410.5], rotate: 148.33 },
+  7: { frame: [402, 874], size: [1341.62, 673.092], center: [213.0, 315.8], rotate: -107.16 },
+  8: { frame: [402, 874], size: [1053.12, 522.801], center: [247.7, 490.7], rotate: -107.16 },
 };
 
 interface BackgroundProps {
