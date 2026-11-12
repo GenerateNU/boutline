@@ -53,6 +53,7 @@ function CalendarDayButton({
   day,
   modifiers,
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof DayButton>) {
   const ref = React.useRef<HTMLButtonElement>(null);
@@ -73,14 +74,20 @@ function CalendarDayButton({
       data-today={modifiers.today}
       data-outside={modifiers.outside}
       className={cn(
-        "border border-transparent text-sm text-obsidian disabled:opacity-50",
+        "relative border border-transparent text-sm text-obsidian disabled:opacity-50",
         "data-[outside=true]:text-neutral-muted",
         "data-[today=true]:border-[1.5px] data-[today=true]:border-blue data-[today=true]:font-semibold",
         "data-[selected=true]:bg-blue data-[selected=true]:font-semibold data-[selected=true]:text-white data-[selected=true]:hover:bg-blue-dark",
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+      {/* Callers mark days with events via modifiers={{ hasEvent: Date[] }}. */}
+      {modifiers.hasEvent && (
+        <span aria-hidden className="absolute bottom-1 size-1 rounded-full bg-accent-green" />
+      )}
+    </Button>
   );
 }
 
