@@ -8,7 +8,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const redirectTo = safeRedirectPath(next, "/admin/tournaments");
 
   return (
-    <AuthScreen title="Admin Login">
+    <AuthScreen title="Admin Login" background={1}>
       <LoginForm
         redirectTo={redirectTo}
         signupHref={next ? `/signup?next=${encodeURIComponent(redirectTo)}` : "/signup"}
