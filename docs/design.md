@@ -406,10 +406,14 @@ different roles in different tournaments.
 
 **Status:** Completed.
 
-- **`/login`**: a Log in / Sign up toggle (sign-up adds first and last name), with
-  an error alert on failure. On success it returns to `?next=` (validated so it
-  can only point inside the site), else `/admin`. A Log out button clears the
-  session.
+- **`/login`** and **`/signup`**: the logo, the BOUTLINE wordmark and the form
+  over a faint line pattern; each links to the other. Sign-up also asks for first
+  and last name, which the backend requires. Failures show an error alert. On
+  success it returns to `?next=` (validated so it can only point inside the
+  site), else `/admin/tournaments`.
+- **Log out:** on `/admin` pages a profile icon at the right of the global nav
+  opens a "Log out?" confirmation; confirming clears the session and goes to
+  `/login`.
 - The `login` and `signup` Server Actions call the backend and store the token in
   an httpOnly, `sameSite=lax` cookie (`boutline_session`) with the token's
   lifetime, so page scripts never see it.
@@ -435,8 +439,10 @@ from the venue floor.
 - **Global nav** (every page): an obsidian bar with the slanted blue plate and the
   BOUTLINE wordmark. The menu slides a light sidebar in from the left (no motion
   with reduced motion on) with Admin Login, Search Tournaments, Find Private
-  Tournament, and Settings (inert); the current route's item is highlighted. An X
-  at the sidebar's top left closes it.
+  Tournament, and Settings; the current route's item is highlighted. An X at the
+  sidebar's top left closes it.
+- **`/settings`**: Profile, Accessibility and Language, then Privacy Policy and
+  Help, in two cards. None has a page yet, so the rows are labels only.
 - **Tabs** (tournament and event pages): each tab has its own URL, but switching
   tabs replaces the history entry, so the browser's Back button leaves the page
   rather than stepping back through tabs. The exception is the active tab clicked
@@ -515,9 +521,10 @@ replace the tournament's tabs rather than stacking under them.
 
 **Status:** Partial.
 
-Behind the login gate: every tournament (not yet only the caller's), paginated,
-with a "New tournament" button. It switches to `GET /users/{me}/tournaments` in
-§10.7.
+Behind the login gate: a dashed "Create tournament" card, then "Manage
+Tournaments" with All / Completed / In Progress / Upcoming tabs (`?status=`) over
+every tournament (not yet only the caller's), paginated. Cards show the created
+date instead of the location. It switches to `GET /users/{me}/tournaments` in §10.7.
 
 ---
 

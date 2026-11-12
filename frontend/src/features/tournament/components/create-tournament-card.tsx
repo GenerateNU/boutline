@@ -11,7 +11,7 @@ function CreateTournamentCard() {
         <p className="font-medium text-blue">Create tournament</p>
         <p className="text-xs text-neutral-secondary">Upload a file or set it up manually</p>
       </div>
-      <AddOutlined className="size-10 shrink-0 rounded-full bg-blue p-2.5 text-white" />
+      <AddOutlined aria-hidden className="size-10 shrink-0 rounded-full bg-blue p-2.5 text-white" />
     </Link>
   );
 }

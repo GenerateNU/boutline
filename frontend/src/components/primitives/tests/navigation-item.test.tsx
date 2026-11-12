@@ -4,10 +4,12 @@ import { NavigationItem } from "@/components/primitives/navigation/navigation-it
 
 describe("NavigationItem", () => {
   it.each([
-    { name: "active", active: true, current: "page", indicator: true },
-    { name: "inactive", active: false, current: null, indicator: false },
-  ])("when $name", ({ active, current, indicator }) => {
-    render(<NavigationItem href="/fencers" label="Fencers" active={active} />);
+    { name: "active", surface: "dark", active: true, current: "page", indicator: true },
+    { name: "inactive", surface: "dark", active: false, current: null, indicator: false },
+    { name: "active", surface: "light", active: true, current: "page", indicator: true },
+    { name: "inactive", surface: "light", active: false, current: null, indicator: false },
+  ] as const)("when $name on $surface", ({ surface, active, current, indicator }) => {
+    render(<NavigationItem href="/fencers" label="Fencers" active={active} surface={surface} />);
 
     const tab = screen.getByRole("link", { name: "Fencers" });
     expect(tab).toHaveAttribute("href", "/fencers");

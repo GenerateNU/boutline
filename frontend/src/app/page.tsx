@@ -730,6 +730,7 @@ export default function Home() {
       <Section title="Navigation bar">
         <NavigationBar aria-label="Sections" items={barItems.slice(0, 2)} />
         <NavigationBar aria-label="Sections" items={barItems} />
+        <NavigationBar aria-label="Sections" items={barItems} surface="light" />
       </Section>
 
       <Section title="Navigation drawer">
