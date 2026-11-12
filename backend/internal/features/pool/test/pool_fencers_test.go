@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"slices"
@@ -10,6 +11,8 @@ import (
 	"boutline/internal/features/pool"
 	"boutline/internal/features/poolstage"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
+	"boutline/internal/features/user"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -18,12 +21,15 @@ import (
 
 // reseatFixture holds pool 1 (fencers 1-4, Strip 1, the referee) and pool 2 (fencers 5-9)
 // in a stage of at most 6, created through batch create with 15 touches and 540 seconds
-// so those rules can be seen surviving a re-seat. Fencer 10 is in no pool.
+// so those rules can be seen surviving a re-seat. Fencer 10 is in no pool. Patches run
+// as admin, an admin of the pools' tournament.
 type reseatFixture struct {
 	*createFixture
-	service pool.PoolService
-	pool1   uuid.UUID
-	pool2   uuid.UUID
+	memberships *FakeTournamentMembershipLookup
+	admin       uuid.UUID
+	service     pool.PoolService
+	pool1       uuid.UUID
+	pool2       uuid.UUID
 }
 
 func newReseatFixture(t *testing.T) *reseatFixture {
@@ -31,7 +37,10 @@ func newReseatFixture(t *testing.T) *reseatFixture {
 
 	f := &reseatFixture{createFixture: newCreateFixture()}
 	f.updateStage(func(stage *poolstage.PoolStage) { stage.MaxCompetitorPerPool = 6 })
-	f.service = pool.NewPoolService(f.repo, f.lookup)
+	f.memberships = NewFakeTournamentMembershipLookup()
+	f.admin = uuid.New()
+	f.memberships.Roles[[2]uuid.UUID{f.tournament, f.admin}] = tournamentuser.TournamentUserRoleAdmin
+	f.service = pool.NewPoolService(f.repo, f.lookup, f.memberships)
 
 	first := f.item(1, 1, 2, 3, 4)
 	first.Strip = ptr("Strip 1")
@@ -43,6 +52,8 @@ func newReseatFixture(t *testing.T) *reseatFixture {
 	require.NoError(t, err)
 	f.pool1 = uuid.MustParse(out.Body.Data[0].ID)
 	f.pool2 = uuid.MustParse(out.Body.Data[1].ID)
+	f.repo.Tournaments[f.pool1] = f.tournament
+	f.repo.Tournaments[f.pool2] = f.tournament
 
 	return f
 }
@@ -50,7 +61,7 @@ func newReseatFixture(t *testing.T) *reseatFixture {
 func (f *reseatFixture) patch(t *testing.T, id uuid.UUID, body pool.PoolUpdateBody) (*pool.PoolOutput, error) {
 	t.Helper()
 
-	return f.service.UpdatePoolByID(t.Context(), &pool.PoolUpdateInput{ID: id.String(), Body: body})
+	return f.service.UpdatePoolByID(user.WithUserID(t.Context(), f.admin), &pool.PoolUpdateInput{ID: id.String(), Body: body})
 }
 
 // seatedPairs is the bout order a pool of these fencers gets: seated in the order
@@ -260,4 +271,58 @@ func TestReseatPoolMovesAFencerInTwoPatches(t *testing.T) {
 
 	assert.Equal(t, seatedPairs(1, 2, 3, 4, 9), pairsOf(boutsOf(f.repo, f.pool1.String())))
 	assert.Equal(t, seatedPairs(5, 6, 7, 8), pairsOf(boutsOf(f.repo, f.pool2.String())))
+}
+
+func TestReseatPoolRequiresATournamentAdmin(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		caller func(t *testing.T, f *reseatFixture) context.Context
+	}{
+		{
+			name: "a referee of the tournament",
+			caller: func(t *testing.T, f *reseatFixture) context.Context {
+				referee := uuid.New()
+				f.memberships.Roles[[2]uuid.UUID{f.tournament, referee}] = tournamentuser.TournamentUserRoleReferee
+				return user.WithUserID(t.Context(), referee)
+			},
+		},
+		{
+			name: "an admin of another tournament",
+			caller: func(t *testing.T, f *reseatFixture) context.Context {
+				other := uuid.New()
+				f.memberships.Roles[[2]uuid.UUID{uuid.New(), other}] = tournamentuser.TournamentUserRoleAdmin
+				return user.WithUserID(t.Context(), other)
+			},
+		},
+		{
+			name:   "a user with no role in the tournament",
+			caller: func(t *testing.T, _ *reseatFixture) context.Context { return user.WithUserID(t.Context(), uuid.New()) },
+		},
+		{
+			name:   "a request with no caller",
+			caller: func(t *testing.T, _ *reseatFixture) context.Context { return t.Context() },
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			f := newReseatFixture(t)
+			before := slices.Clone(f.repo.Bouts)
+
+			out, err := f.service.UpdatePoolByID(tt.caller(t, f), &pool.PoolUpdateInput{
+				ID:   f.pool1.String(),
+				Body: pool.PoolUpdateBody{Fencers: fencerIDs(1, 2, 3, 10)},
+			})
+
+			code, detail := apiError(t, err)
+			assert.Equal(t, http.StatusForbidden, code)
+			assert.Equal(t, "only the tournament's admins can re-seat its pools", detail)
+			assert.Nil(t, out)
+			assert.Equal(t, before, f.repo.Bouts)
+		})
+	}
 }

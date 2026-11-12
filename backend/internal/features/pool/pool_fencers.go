@@ -8,9 +8,13 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/poolstage"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
+	"boutline/internal/features/user"
 
 	"github.com/google/uuid"
 )
+
+var errPoolReseatForbidden = errs.Public("only the tournament's admins can re-seat its pools", errs.ErrForbidden)
 
 // A pool with no bouts to copy from falls back to batch create's defaults.
 const (
@@ -32,6 +36,9 @@ func (s *poolService) reseatPool(ctx context.Context, id uuid.UUID, update PoolU
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("get pool: %w", err))
 	}
+	if err := s.authorizeReseat(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("reseat pool: %w", err))
+	}
 
 	err = s.repo.WithLockedPoolStage(ctx, stored.PoolStageID, func(repo PoolRepository, stage LockedPoolStage) error {
 		return reseatLockedPool(ctx, repo, stage, id, update, fencers)
@@ -49,6 +56,32 @@ func (s *poolService) reseatPool(ctx context.Context, id uuid.UUID, update PoolU
 	}
 
 	return &PoolOutput{Body: newPoolResponse(*pool)}, nil
+}
+
+// authorizeReseat allows only an admin of the pool's tournament. It runs before the
+// stage lock, since a read on another connection while holding it can starve the pool.
+func (s *poolService) authorizeReseat(ctx context.Context, poolID uuid.UUID) error {
+	caller, ok := user.UserIDFrom(ctx)
+	if !ok {
+		return errPoolReseatForbidden
+	}
+	tournamentID, err := s.repo.GetPoolTournamentID(ctx, poolID)
+	if err != nil {
+		return fmt.Errorf("get pool tournament: %w", err)
+	}
+
+	membership, err := s.memberships.GetTournamentUser(ctx, tournamentID, caller)
+	if errors.Is(err, errs.ErrNotFound) {
+		return errPoolReseatForbidden
+	}
+	if err != nil {
+		return fmt.Errorf("get tournament user: %w", err)
+	}
+	if membership.Role != tournamentuser.TournamentUserRoleAdmin {
+		return errPoolReseatForbidden
+	}
+
+	return nil
 }
 
 // reseatLockedPool checks and re-seats the pool through repo, which holds the stage lock.

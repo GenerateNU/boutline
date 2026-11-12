@@ -28,7 +28,14 @@ func poolCreateCompetitorID(n int) string {
 	return fmt.Sprintf("d0000000-0000-4000-8000-%012d", 32+n)
 }
 
+// poolCreateToken signs in Alex Morgan, an admin of Fall Open, the stage's tournament.
 func poolCreateToken(t *testing.T, app *fiber.App) string {
+	t.Helper()
+
+	return poolCreateTokenFor(t, app, "alex.morgan@boutline.dev")
+}
+
+func poolCreateTokenFor(t *testing.T, app *fiber.App, email string) string {
 	t.Helper()
 
 	login := testkit.New(t).
@@ -36,7 +43,7 @@ func poolCreateToken(t *testing.T, app *fiber.App) string {
 			App:    app,
 			Route:  "/api/v1/auth/login",
 			Method: testkit.POST,
-			Body:   map[string]any{"email": "alex.morgan@boutline.dev", "password": "password123"},
+			Body:   map[string]any{"email": email, "password": "password123"},
 		}).
 		AssertStatus(http.StatusOK)
 
@@ -316,6 +323,16 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 				AssertField("detail", tt.detail)
 		})
 	}
+
+	// Jordan Lee referees Fall Open but isn't an admin of it.
+	t.Run("only a tournament admin can re-seat a pool", func(t *testing.T) {
+		referee := map[string]string{"Authorization": "Bearer " + poolCreateTokenFor(t, app, "jordan.lee@boutline.dev")}
+		pools := poolCreateIDsByNumber(t, app, headers)
+
+		poolCreatePatchFencers(t, app, referee, pools[1], 6, 1, 5, 8).
+			AssertStatus(http.StatusForbidden).
+			AssertField("detail", "only the tournament's admins can re-seat its pools")
+	})
 
 	// Pool 1 is 6, 1, 5, 2 on Strip 3 and pool 2 is 12, 4, 3, 7. Moving 12 into pool 1
 	// is two patches: free 12 from pool 2 by seating 8 in its place, then add 12 to pool 1.

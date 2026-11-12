@@ -18,7 +18,7 @@ func newTestAPI(t *testing.T, repo *FakePoolRepository, stages *FakePoolStageLoo
 	t.Helper()
 
 	_, api := humatest.New(t)
-	pool.RegisterPoolService(api, pool.NewPoolService(repo, stages))
+	pool.RegisterPoolService(api, pool.NewPoolService(repo, stages, NewFakeTournamentMembershipLookup()))
 
 	return api
 }

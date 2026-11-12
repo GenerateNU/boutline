@@ -1046,19 +1046,21 @@ pools are generated after the tournament starts.
    land (§7.2).
 3. **Re-seat** (Partial): `PATCH /pools/{id}` with `fencers` (4 to 10, 422
    otherwise) replaces a pool's fencers and regenerates its bouts in one
-   transaction, under the stage lock below. Fencers are seated in the order
-   listed, as in create. The new bouts keep the old bouts' `points_to_win` and
-   `time_limit_seconds` (a pool whose bouts disagree on them is refused with a
-   409 rather than silently changed), and take any `strip`, `referee_id` or
-   `number` change in the same patch. It needs an active tournament and an upcoming stage (409). It
-   refuses a pool that has started or has a bout that isn't upcoming (409), so
-   nothing fenced is lost. The fencer checks match create: 4 to min(stage
-   maximum, 10) fencers, none listed twice, all entered in the stage's event
-   (400), and none in another of the stage's pools (409); fencers already in
-   this pool may stay. Moving a fencer is two patches: take them out of one
-   pool, then add them to the other. Still to do: an upcoming bout can still
-   hold touches until §9.1 lands, and re-seating such a pool is refused with a
-   409 rather than discarding them; roles (§7.2).
+   transaction, under the stage lock below. Only an admin of the pool's
+   tournament may re-seat it (403, from their `tournament_users` role). Fencers
+   are seated in the order listed, as in create. The new bouts keep the old
+   bouts' `points_to_win` and `time_limit_seconds` (a pool whose bouts disagree
+   on them is refused with a 409 rather than silently changed), and take any
+   `strip`, `referee_id` or `number` change in the same patch. It needs an
+   active tournament and an upcoming stage (409). It refuses a pool that has
+   started or has a bout that isn't upcoming (409), so nothing fenced is lost.
+   The fencer checks match create: 4 to min(stage maximum, 10) fencers, none
+   listed twice, all entered in the stage's event (400), and none in another of
+   the stage's pools (409); fencers already in this pool may stay. Moving a
+   fencer is two patches: take them out of one pool, then add them to the
+   other. Still to do: an upcoming bout can still hold touches until §9.1
+   lands, and re-seating such a pool is refused with a 409 rather than
+   discarding them.
 
 Create and re-seat lock the pool stage row (`SELECT … FOR UPDATE`) and run every
 check inside that transaction. Without the lock, two requests can seat the same

@@ -9,6 +9,7 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/poolstage"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -36,6 +37,11 @@ type PoolStageLookup interface {
 	GetPoolStageByID(ctx context.Context, id uuid.UUID) (*poolstage.PoolStage, error)
 }
 
+// TournamentMembershipLookup is the subset of the tournament-user repository needed here.
+type TournamentMembershipLookup interface {
+	GetTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) (*tournamentuser.TournamentUser, error)
+}
+
 type PoolService interface {
 	CreatePools(ctx context.Context, input *PoolCreateInput) (*PoolCreatedOutput, error)
 	GetPoolByID(ctx context.Context, input *PoolIDInput) (*PoolOutput, error)
@@ -47,12 +53,13 @@ type PoolService interface {
 }
 
 type poolService struct {
-	repo       PoolRepository
-	poolStages PoolStageLookup
+	repo        PoolRepository
+	poolStages  PoolStageLookup
+	memberships TournamentMembershipLookup
 }
 
-func NewPoolService(repo PoolRepository, poolStages PoolStageLookup) PoolService {
-	return &poolService{repo: repo, poolStages: poolStages}
+func NewPoolService(repo PoolRepository, poolStages PoolStageLookup, memberships TournamentMembershipLookup) PoolService {
+	return &poolService{repo: repo, poolStages: poolStages, memberships: memberships}
 }
 
 func (s *poolService) CreatePools(ctx context.Context, input *PoolCreateInput) (*PoolCreatedOutput, error) {

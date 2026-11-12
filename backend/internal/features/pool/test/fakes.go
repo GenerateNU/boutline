@@ -9,6 +9,7 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/pool"
 	"boutline/internal/features/poolstage"
+	"boutline/internal/features/tournamentuser"
 
 	"github.com/google/uuid"
 )
@@ -351,6 +352,29 @@ func (f *FakePoolRepository) DeletePoolByID(_ context.Context, id uuid.UUID) err
 	delete(f.Pools, id)
 
 	return nil
+}
+
+var _ pool.TournamentMembershipLookup = (*FakeTournamentMembershipLookup)(nil)
+
+// FakeTournamentMembershipLookup holds each user's role, by tournament.
+type FakeTournamentMembershipLookup struct {
+	Roles map[[2]uuid.UUID]tournamentuser.TournamentUserRole // {tournament, user} to role
+}
+
+func NewFakeTournamentMembershipLookup() *FakeTournamentMembershipLookup {
+	return &FakeTournamentMembershipLookup{Roles: map[[2]uuid.UUID]tournamentuser.TournamentUserRole{}}
+}
+
+func (f *FakeTournamentMembershipLookup) GetTournamentUser(
+	_ context.Context,
+	tournamentID, userID uuid.UUID,
+) (*tournamentuser.TournamentUser, error) {
+	role, ok := f.Roles[[2]uuid.UUID{tournamentID, userID}]
+	if !ok {
+		return nil, fmt.Errorf("select tournament user %s/%s: %w", tournamentID, userID, errs.ErrNotFound)
+	}
+
+	return &tournamentuser.TournamentUser{TournamentID: tournamentID, UserID: userID, Role: role}, nil
 }
 
 var _ pool.PoolStageLookup = (*FakePoolStageLookup)(nil)
