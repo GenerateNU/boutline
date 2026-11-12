@@ -1,5 +1,3 @@
-import { Pin } from "lucide-react";
-
 import { PinButton } from "@/components/primitives/pin-button";
 import { Section } from "@/components/primitives/section";
 
@@ -24,9 +22,7 @@ export default async function PoolingTab({ params }: PoolingTabProps) {
           <div className="flex items-center justify-between">
             <h3 className="text-base font-medium text-obsidian">{pool}</h3>
             {/* Pinning pools comes in the dashboard tickets; for now the pin does nothing. */}
-            <PinButton variant="plain" size="xs" active={false} aria-label={`Pin ${pool}`}>
-              <Pin aria-hidden />
-            </PinButton>
+            <PinButton variant="plain" size="xs" active={false} aria-label={`Pin ${pool}`} />
           </div>
           <BoutList
             bouts={poolBouts.filter(({ round }) => round === pool)}

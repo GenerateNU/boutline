@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
 import { cn } from "cn";
 
 import { Button } from "@/components/primitives/button";
@@ -45,7 +45,7 @@ function BackButton({
         tabIndex={disabled ? -1 : props.tabIndex}
         onClick={disabled ? (event) => event.preventDefault() : props.onClick}
       >
-        <ChevronLeft aria-hidden />
+        <ChevronLeftOutlined aria-hidden />
         {children}
       </Link>
     </Button>

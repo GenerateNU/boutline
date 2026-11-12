@@ -1,5 +1,7 @@
 import { cn } from "cn";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import CalendarMonthOutlined from "@mui/icons-material/CalendarMonthOutlined";
+import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
 import Link, { type LinkProps } from "next/link";
 
 import { Button } from "@/components/primitives/button";
@@ -66,7 +68,7 @@ function EventDateStrip({
         rel="prev"
         label="Previous day"
       >
-        <ChevronLeft aria-hidden />
+        <ChevronLeftOutlined aria-hidden />
       </Step>
 
       <ul className="flex flex-1 border-b border-border">
@@ -87,7 +89,7 @@ function EventDateStrip({
       </ul>
 
       <Step href={next ? dayLinkWithSearch(next) : null} rel="next" label="Next day">
-        <ChevronRight aria-hidden />
+        <ChevronRightOutlined aria-hidden />
       </Step>
 
       {/* Disabled until the calendar view (a follow-up ticket) exists. */}
@@ -99,7 +101,7 @@ function EventDateStrip({
         aria-label="Calendar view (not available yet)"
         className="shrink-0 rounded-md"
       >
-        <CalendarDays aria-hidden />
+        <CalendarMonthOutlined aria-hidden />
       </Button>
     </nav>
   );

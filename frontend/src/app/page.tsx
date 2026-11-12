@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Ellipsis, EllipsisVertical, House, Reply, Settings, Shapes, Swords } from "lucide-react";
+import CategoryOutlined from "@mui/icons-material/CategoryOutlined";
+import HomeOutlined from "@mui/icons-material/HomeOutlined";
+import MoreHorizOutlined from "@mui/icons-material/MoreHorizOutlined";
+import MoreVertOutlined from "@mui/icons-material/MoreVertOutlined";
+import ReplyOutlined from "@mui/icons-material/ReplyOutlined";
+import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
+import SportsMartialArtsOutlined from "@mui/icons-material/SportsMartialArtsOutlined";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { BackButton } from "@/components/primitives/back-button";
@@ -22,6 +28,7 @@ import { Menu, MenuItem } from "@/components/primitives/menu";
 import { CircularProgress } from "@/components/primitives/circular-progress";
 import { DatePicker } from "@/components/primitives/date-picker";
 import { LinearProgress } from "@/components/primitives/linear-progress";
+import { Loading } from "@/components/primitives/loading";
 import { PinButton } from "@/components/primitives/pin-button";
 import { Radio, RadioItem } from "@/components/primitives/radio";
 import { RatingBadge } from "@/components/primitives/rating-badge";
@@ -46,6 +53,19 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
+import { EventListCard } from "@/app/tournaments/[tournamentId]/_components/event-list-card";
+import { EventRow } from "@/app/tournaments/[tournamentId]/_components/event-row";
+import { ClubCard } from "@/features/competitor/components/club-card";
+import { FencerCard } from "@/features/competitor/components/fencer-card";
+import { EventCard } from "@/features/event/components/event-card";
+import type { TournamentEvent } from "@/features/event/types/event";
+import { RefereeCard } from "@/features/referee/components/referee-card";
+import { RefereeRow } from "@/features/referee/components/referee-row";
+import { CreateTournamentCard } from "@/features/tournament/components/create-tournament-card";
+import { TournamentCard } from "@/features/tournament/components/tournament-card";
+import { TournamentInfoCard } from "@/features/tournament/components/tournament-info-card";
+import { TournamentResultsCard } from "@/features/tournament/components/tournament-results-card";
+import type { Tournament } from "@/features/tournament/types/tournament";
 import { ProfileTopAppBar } from "@/components/primitives/profile-top-app-bar";
 import { SubTopAppBar } from "@/components/primitives/sub-top-app-bar";
 
@@ -53,6 +73,8 @@ import { NavigationBar } from "@/components/primitives/navigation/navigation-bar
 import { NavigationDrawer } from "@/components/primitives/navigation/navigation-drawer";
 import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
 import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+import { Logo } from "@/components/primitives/logo";
+import { Navbar } from "@/components/primitives/navigation/navbar";
 
 const buttonVariantNames = ["filled", "outline", "tonal", "text"] as const;
 const buttonSizes = ["sm", "default", "lg"] as const;
@@ -65,20 +87,77 @@ const hoverClasses: Record<(typeof buttonVariantNames)[number], string> = {
   text: "bg-blue-lighter",
 };
 
-const barItems = Array.from({ length: 5 }, (_, index) => ({
-  id: `bar-${index}`,
-  label: "Label",
-  icon: <Shapes />,
+const demoTournament: Tournament = {
+  id: "demo",
+  name: "Northeastern Open",
+  visibility: "public",
+  code: "DEMO01",
+  status: "active",
+  created_by: "demo",
+  start_time: "2026-10-19T08:00:00Z",
+  city: "Oakland",
+  country: "US",
+  started_at: null,
+  completed_at: null,
+  created_at: "2026-10-06T00:00:00Z",
+  updated_at: "2026-10-06T00:00:00Z",
+};
+const demoResultsTournament: Tournament = {
+  ...demoTournament,
+  name: "Generate Fencing Open",
+  status: "ended",
+  city: "Boston",
+};
+
+const demoEvents: TournamentEvent[] = [
+  ["Y-12 Men's Sabre", "08:00"],
+  ["Cadet Men's Épée", "08:00"],
+  ["Junior Women's Foil", "10:00"],
+  ["Cadet Women's Épée", "10:00"],
+].map(([name, time], index) => ({
+  id: `demo-${index}`,
+  tournament_id: "demo",
+  format: "pool_then_direct_elimination",
+  name,
+  status: "active",
+  start_time: `2026-10-19T${time}:00Z`,
+  started_at: null,
+  completed_at: null,
+  created_at: "2026-10-06T00:00:00Z",
+  updated_at: "2026-10-06T00:00:00Z",
+}));
+
+const demoReferees = [
+  { id: "1", name: "Yan Wang", occupied: true, pool: "Pool 1" },
+  { id: "2", name: "Yan Wang", occupied: false, pool: "Pool 1" },
+];
+
+const demoFencer = {
+  id: "demo",
+  eventId: "demo-event",
+  tournamentId: "demo-tournament",
+  ratingYear: 26,
+  firstName: "Annika",
+  lastName: "Kim",
+  rating: "A26",
+  team: "Boston Blade Club",
+};
+const demoClub = { name: "Boston Blade Club", competitorCount: 12 };
+
+const barItems = ["Overview", "Fencers", "Clubs", "Events"].map((label) => ({
+  label,
+  href: "#",
+  active: label === "Fencers",
 }));
 
 const drawerItems = Array.from({ length: 7 }, (_, index) => ({
   id: `drawer-${index}`,
   label: "Label",
-  icon: <Shapes />,
+  icon: <CategoryOutlined />,
   badge: "100+",
 }));
 
-const drawerFooter = [{ id: "settings", label: "Settings", icon: <Settings /> }];
+const drawerFooter = [{ id: "settings", label: "Settings", icon: <SettingsOutlined /> }];
 function DialogAvatar() {
   return (
     <Avatar className="size-8">
@@ -192,10 +271,10 @@ export default function Home() {
           <PinButton aria-label="Pin" variant="obsidian" />
           <PinButton aria-label="Pin" variant="primary" />
           <PinButton aria-label="Home" variant="primary">
-            <House aria-hidden />
+            <HomeOutlined aria-hidden />
           </PinButton>
           <PinButton aria-label="Back" variant="primary">
-            <Reply aria-hidden />
+            <ReplyOutlined aria-hidden />
           </PinButton>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -246,7 +325,7 @@ export default function Home() {
 
       <Section title="Tag">
         <div className="flex flex-wrap items-center gap-3">
-          <Tag icon={<Swords aria-hidden />}>Specialty: Foil</Tag>
+          <Tag icon={<SportsMartialArtsOutlined aria-hidden />}>Specialty: Foil</Tag>
         </div>
       </Section>
 
@@ -267,6 +346,37 @@ export default function Home() {
           <Stat value="1" label="Pool" />
           <Stat value="3" label="Strip" />
         </StatRow>
+      </Section>
+
+      <Section title="Cards">
+        <div className="contents" onClickCapture={(event) => event.preventDefault()}>
+          <TournamentCard tournament={demoTournament} />
+          <TournamentCard tournament={{ ...demoTournament, status: "pending" }} admin />
+          <EventCard event={{ ...demoEvents[0], name: "U15 Mixed Épée", status: "ended" }} competitorCount={5} />
+          <TournamentResultsCard tournament={demoResultsTournament} eventCount={12} resultsHref="/" />
+          <CreateTournamentCard />
+          <TournamentInfoCard name="Boston Championships" dates="October 5 – October 7, 2026" />
+          <EventRow event={demoEvents[0]} />
+          <RefereeCard referees={demoReferees} />
+          <EventListCard title="Ongoing Events" events={demoEvents} emptyMessage="" />
+          <EventListCard
+            title="Upcoming Events"
+            events={demoEvents.map((event) => ({ ...event, status: "upcoming" }))}
+            emptyMessage=""
+          />
+          <EventListCard
+            title="Completed Events"
+            events={demoEvents.map((event) => ({ ...event, status: "ended" }))}
+            emptyMessage=""
+          />
+          <FencerCard competitor={demoFencer} />
+          <FencerCard competitor={demoFencer} pinned={false} />
+          <FencerCard competitor={demoFencer} pinned />
+          <ClubCard team={demoClub} href="/" />
+          <ClubCard team={demoClub} pinned={false} />
+          <ClubCard team={demoClub} pinned />
+          <RefereeRow name="Yan Wang" occupied pool="Pool 1" />
+        </div>
       </Section>
 
       <Section title="Checkbox">
@@ -294,7 +404,7 @@ export default function Home() {
       <Section title="Chip">
         <div className="flex flex-wrap items-center gap-3">
           <Chip>Label</Chip>
-          <Chip icon={<Ellipsis />}>Label</Chip>
+          <Chip icon={<MoreHorizOutlined />}>Label</Chip>
           <Chip dismissible>Label</Chip>
           <Chip dropdown>Label</Chip>
         </div>
@@ -376,19 +486,30 @@ export default function Home() {
       </Section>
 
       <Section title="Navigation item">
-        <div className="flex items-center gap-4">
-          <NavigationItem icon={<Shapes />} label="Label" />
-          <NavigationItem icon={<Shapes />} aria-label="Label" />
-          <NavigationItem icon={<Shapes />} label="Label" selected />
-          <NavigationItem icon={<Shapes />} aria-label="Label" selected />
+        <div className="flex rounded-xl bg-obsidian">
+          <NavigationItem href="#" label="Fencers" />
+          <NavigationItem href="#" label="Fencers" active />
         </div>
+      </Section>
+
+      <Section title="Logo">
+        <div className="flex flex-col gap-4">
+          <Logo />
+          <div className="bg-blue p-4">
+            <Logo className="text-white" />
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Navbar">
+        <Navbar />
       </Section>
 
       <Section title="Navigation drawer item">
         <div className="flex flex-col gap-2">
-          <NavigationDrawerItem icon={<Shapes />} label="Label" badge="100+" />
+          <NavigationDrawerItem icon={<CategoryOutlined />} label="Label" badge="100+" />
           <NavigationDrawerItem
-            icon={<Shapes />}
+            icon={<CategoryOutlined />}
             label="Label"
             badge="100+"
             selected
@@ -397,7 +518,8 @@ export default function Home() {
       </Section>
 
       <Section title="Navigation bar">
-        <NavigationBar items={barItems} />
+        <NavigationBar aria-label="Sections" items={barItems.slice(0, 2)} />
+        <NavigationBar aria-label="Sections" items={barItems} />
       </Section>
 
       <Section title="Navigation drawer">
@@ -421,10 +543,10 @@ export default function Home() {
           actions={
             <>
               <Button variant="text" size="icon" aria-label="Action">
-                <Shapes />
+                <CategoryOutlined />
               </Button>
               <Button variant="text" size="icon" aria-label="More options">
-                <EllipsisVertical />
+                <MoreVertOutlined />
               </Button>
             </>
           }
@@ -437,7 +559,7 @@ export default function Home() {
       <Section title="Menu">
         <Menu>
           {Array.from({ length: 10 }, (_, index) => (
-            <MenuItem key={index} icon={<Ellipsis aria-hidden />}>
+            <MenuItem key={index} icon={<MoreHorizOutlined aria-hidden />}>
               Dialog title
             </MenuItem>
           ))}
@@ -492,6 +614,10 @@ export default function Home() {
         </div>
       </Section>
 
+      <Section title="Loading">
+        <Loading />
+      </Section>
+
       <Section title="Card">
         <div className="flex flex-col gap-4">
           <Card className="w-64">
@@ -506,7 +632,7 @@ export default function Home() {
                   aria-label="More"
                   className="bg-background"
                 >
-                  <Ellipsis />
+                  <MoreHorizOutlined />
                 </Button>
               </CardAction>
             </CardHeader>
@@ -518,7 +644,7 @@ export default function Home() {
               <CardDescription>Subhead</CardDescription>
               <CardAction>
                 <Button variant="outline" size="icon" aria-label="More">
-                  <Ellipsis />
+                  <MoreHorizOutlined />
                 </Button>
               </CardAction>
             </CardHeader>
@@ -547,7 +673,7 @@ export default function Home() {
             <Tabs key={variant} defaultValue="one">
               <TabsList variant={variant}>
                 {["one", "two", "three"].map((value) => (
-                  <TabsTrigger key={value} value={value} icon={<Ellipsis />}>
+                  <TabsTrigger key={value} value={value} icon={<MoreHorizOutlined />}>
                     Tab
                   </TabsTrigger>
                 ))}
@@ -563,8 +689,8 @@ export default function Home() {
             label="Label"
             placeholder="Placeholder text"
             supportingText="Supporting text"
-            leading={<Ellipsis aria-hidden />}
-            trailing={<Ellipsis aria-hidden />}
+            leading={<MoreHorizOutlined aria-hidden />}
+            trailing={<MoreHorizOutlined aria-hidden />}
           />
         </div>
       </Section>

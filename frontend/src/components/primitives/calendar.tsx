@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
 import { cn } from "cn";
 import {
   DayPicker,
@@ -23,20 +24,18 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       hideNavigation
-      className={cn("w-full bg-background [--cell-size:--spacing(11)]", className)}
+      className={cn("w-full bg-background", className)}
       formatters={{
         formatWeekdayName: (date) =>
           date.toLocaleString(undefined, { weekday: "narrow" }),
       }}
       classNames={{
-        month: "flex w-full flex-col gap-4",
+        month: "flex w-full flex-col gap-3",
         month_grid: "w-full border-collapse",
-        weekdays: "flex",
-        weekday: "flex-1 text-sm font-normal text-foreground select-none",
-        week: "mt-2 flex w-full",
-        day: "relative aspect-square h-full w-full p-1 text-center select-none",
-        outside: "[&_button]:text-muted-foreground",
-        disabled: "[&_button]:text-muted-foreground [&_button]:opacity-50",
+        weekdays: "flex justify-between",
+        weekday: "w-10 text-xs font-medium text-neutral-secondary select-none",
+        week: "mt-1 flex w-full justify-between",
+        day: "size-10 p-0 text-center select-none",
         hidden: "invisible",
         ...classNames,
       }}
@@ -71,8 +70,13 @@ function CalendarDayButton({
       size="icon"
       data-day={day.date.toLocaleDateString()}
       data-selected={modifiers.selected}
+      data-today={modifiers.today}
+      data-outside={modifiers.outside}
       className={cn(
-        "aspect-square size-auto w-full min-w-(--cell-size) border border-transparent text-base font-normal data-[selected=true]:border-foreground",
+        "border border-transparent text-sm text-obsidian disabled:opacity-50",
+        "data-[outside=true]:text-neutral-muted",
+        "data-[today=true]:border-[1.5px] data-[today=true]:border-blue data-[today=true]:font-semibold",
+        "data-[selected=true]:bg-blue data-[selected=true]:font-semibold data-[selected=true]:text-white data-[selected=true]:hover:bg-blue-dark",
         className,
       )}
       {...props}
@@ -87,27 +91,53 @@ function CalendarCaption({ calendarMonth }: MonthCaptionProps) {
     goToMonth(new Date(shown.getFullYear(), shown.getMonth() + months, 1));
 
   return (
-    <div className="flex items-center justify-around">
-      <div className="flex items-center gap-2">
-        <Button variant="text" size="icon" aria-label="Previous month" onClick={() => shift(-1)}>
-          <ChevronLeft />
-        </Button>
-        <p className="w-10 text-center text-sm">
-          {shown.toLocaleString(undefined, { month: "short" })}
-        </p>
-        <Button variant="text" size="icon" aria-label="Next month" onClick={() => shift(1)}>
-          <ChevronRight />
-        </Button>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button variant="text" size="icon" aria-label="Previous year" onClick={() => shift(-12)}>
-          <ChevronLeft />
-        </Button>
-        <p className="w-12 text-center text-sm">{shown.getFullYear()}</p>
-        <Button variant="text" size="icon" aria-label="Next year" onClick={() => shift(12)}>
-          <ChevronRight />
-        </Button>
-      </div>
+    <div className="flex items-center justify-center gap-12.5 pb-1 text-sm font-semibold text-obsidian">
+      <Stepper
+        label={shown.toLocaleString(undefined, { month: "long" })}
+        unit="month"
+        onStep={shift}
+      />
+      <Stepper
+        label={String(shown.getFullYear())}
+        unit="year"
+        onStep={(step) => shift(step * 12)}
+      />
+    </div>
+  );
+}
+
+interface StepperProps {
+  label: string;
+  unit: string;
+  onStep: (step: number) => void;
+}
+
+const stepClassName = "size-6 text-obsidian [&_svg]:size-6";
+
+function Stepper({ label, unit, onStep }: StepperProps) {
+  return (
+    <div className="flex items-center gap-3">
+      <Button
+        type="button"
+        variant="text"
+        size="icon"
+        aria-label={`Previous ${unit}`}
+        onClick={() => onStep(-1)}
+        className={stepClassName}
+      >
+        <ChevronLeftOutlined />
+      </Button>
+      <p className="min-w-10 text-center">{label}</p>
+      <Button
+        type="button"
+        variant="text"
+        size="icon"
+        aria-label={`Next ${unit}`}
+        onClick={() => onStep(1)}
+        className={stepClassName}
+      >
+        <ChevronRightOutlined />
+      </Button>
     </div>
   );
 }

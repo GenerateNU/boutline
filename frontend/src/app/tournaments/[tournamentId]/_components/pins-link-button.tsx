@@ -1,6 +1,6 @@
 "use client";
 
-import { Pin } from "lucide-react";
+import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -24,7 +24,7 @@ function PinsLinkButton({ tournamentId }: PinsLinkButtonProps) {
         href={`/pinned?tournamentId=${encodeURIComponent(tournamentId)}`}
         aria-label="View pins"
       >
-        <Pin aria-hidden />
+        <PushPinOutlined aria-hidden />
       </Link>
     </PinButton>
   );

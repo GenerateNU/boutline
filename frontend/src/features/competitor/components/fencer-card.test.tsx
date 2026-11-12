@@ -6,9 +6,10 @@ import type { Competitor } from "@/types/competitor";
 const yan: Competitor = {
   id: "c-1",
   eventId: "e1",
+  tournamentId: "t1",
   firstName: "Yan",
   lastName: "Wang",
-  rating: "A",
+  rating: "A26",
   ratingYear: 26,
   team: "Boston Blade Club",
 };
@@ -53,9 +54,9 @@ describe("FencerCard", () => {
     expect(onTogglePin).toHaveBeenCalled();
   });
 
-  it("shows an unpinned pin even before pinning is wired up", () => {
-    render(<FencerCard competitor={yan} />);
+  it("shows the pin without a button until pinning is wired up", () => {
+    render(<FencerCard competitor={yan} pinned={false} />);
 
-    expect(screen.getByRole("button", { name: "Pin Yan Wang" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });
