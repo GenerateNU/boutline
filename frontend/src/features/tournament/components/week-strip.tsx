@@ -19,16 +19,19 @@ function WeekStrip() {
   const today = useToday();
   const [pagedStart, setPagedStart] = useState<Date>();
   const anchor = selected ?? today;
-  const start = pagedStart ?? (anchor && addDays(anchor, -1));
+  const start = pagedStart ?? anchor;
 
   // One page of days either side of the visible one, revealed while dragging.
   const days = start
     ? Array.from({ length: visibleDays * 3 }, (_, i) => addDays(start, i - visibleDays))
     : [];
 
+  // Turning the page also selects its first day, so the selection stays leftmost.
   function page(step: number) {
     if (start) {
-      setPagedStart(addDays(start, step));
+      const pageStart = addDays(start, step);
+      setPagedStart(pageStart);
+      setDate(pageStart);
     }
   }
 

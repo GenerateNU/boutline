@@ -4,12 +4,14 @@ import { useRef, useState } from "react";
 
 // Movement under this many pixels is a tap on a day, not a drag.
 const dragThreshold = 5;
+// A drag past this share of the strip turns the page; a shorter one springs back.
+const pageThreshold = 1 / 4;
 const settleMs = 200;
 
 interface Drag {
   pointerId: number;
   startX: number;
-  dayWidth: number;
+  pageWidth: number;
   dragging: boolean;
 }
 
@@ -51,7 +53,7 @@ function useDayDrag(visibleDays: number, onShift: (days: number) => void) {
     drag.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
-      dayWidth: event.currentTarget.clientWidth / visibleDays,
+      pageWidth: event.currentTarget.clientWidth,
       dragging: false,
     };
   }
@@ -70,7 +72,7 @@ function useDayDrag(visibleDays: number, onShift: (days: number) => void) {
       current.dragging = true;
       event.currentTarget.setPointerCapture(event.pointerId);
     }
-    setOffset(clamp(dx, current.dayWidth * visibleDays));
+    setOffset(clamp(dx, current.pageWidth));
   }
 
   function finish(event: React.PointerEvent<HTMLDivElement>, canShift: boolean) {
@@ -83,12 +85,13 @@ function useDayDrag(visibleDays: number, onShift: (days: number) => void) {
       return;
     }
     suppressClick.current = true;
-    const shift = canShift ? Math.round(-offset / current.dayWidth) : 0;
-    if (shift !== 0) {
-      onShift(shift);
+    const turnsPage = canShift && Math.abs(offset) > current.pageWidth * pageThreshold;
+    const pages = turnsPage ? -Math.sign(offset) : 0;
+    if (pages !== 0) {
+      onShift(pages * visibleDays);
     }
     setOffset(0);
-    settle(offset + shift * current.dayWidth);
+    settle(offset + pages * current.pageWidth);
   }
 
   function onClickCapture(event: React.MouseEvent<HTMLDivElement>) {
