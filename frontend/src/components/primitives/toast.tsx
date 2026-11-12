@@ -142,23 +142,6 @@ function Toaster({ children }: ToasterProps) {
   );
 }
 
-interface ToastPreviewProps {
-  toasts: ToastOptions[];
-}
-
-// Keeps toasts open in the page (e.g. the gallery) instead of popping them up at
-// the bottom of the screen.
-function ToastPreview({ toasts }: ToastPreviewProps) {
-  return (
-    <ToastPrimitive.Provider>
-      {toasts.map((options, index) => (
-        <ToastItem key={index} options={options} open duration={Infinity} />
-      ))}
-      <ToastViewport className="static w-full translate-x-0 p-0" />
-    </ToastPrimitive.Provider>
-  );
-}
-
 function useToast() {
   const toast = useContext(ToastContext);
   if (!toast) {
@@ -167,4 +150,4 @@ function useToast() {
   return { toast };
 }
 
-export { Toaster, ToastPreview, useToast, type ToastOptions };
+export { Toaster, ToastItem, ToastViewport, useToast, type ToastOptions };

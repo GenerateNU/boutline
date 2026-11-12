@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Toast as ToastPrimitive } from "radix-ui";
 import { Suspense, useRef, useState } from "react";
 import {
   Check,
@@ -67,7 +68,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/primitives/tabs";
 import { Tag } from "@/components/primitives/tag";
 import { TextField } from "@/components/primitives/text-field";
 import { UploadDialog, uploadAccept, type UploadFile } from "@/components/primitives/upload-dialog";
-import { ToastPreview, useToast } from "@/components/primitives/toast";
+import { ToastItem, ToastViewport, useToast } from "@/components/primitives/toast";
 import { Toggle } from "@/components/primitives/toggle";
 import {
   Tooltip,
@@ -268,6 +269,19 @@ const sampleToasts = [
   { description: "Pinned Pool 1 · Strip 3", icon: <Pin className="text-blue-light" />, action: undo },
   { description: "Code not found", icon: <X className="text-red-dark" />, action: undo },
 ];
+
+// Keeps the sample toasts open in the page instead of popping them up at the
+// bottom of the screen.
+function ToastPreview() {
+  return (
+    <ToastPrimitive.Provider>
+      {sampleToasts.map((options) => (
+        <ToastItem key={options.description} options={options} open duration={Infinity} />
+      ))}
+      <ToastViewport className="static w-full translate-x-0 p-0" />
+    </ToastPrimitive.Provider>
+  );
+}
 
 function PrivateTournamentDemo() {
   const [open, setOpen] = useState(false);
@@ -708,7 +722,7 @@ export default function Home() {
       </Section>
 
       <Section title="Toast">
-        <ToastPreview toasts={sampleToasts} />
+        <ToastPreview />
         <Button variant="outline" className="self-start" onClick={() => toast(sampleToasts[0])}>
           Show a toast
         </Button>
