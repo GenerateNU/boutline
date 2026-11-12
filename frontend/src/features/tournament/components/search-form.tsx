@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import SearchOutlined from "@mui/icons-material/SearchOutlined";
 import { useState } from "react";
 
 import { Input } from "@/components/primitives/input";
@@ -81,7 +81,7 @@ function SearchForm({
         }}
         className="h-11.5 rounded-[12px] border-outline pr-11 pl-4 text-obsidian shadow-sm placeholder:text-neutral-secondary"
       />
-      <Search
+      <SearchOutlined
         aria-hidden
         data-pending={isPending || undefined}
         className="pointer-events-none absolute top-1/2 right-4 size-4.5 -translate-y-1/2 text-neutral-secondary transition-opacity data-pending:opacity-40"

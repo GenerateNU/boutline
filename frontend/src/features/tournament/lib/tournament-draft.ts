@@ -6,16 +6,21 @@ export function saveTournamentDraft(form: HTMLFormElement) {
   } catch {}
 }
 
-export function restoreTournamentDraft(form: HTMLFormElement) {
+export function readTournamentDraft(): Record<string, string> {
   try {
-    const draft: Record<string, string> = JSON.parse(sessionStorage.getItem(key) ?? "{}");
-    for (const [name, value] of Object.entries(draft)) {
-      const field = form.elements.namedItem(name);
-      if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) {
-        field.value = value;
-      }
+    return JSON.parse(sessionStorage.getItem(key) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function restoreTournamentDraft(form: HTMLFormElement) {
+  for (const [name, value] of Object.entries(readTournamentDraft())) {
+    const field = form.elements.namedItem(name);
+    if (field instanceof HTMLInputElement) {
+      field.value = value;
     }
-  } catch {}
+  }
 }
 
 export function clearTournamentDraft() {

@@ -269,7 +269,7 @@ func TestCreatePools(t *testing.T) {
 			items := tt.items(f)
 			poolsBefore, boutsBefore := len(f.repo.Pools), len(f.repo.Bouts)
 
-			out, err := pool.NewPoolService(f.repo, f.lookup).
+			out, err := pool.NewPoolService(f.repo, f.lookup, NewFakeTournamentMembershipLookup()).
 				CreatePools(t.Context(), &pool.PoolCreateInput{Body: f.body(items...)})
 
 			if tt.wantCode != 0 {
@@ -293,6 +293,7 @@ func TestCreatePools(t *testing.T) {
 // poolBoutPairs are the seat pairs of the standard bout order, by pool size.
 var poolBoutPairs = map[int][][2]int{
 	4: {{1, 4}, {2, 3}, {1, 3}, {2, 4}, {3, 4}, {1, 2}},
+	5: {{1, 2}, {3, 4}, {5, 1}, {2, 3}, {5, 4}, {1, 3}, {2, 5}, {4, 1}, {3, 5}, {4, 2}},
 }
 
 // Seating and the bout order itself are covered by newPoolLineup's tests; this checks the
@@ -307,7 +308,7 @@ func TestCreatePoolsStoresPoolsWithTheirBouts(t *testing.T) {
 	body := f.body(first, f.item(1, 7, 5, 6, 8))
 	body.PointsToWin, body.TimeLimitSeconds = 15, 540
 
-	out, err := pool.NewPoolService(f.repo, f.lookup).CreatePools(t.Context(), &pool.PoolCreateInput{Body: body})
+	out, err := pool.NewPoolService(f.repo, f.lookup, NewFakeTournamentMembershipLookup()).CreatePools(t.Context(), &pool.PoolCreateInput{Body: body})
 
 	require.NoError(t, err)
 	require.Len(t, out.Body.Data, 2)
@@ -390,7 +391,7 @@ func TestListPools(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := pool.NewPoolService(NewFakePoolRepository(mixed...), NewFakePoolStageLookup()).
+			out, err := pool.NewPoolService(NewFakePoolRepository(mixed...), NewFakePoolStageLookup(), NewFakeTournamentMembershipLookup()).
 				ListPools(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
@@ -476,7 +477,7 @@ func TestUpdatePoolByID(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakePoolRepository(stored, sibling)
-			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
+			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup(), NewFakeTournamentMembershipLookup()).
 				UpdatePoolByID(t.Context(), &pool.PoolUpdateInput{ID: tt.id, Body: tt.body})
 
 			if tt.wantCode != 0 {
@@ -560,7 +561,7 @@ func TestDeletePoolByID(t *testing.T) {
 				id = "not-a-uuid"
 			}
 
-			_, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
+			_, err := pool.NewPoolService(repo, NewFakePoolStageLookup(), NewFakeTournamentMembershipLookup()).
 				DeletePoolByID(t.Context(), &pool.PoolIDInput{ID: id})
 
 			if tt.wantCode == 0 {
@@ -586,7 +587,7 @@ func TestPoolRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo := NewFakePoolRepository()
 	repo.Err = errors.New("connection refused")
 
-	_, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
+	_, err := pool.NewPoolService(repo, NewFakePoolStageLookup(), NewFakeTournamentMembershipLookup()).
 		ListPools(t.Context(), &pool.PoolListInput{})
 
 	code, detail := apiError(t, err)
@@ -680,7 +681,7 @@ func TestStartPool(t *testing.T) {
 				id = tt.id
 			}
 
-			out, err := pool.NewPoolService(repo, lookup).StartPool(t.Context(), &pool.PoolIDInput{ID: id})
+			out, err := pool.NewPoolService(repo, lookup, NewFakeTournamentMembershipLookup()).StartPool(t.Context(), &pool.PoolIDInput{ID: id})
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -773,7 +774,7 @@ func TestEndPool(t *testing.T) {
 				id = tt.id
 			}
 
-			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
+			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup(), NewFakeTournamentMembershipLookup()).
 				EndPool(t.Context(), &pool.PoolIDInput{ID: id})
 
 			if tt.wantCode != 0 {

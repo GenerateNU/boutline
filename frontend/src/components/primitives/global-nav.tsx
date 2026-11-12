@@ -4,11 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
-import { CircleUserRound, KeyRound, Menu, Search, Settings, X } from "lucide-react";
+import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
+import KeyOutlined from "@mui/icons-material/KeyOutlined";
+import SearchOutlined from "@mui/icons-material/SearchOutlined";
+import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
 import { useRef, useState } from "react";
 import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
+import { Navbar } from "@/components/primitives/navigation/navbar";
 import { PrivateTournamentDialog } from "@/features/tournament/components/private-tournament-dialog";
 
 function sidebarItemClassName(selected = false) {
@@ -29,39 +34,10 @@ function GlobalNav() {
   return (
     <>
       <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
-        <header className="relative flex h-10 items-center overflow-hidden bg-obsidian">
-          <Image
-            src="/brand/nav-plate.svg"
-            alt=""
-            width={297}
-            height={57}
-            className="absolute top-1/2 left-0 -translate-y-1/2"
-          />
-          <Image
-            src="/brand/nav-blade.svg"
-            alt=""
-            width={28}
-            height={55}
-            className="absolute top-1/2 left-69.75 -translate-y-1/2"
-          />
-          <Dialog.Trigger asChild>
-            <Button
-              ref={menuButton}
-              variant="text"
-              size="icon"
-              aria-label="Open menu"
-              className="relative ml-2.5 text-white hover:bg-background/10 [&_svg]:size-6"
-            >
-              <Menu />
-            </Button>
-          </Dialog.Trigger>
-          <Link href="/" className="relative ml-2.5 flex items-center gap-2.5">
-            <Image src="/brand/logo-mark.svg" alt="" width={21} height={24} />
-            <span className="font-wordmark text-[17px] tracking-[1.02px] text-white">
-              BOUTLINE
-            </span>
-          </Link>
-        </header>
+        <Navbar
+          menuRef={menuButton}
+          wrapMenuButton={(button) => <Dialog.Trigger asChild>{button}</Dialog.Trigger>}
+        />
 
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40 motion-safe:data-open:animate-fade-in motion-safe:data-closed:animate-fade-out" />
@@ -80,7 +56,7 @@ function GlobalNav() {
                     aria-label="Close menu"
                     className="text-white hover:bg-background/10 [&_svg]:size-6"
                   >
-                    <X />
+                    <CloseOutlined />
                   </Button>
                 </Dialog.Close>
                 <Image src="/brand/logo-mark-sidebar.svg" alt="" width={27} height={31} />
@@ -95,7 +71,7 @@ function GlobalNav() {
                     aria-current={pathname === "/login" ? "page" : undefined}
                     className={sidebarItemClassName(pathname === "/login")}
                   >
-                    <CircleUserRound aria-hidden />
+                    <AccountCircleOutlined aria-hidden />
                     Admin Login
                   </Link>
                 </Dialog.Close>
@@ -105,7 +81,7 @@ function GlobalNav() {
                     aria-current={pathname === "/tournaments" ? "page" : undefined}
                     className={sidebarItemClassName(onTournaments)}
                   >
-                    <Search aria-hidden />
+                    <SearchOutlined aria-hidden />
                     Search Tournaments
                   </Link>
                 </Dialog.Close>
@@ -117,13 +93,13 @@ function GlobalNav() {
                   }}
                   className={sidebarItemClassName()}
                 >
-                  <KeyRound aria-hidden />
+                  <KeyOutlined aria-hidden />
                   Find Private Tournament
                 </button>
               </nav>
             </div>
             <p className="flex h-11 items-center gap-6 px-6 text-sm font-medium text-obsidian">
-              <Settings aria-hidden className="size-6" />
+              <SettingsOutlined aria-hidden className="size-6" />
               Settings
             </p>
           </Dialog.Content>

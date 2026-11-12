@@ -1,7 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { Ellipsis, EllipsisVertical, House, Reply, Settings, Shapes, Swords } from "lucide-react";
+import { Toast as ToastPrimitive } from "radix-ui";
+import { Suspense, useRef, useState } from "react";
+import CheckOutlined from "@mui/icons-material/CheckOutlined";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
+import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
+import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
+import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
+import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
+import PersonOutlined from "@mui/icons-material/PersonOutlined";
+import PublicOutlined from "@mui/icons-material/PublicOutlined";
+import CategoryOutlined from "@mui/icons-material/CategoryOutlined";
+import HomeOutlined from "@mui/icons-material/HomeOutlined";
+import MoreHorizOutlined from "@mui/icons-material/MoreHorizOutlined";
+import MoreVertOutlined from "@mui/icons-material/MoreVertOutlined";
+import ReplyOutlined from "@mui/icons-material/ReplyOutlined";
+import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
+import SportsMartialArtsOutlined from "@mui/icons-material/SportsMartialArtsOutlined";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { BackButton } from "@/components/primitives/back-button";
@@ -14,13 +30,17 @@ import {
   CardMedia,
   CardTitle,
 } from "@/components/primitives/card";
+import { Calendar } from "@/components/primitives/calendar";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Chip } from "@/components/primitives/chip";
+import { DateField } from "@/components/primitives/date-field";
+import { Dropzone } from "@/components/primitives/dropzone";
 import { FilterButton } from "@/components/primitives/filter-button";
+import { Label } from "@/components/primitives/label";
+import { Modal, ModalFooter } from "@/components/primitives/modal";
 import { List, ListItem } from "@/components/primitives/list";
 import { Menu, MenuItem } from "@/components/primitives/menu";
 import { CircularProgress } from "@/components/primitives/circular-progress";
-import { DatePicker } from "@/components/primitives/date-picker";
 import { LinearProgress } from "@/components/primitives/linear-progress";
 import { Loading } from "@/components/primitives/loading";
 import { PinButton } from "@/components/primitives/pin-button";
@@ -28,6 +48,12 @@ import { Radio, RadioItem } from "@/components/primitives/radio";
 import { RatingBadge } from "@/components/primitives/rating-badge";
 import { Section } from "@/components/primitives/section";
 import { SearchBar } from "@/components/primitives/search-bar";
+import {
+  Dropdown,
+  DropdownItem,
+  DropdownSection,
+} from "@/components/primitives/dropdown";
+import { SelectField } from "@/components/primitives/select-field";
 import { SegmentItem } from "@/components/primitives/segment-item";
 import {
   SegmentedButton,
@@ -40,7 +66,8 @@ import { StatusBadge } from "@/components/primitives/status-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/primitives/tabs";
 import { Tag } from "@/components/primitives/tag";
 import { TextField } from "@/components/primitives/text-field";
-import { useToast } from "@/components/primitives/toast";
+import { UploadDialog, uploadAccept, type UploadFile } from "@/components/primitives/upload-dialog";
+import { ToastItem, ToastViewport, useToast } from "@/components/primitives/toast";
 import { Toggle } from "@/components/primitives/toggle";
 import {
   Tooltip,
@@ -67,6 +94,11 @@ import { NavigationBar } from "@/components/primitives/navigation/navigation-bar
 import { NavigationDrawer } from "@/components/primitives/navigation/navigation-drawer";
 import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
 import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+import { PrivateTournamentDialog } from "@/features/tournament/components/private-tournament-dialog";
+import { FilterSheet } from "@/features/tournament/components/filter-sheet";
+import { WeekStrip } from "@/features/tournament/components/week-strip";
+import { Logo } from "@/components/primitives/logo";
+import { Navbar } from "@/components/primitives/navigation/navbar";
 
 const buttonVariantNames = ["filled", "outline", "tonal", "text"] as const;
 const buttonSizes = ["sm", "default", "lg"] as const;
@@ -126,6 +158,9 @@ const demoReferees = [
 
 const demoFencer = {
   id: "demo",
+  eventId: "demo-event",
+  tournamentId: "demo-tournament",
+  ratingYear: 26,
   firstName: "Annika",
   lastName: "Kim",
   rating: "A26",
@@ -133,20 +168,22 @@ const demoFencer = {
 };
 const demoClub = { name: "Boston Blade Club", competitorCount: 12 };
 
-const barItems = Array.from({ length: 5 }, (_, index) => ({
-  id: `bar-${index}`,
-  label: "Label",
-  icon: <Shapes />,
+const barItems = ["Overview", "Fencers", "Clubs", "Events"].map((label) => ({
+  label,
+  href: "#",
+  active: label === "Fencers",
 }));
+
+const dropdownOptions = ["Fencer", "Country", "Club"];
 
 const drawerItems = Array.from({ length: 7 }, (_, index) => ({
   id: `drawer-${index}`,
   label: "Label",
-  icon: <Shapes />,
+  icon: <CategoryOutlined />,
   badge: "100+",
 }));
 
-const drawerFooter = [{ id: "settings", label: "Settings", icon: <Settings /> }];
+const drawerFooter = [{ id: "settings", label: "Settings", icon: <SettingsOutlined /> }];
 function DialogAvatar() {
   return (
     <Avatar className="size-8">
@@ -175,6 +212,186 @@ function DialogList() {
         </ListItem>
       ))}
     </List>
+  );
+}
+
+const searchSamples = [
+  {
+    title: "Clubs",
+    icon: <GroupsOutlined aria-hidden />,
+    rows: ["Northeastern Fencing Club", "NYAC Fencing", "North Shore Fencing", "Allez Fencing"],
+  },
+  {
+    title: "Countries",
+    icon: <PublicOutlined aria-hidden />,
+    rows: ["Netherlands", "New Zealand", "Norway", "United States of America"],
+  },
+  {
+    title: "Fencers",
+    icon: <PersonOutlined aria-hidden />,
+    rows: ["Nathan Lee", "Nadia Okafor", "Noah Park", "Eric Kitagawa"],
+  },
+];
+
+interface SearchSampleSectionProps {
+  title: string;
+  icon: React.ReactNode;
+  rows: string[];
+}
+
+function SearchSampleSection({ title, icon, rows }: SearchSampleSectionProps) {
+  return (
+    <DropdownSection title={title} icon={icon}>
+      {rows.map((row) => (
+        <DropdownItem key={row}>{row}</DropdownItem>
+      ))}
+    </DropdownSection>
+  );
+}
+
+// Filters sample data in place of a real search request.
+function SearchDemo() {
+  const [query, setQuery] = useState("N");
+  const term = query.trim().toLowerCase();
+  const matches = searchSamples
+    .map((section) => ({
+      ...section,
+      rows: section.rows.filter((row) => row.toLowerCase().includes(term)),
+    }))
+    .filter((section) => section.rows.length > 0);
+
+  return (
+    <div className="flex min-h-80 items-start gap-2">
+      <SearchBar
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        expanded={term !== "" && matches.length > 0}
+        placeholder="Search tournaments and clubs"
+        aria-label="Search"
+        className="flex-1"
+      >
+        <Dropdown>
+          {matches.map((section) => (
+            <SearchSampleSection key={section.title} {...section} />
+          ))}
+        </Dropdown>
+      </SearchBar>
+      <FilterButton aria-label="Filter" />
+    </div>
+  );
+}
+
+const sampleEventDates = [new Date(2026, 9, 9), new Date(2026, 9, 16), new Date(2026, 9, 23)];
+
+function CalendarDemo() {
+  const [selected, setSelected] = useState(new Date(2026, 9, 5));
+
+  return (
+    <Calendar
+      mode="single"
+      required
+      selected={selected}
+      onSelect={setSelected}
+      defaultMonth={selected}
+      today={new Date(2026, 9, 1)}
+      modifiers={{ hasEvent: sampleEventDates }}
+    />
+  );
+}
+
+// There's no upload backend yet, so the demo just lists what was picked; the
+// second seeded file shows the in-progress row.
+function UploadDialogDemo() {
+  const [open, setOpen] = useState(false);
+  const [files, setFiles] = useState<UploadFile[]>(() => [
+    { id: "cv", file: new File(["cv"], "my-cv.pdf", { type: "application/pdf" }) },
+    {
+      id: "certificate",
+      file: new File(["certificate"], "certificate.pdf", { type: "application/pdf" }),
+      progress: 60,
+    },
+  ]);
+
+  return (
+    <>
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        Open upload dialog
+      </Button>
+      <UploadDialog
+        open={open}
+        onOpenChange={setOpen}
+        files={files}
+        onAddFiles={(added) =>
+          setFiles((current) => [
+            ...current,
+            ...added.map((file) => ({ id: crypto.randomUUID(), file })),
+          ])
+        }
+        onRemoveFile={(id) => setFiles((current) => current.filter((entry) => entry.id !== id))}
+      />
+    </>
+  );
+}
+
+const undo = { label: "Undo", altText: "Undo" };
+
+const sampleToasts = [
+  { description: "Pins saved", icon: <CheckOutlined className="text-accent-green" />, action: undo },
+  { description: "Pinned Pool 1 · Strip 3", icon: <PushPinOutlined className="text-blue-light" />, action: undo },
+  { description: "Code not found", icon: <CloseOutlined className="text-red-dark" />, action: undo },
+];
+
+// Keeps the sample toasts open in the page instead of popping them up at the
+// bottom of the screen.
+function ToastPreview() {
+  return (
+    <ToastPrimitive.Provider>
+      {sampleToasts.map((options) => (
+        <ToastItem key={options.description} options={options} open duration={Infinity} />
+      ))}
+      <ToastViewport className="static w-full translate-x-0 p-0" />
+    </ToastPrimitive.Provider>
+  );
+}
+
+function PrivateTournamentDemo() {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <>
+      <Button ref={triggerRef} type="button" variant="outline" onClick={() => setOpen(true)}>
+        Private tournament
+      </Button>
+      <PrivateTournamentDialog open={open} onOpenChange={setOpen} returnFocusTo={triggerRef} />
+    </>
+  );
+}
+
+function LogoutModalDemo() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        Log out
+      </Button>
+      <Modal
+        open={open}
+        onOpenChange={setOpen}
+        title="Log out?"
+        description="You will need to sign in again to manage your tournaments."
+      >
+        <ModalFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="button" variant="destructive" onClick={() => setOpen(false)}>
+            Yes, log out
+          </Button>
+        </ModalFooter>
+      </Modal>
+    </>
   );
 }
 
@@ -260,10 +477,10 @@ export default function Home() {
           <PinButton aria-label="Pin" variant="obsidian" />
           <PinButton aria-label="Pin" variant="primary" />
           <PinButton aria-label="Home" variant="primary">
-            <House aria-hidden />
+            <HomeOutlined aria-hidden />
           </PinButton>
           <PinButton aria-label="Back" variant="primary">
-            <Reply aria-hidden />
+            <ReplyOutlined aria-hidden />
           </PinButton>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -314,7 +531,7 @@ export default function Home() {
 
       <Section title="Tag">
         <div className="flex flex-wrap items-center gap-3">
-          <Tag icon={<Swords aria-hidden />}>Specialty: Foil</Tag>
+          <Tag icon={<SportsMartialArtsOutlined aria-hidden />}>Specialty: Foil</Tag>
         </div>
       </Section>
 
@@ -358,7 +575,7 @@ export default function Home() {
             events={demoEvents.map((event) => ({ ...event, status: "ended" }))}
             emptyMessage=""
           />
-          <FencerCard competitor={demoFencer} href="/" />
+          <FencerCard competitor={demoFencer} />
           <FencerCard competitor={demoFencer} pinned={false} />
           <FencerCard competitor={demoFencer} pinned />
           <ClubCard team={demoClub} href="/" />
@@ -390,21 +607,29 @@ export default function Home() {
         </Radio>
       </Section>
 
-      <Section title="Chip">
+      <Section title="Filter Tag">
         <div className="flex flex-wrap items-center gap-3">
-          <Chip>Label</Chip>
-          <Chip icon={<Ellipsis />}>Label</Chip>
-          <Chip dismissible>Label</Chip>
-          <Chip dropdown>Label</Chip>
+          <Chip dismissible>Default</Chip>
+          <Chip dismissible className="bg-surface">
+            Hover
+          </Chip>
+          <Chip dismissible selected>
+            Selected
+          </Chip>
+        </div>
+      </Section>
+
+      <Section title="Label">
+        <div className="flex flex-col gap-1">
+          <Label icon={<AccountCircleOutlined aria-hidden />}>Eric Kitagawa</Label>
+          <Label tone="subtle" icon={<PublicOutlined aria-hidden />}>
+            United States of America
+          </Label>
         </div>
       </Section>
 
       <Section title="Slider">
-        <div className="flex flex-col gap-6">
-          <Slider defaultValue={[0]} aria-label="Empty" />
-          <Slider defaultValue={[50]} aria-label="Half" />
-          <Slider defaultValue={[100]} aria-label="Full" />
-        </div>
+        <Slider unit="MI" showValue defaultValue={[50]} aria-label="Distance" className="pt-10" />
       </Section>
 
       <Section title="Segment items">
@@ -470,24 +695,31 @@ export default function Home() {
         </div>
       </Section>
 
-      <Section title="Date picker">
-        <DatePicker />
+      <Section title="Navigation item">
+        <div className="flex rounded-xl bg-obsidian">
+          <NavigationItem href="#" label="Fencers" />
+          <NavigationItem href="#" label="Fencers" active />
+        </div>
       </Section>
 
-      <Section title="Navigation item">
-        <div className="flex items-center gap-4">
-          <NavigationItem icon={<Shapes />} label="Label" />
-          <NavigationItem icon={<Shapes />} aria-label="Label" />
-          <NavigationItem icon={<Shapes />} label="Label" selected />
-          <NavigationItem icon={<Shapes />} aria-label="Label" selected />
+      <Section title="Logo">
+        <div className="flex flex-col gap-4">
+          <Logo />
+          <div className="bg-blue p-4">
+            <Logo className="text-white" />
+          </div>
         </div>
+      </Section>
+
+      <Section title="Navbar">
+        <Navbar />
       </Section>
 
       <Section title="Navigation drawer item">
         <div className="flex flex-col gap-2">
-          <NavigationDrawerItem icon={<Shapes />} label="Label" badge="100+" />
+          <NavigationDrawerItem icon={<CategoryOutlined />} label="Label" badge="100+" />
           <NavigationDrawerItem
-            icon={<Shapes />}
+            icon={<CategoryOutlined />}
             label="Label"
             badge="100+"
             selected
@@ -496,7 +728,8 @@ export default function Home() {
       </Section>
 
       <Section title="Navigation bar">
-        <NavigationBar items={barItems} />
+        <NavigationBar aria-label="Sections" items={barItems.slice(0, 2)} />
+        <NavigationBar aria-label="Sections" items={barItems} />
       </Section>
 
       <Section title="Navigation drawer">
@@ -520,10 +753,10 @@ export default function Home() {
           actions={
             <>
               <Button variant="text" size="icon" aria-label="Action">
-                <Shapes />
+                <CategoryOutlined />
               </Button>
               <Button variant="text" size="icon" aria-label="More options">
-                <EllipsisVertical />
+                <MoreVertOutlined />
               </Button>
             </>
           }
@@ -536,39 +769,16 @@ export default function Home() {
       <Section title="Menu">
         <Menu>
           {Array.from({ length: 10 }, (_, index) => (
-            <MenuItem key={index} icon={<Ellipsis aria-hidden />}>
+            <MenuItem key={index} icon={<MoreHorizOutlined aria-hidden />}>
               Dialog title
             </MenuItem>
           ))}
         </Menu>
       </Section>
 
-      <Section title="Search bar">
-        <div className="flex flex-col gap-6">
-          <SearchBar
-            placeholder="Enter search text"
-            aria-label="Search"
-            trailing={
-              <Avatar className="size-8">
-                <AvatarFallback />
-              </Avatar>
-            }
-          />
-
-          <SearchBar expanded defaultValue="Input" aria-label="Search">
-            <div className="h-24" />
-          </SearchBar>
-
-          <SearchBar expanded defaultValue="Input" aria-label="Search">
-            <List className="border-0">
-              {Array.from({ length: 4 }, (_, index) => (
-                <ListItem key={index} leading={<DialogAvatar />}>
-                  Dialog title
-                </ListItem>
-              ))}
-            </List>
-          </SearchBar>
-        </div>
+      <Section title="Search Bar and Dropdown">
+        <SearchBar placeholder="Search fencers, clubs, events" aria-label="Search fencers" />
+        <SearchDemo />
       </Section>
 
       <Section title="Linear progress">
@@ -609,7 +819,7 @@ export default function Home() {
                   aria-label="More"
                   className="bg-background"
                 >
-                  <Ellipsis />
+                  <MoreHorizOutlined />
                 </Button>
               </CardAction>
             </CardHeader>
@@ -621,7 +831,7 @@ export default function Home() {
               <CardDescription>Subhead</CardDescription>
               <CardAction>
                 <Button variant="outline" size="icon" aria-label="More">
-                  <Ellipsis />
+                  <MoreHorizOutlined />
                 </Button>
               </CardAction>
             </CardHeader>
@@ -630,18 +840,24 @@ export default function Home() {
       </Section>
 
       <Section title="Toast">
-        <Button
-          onClick={() =>
-            toast({
-              description:
-                "Toasts provide brief messages about app processes at the bottom of the screen",
-              action: { label: "Label", altText: "Label" },
-              stacked: true,
-            })
-          }
-        >
-          Show toast
+        <ToastPreview />
+        <Button variant="outline" className="self-start" onClick={() => toast(sampleToasts[0])}>
+          Show a toast
         </Button>
+      </Section>
+
+      <Section title="Modal">
+        <div className="flex flex-wrap gap-3">
+          <PrivateTournamentDemo />
+          <LogoutModalDemo />
+        </div>
+      </Section>
+
+      <Section title="Filter Sheet">
+        {/* FilterSheet reads the URL's filters, which needs a Suspense boundary to prerender. */}
+        <Suspense>
+          <FilterSheet />
+        </Suspense>
       </Section>
 
       <Section title="Tabs">
@@ -650,7 +866,7 @@ export default function Home() {
             <Tabs key={variant} defaultValue="one">
               <TabsList variant={variant}>
                 {["one", "two", "three"].map((value) => (
-                  <TabsTrigger key={value} value={value} icon={<Ellipsis />}>
+                  <TabsTrigger key={value} value={value} icon={<MoreHorizOutlined />}>
                     Tab
                   </TabsTrigger>
                 ))}
@@ -660,16 +876,55 @@ export default function Home() {
         </div>
       </Section>
 
-      <Section title="Textfield">
+      <Section title="Text Field">
         <div className="flex flex-col gap-6">
-          <TextField
-            label="Label"
-            placeholder="Placeholder text"
-            supportingText="Supporting text"
-            leading={<Ellipsis aria-hidden />}
-            trailing={<Ellipsis aria-hidden />}
-          />
+          <TextField label="Label" placeholder="Placeholder text" />
+          <TextField label="Disabled" placeholder="Placeholder text" disabled />
         </div>
+      </Section>
+
+      <Section title="Dropdown Selection">
+        <div className="flex flex-col gap-6">
+          <SelectField label="Label" options={dropdownOptions} />
+          <SelectField label="Disabled" options={dropdownOptions} disabled />
+        </div>
+      </Section>
+
+      <Section title="Date Field">
+        <div className="flex flex-col gap-6">
+          <DateField label="Date" defaultValue={new Date(2026, 9, 5)} eventDates={sampleEventDates} />
+          <DateField label="Error" aria-invalid />
+          <DateField label="Disabled" disabled />
+        </div>
+      </Section>
+
+      <Section title="Date Scroller">
+        {/* WeekStrip reads the URL's filters, which needs a Suspense boundary to prerender. */}
+        <Suspense>
+          <WeekStrip />
+        </Suspense>
+      </Section>
+
+      <Section title="Calendar">
+        <CalendarDemo />
+      </Section>
+
+      <Section title="Upload File">
+        <Dropzone accept={uploadAccept} className="gap-3 px-6 py-8">
+          {(open) => (
+            <>
+              <CloudUploadOutlined aria-hidden className="size-8 text-neutral-secondary" />
+              <p className="text-base font-semibold text-obsidian">Already have file?</p>
+              <Button type="button" className="w-full" onClick={open}>
+                Upload
+              </Button>
+            </>
+          )}
+        </Dropzone>
+      </Section>
+
+      <Section title="Upload Dialog">
+        <UploadDialogDemo />
       </Section>
     </main>
   );

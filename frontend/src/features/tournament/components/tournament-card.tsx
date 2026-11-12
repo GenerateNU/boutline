@@ -1,4 +1,5 @@
-import { Calendar, MapPin } from "lucide-react";
+import CalendarTodayOutlined from "@mui/icons-material/CalendarTodayOutlined";
+import LocationOnOutlined from "@mui/icons-material/LocationOnOutlined";
 import Link from "next/link";
 
 import { Card, CardHeader, CardTitle } from "@/components/primitives/card";
@@ -13,7 +14,7 @@ interface TournamentCardProps {
 
 function TournamentCard({ tournament, admin }: TournamentCardProps) {
   const location = [tournament.city, tournament.country].filter(Boolean).join(", ");
-  const Icon = admin ? Calendar : MapPin;
+  const Icon = admin ? CalendarTodayOutlined : LocationOnOutlined;
   const meta = admin ? `Created ${formatShortDate(tournament.created_at)}` : location;
 
   return (

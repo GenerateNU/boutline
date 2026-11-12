@@ -2,7 +2,8 @@
 
 import { addDays, format, isSameDay } from "date-fns";
 import { cn } from "cn";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
 import { useState } from "react";
 
 import { Button } from "@/components/primitives/button";
@@ -52,7 +53,7 @@ function WeekStrip() {
         onClick={() => page(-visibleDays)}
         className="size-6 rounded-none text-white hover:bg-transparent [&_svg]:size-6"
       >
-        <ChevronLeft />
+        <ChevronLeftOutlined />
       </Button>
       <div
         {...trackHandlers}
@@ -89,7 +90,7 @@ function WeekStrip() {
         onClick={() => page(visibleDays)}
         className="size-6 rounded-none text-white hover:bg-transparent [&_svg]:size-6"
       >
-        <ChevronRight />
+        <ChevronRightOutlined />
       </Button>
     </div>
   );

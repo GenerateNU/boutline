@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import AddOutlined from "@mui/icons-material/AddOutlined";
 import Link from "next/link";
 
 function CreateTournamentCard() {
@@ -11,7 +11,7 @@ function CreateTournamentCard() {
         <p className="font-medium text-blue">Create tournament</p>
         <p className="text-xs text-neutral-secondary">Upload a file or set it up manually</p>
       </div>
-      <Plus className="size-10 shrink-0 rounded-full bg-blue p-2.5 text-white" />
+      <AddOutlined className="size-10 shrink-0 rounded-full bg-blue p-2.5 text-white" />
     </Link>
   );
 }
