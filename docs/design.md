@@ -433,9 +433,10 @@ from the venue floor.
 **Status:** Completed.
 
 - **Global nav** (every page): an obsidian bar with the slanted blue plate and the
-  BOUTLINE wordmark. The menu opens a light sidebar with Admin Login, Search
-  Tournaments, Find Private Tournament, and Settings (inert); the current route's
-  item is highlighted.
+  BOUTLINE wordmark. The menu slides a light sidebar in from the left (no motion
+  with reduced motion on) with Admin Login, Search Tournaments, Find Private
+  Tournament, and Settings (inert); the current route's item is highlighted. An X
+  at the sidebar's top left closes it.
 - **Tabs** (tournament and event pages): each tab has its own URL, but switching
   tabs replaces the history entry, so the browser's Back button leaves the page
   rather than stepping back through tabs. The exception is the active tab clicked
