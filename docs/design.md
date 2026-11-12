@@ -456,7 +456,8 @@ from the venue floor.
 - **Search:** a plain GET form that works without JS; with JS it updates `?q=`
   after a 300 ms debounce.
 - **Dates:** five day tabs in a dark row under the global nav, with paging and a
-  day toggle. The icon beside the title toggles a month calendar (with month and
+  day toggle. Dragging the row scrolls through days and snaps to the nearest
+  one, at most five per drag. The icon beside the title toggles a month calendar (with month and
   year steppers) open above the search bar, on the same screen. Both filter by
   `start_time`.
 - **Active filters:** each applied Status, Club or Country filter shows as a pill
