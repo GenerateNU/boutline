@@ -206,8 +206,8 @@ func (f poolCreateFixture) assertStoredBouts(t *testing.T, created pool.PoolCrea
 		assert.Equal(t, wantBout.Competitor1ID, bout["competitor_1_id"])
 		assert.Equal(t, wantBout.Competitor2ID, bout["competitor_2_id"])
 		assert.EqualValues(t, wantBout.Slot, bout["slot"])
-		assert.EqualValues(t, 5, bout["points_to_win"])
-		assert.EqualValues(t, 180, bout["time_limit_seconds"])
+		assert.EqualValues(t, 15, bout["points_to_win"])
+		assert.EqualValues(t, 540, bout["time_limit_seconds"])
 		assert.EqualValues(t, 1, bout["group_number"])
 		assert.Equal(t, "Strip 3", bout["location"])
 		assert.Equal(t, "upcoming", bout["status"])
@@ -245,8 +245,15 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 		first["strip"] = "Strip 3"
 		first["referee_id"] = poolCreateRefereeID
 
-		result := poolCreatePost(t, app, headers, first, poolCreateItem(2, 12, 4, 3, 7)).
-			AssertStatus(http.StatusCreated)
+		// Non-default rules, so re-seat keeping them below can't be mistaken for its fallback.
+		result := testkit.New(t).Request(testkit.Request{
+			App: app, Route: "/api/v1/pools", Method: testkit.POST, Headers: headers,
+			Body: map[string]any{
+				"pools":              []map[string]any{first, poolCreateItem(2, 12, 4, 3, 7)},
+				"points_to_win":      15,
+				"time_limit_seconds": 540,
+			},
+		}).AssertStatus(http.StatusCreated)
 		created := poolCreateDecode(t, result)
 
 		require.Len(t, created, 2)
@@ -329,32 +336,11 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 			slots = append(slots, bout["slot"].(float64))
 			assert.Equal(t, "Strip 3", bout["location"], "the pool's strip carries over")
 			assert.Equal(t, poolCreateRefereeID, bout["referee_id"], "the pool's referee carries over")
-			assert.EqualValues(t, 5, bout["points_to_win"])
+			assert.EqualValues(t, 15, bout["points_to_win"], "the pool's bout rules carry over")
+			assert.EqualValues(t, 540, bout["time_limit_seconds"])
 		}
 		assert.ElementsMatch(t, []float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, slots)
 		assert.Len(t, poolCreateListBouts(t, app, headers, pools[2]), 6, "a pool of four fences six bouts")
-	})
-
-	// Non-default rules, so a summary that failed to read them would show up as 5 and 180.
-	t.Run("re-seating keeps the pool's bout rules", func(t *testing.T) {
-		testkit.New(t).Request(testkit.Request{
-			App: app, Route: "/api/v1/pools", Method: testkit.POST, Headers: headers,
-			Body: map[string]any{
-				"pools":              []map[string]any{poolCreateItem(3, 8, 9, 10, 11)},
-				"points_to_win":      15,
-				"time_limit_seconds": 540,
-			},
-		}).AssertStatus(http.StatusCreated)
-		pool3 := poolCreateIDsByNumber(t, app, headers)[3]
-
-		poolCreatePatchFencers(t, app, headers, pool3, 11, 10, 9, 8).AssertStatus(http.StatusOK)
-
-		bouts := poolCreateListBouts(t, app, headers, pool3)
-		require.Len(t, bouts, 6)
-		for _, bout := range bouts {
-			assert.EqualValues(t, 15, bout["points_to_win"])
-			assert.EqualValues(t, 540, bout["time_limit_seconds"])
-		}
 	})
 }
 
