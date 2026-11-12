@@ -28,6 +28,7 @@ const (
 	msgPoolEnded   = "this pool has already ended"
 
 	msgPoolFencersLocked = "a pool's fencers can only change before it starts and while every bout is upcoming"
+	msgPoolMixedRules    = "a pool whose bouts have different points_to_win or time_limit_seconds cannot be re-seated"
 )
 
 // PoolStageLookup is the subset of the PoolStageRepository interface needed here.

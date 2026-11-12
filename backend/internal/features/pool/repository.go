@@ -274,12 +274,18 @@ func (r *poolRepository) UpdatePoolByID(ctx context.Context, id uuid.UUID, updat
 }
 
 // PoolBoutSummary is what re-seating a pool needs to know about its current bouts.
+// RuleSets counts the distinct (points_to_win, time_limit_seconds) pairs among them.
 type PoolBoutSummary struct {
 	Total            int64
 	Started          int64
+	RuleSets         int64
 	PointsToWin      int
 	TimeLimitSeconds int
 }
+
+// errPoolSeatingLocked is ReplacePoolBouts finding the pool started or a bout no
+// longer upcoming; re-seat reports it as a conflict.
+var errPoolSeatingLocked = errors.New("pool seating locked")
 
 func (r *poolRepository) GetPoolBoutSummary(ctx context.Context, poolID uuid.UUID) (PoolBoutSummary, error) {
 	var summary PoolBoutSummary
@@ -287,6 +293,7 @@ func (r *poolRepository) GetPoolBoutSummary(ctx context.Context, poolID uuid.UUI
 	err := r.db.WithContext(ctx).Raw(`
 		SELECT count(*) AS total,
 		       count(*) FILTER (WHERE status <> ?) AS started,
+		       count(DISTINCT (points_to_win, time_limit_seconds)) AS rule_sets,
 		       COALESCE(max(points_to_win), 0) AS points_to_win,
 		       COALESCE(max(time_limit_seconds), 0) AS time_limit_seconds
 		FROM bouts WHERE pool_id = ?`, upcomingBoutStatus, poolID).
@@ -304,7 +311,7 @@ func (r *poolRepository) GetPoolBoutSummary(ctx context.Context, poolID uuid.UUI
 // upcoming bouts, rolling back if any others remain.
 func (r *poolRepository) ReplacePoolBouts(ctx context.Context, id uuid.UUID, update PoolUpdate, bouts []PoolBout) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		locked := fmt.Errorf("replace bouts of pool %s: %w", id, errs.Public(msgPoolFencersLocked, errs.ErrConflict))
+		locked := fmt.Errorf("replace bouts of pool %s: %w", id, errPoolSeatingLocked)
 
 		columns := update.columns()
 		columns["updated_at"] = time.Now()

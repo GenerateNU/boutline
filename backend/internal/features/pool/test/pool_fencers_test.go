@@ -149,6 +149,21 @@ func TestReseatPool(t *testing.T) {
 			wantDetail: locked,
 		},
 		{
+			name: "refuses a pool whose bouts have different rules",
+			prepare: func(f *reseatFixture) {
+				for i := range f.repo.Bouts {
+					if f.repo.Bouts[i].PoolID == f.pool1 {
+						f.repo.Bouts[i].PointsToWin = 5
+
+						break
+					}
+				}
+			},
+			body:       pool.PoolUpdateBody{Fencers: fencerIDs(1, 2, 3, 10)},
+			wantCode:   http.StatusConflict,
+			wantDetail: "a pool whose bouts have different points_to_win or time_limit_seconds cannot be re-seated",
+		},
+		{
 			name: "refuses once the pool has started",
 			prepare: func(f *reseatFixture) {
 				started := f.repo.Pools[f.pool1]

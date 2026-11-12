@@ -1048,8 +1048,9 @@ pools are generated after the tournament starts.
    otherwise) replaces a pool's fencers and regenerates its bouts in one
    transaction, under the stage lock below. Fencers are seated in the order
    listed, as in create. The new bouts keep the old bouts' `points_to_win` and
-   `time_limit_seconds`, and take any `strip`, `referee_id` or `number` change in
-   the same patch. It needs an active tournament and an upcoming stage (409). It
+   `time_limit_seconds` (a pool whose bouts disagree on them is refused with a
+   409 rather than silently changed), and take any `strip`, `referee_id` or
+   `number` change in the same patch. It needs an active tournament and an upcoming stage (409). It
    refuses a pool that has started or has a bout that isn't upcoming (409), so
    nothing fenced is lost. The fencer checks match create: 4 to min(stage
    maximum, 10) fencers, none listed twice, all entered in the stage's event

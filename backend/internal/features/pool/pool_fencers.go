@@ -2,6 +2,7 @@ package pool
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"boutline/internal/errs"
@@ -35,6 +36,9 @@ func (s *poolService) reseatPool(ctx context.Context, id uuid.UUID, update PoolU
 	err = s.repo.WithLockedPoolStage(ctx, stored.PoolStageID, func(repo PoolRepository, stage LockedPoolStage) error {
 		return reseatLockedPool(ctx, repo, stage, id, update, fencers)
 	})
+	if errors.Is(err, errPoolSeatingLocked) {
+		err = errs.Public(msgPoolFencersLocked, errs.ErrConflict)
+	}
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("reseat pool: %w", err))
 	}
@@ -88,7 +92,8 @@ func reseatLockedPool(
 }
 
 // loadReseatablePool returns the pool and its bout summary, refusing a pool that has
-// started or has a bout that isn't upcoming, so no fenced touch is lost.
+// started or has a bout that isn't upcoming, so no fenced touch is lost, and one whose
+// bouts disagree on their rules, so none is silently changed.
 func loadReseatablePool(ctx context.Context, repo PoolRepository, id uuid.UUID) (*Pool, PoolBoutSummary, error) {
 	current, err := repo.GetPoolByID(ctx, id)
 	if err != nil {
@@ -104,6 +109,10 @@ func loadReseatablePool(ctx context.Context, repo PoolRepository, id uuid.UUID) 
 	}
 	if summary.Started > 0 {
 		return nil, PoolBoutSummary{}, errs.Public(msgPoolFencersLocked, errs.ErrConflict)
+	}
+	// The new bouts all take one set of rules, so a pool with several has no rules to keep.
+	if summary.RuleSets > 1 {
+		return nil, PoolBoutSummary{}, errs.Public(msgPoolMixedRules, errs.ErrConflict)
 	}
 
 	return current, summary, nil

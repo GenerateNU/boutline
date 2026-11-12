@@ -237,6 +237,7 @@ func (f *FakePoolRepository) GetPoolBoutSummary(_ context.Context, poolID uuid.U
 	}
 
 	var summary pool.PoolBoutSummary
+	ruleSets := map[[2]int]bool{}
 	for _, bout := range f.Bouts {
 		if bout.PoolID != poolID {
 			continue
@@ -245,9 +246,11 @@ func (f *FakePoolRepository) GetPoolBoutSummary(_ context.Context, poolID uuid.U
 		if bout.Status != "upcoming" {
 			summary.Started++
 		}
-		summary.PointsToWin = bout.PointsToWin
-		summary.TimeLimitSeconds = bout.TimeLimitSeconds
+		ruleSets[[2]int{bout.PointsToWin, bout.TimeLimitSeconds}] = true
+		summary.PointsToWin = max(summary.PointsToWin, bout.PointsToWin)
+		summary.TimeLimitSeconds = max(summary.TimeLimitSeconds, bout.TimeLimitSeconds)
 	}
+	summary.RuleSets = int64(len(ruleSets))
 
 	return summary, nil
 }
