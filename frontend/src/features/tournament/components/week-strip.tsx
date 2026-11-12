@@ -12,7 +12,35 @@ import { useToday } from "@/features/tournament/hooks/use-today";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { parseDateParam } from "@/features/tournament/lib/date-param";
 
-const visibleDays = 5;
+const VISIBLE_DAYS = 5;
+
+interface DayButtonProps {
+  day: Date;
+  selected: Date | undefined;
+  offScreen: boolean;
+  onSelect: (day: Date | undefined) => void;
+}
+
+function DayButton({ day, selected, offScreen, onSelect }: DayButtonProps) {
+  const isSelected = selected !== undefined && isSameDay(day, selected);
+
+  return (
+    <Button
+      type="button"
+      variant="text"
+      aria-pressed={isSelected}
+      aria-hidden={offScreen || undefined}
+      tabIndex={offScreen ? -1 : undefined}
+      onClick={() => onSelect(isSelected ? undefined : day)}
+      className={cn(
+        "h-auto min-w-0 flex-1 flex-col rounded-none px-1 pt-2.5 font-medium text-neutral-muted hover:bg-transparent after:h-0.5 after:w-full after:rounded-t-xs",
+        isSelected && "font-semibold text-white after:bg-accent-green",
+      )}
+    >
+      {format(day, "MMM d")}
+    </Button>
+  );
+}
 
 function WeekStrip() {
   const { searchParams, setDate } = useTournamentFilters();
@@ -24,7 +52,7 @@ function WeekStrip() {
 
   // One page of days either side of the visible one, revealed while dragging.
   const days = start
-    ? Array.from({ length: visibleDays * 3 }, (_, i) => addDays(start, i - visibleDays))
+    ? Array.from({ length: VISIBLE_DAYS * 3 }, (_, i) => addDays(start, i - VISIBLE_DAYS))
     : [];
 
   // Turning the page also selects its first day, so the selection stays leftmost.
@@ -36,7 +64,7 @@ function WeekStrip() {
     }
   }
 
-  const { rowRef, rowStyle, trackHandlers } = useDayDrag(visibleDays, page);
+  const { rowRef, rowStyle, trackHandlers } = useDayDrag(VISIBLE_DAYS, page);
 
   function select(day: Date | undefined) {
     setPagedStart(start);
@@ -50,7 +78,7 @@ function WeekStrip() {
         variant="text"
         size="icon"
         aria-label="Earlier days"
-        onClick={() => page(-visibleDays)}
+        onClick={() => page(-VISIBLE_DAYS)}
         className="size-6 rounded-none text-white hover:bg-transparent [&_svg]:size-6"
       >
         <ChevronLeftOutlined />
@@ -60,26 +88,15 @@ function WeekStrip() {
         className="max-w-83.75 min-w-0 flex-1 cursor-grab touch-pan-y overflow-hidden select-none active:cursor-grabbing"
       >
         <div ref={rowRef} style={rowStyle} className="flex items-start">
-          {days.map((day, i) => {
-            const isSelected = selected !== undefined && isSameDay(day, selected);
-            const offScreen = i < visibleDays || i >= visibleDays * 2;
-            return (
-              <button
-                key={day.toISOString()}
-                type="button"
-                aria-pressed={isSelected}
-                aria-hidden={offScreen || undefined}
-                tabIndex={offScreen ? -1 : undefined}
-                onClick={() => select(isSelected ? undefined : day)}
-                className={cn(
-                  "flex min-w-0 flex-1 cursor-pointer flex-col whitespace-nowrap items-center gap-2 px-1 pt-2.5 text-sm font-medium text-neutral-muted after:h-0.5 after:w-full after:rounded-t-xs",
-                  isSelected && "font-semibold text-white after:bg-accent-green",
-                )}
-              >
-                {format(day, "MMM d")}
-              </button>
-            );
-          })}
+          {days.map((day, i) => (
+            <DayButton
+              key={day.toISOString()}
+              day={day}
+              selected={selected}
+              offScreen={i < VISIBLE_DAYS || i >= VISIBLE_DAYS * 2}
+              onSelect={select}
+            />
+          ))}
         </div>
       </div>
       <Button
@@ -87,7 +104,7 @@ function WeekStrip() {
         variant="text"
         size="icon"
         aria-label="Later days"
-        onClick={() => page(visibleDays)}
+        onClick={() => page(VISIBLE_DAYS)}
         className="size-6 rounded-none text-white hover:bg-transparent [&_svg]:size-6"
       >
         <ChevronRightOutlined />

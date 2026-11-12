@@ -3,10 +3,10 @@
 import { useRef, useState } from "react";
 
 // Movement under this many pixels is a tap on a day, not a drag.
-const dragThreshold = 5;
+const DRAG_THRESHOLD = 5;
 // A drag past this share of the strip turns the page; a shorter one springs back.
-const pageThreshold = 1 / 4;
-const settleMs = 200;
+const PAGE_THRESHOLD = 1 / 4;
+const SETTLE_MS = 200;
 
 interface Drag {
   pointerId: number;
@@ -39,7 +39,7 @@ function useDayDrag(visibleDays: number, onShift: (days: number) => void) {
       return;
     }
     rowRef.current?.animate([{ transform: rowTransform(from) }, { transform: rowTransform(0) }], {
-      duration: settleMs,
+      duration: SETTLE_MS,
       easing: "ease-out",
     });
   }
@@ -65,7 +65,7 @@ function useDayDrag(visibleDays: number, onShift: (days: number) => void) {
     }
     const dx = event.clientX - current.startX;
     if (!current.dragging) {
-      if (Math.abs(dx) < dragThreshold) {
+      if (Math.abs(dx) < DRAG_THRESHOLD) {
         return;
       }
       // Captured only once it's a drag, so a tap's click still lands on the day under it.
@@ -85,7 +85,7 @@ function useDayDrag(visibleDays: number, onShift: (days: number) => void) {
       return;
     }
     suppressClick.current = true;
-    const turnsPage = canShift && Math.abs(offset) > current.pageWidth * pageThreshold;
+    const turnsPage = canShift && Math.abs(offset) > current.pageWidth * PAGE_THRESHOLD;
     const pages = turnsPage ? -Math.sign(offset) : 0;
     if (pages !== 0) {
       onShift(pages * visibleDays);

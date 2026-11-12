@@ -11,12 +11,12 @@ jest.mock("next/navigation", () => ({
 }));
 
 // Five days fill 300px, so each day is 60px wide.
-const trackWidth = 300;
+const TRACK_WIDTH = 300;
 
 function renderStrip() {
   render(<WeekStrip />);
   const track = screen.getByRole("button", { name: "Nov 11" }).parentElement!.parentElement!;
-  Object.defineProperty(track, "clientWidth", { value: trackWidth });
+  Object.defineProperty(track, "clientWidth", { value: TRACK_WIDTH });
   return track;
 }
 
