@@ -1,8 +1,9 @@
 "use client";
 
 import { addDays, format, isSameDay } from "date-fns";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "cn";
+import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
 import { useState } from "react";
 
 import { Button } from "@/components/primitives/button";
@@ -10,10 +11,10 @@ import { useToday } from "@/features/tournament/hooks/use-today";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { parseDateParam } from "@/features/tournament/lib/date-param";
 
-const visibleDays = 4;
+const visibleDays = 5;
 
 function WeekStrip() {
-  const { searchParams, setFilters, setDate } = useTournamentFilters();
+  const { searchParams, setDate } = useTournamentFilters();
   const selected = parseDateParam(searchParams.get("date"));
   const today = useToday();
   const [pagedStart, setPagedStart] = useState<Date>();
@@ -36,34 +37,33 @@ function WeekStrip() {
   }
 
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex h-12 items-center justify-center bg-obsidian px-1 pt-0.75 font-manrope shadow-md">
       <Button
         type="button"
         variant="text"
         size="icon"
         aria-label="Earlier days"
         onClick={() => page(-visibleDays)}
+        className="size-6 rounded-none text-white hover:bg-transparent [&_svg]:size-6"
       >
-        <ChevronLeft className="size-5! text-neutral-secondary" />
+        <ChevronLeftOutlined />
       </Button>
-      <div className="flex flex-1 justify-between">
+      <div className="flex max-w-83.75 min-w-0 flex-1 items-start">
         {days.map((day) => {
           const isSelected = selected !== undefined && isSameDay(day, selected);
           return (
-            <Button
+            <button
               key={day.toISOString()}
               type="button"
-              variant="text"
               aria-pressed={isSelected}
               onClick={() => select(isSelected ? undefined : day)}
               className={cn(
-                "h-auto rounded-none border-b-2 border-transparent px-0 pb-1.5 text-sm text-neutral-muted hover:bg-transparent",
-                isSelected &&
-                  "border-accent-green font-semibold text-obsidian",
+                "flex min-w-0 flex-1 cursor-pointer flex-col whitespace-nowrap items-center gap-2 px-1 pt-2.5 text-sm font-medium text-neutral-muted after:h-0.5 after:w-full after:rounded-t-xs",
+                isSelected && "font-semibold text-white after:bg-accent-green",
               )}
             >
               {format(day, "MMM d")}
-            </Button>
+            </button>
           );
         })}
       </div>
@@ -73,17 +73,9 @@ function WeekStrip() {
         size="icon"
         aria-label="Later days"
         onClick={() => page(visibleDays)}
+        className="size-6 rounded-none text-white hover:bg-transparent [&_svg]:size-6"
       >
-        <ChevronRight className="size-5! text-neutral-secondary" />
-      </Button>
-      <Button
-        type="button"
-        variant="text"
-        size="icon"
-        aria-label="Calendar view"
-        onClick={() => setFilters({ view: "calendar" })}
-      >
-        <CalendarDays className="size-8! text-neutral-secondary" />
+        <ChevronRightOutlined />
       </Button>
     </div>
   );

@@ -118,6 +118,14 @@ describe("FencerFilterSheet", () => {
     expect(screen.getByRole("searchbox", { name: "Club" })).toHaveValue("");
   });
 
+  it("shows a spinner while a club search loads", async () => {
+    apiRequestMock.mockReturnValue(new Promise(() => {}));
+    await openSheet();
+    await search("nord");
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading");
+  });
+
   it.each([
     {
       name: "no clubs",

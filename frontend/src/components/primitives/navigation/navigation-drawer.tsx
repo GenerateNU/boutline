@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Menu } from "lucide-react";
+import MenuOutlined from "@mui/icons-material/MenuOutlined";
 import { cn } from "cn";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
 import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
-import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+import { NavigationRailItem } from "@/components/primitives/navigation/navigation-rail-item";
 import { NavItem } from "@/components/primitives/navigation/types";
 
 interface NavigationDrawerProps {
@@ -64,11 +64,11 @@ setExpanded(false);
           aria-expanded={expanded}
           onClick={() => setExpanded(true)}
         >
-          <Menu />
+          <MenuOutlined />
         </Button>
         <div className="mt-10 flex min-h-0 flex-1 flex-col items-center gap-3 overflow-y-auto">
           {items.map((item) => (
-            <NavigationItem
+            <NavigationRailItem
               key={item.id}
               icon={item.icon}
               label={item.label}
@@ -79,7 +79,7 @@ setExpanded(false);
         </div>
         <div className="flex w-full shrink-0 flex-col items-center gap-3 border-t border-foreground pt-2">
           {footerItems.map((item) => (
-            <NavigationItem
+            <NavigationRailItem
               key={item.id}
               icon={item.icon}
               label={item.label}
@@ -119,7 +119,7 @@ setExpanded(false);
             aria-label="Close menu"
             onClick={() => setExpanded(false)}
           >
-            <Menu />
+            <MenuOutlined />
           </Button>
           <span className="text-lg font-semibold">{title}</span>
         </div>

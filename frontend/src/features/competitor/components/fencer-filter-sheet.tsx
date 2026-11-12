@@ -1,6 +1,6 @@
 "use client";
 
-import { Funnel } from "lucide-react";
+import FilterAltOutlined from "@mui/icons-material/FilterAltOutlined";
 import { useState } from "react";
 
 import { Chip } from "@/components/primitives/chip";
@@ -58,7 +58,7 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         setOpen(next);
       }}
       triggerLabel="Filter fencers"
-      triggerIcon={<Funnel className="size-5! text-brand" />}
+      triggerIcon={<FilterAltOutlined className="size-5! text-brand" />}
       description="Narrow the fencer list"
       submitLabel="Show Fencers"
       onReset={() => {
@@ -93,6 +93,7 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         onChange={(event) => fencerSearch.change(event.target.value)}
         suggestions={fencerSearch.suggestions}
         failed={fencerSearch.failed}
+        loading={fencerSearch.loading}
         selected={selectedFencer}
         onPick={(name) => {
           setSelectedFencer(name);
@@ -109,6 +110,7 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         onChange={(event) => clubSearch.change(event.target.value)}
         suggestions={clubSearch.suggestions}
         failed={clubSearch.failed}
+        loading={clubSearch.loading}
         selected={selectedClub}
         onPick={(name) => {
           setSelectedClub(name);

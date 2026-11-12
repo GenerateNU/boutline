@@ -10,6 +10,7 @@ function useSearchSuggestions<T>(fetchSuggestions: (term: string) => Promise<T[]
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<T[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(false);
   const latestRequestId = useRef(0);
 
   async function search(term: string) {
@@ -19,17 +20,21 @@ function useSearchSuggestions<T>(fetchSuggestions: (term: string) => Promise<T[]
     if (!term) {
       setSuggestions(null);
       setFailed(false);
+      setLoading(false);
       return;
     }
+    setLoading(true);
     try {
       const found = await fetchSuggestions(term);
       if (requestId === latestRequestId.current) {
         setSuggestions(found);
         setFailed(false);
+        setLoading(false);
       }
     } catch {
       if (requestId === latestRequestId.current) {
         setFailed(true);
+        setLoading(false);
       }
     }
   }
@@ -47,7 +52,7 @@ function useSearchSuggestions<T>(fetchSuggestions: (term: string) => Promise<T[]
     void search("");
   }
 
-  return { query, suggestions, failed, change, clear };
+  return { query, suggestions, failed, loading, change, clear };
 }
 
 export { useSearchSuggestions };

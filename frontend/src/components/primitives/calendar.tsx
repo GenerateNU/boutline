@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import * as React from "react";
+import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
 import { cn } from "cn";
-import { useEffect, useRef } from "react";
 import {
   DayPicker,
   useDayPicker,
@@ -23,23 +24,18 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       hideNavigation
-      className={cn(
-        "rounded-lg border border-outline bg-background p-3 [--cell-size:--spacing(9)]",
-        className,
-      )}
+      className={cn("w-full bg-background", className)}
       formatters={{
         formatWeekdayName: (date) =>
           date.toLocaleString(undefined, { weekday: "narrow" }),
       }}
       classNames={{
-        month: "flex w-full flex-col gap-4",
+        month: "flex w-full flex-col gap-3",
         month_grid: "w-full border-collapse",
-        weekdays: "flex",
-        weekday: "flex-1 text-xs font-normal text-neutral-muted select-none",
-        week: "mt-1 flex w-full",
-        day: "relative aspect-square h-full w-full p-0.5 text-center text-sm text-obsidian select-none",
-        outside: "[&_button]:text-neutral-muted",
-        disabled: "[&_button]:text-neutral-muted [&_button]:opacity-50",
+        weekdays: "flex justify-between",
+        weekday: "w-10 text-xs font-medium text-neutral-secondary select-none",
+        week: "mt-1 flex w-full justify-between",
+        day: "size-10 p-0 text-center select-none",
         hidden: "invisible",
         ...classNames,
       }}
@@ -60,35 +56,38 @@ function CalendarDayButton({
   children,
   ...props
 }: React.ComponentProps<typeof DayButton>) {
-  const ref = useRef<HTMLButtonElement>(null);
+  const ref = React.useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (modifiers.focused) {
       ref.current?.focus();
     }
   }, [modifiers.focused]);
 
   return (
-    <button
+    <Button
       ref={ref}
-      type="button"
+      variant="text"
+      size="icon"
       data-day={day.date.toLocaleDateString()}
+      data-selected={modifiers.selected}
+      data-today={modifiers.today}
+      data-outside={modifiers.outside}
       className={cn(
-        "relative flex aspect-square w-full min-w-(--cell-size) cursor-pointer items-center justify-center rounded-full text-sm outline-none hover:bg-blue-lighter focus-visible:ring-3 focus-visible:ring-blue-lighter",
-        modifiers.today && "ring-1 ring-blue",
-        modifiers.selected && "bg-blue text-white ring-0 hover:bg-blue",
+        "relative border border-transparent text-sm text-obsidian disabled:opacity-50",
+        "data-[outside=true]:text-neutral-muted",
+        "data-[today=true]:border-[1.5px] data-[today=true]:border-blue data-[today=true]:font-semibold",
+        "data-[selected=true]:bg-blue data-[selected=true]:font-semibold data-[selected=true]:text-white data-[selected=true]:hover:bg-blue-dark",
         className,
       )}
       {...props}
     >
       {children}
+      {/* Callers mark days with events via modifiers={{ hasEvent: Date[] }}. */}
       {modifiers.hasEvent && (
-        <span
-          aria-hidden
-          className="absolute bottom-1 size-1 rounded-full bg-accent-green"
-        />
+        <span aria-hidden className="absolute bottom-1 size-1 rounded-full bg-accent-green" />
       )}
-    </button>
+    </Button>
   );
 }
 
@@ -99,27 +98,53 @@ function CalendarCaption({ calendarMonth }: MonthCaptionProps) {
     goToMonth(new Date(shown.getFullYear(), shown.getMonth() + months, 1));
 
   return (
-    <div className="flex items-center justify-around">
-      <div className="flex items-center gap-2">
-        <Button variant="text" size="icon" aria-label="Previous month" onClick={() => shift(-1)}>
-          <ChevronLeft className="text-neutral-secondary" />
-        </Button>
-        <p className="w-24 text-center text-sm font-medium text-obsidian">
-          {shown.toLocaleString(undefined, { month: "long" })}
-        </p>
-        <Button variant="text" size="icon" aria-label="Next month" onClick={() => shift(1)}>
-          <ChevronRight className="text-neutral-secondary" />
-        </Button>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button variant="text" size="icon" aria-label="Previous year" onClick={() => shift(-12)}>
-          <ChevronLeft className="text-neutral-secondary" />
-        </Button>
-        <p className="w-12 text-center text-sm font-medium text-obsidian">{shown.getFullYear()}</p>
-        <Button variant="text" size="icon" aria-label="Next year" onClick={() => shift(12)}>
-          <ChevronRight className="text-neutral-secondary" />
-        </Button>
-      </div>
+    <div className="flex items-center justify-center gap-12.5 pb-1 text-sm font-semibold text-obsidian">
+      <Stepper
+        label={shown.toLocaleString(undefined, { month: "long" })}
+        unit="month"
+        onStep={shift}
+      />
+      <Stepper
+        label={String(shown.getFullYear())}
+        unit="year"
+        onStep={(step) => shift(step * 12)}
+      />
+    </div>
+  );
+}
+
+interface StepperProps {
+  label: string;
+  unit: string;
+  onStep: (step: number) => void;
+}
+
+const stepClassName = "size-6 text-obsidian [&_svg]:size-6";
+
+function Stepper({ label, unit, onStep }: StepperProps) {
+  return (
+    <div className="flex items-center gap-3">
+      <Button
+        type="button"
+        variant="text"
+        size="icon"
+        aria-label={`Previous ${unit}`}
+        onClick={() => onStep(-1)}
+        className={stepClassName}
+      >
+        <ChevronLeftOutlined />
+      </Button>
+      <p className="min-w-10 text-center">{label}</p>
+      <Button
+        type="button"
+        variant="text"
+        size="icon"
+        aria-label={`Next ${unit}`}
+        onClick={() => onStep(1)}
+        className={stepClassName}
+      >
+        <ChevronRightOutlined />
+      </Button>
     </div>
   );
 }

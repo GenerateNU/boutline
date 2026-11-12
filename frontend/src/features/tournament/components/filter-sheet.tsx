@@ -1,15 +1,20 @@
 "use client";
 
-import { ChevronDown, Funnel } from "lucide-react";
-import { ToggleGroup } from "radix-ui";
+import { cn } from "cn";
 import { useState } from "react";
 
-import { Chip, chipVariants } from "@/components/primitives/chip";
+import { buttonVariants } from "@/components/primitives/button";
+import { Chip } from "@/components/primitives/chip";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
-import { SegmentedButton } from "@/components/primitives/segmented-button";
+import {
+  SegmentedButton,
+  SegmentedButtonItem,
+} from "@/components/primitives/segmented-button";
+import { Slider } from "@/components/primitives/slider";
 import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
+import { countryName } from "@/features/tournament/lib/country-name";
 import { countryCodePattern } from "@/features/tournament/lib/tournament-filters";
 import type {
   TournamentStatus,
@@ -19,12 +24,14 @@ import { useSearchSuggestions } from "@/lib/hooks/use-search-suggestions";
 import { apiRequest } from "@/services/api-request";
 import type { TeamListResult } from "@/types/competitor";
 
-const distances = ["10 mi", "25 mi", "50 mi", "100 mi"];
-const optionClassName = chipVariants({ variant: "option" });
+const maxDistance = 100;
 const statusOrder: TournamentStatus[] = ["ended", "active", "pending"];
 
 const clubResultLimit = 10;
-const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
+const chipClassName = cn(
+  buttonVariants({ variant: "outline", size: "sm" }),
+  "flex-none rounded-lg first:border-l data-[state=on]:bg-blue data-[state=on]:text-white data-[state=on]:hover:bg-blue-dark",
+);
 
 interface Country {
   code: string;
@@ -35,10 +42,6 @@ interface CountryListResult {
   data: Country[];
 }
 
-function countryName(code: string) {
-  return countryNames.of(code) ?? code;
-}
-
 interface FilterSheetProps {
   visibility?: TournamentVisibility;
 }
@@ -47,7 +50,6 @@ function FilterSheet({ visibility }: FilterSheetProps) {
   const { searchParams, setFilters } = useTournamentFilters();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState("");
-  const [distance, setDistance] = useState("");
   const [selectedClub, setSelectedClub] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
   const [countries, setCountries] = useState<Country[] | null>(null);
@@ -95,17 +97,10 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         setOpen(next);
       }}
       triggerLabel="Filter tournaments"
-      triggerIcon={
-        <>
-          <Funnel className="size-5! text-brand" />
-          <ChevronDown />
-        </>
-      }
       description="Narrow the tournament list"
       submitLabel="Show Tournaments"
       onReset={() => {
         setStatus("");
-        setDistance("");
         setSelectedClub("");
         setSelectedCountry("");
         setCountryQuery("");
@@ -120,6 +115,7 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         setOpen(false);
       }}
     >
+      {/* Picking a suggestion empties its search box, so the picks show here until submitted. */}
       {(selectedCountry || selectedClub) && (
         <div className="flex flex-wrap gap-2">
           {selectedCountry && (
@@ -144,6 +140,7 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         onChange={(event) => setCountryQuery(event.target.value)}
         suggestions={shownCountries}
         failed={countriesFailed && countryTerm !== ""}
+        loading={countryTerm !== "" && countries === null && !countriesFailed}
         selected={selectedCountry}
         onPick={(code) => {
           setSelectedCountry(code);
@@ -158,6 +155,7 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         onChange={(event) => clubSearch.change(event.target.value)}
         suggestions={clubSearch.suggestions}
         failed={clubSearch.failed}
+        loading={clubSearch.loading}
         selected={selectedClub}
         onPick={(name) => {
           setSelectedClub(name);
@@ -166,19 +164,18 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         noun="clubs"
       />
 
-      <ChipGroup label="Distance" value={distance} onValueChange={setDistance}>
-        {distances.map((value) => (
-          <ToggleGroup.Item key={value} value={value} className={optionClassName}>
-            {value}
-          </ToggleGroup.Item>
-        ))}
-      </ChipGroup>
+      <div className="flex flex-col gap-2">
+        <p className="text-sm text-obsidian">Distance</p>
+        <div className="px-5 py-2">
+          <Slider aria-label="Distance" unit="mi" max={maxDistance} defaultValue={[maxDistance / 2]} />
+        </div>
+      </div>
 
       <ChipGroup label="Tournament Status" value={status} onValueChange={setStatus}>
         {statusOrder.map((value) => (
-          <ToggleGroup.Item key={value} value={value} className={optionClassName}>
+          <SegmentedButtonItem key={value} value={value} className={cn(chipClassName, "flex-1")}>
             {statusLabels[value]}
-          </ToggleGroup.Item>
+          </SegmentedButtonItem>
         ))}
       </ChipGroup>
     </FilterSheetDialog>
@@ -195,13 +192,13 @@ interface ChipGroupProps {
 function ChipGroup({ label, value, onValueChange, children }: ChipGroupProps) {
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm font-medium text-obsidian">{label}</p>
+      <p className="text-sm text-obsidian">{label}</p>
       <SegmentedButton
         type="single"
         aria-label={label}
         value={value}
         onValueChange={onValueChange}
-        className="flex gap-2 overflow-visible rounded-none border-0 *:flex-1"
+        className="flex gap-3 overflow-visible rounded-none border-0 shadow-none"
       >
         {children}
       </SegmentedButton>

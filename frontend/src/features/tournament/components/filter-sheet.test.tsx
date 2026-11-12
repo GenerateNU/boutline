@@ -75,6 +75,20 @@ describe("FilterSheet", () => {
     ]);
   });
 
+  it("shows a spinner for clubs and countries while each search loads", async () => {
+    jest.useFakeTimers();
+    apiRequestMock.mockReturnValue(new Promise(() => {}));
+    await openSheet();
+
+    typeInto("Country", "fr");
+    typeInto("Club", "sal");
+    await act(async () => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(screen.getAllByRole("status")).toHaveLength(2);
+  });
+
   it("sets club and country params on submit", async () => {
     jest.useFakeTimers();
     await openSheet();

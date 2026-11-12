@@ -148,7 +148,7 @@ how to test it.
   through the real app: routing, OpenAPI security and the auth middleware, plus
   DB-backed login, search and list-filter tests. Those skip without Postgres;
   `REQUIRE_DB=1` makes them fail instead, as CI does.
-- **Frontend:** Jest with Testing Library, 31 test files. They cover the proxy,
+- **Frontend:** Jest with Testing Library, 58 test files. They cover the proxy,
   `apiRequest`, the API services, auth actions, the search and filter components,
   pagination, pinning and the referee screen. No browser end-to-end tests yet.
 
@@ -269,7 +269,7 @@ chapter 11.
 A pool stage is an event's round-robin round. A pool is one group of fencers in it,
 each with a referee.
 
-- `pool_stages`: `event_id`, `max_competitor_per_pool` (≥ 2), `status`,
+- `pool_stages`: `event_id`, `max_competitor_per_pool` (≥ 4), `status`,
   `start_time`. `pools`: `pool_stage_id`, `referee_id`, `number`, `strip`,
   `start_time` (scheduled), `started_at`, `completed_at` (§11.1). `bouts.pool_id`
   links a pool's bouts to it.
@@ -279,13 +279,16 @@ each with a referee.
     one pool.
   - `POST /pool-stages/{id}/end`: `active → ended`, and only when every pool has
     completed.
-- Pool routes: CRUD (`POST` needs a `number`, and a duplicate in the stage is a 409;
-  `PATCH` changes the referee, number, strip and start time, and the pool's
-  upcoming bouts follow (§11.1); delete is a 409 when the pool has bouts), plus:
+- Pool routes: CRUD (`POST` creates a batch of pools with their bouts, §11.2, and
+  a duplicate `number` in the stage is a 409; `PATCH` changes the referee, number,
+  strip and start time, and the pool's upcoming bouts follow (§11.1); delete is a
+  409 when the pool has bouts), plus:
   - `POST /pools/{id}/start`: needs an assigned referee and an `active` stage;
     writes `started_at`.
   - `POST /pools/{id}/end`: needs every bout in the pool ended; writes
     `completed_at`.
+- Pool sheet routes (§11.3): `GET /pool-sheets` (by `event_id`, `ids` or both,
+  paginated) and `GET /pool-sheets/{id}`, read-only and public.
 - `poolstage.GenerateSeed` already implements pool seeding (§11.2), with tests, but
   no route calls it.
 
@@ -429,8 +432,15 @@ from the venue floor.
 
 **Status:** Completed.
 
-- **Global nav** (every page): a "Boutline" header opens a drawer with Admin Login,
-  Find Private Tournament, Search Tournaments, and Settings (inert).
+- **Global nav** (every page): an obsidian bar with the slanted blue plate and the
+  BOUTLINE wordmark. The menu slides a light sidebar in from the left (no motion
+  with reduced motion on) with Admin Login, Search Tournaments, Find Private
+  Tournament, and Settings (inert); the current route's item is highlighted. An X
+  at the sidebar's top left closes it.
+- **Tabs** (tournament and event pages): each tab has its own URL, but switching
+  tabs replaces the history entry, so the browser's Back button leaves the page
+  rather than stepping back through tabs. The exception is the active tab clicked
+  from a page nested under it (an event's Events tab), which adds an entry.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
 - **`/`**: quick links to login, tournaments and pinned items, then a showcase of
@@ -445,9 +455,13 @@ from the venue floor.
   Active / Ended), empty states, and Previous/Next pagination, 20 per page.
 - **Search:** a plain GET form that works without JS; with JS it updates `?q=`
   after a 300 ms debounce.
-- **Dates:** a week strip of four days with paging and a day toggle, or a calendar
-  view with month and year steppers. Both filter by `start_time`.
-- **Filter sheet:** Status, Club and Country work; Distance is inert, since
+- **Dates:** five day tabs in a dark row under the global nav, with paging and a
+  day toggle. The icon beside the title toggles a month calendar (with month and
+  year steppers) open above the search bar, on the same screen. Both filter by
+  `start_time`.
+- **Active filters:** each applied Status, Club or Country filter shows as a pill
+  under the search bar; its × removes just that filter.
+- **Filter sheet:** Status, Club and Country work; the Distance slider is inert, since
   tournaments have no coordinates (#122). Club suggests names from `GET /clubs` and
   sets `?club=`; Country offers only countries that have tournaments, from
   `GET /countries`, and sets `?country=` to the code. Suggestions appear only while
@@ -481,7 +495,8 @@ Tabs: Overview · Fencers · Clubs · Events.
 
 **Status:** Partial.
 
-Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers.
+Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers. These
+replace the tournament's tabs rather than stacking under them.
 
 - **Fencers** (Completed): search, pagination, and a filter sheet with Fencer (sets
   `?q=`) and Club (sets `?team=`) searches, each picked from a dropdown of matches. It lists every fencer in the tournament, since
@@ -953,8 +968,8 @@ generates the DE once pools end.
 
 ## 11. Pools
 
-**Status:** Partial. Seeding and the manual pool and stage transitions are built;
-generation, results and the screens are planned.
+**Status:** Partial. Seeding, the manual pool and stage transitions and the pool
+sheet are built; generation, stage results and the screens are planned.
 
 **What it is:** the first round of an event. Fencers are split into pools of about
 six or seven, equally strong and with clubmates apart, and everyone in a pool
@@ -967,9 +982,8 @@ ranking seeds the tableau.
 
 ### 11.1 Pool data
 
-**Status:** Partial. The columns are built, and so is copying from the pool: on
-`POST /bouts` and on pool edits, both under the pool stage lock. Pool create
-(§11.2) will copy the same way.
+**Status:** Completed. Pool create (§11.2), `POST /bouts` and pool edits all copy
+from the pool under the pool stage lock.
 
 - `pools.number` (≥ 1, unique per pool stage) labels the pool, and `pools.strip`
   is its strip assignment.
@@ -993,32 +1007,67 @@ Generation is three steps, all admin only and only while the pool stage is
 Creating pools creates bouts, which requires an `active` tournament (§2.8), so
 pools are generated after the tournament starts.
 
-1. **Propose** (seeding Completed, route Planned):
-   `POST /pool-stages/{id}/proposed-pools` takes the event's checked-in fencers (an
-   optional `competitor_ids` overrides the list, and every ID must belong to the
-   event). It returns pools without saving them. `poolstage.GenerateSeed` already
+1. **Propose** (Partial): `POST /pool-stages/{id}/proposed-pools` takes
+   `{competitor_ids}` (4 to 1,000, 422 otherwise) and returns
+   `{pools: [{number, fencers: [{competitor_id, first_name, last_name, rating,
+   team}]}]}` without saving anything, each pool's fencers in seed order. The
+   stage must exist (404), be `upcoming` and have no pools yet (409); existing
+   pools are changed by re-seating. Every competitor must exist
+   and be entered in the stage's event, and none may be listed twice (400), so
+   any proposal can be sent to Create as is. Pools are capped at the smaller of
+   `max_competitor_per_pool` and 10, Create's limit. `poolstage.GenerateSeed`
    does the seeding:
    - Rank by rating, then by rating year (more recent first), with a random draw
      between equals.
    - Make the fewest pools of at most `max_competitor_per_pool`, with sizes as
-     equal as possible (e.g. 20 fencers, max 7: pools of 7-7-6).
+     equal as possible (e.g. 20 fencers, max 7: pools of 7-7-6). A field that
+     cannot fill pools of 4 up to that maximum (e.g. 7 fencers, max 6), or needs
+     more than the 100 pools Create takes at once, is a 400, since Create would
+     reject the pools.
    - Deal the ranking out in a snake (1→A, 2→B, 3→C, 4→C, 5→B, …).
    - Keep clubmates apart, as FIE o.68.2 keeps compatriots apart. Each slot takes
      the best remaining seed with no clubmate in that pool. A fencer passed over
      moves down the seed order, across tiers if need be, and is first in line for
      the next slot. A fencer with no clubmate-free pool left keeps their slot.
      Clubs match case-insensitively, and an empty club never clashes.
-   - Fewer than 2 fencers, or a maximum under 2, is a 400.
    - Planned additions: cap `max_competitor_per_pool` at 12, the largest size with a
      standard bout order, and match clubs by the normalised key in §8.4. #153 asks
      for clubmates who do share a pool to fence each other first.
-2. **Create** (Planned): `POST /pools` takes the adjusted pools and creates each one
-   with every round-robin bout. Bouts follow the standard order for the pool's
-   size, so no one fences back-to-back, and use the event's pool touches and time
-   (§8.5).
-3. **Re-seat** (Planned): `PATCH /pools/{id}` with `fencers` replaces a pool's
-   fencers and regenerates its bouts, while none of them has started. Depends on
-   §9.1. A branch (`jleung/pool-reseat`) has a first version.
+   - Still to do: rating years aren't stored, so every fencer counts as year 0
+     and ties within a letter fall to the draw; `competitor_ids` is required
+     rather than defaulting to the event's checked-in fencers; and Propose is
+     open to any signed-in user until roles land (§7.2).
+2. **Create** (Partial): `POST /pools` takes the adjusted pools
+   (`{pools: [{pool_stage_id, number, strip?, start_time?, referee_id?, fencers}],
+   points_to_win, time_limit_seconds}`, all in one stage) and creates each one
+   with every round-robin bout, under the stage lock below. It needs an active
+   tournament. Fencers take grid positions in the order each pool lists them,
+   which Propose returns in seed order. Bouts follow the standard order for the
+   pool's size, which spreads each fencer's bouts out. A pool needs 4 to 10
+   fencers (400 otherwise): neither the FIE nor USA Fencing allows pools of 2 or
+   3, so they have no standard order. Every fencer must be
+   entered in the stage's event (400) and not already in one of the stage's
+   pools (409). Still to do: bouts take touches and time from the request
+   (default 5 and 180) rather than the event's (§8.5), pools are capped at 10
+   fencers rather than 12, and create is open to any signed-in user until roles
+   land (§7.2).
+3. **Re-seat** (Partial): `PATCH /pools/{id}` with `fencers` (4 to 10, 422
+   otherwise) replaces a pool's fencers and regenerates its bouts in one
+   transaction, under the stage lock below. Only an admin of the pool's
+   tournament may re-seat it (403, from their `tournament_users` role). Fencers
+   are seated in the order listed, as in create. The new bouts keep the old
+   bouts' `points_to_win` and `time_limit_seconds` (a pool whose bouts disagree
+   on them is refused with a 409 rather than silently changed), and take any
+   `strip`, `referee_id` or `number` change in the same patch. It needs an
+   active tournament and an upcoming stage (409). It refuses a pool that has
+   started or has a bout that isn't upcoming (409), so nothing fenced is lost.
+   The fencer checks match create: 4 to min(stage maximum, 10) fencers, none
+   listed twice, all entered in the stage's event (400), and none in another of
+   the stage's pools (409); fencers already in this pool may stay. Moving a
+   fencer is two patches: take them out of one pool, then add them to the
+   other. Still to do: an upcoming bout can still hold touches until §9.1
+   lands, and re-seating such a pool is refused with a 409 rather than
+   discarding them.
 
 Create and re-seat lock the pool stage row (`SELECT … FOR UPDATE`) and run every
 check inside that transaction. Without the lock, two requests can seat the same
@@ -1026,11 +1075,26 @@ fencer in two pools, or re-seat a pool that has just started.
 
 ### 11.3 Pool results
 
-**Status:** Planned.
+**Status:** Partial. The pool sheet is built; the stage results endpoint is
+planned.
 
-`GET /pool-stages/{id}/results` returns each pool's grid and standings plus the
-overall ranking, computed from ended bouts. It is also the read the Pools tab
-uses, so there is no separate pool-board resource.
+Two reads share one standings function (`pool/standings.go`):
+
+- **Pool sheet** (built): `GET /pool-sheets` and `GET /pool-sheets/{id}` return,
+  per pool, its number, strip and status, its fencers with their standings, and
+  every bout in slot order with each side's score. This is what the Pools tab and
+  the pool screen read (§11.6). The list takes `event_id`, `ids` (up to 100 pools,
+  which may span events, for pinned pools, §6), or both, and is paginated.
+  - It is a read-only view over `pools`, `bouts`, `scorings` and `competitors`,
+    not a stored resource. It lives in the pool feature but reads those tables
+    with its own SQL, because `bout` imports `pool` and `scoring` imports `bout`.
+  - Still to do: fencers come from the pool's bouts and are positioned by
+    registration order, which can differ from the order create seats them in
+    (§11.2). Until `bouts.winner_id` exists (§9.2), the higher score wins, so a
+    priority win at a tied score shows no winner.
+- **Stage results** (planned): `GET /pool-stages/{id}/results` returns the
+  stage's overall ranking, computed from ended bouts, which seeds the DE. Each
+  pool's grid comes from the pool sheet.
 
 | Column | Meaning |
 | --- | --- |
@@ -1487,7 +1551,9 @@ No Tailwind palette colors. The tournament status badge breaks this today
 touched.
 
 ### C.3 Type
-Geist Sans; Geist Mono for aligned numbers. Body and controls `text-sm`, metadata
+Geist Sans; Geist Mono for aligned numbers. Hi-fi screens (global nav, tournament
+browser, filter sheet) use Manrope (`font-manrope`), and the BOUTLINE wordmark uses
+Special Gothic Expanded One (`font-wordmark`). Body and controls `text-sm`, metadata
 `text-xs text-muted-foreground`, at most `font-medium`. Sizes from `text-2xl` up are
 reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 
@@ -1497,7 +1563,11 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   `border-foreground`, no shadows, except floating surfaces (select menu, dropdown,
   date field popover, upload dialog, modal, filter sheet, toast) which use `shadow-md`.
 - Focus `focus-visible:ring-2 ring-ring`; hover `bg-muted`; disabled `opacity-50`.
-- Icons from `lucide-react` at `size-4`, `aria-hidden` when decorative.
+- Icons are Material's Outlined set from `@mui/icons-material`, imported by path
+  (`@mui/icons-material/SearchOutlined`), at `size-4`, `aria-hidden` when
+  decorative. A filled glyph marks only a set state, like a pinned item.
+  `globals.css` puts MUI's `mui` layer before `utilities` so Tailwind sizes and
+  colors win.
 - Referee touch targets are large (`h-32`), because they are pressed under time
   pressure.
 
@@ -1508,13 +1578,27 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   tag), label, button, segmented button, search bar, dropdown, text field,
   select, date field, checkbox, radio, toggle, slider, calendar,
   dropzone and upload dialog, modal, filter sheet, pagination, toast, tooltip,
-  and progress indicators.
+  progress indicators, and a loading spinner.
 - Form fields (text field, select, date field) share one hi-fi frame: a `text-xs`
   label above a `rounded-md border-outline` box that turns `border-blue` with a
   `ring-blue-lighter` halo on focus or open, `border-red-dark` when `aria-invalid`,
   and `bg-disabled` when disabled. Select is Radix Select; the date field opens the
   calendar in a Radix Popover.
-- Overlays: Modal is a `rounded-xl p-4` card with a title and close (X) header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a filled or `destructive` action). The filter sheet is a bottom sheet whose sections are a label above a `FilterSearchField` (a SearchBar whose suggestions open in a `Dropdown` of `DropdownOption` rows) or a row of chip-styled options (`chipVariants({ variant: "option" })`), with a full-width Clear All (`blue-lightest`) and a filled submit. The toast is a single obsidian row with white `text-sm`, a leading icon, an `accent-green` action, and no close button.
+- Overlays: Modal is a `rounded-3xl p-5` card with an `text-xl` title and close (X)
+  header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a
+  filled or `destructive` action). The filter sheet is a `rounded-t-3xl` bottom sheet
+  whose search sections are a label above a `FilterSearchField` whose suggestions show
+  in a `Dropdown` of `DropdownOption` rows while typing; picked values show as
+  removable tags at the top until submitted. Other sections are a Distance slider and
+  rows of outline chips, then a full-width Clear All and a filled submit. The toast is
+  a single obsidian row with white `text-sm`, a leading icon, an `accent-green`
+  action, and no close button.
+- The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and `navigation-item`.
+  `global-nav` renders `navbar` as its header. `navigation-bar` is the obsidian row of
+  `navigation-item` tabs, and `tab-nav` renders it with the active tab taken from the
+  route. The logo takes its tone from the text colour (`text-white` or `text-blue`).
+- Fetched content shows `Loading` until it arrives: a route's `loading.tsx` sits
+  under its tab bar, and client fetches render it in place of their first result.
 - Many are only used by the `/` showcase so far.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.

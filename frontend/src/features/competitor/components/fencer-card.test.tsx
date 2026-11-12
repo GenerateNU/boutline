@@ -19,10 +19,10 @@ describe("FencerCard", () => {
       "/tournaments/t1/events/e1/fencers/c-1",
     );
     expect(screen.getByText("Yan Wang")).toHaveClass("uppercase");
-    expect(screen.getByText(`- ${wantClub}`, { exact: false })).toHaveTextContent(
-      `- ${wantClub}`,
+    expect(screen.getByText(`· ${wantClub}`, { exact: false })).toHaveTextContent(
+      `· ${wantClub}`,
     );
-    expect(screen.getByText(rating)).toHaveClass("bg-foreground", "text-background");
+    expect(screen.getByText(rating)).toHaveClass("bg-blue-lightest", "text-blue");
     expect(screen.getByRole("img")).toBeInTheDocument();
   });
 });

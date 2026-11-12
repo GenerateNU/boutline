@@ -3,23 +3,21 @@
 import Link from "next/link";
 import { Toast as ToastPrimitive } from "radix-ui";
 import { Suspense, useRef, useState } from "react";
-import {
-  Check,
-  CircleUserRound,
-  CloudUpload,
-  Ellipsis,
-  EllipsisVertical,
-  Globe,
-  House,
-  Pin,
-  Reply,
-  Settings,
-  Shapes,
-  Swords,
-  UserRound,
-  UsersRound,
-  X,
-} from "lucide-react";
+import CheckOutlined from "@mui/icons-material/CheckOutlined";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
+import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
+import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
+import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
+import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
+import PersonOutlined from "@mui/icons-material/PersonOutlined";
+import PublicOutlined from "@mui/icons-material/PublicOutlined";
+import CategoryOutlined from "@mui/icons-material/CategoryOutlined";
+import HomeOutlined from "@mui/icons-material/HomeOutlined";
+import MoreHorizOutlined from "@mui/icons-material/MoreHorizOutlined";
+import MoreVertOutlined from "@mui/icons-material/MoreVertOutlined";
+import ReplyOutlined from "@mui/icons-material/ReplyOutlined";
+import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
+import SportsMartialArtsOutlined from "@mui/icons-material/SportsMartialArtsOutlined";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { BackButton } from "@/components/primitives/back-button";
@@ -44,6 +42,7 @@ import { List, ListItem } from "@/components/primitives/list";
 import { Menu, MenuItem } from "@/components/primitives/menu";
 import { CircularProgress } from "@/components/primitives/circular-progress";
 import { LinearProgress } from "@/components/primitives/linear-progress";
+import { Loading } from "@/components/primitives/loading";
 import { PinButton } from "@/components/primitives/pin-button";
 import { Radio, RadioItem } from "@/components/primitives/radio";
 import { RatingBadge } from "@/components/primitives/rating-badge";
@@ -75,6 +74,19 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/primitives/tooltip";
+import { EventListCard } from "@/app/tournaments/[tournamentId]/_components/event-list-card";
+import { EventRow } from "@/app/tournaments/[tournamentId]/_components/event-row";
+import { ClubCard } from "@/features/competitor/components/club-card";
+import { FencerCard } from "@/features/competitor/components/fencer-card";
+import { EventCard } from "@/features/event/components/event-card";
+import type { TournamentEvent } from "@/features/event/types/event";
+import { RefereeCard } from "@/features/referee/components/referee-card";
+import { RefereeRow } from "@/features/referee/components/referee-row";
+import { CreateTournamentCard } from "@/features/tournament/components/create-tournament-card";
+import { TournamentCard } from "@/features/tournament/components/tournament-card";
+import { TournamentInfoCard } from "@/features/tournament/components/tournament-info-card";
+import { TournamentResultsCard } from "@/features/tournament/components/tournament-results-card";
+import type { Tournament } from "@/features/tournament/types/tournament";
 import { ProfileTopAppBar } from "@/components/primitives/profile-top-app-bar";
 import { SubTopAppBar } from "@/components/primitives/sub-top-app-bar";
 
@@ -85,6 +97,8 @@ import { NavigationItem } from "@/components/primitives/navigation/navigation-it
 import { PrivateTournamentDialog } from "@/features/tournament/components/private-tournament-dialog";
 import { FilterSheet } from "@/features/tournament/components/filter-sheet";
 import { WeekStrip } from "@/features/tournament/components/week-strip";
+import { Logo } from "@/components/primitives/logo";
+import { Navbar } from "@/components/primitives/navigation/navbar";
 
 const buttonVariantNames = ["filled", "outline", "tonal", "text"] as const;
 const buttonSizes = ["sm", "default", "lg"] as const;
@@ -97,10 +111,64 @@ const hoverClasses: Record<(typeof buttonVariantNames)[number], string> = {
   text: "bg-blue-lighter",
 };
 
-const barItems = Array.from({ length: 5 }, (_, index) => ({
-  id: `bar-${index}`,
-  label: "Label",
-  icon: <Shapes />,
+const demoTournament: Tournament = {
+  id: "demo",
+  name: "Northeastern Open",
+  visibility: "public",
+  code: "DEMO01",
+  status: "active",
+  created_by: "demo",
+  start_time: "2026-10-19T08:00:00Z",
+  city: "Oakland",
+  country: "US",
+  started_at: null,
+  completed_at: null,
+  created_at: "2026-10-06T00:00:00Z",
+  updated_at: "2026-10-06T00:00:00Z",
+};
+const demoResultsTournament: Tournament = {
+  ...demoTournament,
+  name: "Generate Fencing Open",
+  status: "ended",
+  city: "Boston",
+};
+
+const demoEvents: TournamentEvent[] = [
+  ["Y-12 Men's Sabre", "08:00"],
+  ["Cadet Men's Épée", "08:00"],
+  ["Junior Women's Foil", "10:00"],
+  ["Cadet Women's Épée", "10:00"],
+].map(([name, time], index) => ({
+  id: `demo-${index}`,
+  tournament_id: "demo",
+  format: "pool_then_direct_elimination",
+  name,
+  status: "active",
+  start_time: `2026-10-19T${time}:00Z`,
+  started_at: null,
+  completed_at: null,
+  created_at: "2026-10-06T00:00:00Z",
+  updated_at: "2026-10-06T00:00:00Z",
+}));
+
+const demoReferees = [
+  { id: "1", name: "Yan Wang", occupied: true, pool: "Pool 1" },
+  { id: "2", name: "Yan Wang", occupied: false, pool: "Pool 1" },
+];
+
+const demoFencer = {
+  id: "demo",
+  firstName: "Annika",
+  lastName: "Kim",
+  rating: "A26",
+  team: "Boston Blade Club",
+};
+const demoClub = { name: "Boston Blade Club", competitorCount: 12 };
+
+const barItems = ["Overview", "Fencers", "Clubs", "Events"].map((label) => ({
+  label,
+  href: "#",
+  active: label === "Fencers",
 }));
 
 const dropdownOptions = ["Fencer", "Country", "Club"];
@@ -108,11 +176,11 @@ const dropdownOptions = ["Fencer", "Country", "Club"];
 const drawerItems = Array.from({ length: 7 }, (_, index) => ({
   id: `drawer-${index}`,
   label: "Label",
-  icon: <Shapes />,
+  icon: <CategoryOutlined />,
   badge: "100+",
 }));
 
-const drawerFooter = [{ id: "settings", label: "Settings", icon: <Settings /> }];
+const drawerFooter = [{ id: "settings", label: "Settings", icon: <SettingsOutlined /> }];
 function DialogAvatar() {
   return (
     <Avatar className="size-8">
@@ -147,17 +215,17 @@ function DialogList() {
 const searchSamples = [
   {
     title: "Clubs",
-    icon: <UsersRound aria-hidden />,
+    icon: <GroupsOutlined aria-hidden />,
     rows: ["Northeastern Fencing Club", "NYAC Fencing", "North Shore Fencing", "Allez Fencing"],
   },
   {
     title: "Countries",
-    icon: <Globe aria-hidden />,
+    icon: <PublicOutlined aria-hidden />,
     rows: ["Netherlands", "New Zealand", "Norway", "United States of America"],
   },
   {
     title: "Fencers",
-    icon: <UserRound aria-hidden />,
+    icon: <PersonOutlined aria-hidden />,
     rows: ["Nathan Lee", "Nadia Okafor", "Noah Park", "Eric Kitagawa"],
   },
 ];
@@ -265,9 +333,9 @@ function UploadDialogDemo() {
 const undo = { label: "Undo", altText: "Undo" };
 
 const sampleToasts = [
-  { description: "Pins saved", icon: <Check className="text-accent-green" />, action: undo },
-  { description: "Pinned Pool 1 · Strip 3", icon: <Pin className="text-blue-light" />, action: undo },
-  { description: "Code not found", icon: <X className="text-red-dark" />, action: undo },
+  { description: "Pins saved", icon: <CheckOutlined className="text-accent-green" />, action: undo },
+  { description: "Pinned Pool 1 · Strip 3", icon: <PushPinOutlined className="text-blue-light" />, action: undo },
+  { description: "Code not found", icon: <CloseOutlined className="text-red-dark" />, action: undo },
 ];
 
 // Keeps the sample toasts open in the page instead of popping them up at the
@@ -406,10 +474,10 @@ export default function Home() {
           <PinButton aria-label="Pin" variant="obsidian" />
           <PinButton aria-label="Pin" variant="primary" />
           <PinButton aria-label="Home" variant="primary">
-            <House aria-hidden />
+            <HomeOutlined aria-hidden />
           </PinButton>
           <PinButton aria-label="Back" variant="primary">
-            <Reply aria-hidden />
+            <ReplyOutlined aria-hidden />
           </PinButton>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -460,7 +528,7 @@ export default function Home() {
 
       <Section title="Tag">
         <div className="flex flex-wrap items-center gap-3">
-          <Tag icon={<Swords aria-hidden />}>Specialty: Foil</Tag>
+          <Tag icon={<SportsMartialArtsOutlined aria-hidden />}>Specialty: Foil</Tag>
         </div>
       </Section>
 
@@ -481,6 +549,37 @@ export default function Home() {
           <Stat value="1" label="Pool" />
           <Stat value="3" label="Strip" />
         </StatRow>
+      </Section>
+
+      <Section title="Cards">
+        <div className="contents" onClickCapture={(event) => event.preventDefault()}>
+          <TournamentCard tournament={demoTournament} />
+          <TournamentCard tournament={{ ...demoTournament, status: "pending" }} admin />
+          <EventCard event={{ ...demoEvents[0], name: "U15 Mixed Épée", status: "ended" }} competitorCount={5} />
+          <TournamentResultsCard tournament={demoResultsTournament} eventCount={12} resultsHref="/" />
+          <CreateTournamentCard />
+          <TournamentInfoCard name="Boston Championships" dates="October 5 – October 7, 2026" />
+          <EventRow event={demoEvents[0]} />
+          <RefereeCard referees={demoReferees} />
+          <EventListCard title="Ongoing Events" events={demoEvents} emptyMessage="" />
+          <EventListCard
+            title="Upcoming Events"
+            events={demoEvents.map((event) => ({ ...event, status: "upcoming" }))}
+            emptyMessage=""
+          />
+          <EventListCard
+            title="Completed Events"
+            events={demoEvents.map((event) => ({ ...event, status: "ended" }))}
+            emptyMessage=""
+          />
+          <FencerCard competitor={demoFencer} href="/" />
+          <FencerCard competitor={demoFencer} pinned={false} />
+          <FencerCard competitor={demoFencer} pinned />
+          <ClubCard team={demoClub} href="/" />
+          <ClubCard team={demoClub} pinned={false} />
+          <ClubCard team={demoClub} pinned />
+          <RefereeRow name="Yan Wang" occupied pool="Pool 1" />
+        </div>
       </Section>
 
       <Section title="Checkbox">
@@ -519,8 +618,8 @@ export default function Home() {
 
       <Section title="Label">
         <div className="flex flex-col gap-1">
-          <Label icon={<CircleUserRound aria-hidden />}>Eric Kitagawa</Label>
-          <Label tone="subtle" icon={<Globe aria-hidden />}>
+          <Label icon={<AccountCircleOutlined aria-hidden />}>Eric Kitagawa</Label>
+          <Label tone="subtle" icon={<PublicOutlined aria-hidden />}>
             United States of America
           </Label>
         </div>
@@ -594,19 +693,30 @@ export default function Home() {
       </Section>
 
       <Section title="Navigation item">
-        <div className="flex items-center gap-4">
-          <NavigationItem icon={<Shapes />} label="Label" />
-          <NavigationItem icon={<Shapes />} aria-label="Label" />
-          <NavigationItem icon={<Shapes />} label="Label" selected />
-          <NavigationItem icon={<Shapes />} aria-label="Label" selected />
+        <div className="flex rounded-xl bg-obsidian">
+          <NavigationItem href="#" label="Fencers" />
+          <NavigationItem href="#" label="Fencers" active />
         </div>
+      </Section>
+
+      <Section title="Logo">
+        <div className="flex flex-col gap-4">
+          <Logo />
+          <div className="bg-blue p-4">
+            <Logo className="text-white" />
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Navbar">
+        <Navbar />
       </Section>
 
       <Section title="Navigation drawer item">
         <div className="flex flex-col gap-2">
-          <NavigationDrawerItem icon={<Shapes />} label="Label" badge="100+" />
+          <NavigationDrawerItem icon={<CategoryOutlined />} label="Label" badge="100+" />
           <NavigationDrawerItem
-            icon={<Shapes />}
+            icon={<CategoryOutlined />}
             label="Label"
             badge="100+"
             selected
@@ -615,7 +725,8 @@ export default function Home() {
       </Section>
 
       <Section title="Navigation bar">
-        <NavigationBar items={barItems} />
+        <NavigationBar aria-label="Sections" items={barItems.slice(0, 2)} />
+        <NavigationBar aria-label="Sections" items={barItems} />
       </Section>
 
       <Section title="Navigation drawer">
@@ -639,10 +750,10 @@ export default function Home() {
           actions={
             <>
               <Button variant="text" size="icon" aria-label="Action">
-                <Shapes />
+                <CategoryOutlined />
               </Button>
               <Button variant="text" size="icon" aria-label="More options">
-                <EllipsisVertical />
+                <MoreVertOutlined />
               </Button>
             </>
           }
@@ -655,7 +766,7 @@ export default function Home() {
       <Section title="Menu">
         <Menu>
           {Array.from({ length: 10 }, (_, index) => (
-            <MenuItem key={index} icon={<Ellipsis aria-hidden />}>
+            <MenuItem key={index} icon={<MoreHorizOutlined aria-hidden />}>
               Dialog title
             </MenuItem>
           ))}
@@ -687,6 +798,10 @@ export default function Home() {
         </div>
       </Section>
 
+      <Section title="Loading">
+        <Loading />
+      </Section>
+
       <Section title="Card">
         <div className="flex flex-col gap-4">
           <Card className="w-64">
@@ -701,7 +816,7 @@ export default function Home() {
                   aria-label="More"
                   className="bg-background"
                 >
-                  <Ellipsis />
+                  <MoreHorizOutlined />
                 </Button>
               </CardAction>
             </CardHeader>
@@ -713,7 +828,7 @@ export default function Home() {
               <CardDescription>Subhead</CardDescription>
               <CardAction>
                 <Button variant="outline" size="icon" aria-label="More">
-                  <Ellipsis />
+                  <MoreHorizOutlined />
                 </Button>
               </CardAction>
             </CardHeader>
@@ -748,7 +863,7 @@ export default function Home() {
             <Tabs key={variant} defaultValue="one">
               <TabsList variant={variant}>
                 {["one", "two", "three"].map((value) => (
-                  <TabsTrigger key={value} value={value} icon={<Ellipsis />}>
+                  <TabsTrigger key={value} value={value} icon={<MoreHorizOutlined />}>
                     Tab
                   </TabsTrigger>
                 ))}
@@ -795,7 +910,7 @@ export default function Home() {
         <Dropzone accept={uploadAccept} className="gap-3 px-6 py-8">
           {(open) => (
             <>
-              <CloudUpload aria-hidden className="size-8 text-neutral-secondary" />
+              <CloudUploadOutlined aria-hidden className="size-8 text-neutral-secondary" />
               <p className="text-base font-semibold text-obsidian">Already have file?</p>
               <Button type="button" className="w-full" onClick={open}>
                 Upload
