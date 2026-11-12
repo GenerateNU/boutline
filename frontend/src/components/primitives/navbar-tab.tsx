@@ -12,7 +12,7 @@ function NavbarTab({ label, active = false, className, ...props }: NavbarTabProp
       data-slot="navbar-tab"
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex h-12 flex-1 items-center justify-center rounded-xl px-4 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+        "flex h-12 flex-1 items-center justify-center font-manrope rounded-xl px-4 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
         active ? "text-white" : "text-neutral-muted hover:text-white",
         className,
       )}

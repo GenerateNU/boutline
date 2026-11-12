@@ -4,11 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
-import { CircleUserRound, KeyRound, Menu, Search, Settings } from "lucide-react";
+import { CircleUserRound, KeyRound, Search, Settings } from "lucide-react";
 import { useRef, useState } from "react";
 import { Dialog } from "radix-ui";
 
-import { Button } from "@/components/primitives/button";
+import { Navbar } from "@/components/primitives/navbar";
 import { PrivateTournamentDialog } from "@/features/tournament/components/private-tournament-dialog";
 
 function sidebarItemClassName(selected = false) {
@@ -29,39 +29,7 @@ function GlobalNav() {
   return (
     <>
       <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
-        <header className="relative flex h-10 items-center overflow-hidden bg-obsidian">
-          <Image
-            src="/brand/nav-plate.svg"
-            alt=""
-            width={297}
-            height={57}
-            className="absolute top-1/2 left-0 -translate-y-1/2"
-          />
-          <Image
-            src="/brand/nav-blade.svg"
-            alt=""
-            width={28}
-            height={55}
-            className="absolute top-1/2 left-69.75 -translate-y-1/2"
-          />
-          <Dialog.Trigger asChild>
-            <Button
-              ref={menuButton}
-              variant="text"
-              size="icon"
-              aria-label="Open menu"
-              className="relative ml-2.5 text-white hover:bg-background/10 [&_svg]:size-6"
-            >
-              <Menu />
-            </Button>
-          </Dialog.Trigger>
-          <Link href="/" className="relative ml-2.5 flex items-center gap-2.5">
-            <Image src="/brand/logo-mark.svg" alt="" width={21} height={24} />
-            <span className="font-wordmark text-[17px] tracking-[1.02px] text-white">
-              BOUTLINE
-            </span>
-          </Link>
-        </header>
+        <Navbar menuRef={menuButton} onMenuClick={() => setMenuOpen(true)} />
 
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40" />

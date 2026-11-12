@@ -1,39 +1,51 @@
 import { cn } from "cn";
 import { Menu } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/primitives/button";
-import { Logo } from "@/components/primitives/logo";
 
 interface NavbarProps extends React.ComponentProps<"header"> {
   onMenuClick?: () => void;
+  menuRef?: React.Ref<HTMLButtonElement>;
 }
 
-function Navbar({ onMenuClick, className, ...props }: NavbarProps) {
+function Navbar({ onMenuClick, menuRef, className, ...props }: NavbarProps) {
   return (
     <header
       data-slot="navbar"
-      className={cn(
-        "relative flex h-10 w-full items-center justify-between overflow-hidden bg-obsidian pr-3 shadow-md [--slant:1.1rem]",
-        className,
-      )}
+      className={cn("relative flex h-10 items-center overflow-hidden bg-obsidian", className)}
       {...props}
     >
-      <div className="absolute inset-y-0 left-0 w-3/4 bg-blue [clip-path:polygon(0_0,100%_0,calc(100%-var(--slant))_100%,0_100%)]" />
-      <div className="absolute inset-y-0 left-[calc(75%+0.375rem-var(--slant))] w-[calc(var(--slant)+0.25rem)] bg-accent-green [clip-path:polygon(var(--slant)_0,100%_0,calc(100%-var(--slant))_100%,0_100%)]" />
-      <Link href="/" className="relative ml-5 rounded-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        <Logo className="h-6 text-white" />
-      </Link>
+      <Image
+        src="/brand/nav-plate.svg"
+        alt=""
+        width={297}
+        height={57}
+        className="absolute top-1/2 left-0 -translate-y-1/2"
+      />
+      <Image
+        src="/brand/nav-blade.svg"
+        alt=""
+        width={28}
+        height={55}
+        className="absolute top-1/2 left-69.75 -translate-y-1/2"
+      />
       <Button
+        ref={menuRef}
         type="button"
         variant="text"
         size="icon"
         aria-label="Open menu"
         onClick={onMenuClick}
-        className="relative text-white hover:bg-white/10"
+        className="relative ml-2.5 text-white hover:bg-background/10 [&_svg]:size-6"
       >
-        <Menu aria-hidden className="size-6!" />
+        <Menu aria-hidden />
       </Button>
+      <Link href="/" className="relative ml-2.5 flex items-center gap-2.5">
+        <Image src="/brand/logo-mark.svg" alt="" width={21} height={24} />
+        <span className="font-wordmark text-[17px] tracking-[1.02px] text-white">BOUTLINE</span>
+      </Link>
     </header>
   );
 }

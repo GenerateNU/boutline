@@ -3,10 +3,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { Navbar } from "@/components/primitives/navbar";
 
 describe("Navbar", () => {
-  it("links the logo home", () => {
+  it("links the wordmark home", () => {
     render(<Navbar />);
 
-    expect(screen.getByRole("link", { name: "Boutline" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "BOUTLINE" })).toHaveAttribute("href", "/");
   });
 
   it("calls onMenuClick from the menu button", () => {
