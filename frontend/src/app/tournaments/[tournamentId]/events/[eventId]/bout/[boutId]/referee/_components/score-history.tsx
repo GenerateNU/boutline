@@ -7,14 +7,20 @@ import { HistoryRow } from "../_types/history-row";
 
 interface ScoreHistoryProps {
   rows: HistoryRow[];
+  failed: boolean;
   nameOf: (competitorId: string) => string;
 }
 
-export function ScoreHistory({ rows, nameOf }: ScoreHistoryProps) {
+export function ScoreHistory({ rows, failed, nameOf }: ScoreHistoryProps) {
   return (
     <Section title="Score history">
+      {failed && (
+        <p role="status" className="text-sm text-destructive">
+          Couldn&apos;t load the latest score history.
+        </p>
+      )}
       {rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No touches yet.</p>
+        !failed && <p className="text-sm text-muted-foreground">No touches yet.</p>
       ) : (
         <ol aria-label="Score history" className="flex flex-col divide-y divide-border text-sm">
           {rows.map(({ key, scorerId, recordedAt, scores, revoked }) => (
