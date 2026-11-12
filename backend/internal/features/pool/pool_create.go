@@ -48,13 +48,9 @@ func parsePoolRequest(item PoolCreateItem) (poolRequest, error) {
 		return poolRequest{}, err
 	}
 
-	fencers := make([]uuid.UUID, 0, len(item.Fencers))
-	for _, raw := range item.Fencers {
-		id, err := utils.ParseUUID(raw, "fencers")
-		if err != nil {
-			return poolRequest{}, err
-		}
-		fencers = append(fencers, id)
+	fencers, err := parseFencers(item.Fencers)
+	if err != nil {
+		return poolRequest{}, err
 	}
 
 	return poolRequest{
@@ -67,6 +63,19 @@ func parsePoolRequest(item PoolCreateItem) (poolRequest, error) {
 		},
 		fencers: fencers,
 	}, nil
+}
+
+func parseFencers(raw []string) ([]uuid.UUID, error) {
+	fencers := make([]uuid.UUID, 0, len(raw))
+	for _, value := range raw {
+		id, err := utils.ParseUUID(value, "fencers")
+		if err != nil {
+			return nil, err
+		}
+		fencers = append(fencers, id)
+	}
+
+	return fencers, nil
 }
 
 func checkSharedStage(requests []poolRequest) error {
@@ -112,11 +121,12 @@ func checkFencerCounts(requests []poolRequest, limit int) error {
 }
 
 // checkEntrants checks that every requested competitor exists, is entered in the
-// stage's event, and is not already in one of the stage's pools.
+// stage's event, and is not already in one of the stage's pools other than
+// exceptPoolID (uuid.Nil for none).
 func checkEntrants(
 	ctx context.Context,
 	repo PoolRepository,
-	poolStageID, eventID uuid.UUID,
+	poolStageID, eventID, exceptPoolID uuid.UUID,
 	requests []poolRequest,
 ) error {
 	var requested []uuid.UUID
@@ -124,7 +134,7 @@ func checkEntrants(
 		requested = append(requested, request.fencers...)
 	}
 
-	listed, err := repo.ListPoolEntrants(ctx, poolStageID, requested)
+	listed, err := repo.ListPoolEntrants(ctx, poolStageID, requested, exceptPoolID)
 	if err != nil {
 		return fmt.Errorf("list competitors: %w", err)
 	}

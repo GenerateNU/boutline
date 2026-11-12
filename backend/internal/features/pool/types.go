@@ -109,6 +109,7 @@ type PoolUpdateBody struct {
 	Number    *int       `json:"number,omitempty" minimum:"1"`
 	Strip     *string    `json:"strip,omitempty" maxLength:"200"`
 	StartTime *time.Time `json:"start_time,omitempty" doc:"New scheduled start"`
+	Fencers   []string   `json:"fencers,omitempty" format:"uuid" minItems:"4" maxItems:"10" doc:"Replaces the pool's fencers and regenerates its bouts, seated in the order listed; only before the pool starts and while every bout is upcoming"`
 }
 
 type PoolUpdateInput struct {

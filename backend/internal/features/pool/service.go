@@ -9,6 +9,7 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/poolstage"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -26,11 +27,19 @@ const poolMaxFencers = 10
 const (
 	msgPoolStarted = "this pool has already started"
 	msgPoolEnded   = "this pool has already ended"
+
+	msgPoolFencersLocked = "a pool's fencers can only change before it starts and while every bout is upcoming"
+	msgPoolMixedRules    = "a pool whose bouts have different points_to_win or time_limit_seconds cannot be re-seated"
 )
 
 // PoolStageLookup is the subset of the PoolStageRepository interface needed here.
 type PoolStageLookup interface {
 	GetPoolStageByID(ctx context.Context, id uuid.UUID) (*poolstage.PoolStage, error)
+}
+
+// TournamentMembershipLookup is the subset of the tournament-user repository needed here.
+type TournamentMembershipLookup interface {
+	GetTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) (*tournamentuser.TournamentUser, error)
 }
 
 type PoolService interface {
@@ -44,12 +53,13 @@ type PoolService interface {
 }
 
 type poolService struct {
-	repo       PoolRepository
-	poolStages PoolStageLookup
+	repo        PoolRepository
+	poolStages  PoolStageLookup
+	memberships TournamentMembershipLookup
 }
 
-func NewPoolService(repo PoolRepository, poolStages PoolStageLookup) PoolService {
-	return &poolService{repo: repo, poolStages: poolStages}
+func NewPoolService(repo PoolRepository, poolStages PoolStageLookup, memberships TournamentMembershipLookup) PoolService {
+	return &poolService{repo: repo, poolStages: poolStages, memberships: memberships}
 }
 
 func (s *poolService) CreatePools(ctx context.Context, input *PoolCreateInput) (*PoolCreatedOutput, error) {
@@ -73,7 +83,7 @@ func (s *poolService) CreatePools(ctx context.Context, input *PoolCreateInput) (
 			return err
 		}
 
-		if err := checkEntrants(ctx, repo, stageID, stage.EventID, requests); err != nil {
+		if err := checkEntrants(ctx, repo, stageID, stage.EventID, uuid.Nil, requests); err != nil {
 			return err
 		}
 
@@ -167,6 +177,9 @@ func (s *poolService) UpdatePoolByID(ctx context.Context, input *PoolUpdateInput
 		Number:    input.Body.Number,
 		Strip:     input.Body.Strip,
 		StartTime: input.Body.StartTime,
+	}
+	if input.Body.Fencers != nil {
+		return s.reseatPool(ctx, id, update, input.Body.Fencers)
 	}
 	if len(update.columns()) == 0 {
 		return nil, errs.HumaError(errs.Public("provide at least one field to update", errs.ErrInvalidInput))
