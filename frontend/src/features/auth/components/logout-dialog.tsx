@@ -1,12 +1,12 @@
 "use client";
 
 import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
-import CloseOutlined from "@mui/icons-material/CloseOutlined";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
+import { ModalClose } from "@/components/primitives/modal";
 import { logout } from "@/features/auth/services/auth-actions";
 
 function LogoutDialog() {
@@ -44,16 +44,7 @@ function LogoutDialog() {
         <Dialog.Content className="fixed inset-x-2 top-1/2 z-50 mx-auto flex max-w-87.5 -translate-y-1/2 flex-col gap-4 rounded-[20px] bg-background p-5 font-manrope shadow-lg">
           <div className="flex items-center justify-between">
             <Dialog.Title className="text-xl font-semibold text-obsidian">Log out?</Dialog.Title>
-            <Dialog.Close asChild>
-              <Button
-                variant="text"
-                size="icon"
-                aria-label="Close"
-                className="-m-2 text-obsidian [&_svg]:size-6"
-              >
-                <CloseOutlined />
-              </Button>
-            </Dialog.Close>
+            <ModalClose />
           </div>
           <Dialog.Description className="text-sm text-neutral-secondary">
             You will need to sign in again to manage your tournaments.
