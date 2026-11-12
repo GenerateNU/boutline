@@ -436,6 +436,10 @@ from the venue floor.
   BOUTLINE wordmark. The menu opens a light sidebar with Admin Login, Search
   Tournaments, Find Private Tournament, and Settings (inert); the current route's
   item is highlighted.
+- **Tabs** (tournament and event pages): each tab has its own URL, but switching
+  tabs replaces the history entry, so the browser's Back button leaves the page
+  rather than stepping back through tabs. The exception is the active tab clicked
+  from a page nested under it (an event's Events tab), which adds an entry.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
 - **`/`**: quick links to login, tournaments and pinned items, then a showcase of
@@ -1000,25 +1004,36 @@ Generation is three steps, all admin only and only while the pool stage is
 Creating pools creates bouts, which requires an `active` tournament (§2.8), so
 pools are generated after the tournament starts.
 
-1. **Propose** (seeding Completed, route Planned):
-   `POST /pool-stages/{id}/proposed-pools` takes the event's checked-in fencers (an
-   optional `competitor_ids` overrides the list, and every ID must belong to the
-   event). It returns pools without saving them. `poolstage.GenerateSeed` already
+1. **Propose** (Partial): `POST /pool-stages/{id}/proposed-pools` takes
+   `{competitor_ids}` (4 to 1,000, 422 otherwise) and returns
+   `{pools: [{number, fencers: [{competitor_id, first_name, last_name, rating,
+   team}]}]}` without saving anything, each pool's fencers in seed order. The
+   stage must exist (404), be `upcoming` and have no pools yet (409); existing
+   pools are changed by re-seating. Every competitor must exist
+   and be entered in the stage's event, and none may be listed twice (400), so
+   any proposal can be sent to Create as is. Pools are capped at the smaller of
+   `max_competitor_per_pool` and 10, Create's limit. `poolstage.GenerateSeed`
    does the seeding:
    - Rank by rating, then by rating year (more recent first), with a random draw
      between equals.
    - Make the fewest pools of at most `max_competitor_per_pool`, with sizes as
-     equal as possible (e.g. 20 fencers, max 7: pools of 7-7-6).
+     equal as possible (e.g. 20 fencers, max 7: pools of 7-7-6). A field that
+     cannot fill pools of 4 up to that maximum (e.g. 7 fencers, max 6), or needs
+     more than the 100 pools Create takes at once, is a 400, since Create would
+     reject the pools.
    - Deal the ranking out in a snake (1→A, 2→B, 3→C, 4→C, 5→B, …).
    - Keep clubmates apart, as FIE o.68.2 keeps compatriots apart. Each slot takes
      the best remaining seed with no clubmate in that pool. A fencer passed over
      moves down the seed order, across tiers if need be, and is first in line for
      the next slot. A fencer with no clubmate-free pool left keeps their slot.
      Clubs match case-insensitively, and an empty club never clashes.
-   - Fewer than 2 fencers, or a maximum under 2, is a 400.
    - Planned additions: cap `max_competitor_per_pool` at 12, the largest size with a
      standard bout order, and match clubs by the normalised key in §8.4. #153 asks
      for clubmates who do share a pool to fence each other first.
+   - Still to do: rating years aren't stored, so every fencer counts as year 0
+     and ties within a letter fall to the draw; `competitor_ids` is required
+     rather than defaulting to the event's checked-in fencers; and Propose is
+     open to any signed-in user until roles land (§7.2).
 2. **Create** (Partial): `POST /pools` takes the adjusted pools
    (`{pools: [{pool_stage_id, number, strip?, start_time?, referee_id?, fencers}],
    points_to_win, time_limit_seconds}`, all in one stage) and creates each one
