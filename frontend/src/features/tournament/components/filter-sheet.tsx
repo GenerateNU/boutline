@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { buttonVariants } from "@/components/primitives/button";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
+import { Loading } from "@/components/primitives/loading";
 import {
   SegmentedButton,
   SegmentedButtonItem,
@@ -207,7 +208,7 @@ function CountryOptions({ countries, failed, selectedCountry, onSelectCountry }:
     return <p className="text-sm text-muted-foreground">Couldn’t load countries.</p>;
   }
   if (countries === null) {
-    return null;
+    return <Loading className="py-2" />;
   }
   if (countries.length === 0) {
     return <p className="text-sm text-muted-foreground">No countries match.</p>;

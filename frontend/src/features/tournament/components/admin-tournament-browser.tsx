@@ -1,5 +1,3 @@
-import { format } from "date-fns";
-
 import { Pagination } from "@/components/primitives/pagination";
 import { CreateTournamentCard } from "@/features/tournament/components/create-tournament-card";
 import { StatusTabs } from "@/features/tournament/components/status-tabs";
@@ -18,14 +16,20 @@ interface AdminTournamentBrowserProps {
 
 async function AdminTournamentBrowser({ query }: AdminTournamentBrowserProps) {
   const { offset, status } = parseTournamentFilters(query);
-  const { data, total, limit } = await getTournaments(tournamentPageSize, offset, { status });
+  const { data, total, limit } = await getTournaments(
+    tournamentPageSize,
+    offset,
+    { status },
+  );
 
   return (
     <main className="mx-auto flex w-full max-w-mobile flex-1 flex-col gap-5 px-5 pt-5 pb-6 font-manrope">
       <CreateTournamentCard />
 
       <div className="flex flex-col gap-1.25 pt-1.25">
-        <h1 className="px-1 text-xl font-semibold text-obsidian">Manage Tournaments</h1>
+        <h1 className="px-1 text-xl font-semibold text-obsidian">
+          Manage Tournaments
+        </h1>
         <StatusTabs basePath={basePath} status={status} />
       </div>
 
@@ -36,10 +40,7 @@ async function AdminTournamentBrowser({ query }: AdminTournamentBrowserProps) {
       <ul className="flex flex-col gap-5">
         {data.map((tournament) => (
           <li key={tournament.id}>
-            <TournamentCard
-              tournament={tournament}
-              subtitle={`Created ${format(tournament.created_at, "MMM d, yyyy")}`}
-            />
+            <TournamentCard tournament={tournament} admin />
           </li>
         ))}
       </ul>

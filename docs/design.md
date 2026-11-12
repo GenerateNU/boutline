@@ -269,7 +269,7 @@ chapter 11.
 A pool stage is an event's round-robin round. A pool is one group of fencers in it,
 each with a referee.
 
-- `pool_stages`: `event_id`, `max_competitor_per_pool` (≥ 2), `status`,
+- `pool_stages`: `event_id`, `max_competitor_per_pool` (≥ 4), `status`,
   `start_time`. `pools`: `pool_stage_id`, `referee_id`, `number`, `strip`,
   `start_time` (scheduled), `started_at`, `completed_at` (§11.1). `bouts.pool_id`
   links a pool's bouts to it.
@@ -279,13 +279,16 @@ each with a referee.
     one pool.
   - `POST /pool-stages/{id}/end`: `active → ended`, and only when every pool has
     completed.
-- Pool routes: CRUD (`POST` needs a `number`, and a duplicate in the stage is a 409;
-  `PATCH` changes the referee, number, strip and start time, and the pool's
-  upcoming bouts follow (§11.1); delete is a 409 when the pool has bouts), plus:
+- Pool routes: CRUD (`POST` creates a batch of pools with their bouts, §11.2, and
+  a duplicate `number` in the stage is a 409; `PATCH` changes the referee, number,
+  strip and start time, and the pool's upcoming bouts follow (§11.1); delete is a
+  409 when the pool has bouts), plus:
   - `POST /pools/{id}/start`: needs an assigned referee and an `active` stage;
     writes `started_at`.
   - `POST /pools/{id}/end`: needs every bout in the pool ended; writes
     `completed_at`.
+- Pool sheet routes (§11.3): `GET /pool-sheets` (by `event_id`, `ids` or both,
+  paginated) and `GET /pool-sheets/{id}`, read-only and public.
 - `poolstage.GenerateSeed` already implements pool seeding (§11.2), with tests, but
   no route calls it.
 
@@ -439,6 +442,10 @@ from the venue floor.
   highlighted.
 - **`/settings`**: Profile, Accessibility and Language, then Privacy Policy and
   Help, in two cards. None has a page yet, so the rows are labels only.
+- **Tabs** (tournament and event pages): each tab has its own URL, but switching
+  tabs replaces the history entry, so the browser's Back button leaves the page
+  rather than stepping back through tabs. The exception is the active tab clicked
+  from a page nested under it (an event's Events tab), which adds an entry.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
 - **`/`**: quick links to login, tournaments and pinned items, then a showcase of
@@ -491,7 +498,8 @@ Tabs: Overview · Fencers · Clubs · Events.
 
 **Status:** Partial.
 
-Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers.
+Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers. These
+replace the tournament's tabs rather than stacking under them.
 
 - **Fencers** (Completed): search, pagination, and a club filter sheet whose picker
   searches the tournament's clubs. It lists every fencer in the tournament, since
@@ -964,8 +972,8 @@ generates the DE once pools end.
 
 ## 11. Pools
 
-**Status:** Partial. Seeding and the manual pool and stage transitions are built;
-generation, results and the screens are planned.
+**Status:** Partial. Seeding, the manual pool and stage transitions and the pool
+sheet are built; generation, stage results and the screens are planned.
 
 **What it is:** the first round of an event. Fencers are split into pools of about
 six or seven, equally strong and with clubmates apart, and everyone in a pool
@@ -978,9 +986,8 @@ ranking seeds the tableau.
 
 ### 11.1 Pool data
 
-**Status:** Partial. The columns are built, and so is copying from the pool: on
-`POST /bouts` and on pool edits, both under the pool stage lock. Pool create
-(§11.2) will copy the same way.
+**Status:** Completed. Pool create (§11.2), `POST /bouts` and pool edits all copy
+from the pool under the pool stage lock.
 
 - `pools.number` (≥ 1, unique per pool stage) labels the pool, and `pools.strip`
   is its strip assignment.
@@ -1004,32 +1011,67 @@ Generation is three steps, all admin only and only while the pool stage is
 Creating pools creates bouts, which requires an `active` tournament (§2.8), so
 pools are generated after the tournament starts.
 
-1. **Propose** (seeding Completed, route Planned):
-   `POST /pool-stages/{id}/proposed-pools` takes the event's checked-in fencers (an
-   optional `competitor_ids` overrides the list, and every ID must belong to the
-   event). It returns pools without saving them. `poolstage.GenerateSeed` already
+1. **Propose** (Partial): `POST /pool-stages/{id}/proposed-pools` takes
+   `{competitor_ids}` (4 to 1,000, 422 otherwise) and returns
+   `{pools: [{number, fencers: [{competitor_id, first_name, last_name, rating,
+   team}]}]}` without saving anything, each pool's fencers in seed order. The
+   stage must exist (404), be `upcoming` and have no pools yet (409); existing
+   pools are changed by re-seating. Every competitor must exist
+   and be entered in the stage's event, and none may be listed twice (400), so
+   any proposal can be sent to Create as is. Pools are capped at the smaller of
+   `max_competitor_per_pool` and 10, Create's limit. `poolstage.GenerateSeed`
    does the seeding:
    - Rank by rating, then by rating year (more recent first), with a random draw
      between equals.
    - Make the fewest pools of at most `max_competitor_per_pool`, with sizes as
-     equal as possible (e.g. 20 fencers, max 7: pools of 7-7-6).
+     equal as possible (e.g. 20 fencers, max 7: pools of 7-7-6). A field that
+     cannot fill pools of 4 up to that maximum (e.g. 7 fencers, max 6), or needs
+     more than the 100 pools Create takes at once, is a 400, since Create would
+     reject the pools.
    - Deal the ranking out in a snake (1→A, 2→B, 3→C, 4→C, 5→B, …).
    - Keep clubmates apart, as FIE o.68.2 keeps compatriots apart. Each slot takes
      the best remaining seed with no clubmate in that pool. A fencer passed over
      moves down the seed order, across tiers if need be, and is first in line for
      the next slot. A fencer with no clubmate-free pool left keeps their slot.
      Clubs match case-insensitively, and an empty club never clashes.
-   - Fewer than 2 fencers, or a maximum under 2, is a 400.
    - Planned additions: cap `max_competitor_per_pool` at 12, the largest size with a
      standard bout order, and match clubs by the normalised key in §8.4. #153 asks
      for clubmates who do share a pool to fence each other first.
-2. **Create** (Planned): `POST /pools` takes the adjusted pools and creates each one
-   with every round-robin bout. Bouts follow the standard order for the pool's
-   size, so no one fences back-to-back, and use the event's pool touches and time
-   (§8.5).
-3. **Re-seat** (Planned): `PATCH /pools/{id}` with `fencers` replaces a pool's
-   fencers and regenerates its bouts, while none of them has started. Depends on
-   §9.1. A branch (`jleung/pool-reseat`) has a first version.
+   - Still to do: rating years aren't stored, so every fencer counts as year 0
+     and ties within a letter fall to the draw; `competitor_ids` is required
+     rather than defaulting to the event's checked-in fencers; and Propose is
+     open to any signed-in user until roles land (§7.2).
+2. **Create** (Partial): `POST /pools` takes the adjusted pools
+   (`{pools: [{pool_stage_id, number, strip?, start_time?, referee_id?, fencers}],
+   points_to_win, time_limit_seconds}`, all in one stage) and creates each one
+   with every round-robin bout, under the stage lock below. It needs an active
+   tournament. Fencers take grid positions in the order each pool lists them,
+   which Propose returns in seed order. Bouts follow the standard order for the
+   pool's size, which spreads each fencer's bouts out. A pool needs 4 to 10
+   fencers (400 otherwise): neither the FIE nor USA Fencing allows pools of 2 or
+   3, so they have no standard order. Every fencer must be
+   entered in the stage's event (400) and not already in one of the stage's
+   pools (409). Still to do: bouts take touches and time from the request
+   (default 5 and 180) rather than the event's (§8.5), pools are capped at 10
+   fencers rather than 12, and create is open to any signed-in user until roles
+   land (§7.2).
+3. **Re-seat** (Partial): `PATCH /pools/{id}` with `fencers` (4 to 10, 422
+   otherwise) replaces a pool's fencers and regenerates its bouts in one
+   transaction, under the stage lock below. Only an admin of the pool's
+   tournament may re-seat it (403, from their `tournament_users` role). Fencers
+   are seated in the order listed, as in create. The new bouts keep the old
+   bouts' `points_to_win` and `time_limit_seconds` (a pool whose bouts disagree
+   on them is refused with a 409 rather than silently changed), and take any
+   `strip`, `referee_id` or `number` change in the same patch. It needs an
+   active tournament and an upcoming stage (409). It refuses a pool that has
+   started or has a bout that isn't upcoming (409), so nothing fenced is lost.
+   The fencer checks match create: 4 to min(stage maximum, 10) fencers, none
+   listed twice, all entered in the stage's event (400), and none in another of
+   the stage's pools (409); fencers already in this pool may stay. Moving a
+   fencer is two patches: take them out of one pool, then add them to the
+   other. Still to do: an upcoming bout can still hold touches until §9.1
+   lands, and re-seating such a pool is refused with a 409 rather than
+   discarding them.
 
 Create and re-seat lock the pool stage row (`SELECT … FOR UPDATE`) and run every
 check inside that transaction. Without the lock, two requests can seat the same
@@ -1037,11 +1079,26 @@ fencer in two pools, or re-seat a pool that has just started.
 
 ### 11.3 Pool results
 
-**Status:** Planned.
+**Status:** Partial. The pool sheet is built; the stage results endpoint is
+planned.
 
-`GET /pool-stages/{id}/results` returns each pool's grid and standings plus the
-overall ranking, computed from ended bouts. It is also the read the Pools tab
-uses, so there is no separate pool-board resource.
+Two reads share one standings function (`pool/standings.go`):
+
+- **Pool sheet** (built): `GET /pool-sheets` and `GET /pool-sheets/{id}` return,
+  per pool, its number, strip and status, its fencers with their standings, and
+  every bout in slot order with each side's score. This is what the Pools tab and
+  the pool screen read (§11.6). The list takes `event_id`, `ids` (up to 100 pools,
+  which may span events, for pinned pools, §6), or both, and is paginated.
+  - It is a read-only view over `pools`, `bouts`, `scorings` and `competitors`,
+    not a stored resource. It lives in the pool feature but reads those tables
+    with its own SQL, because `bout` imports `pool` and `scoring` imports `bout`.
+  - Still to do: fencers come from the pool's bouts and are positioned by
+    registration order, which can differ from the order create seats them in
+    (§11.2). Until `bouts.winner_id` exists (§9.2), the higher score wins, so a
+    priority win at a tied score shows no winner.
+- **Stage results** (planned): `GET /pool-stages/{id}/results` returns the
+  stage's overall ranking, computed from ended bouts, which seeds the DE. Each
+  pool's grid comes from the pool sheet.
 
 | Column | Meaning |
 | --- | --- |
@@ -1519,7 +1576,9 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - The set includes the global nav, tab nav, section, list, card, chip, button,
   segmented button, text field, select, checkbox, radio, toggle, slider, date
   picker, calendar, dropzone, dialogs and filter sheet, pagination, toast,
-  tooltip, and progress indicators.
+  tooltip, progress indicators, and a loading spinner.
+- Fetched content shows `Loading` until it arrives: a route's `loading.tsx` sits
+  under its tab bar, and client fetches render it in place of their first result.
 - Many are only used by the `/` showcase so far.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.

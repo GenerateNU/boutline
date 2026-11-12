@@ -1,0 +1,396 @@
+package tests
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"testing"
+
+	"boutline/internal/features/pool"
+	"boutline/internal/tests/testkit"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+const (
+	poolCreateStageID   = "f0000000-0000-4000-8000-000000000002"
+	poolCreateRefereeID = "a0000000-0000-4000-8000-000000000002"
+	// A Mixed Épée competitor, so not entered in the stage's event.
+	poolCreateOtherEventCompetitorID = "d0000000-0000-4000-8000-000000000001"
+)
+
+// Women's Foil's seeded competitors are d0000000-0000-4000-8000-0000000000NN for
+// NN 33..44; n counts them from 1.
+func poolCreateCompetitorID(n int) string {
+	return fmt.Sprintf("d0000000-0000-4000-8000-%012d", 32+n)
+}
+
+// poolCreateToken signs in Alex Morgan, an admin of Fall Open, the stage's tournament.
+func poolCreateToken(t *testing.T, app *fiber.App) string {
+	t.Helper()
+
+	return poolCreateTokenFor(t, app, "alex.morgan@boutline.dev")
+}
+
+func poolCreateTokenFor(t *testing.T, app *fiber.App, email string) string {
+	t.Helper()
+
+	login := testkit.New(t).
+		Request(testkit.Request{
+			App:    app,
+			Route:  "/api/v1/auth/login",
+			Method: testkit.POST,
+			Body:   map[string]any{"email": email, "password": "password123"},
+		}).
+		AssertStatus(http.StatusOK)
+
+	token, ok := login.GetBody()["token"].(string)
+	require.True(t, ok, "token field is not a string: %v", login.GetBody())
+
+	return token
+}
+
+func poolCreateItem(number int, fencers ...int) map[string]any {
+	ids := make([]string, 0, len(fencers))
+	for _, n := range fencers {
+		ids = append(ids, poolCreateCompetitorID(n))
+	}
+
+	return map[string]any{"pool_stage_id": poolCreateStageID, "number": number, "fencers": ids}
+}
+
+func poolCreatePost(t *testing.T, app *fiber.App, headers map[string]string, pools ...map[string]any) *testkit.IntegrationTestBuilder {
+	t.Helper()
+
+	return testkit.New(t).Request(testkit.Request{
+		App:     app,
+		Route:   "/api/v1/pools",
+		Method:  testkit.POST,
+		Headers: headers,
+		Body:    map[string]any{"pools": pools},
+	})
+}
+
+func poolCreateDecode(t *testing.T, result *testkit.IntegrationTestBuilder) []pool.PoolCreatedResponse {
+	t.Helper()
+
+	raw, err := json.Marshal(result.GetBody())
+	require.NoError(t, err)
+
+	var body pool.PoolCreatedBody
+	require.NoError(t, json.Unmarshal(raw, &body))
+
+	return body.Data
+}
+
+func poolCreateStageTotal(t *testing.T, app *fiber.App, headers map[string]string) float64 {
+	t.Helper()
+
+	result := testkit.New(t).
+		Request(testkit.Request{
+			App:     app,
+			Route:   "/api/v1/pools",
+			Method:  testkit.GET,
+			Query:   map[string]string{"pool_stage_id": poolCreateStageID},
+			Headers: headers,
+		}).
+		AssertStatus(http.StatusOK)
+
+	total, ok := result.GetBody()["total"].(float64)
+	require.True(t, ok, "total field is not a number: %v", result.GetBody())
+
+	return total
+}
+
+// Empties the stage, including any pool a failing subtest created by mistake, so
+// a rerun against the same database starts clean. Bouts go first: bouts.pool_id
+// is RESTRICT.
+func poolCreateEmptyStage(t *testing.T, app *fiber.App, headers map[string]string) {
+	t.Helper()
+
+	for _, poolID := range poolCreateListIDs(t, app, headers, "/api/v1/pools", "pool_stage_id", poolCreateStageID) {
+		for _, boutID := range poolCreateListIDs(t, app, headers, "/api/v1/bouts", "pool_id", poolID) {
+			testkit.New(t).
+				Request(testkit.Request{App: app, Route: "/api/v1/bouts/" + boutID, Method: testkit.DELETE, Headers: headers}).
+				AssertStatus(http.StatusNoContent)
+		}
+		testkit.New(t).
+			Request(testkit.Request{App: app, Route: "/api/v1/pools/" + poolID, Method: testkit.DELETE, Headers: headers}).
+			AssertStatus(http.StatusNoContent)
+	}
+}
+
+func poolCreateListIDs(t *testing.T, app *fiber.App, headers map[string]string, route, filter, value string) []string {
+	t.Helper()
+
+	rows := poolCreateListRows(t, app, headers, route, filter, value)
+	ids := make([]string, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row["id"].(string))
+	}
+	return ids
+}
+
+func poolCreateListRows(t *testing.T, app *fiber.App, headers map[string]string, route, filter, value string) []map[string]any {
+	t.Helper()
+
+	result := testkit.New(t).
+		Request(testkit.Request{
+			App:     app,
+			Route:   route,
+			Method:  testkit.GET,
+			Query:   map[string]string{filter: value, "limit": "100"},
+			Headers: headers,
+		}).
+		AssertStatus(http.StatusOK)
+
+	data, ok := result.GetBody()["data"].([]any)
+	require.True(t, ok, "data field is not an array")
+
+	rows := make([]map[string]any, 0, len(data))
+	for _, item := range data {
+		row, ok := item.(map[string]any)
+		require.True(t, ok)
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+type poolCreateFixture struct {
+	app     *fiber.App
+	headers map[string]string
+}
+
+func poolCreateAssertLineup(t *testing.T, got pool.PoolCreatedResponse, wantFencers []int, wantBouts [][2]int) {
+	t.Helper()
+
+	require.Len(t, got.Fencers, len(wantFencers))
+	for i, n := range wantFencers {
+		assert.Equal(t, pool.PoolCreatedFencer{CompetitorID: poolCreateCompetitorID(n), Position: i + 1}, got.Fencers[i])
+	}
+
+	require.Len(t, got.Bouts, len(wantBouts))
+	for i, pair := range wantBouts {
+		assert.Equal(t, i+1, got.Bouts[i].Slot)
+		assert.Equal(t, poolCreateCompetitorID(pair[0]), got.Bouts[i].Competitor1ID, "bout %d competitor 1", i+1)
+		assert.Equal(t, poolCreateCompetitorID(pair[1]), got.Bouts[i].Competitor2ID, "bout %d competitor 2", i+1)
+	}
+}
+
+func (f poolCreateFixture) assertStoredBouts(t *testing.T, created pool.PoolCreatedResponse) {
+	t.Helper()
+
+	result := testkit.New(t).
+		Request(testkit.Request{
+			App:     f.app,
+			Route:   "/api/v1/bouts",
+			Method:  testkit.GET,
+			Query:   map[string]string{"pool_id": created.ID, "limit": "100"},
+			Headers: f.headers,
+		}).
+		AssertStatus(http.StatusOK).
+		AssertField("total", float64(len(created.Bouts)))
+
+	rows, ok := result.GetBody()["data"].([]any)
+	require.True(t, ok, "data field is not an array")
+	require.Len(t, rows, len(created.Bouts))
+
+	want := make(map[string]pool.PoolCreatedBout, len(created.Bouts))
+	for _, bout := range created.Bouts {
+		want[bout.ID] = bout
+	}
+
+	for _, row := range rows {
+		bout, ok := row.(map[string]any)
+		require.True(t, ok)
+		id, ok := bout["id"].(string)
+		require.True(t, ok, "id field is not a string: %v", bout)
+		wantBout, ok := want[id]
+		require.True(t, ok, "stored bout %s is not in the create response", id)
+		assert.Equal(t, wantBout.Competitor1ID, bout["competitor_1_id"])
+		assert.Equal(t, wantBout.Competitor2ID, bout["competitor_2_id"])
+		assert.EqualValues(t, wantBout.Slot, bout["slot"])
+		assert.EqualValues(t, 15, bout["points_to_win"])
+		assert.EqualValues(t, 540, bout["time_limit_seconds"])
+		assert.EqualValues(t, 1, bout["group_number"])
+		assert.Equal(t, "Strip 3", bout["location"])
+		assert.Equal(t, "upcoming", bout["status"])
+		assert.Equal(t, poolCreateRefereeID, bout["referee_id"])
+		assert.NotNil(t, bout["slot"])
+	}
+}
+
+// Creates pools through the real service, repository and Postgres so what
+// the fake repository cannot prove runs here: the all-or-nothing transaction,
+// request-order positions, the stored bouts, and the unique constraints.
+// Subtests share state (the created pools block later numbers and fencers), so
+// they run in order and not in parallel.
+func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
+	app := testkit.GetDBTestApp(t)
+	headers := map[string]string{"Authorization": "Bearer " + poolCreateToken(t, app)}
+	fixture := poolCreateFixture{app: app, headers: headers}
+	t.Cleanup(func() { poolCreateEmptyStage(t, app, headers) })
+
+	t.Run("a bad referee rolls back every pool in the request", func(t *testing.T) {
+		before := poolCreateStageTotal(t, app, headers)
+
+		second := poolCreateItem(2, 12, 4, 3, 7)
+		second["referee_id"] = uuid.NewString()
+
+		poolCreatePost(t, app, headers, poolCreateItem(1, 6, 1, 5, 2), second).
+			AssertStatus(http.StatusBadRequest).
+			AssertField("detail", "referee_id does not reference an existing record")
+
+		assert.Equal(t, before, poolCreateStageTotal(t, app, headers))
+	})
+
+	t.Run("creates pools with fencers in request order and a bout order", func(t *testing.T) {
+		first := poolCreateItem(1, 6, 1, 5, 2)
+		first["strip"] = "Strip 3"
+		first["referee_id"] = poolCreateRefereeID
+
+		// Non-default rules, so re-seat keeping them below can't be mistaken for its fallback.
+		result := testkit.New(t).Request(testkit.Request{
+			App: app, Route: "/api/v1/pools", Method: testkit.POST, Headers: headers,
+			Body: map[string]any{
+				"pools":              []map[string]any{first, poolCreateItem(2, 12, 4, 3, 7)},
+				"points_to_win":      15,
+				"time_limit_seconds": 540,
+			},
+		}).AssertStatus(http.StatusCreated)
+		created := poolCreateDecode(t, result)
+
+		require.Len(t, created, 2)
+		assert.Equal(t, 1, created[0].Number)
+		assert.Equal(t, 2, created[1].Number)
+		assert.Equal(t, poolCreateStageID, created[0].PoolStageID)
+
+		poolCreateAssertLineup(t, created[0],
+			[]int{6, 1, 5, 2},
+			[][2]int{{6, 2}, {1, 5}, {6, 5}, {1, 2}, {5, 2}, {6, 1}})
+		poolCreateAssertLineup(t, created[1],
+			[]int{12, 4, 3, 7},
+			[][2]int{{12, 7}, {4, 3}, {12, 3}, {4, 7}, {3, 7}, {12, 4}})
+
+		fixture.assertStoredBouts(t, created[0])
+	})
+
+	t.Run("an unknown pool stage is rejected", func(t *testing.T) {
+		unknown := poolCreateItem(3, 8, 9, 10, 11)
+		unknown["pool_stage_id"] = uuid.NewString()
+
+		poolCreatePost(t, app, headers, unknown).
+			AssertStatus(http.StatusBadRequest).
+			AssertField("detail", "pool_stage_id must reference an existing pool stage")
+	})
+
+	otherEvent := poolCreateItem(3, 8, 9, 10)
+	otherEvent["fencers"] = append(otherEvent["fencers"].([]string), poolCreateOtherEventCompetitorID)
+
+	rejections := []struct {
+		name   string
+		pool   map[string]any
+		status int
+		detail string
+	}{
+		{
+			name:   "a number already used in the stage is rejected",
+			pool:   poolCreateItem(1, 8, 9, 10, 11),
+			status: http.StatusConflict,
+			detail: "a pool with this number already exists in the pool stage",
+		},
+		{
+			name:   "a competitor already in one of the stage's pools is rejected",
+			pool:   poolCreateItem(3, 8, 9, 10, 6),
+			status: http.StatusConflict,
+			detail: "competitor " + poolCreateCompetitorID(6) + " is already in a pool in this pool stage",
+		},
+		{
+			name:   "a competitor from another event is rejected",
+			pool:   otherEvent,
+			status: http.StatusBadRequest,
+			detail: "competitor " + poolCreateOtherEventCompetitorID + " is not entered in the pool stage's event",
+		},
+	}
+
+	for _, tt := range rejections {
+		t.Run(tt.name, func(t *testing.T) {
+			poolCreatePost(t, app, headers, tt.pool).
+				AssertStatus(tt.status).
+				AssertField("detail", tt.detail)
+		})
+	}
+
+	// Jordan Lee referees Fall Open but isn't an admin of it.
+	t.Run("only a tournament admin can re-seat a pool", func(t *testing.T) {
+		referee := map[string]string{"Authorization": "Bearer " + poolCreateTokenFor(t, app, "jordan.lee@boutline.dev")}
+		pools := poolCreateIDsByNumber(t, app, headers)
+
+		poolCreatePatchFencers(t, app, referee, pools[1], 6, 1, 5, 8).
+			AssertStatus(http.StatusForbidden).
+			AssertField("detail", "only the tournament's admins can re-seat its pools")
+	})
+
+	// Pool 1 is 6, 1, 5, 2 on Strip 3 and pool 2 is 12, 4, 3, 7. Moving 12 into pool 1
+	// is two patches: free 12 from pool 2 by seating 8 in its place, then add 12 to pool 1.
+	t.Run("re-seats pools to move a fencer between them", func(t *testing.T) {
+		pools := poolCreateIDsByNumber(t, app, headers)
+
+		poolCreatePatchFencers(t, app, headers, pools[1], 6, 1, 5, 2, 12).
+			AssertStatus(http.StatusConflict).
+			AssertField("detail", "competitor "+poolCreateCompetitorID(12)+" is already in a pool in this pool stage")
+
+		poolCreatePatchFencers(t, app, headers, pools[2], 8, 4, 3, 7).AssertStatus(http.StatusOK)
+		poolCreatePatchFencers(t, app, headers, pools[1], 6, 1, 5, 2, 12).AssertStatus(http.StatusOK)
+
+		pool1 := poolCreateListBouts(t, app, headers, pools[1])
+		require.Len(t, pool1, 10, "a pool of five fences ten bouts")
+		slots := make([]float64, 0, len(pool1))
+		for _, bout := range pool1 {
+			slots = append(slots, bout["slot"].(float64))
+			assert.Equal(t, "Strip 3", bout["location"], "the pool's strip carries over")
+			assert.Equal(t, poolCreateRefereeID, bout["referee_id"], "the pool's referee carries over")
+			assert.EqualValues(t, 15, bout["points_to_win"], "the pool's bout rules carry over")
+			assert.EqualValues(t, 540, bout["time_limit_seconds"])
+		}
+		assert.ElementsMatch(t, []float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, slots)
+		assert.Len(t, poolCreateListBouts(t, app, headers, pools[2]), 6, "a pool of four fences six bouts")
+	})
+}
+
+func poolCreatePatchFencers(t *testing.T, app *fiber.App, headers map[string]string, poolID string, fencers ...int) *testkit.IntegrationTestBuilder {
+	t.Helper()
+
+	ids := make([]string, 0, len(fencers))
+	for _, n := range fencers {
+		ids = append(ids, poolCreateCompetitorID(n))
+	}
+
+	return testkit.New(t).Request(testkit.Request{
+		App:     app,
+		Route:   "/api/v1/pools/" + poolID,
+		Method:  testkit.PATCH,
+		Headers: headers,
+		Body:    map[string]any{"fencers": ids},
+	})
+}
+
+func poolCreateIDsByNumber(t *testing.T, app *fiber.App, headers map[string]string) map[int]string {
+	t.Helper()
+
+	ids := map[int]string{}
+	for _, row := range poolCreateListRows(t, app, headers, "/api/v1/pools", "pool_stage_id", poolCreateStageID) {
+		ids[int(row["number"].(float64))] = row["id"].(string)
+	}
+
+	return ids
+}
+
+func poolCreateListBouts(t *testing.T, app *fiber.App, headers map[string]string, poolID string) []map[string]any {
+	t.Helper()
+
+	return poolCreateListRows(t, app, headers, "/api/v1/bouts", "pool_id", poolID)
+}

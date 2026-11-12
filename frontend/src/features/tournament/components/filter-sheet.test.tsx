@@ -57,6 +57,13 @@ describe("FilterSheet", () => {
     expect(screen.getByRole("radio", { name: "France" })).toBeInTheDocument();
   });
 
+  it("shows a spinner for clubs and countries until each loads", async () => {
+    apiRequestMock.mockReturnValue(new Promise(() => {}));
+    await openSheet();
+
+    expect(screen.getAllByRole("status")).toHaveLength(2);
+  });
+
   it("sets club and country params on submit", async () => {
     await openSheet();
 
