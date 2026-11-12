@@ -4,7 +4,7 @@ import { useId } from "react";
 import { Input } from "@/components/primitives/input";
 
 interface TextFieldProps extends React.ComponentProps<"input"> {
-  label: React.ReactNode;
+  label?: React.ReactNode;
   supportingText?: React.ReactNode;
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
@@ -33,12 +33,14 @@ function TextField({
       data-slot="text-field"
       className={cn("group flex flex-col gap-1", className)}
     >
-      <label
-        htmlFor={inputId}
-        className="text-xs font-medium text-neutral-secondary group-has-disabled:text-neutral-muted"
-      >
-        {label}
-      </label>
+      {label ? (
+        <label
+          htmlFor={inputId}
+          className="text-xs font-medium text-neutral-secondary group-has-disabled:text-neutral-muted"
+        >
+          {label}
+        </label>
+      ) : null}
       <div
         role="group"
         className={cn(

@@ -464,7 +464,9 @@ from the venue floor.
 - **Filter sheet:** Status, Club and Country work; the Distance slider is inert, since
   tournaments have no coordinates (#122). Club suggests names from `GET /clubs` and
   sets `?club=`; Country offers only countries that have tournaments, from
-  `GET /countries`, and sets `?country=` to the code.
+  `GET /countries`, and sets `?country=` to the code. Suggestions appear only while
+  typing, in a dropdown under the search bar, and picked values show as removable filter tags at the top of the sheet.
+  Sections follow the Figma order: Country, Club, Distance, Tournament Status.
 - A "Create tournament" card links to the creation form when the viewer has a
   session cookie.
 - Each card shows the tournament's city and country code (e.g. "Boston, US"), or
@@ -496,8 +498,8 @@ Tabs: Overview · Fencers · Clubs · Events.
 Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers. These
 replace the tournament's tabs rather than stacking under them.
 
-- **Fencers** (Completed): search, pagination, and a club filter sheet whose picker
-  searches the tournament's clubs. It lists every fencer in the tournament, since
+- **Fencers** (Completed): search, pagination, and a filter sheet with Fencer (sets
+  `?q=`) and Club (sets `?team=`) searches, each picked from a dropdown of matches. It lists every fencer in the tournament, since
   competitors don't belong to an event yet (§8.4). Rows link to a fencer page,
   which is placeholder text.
 - **Pooling** and **Tableau** (Placeholder): a bout list from a hardcoded fixture,
@@ -1541,7 +1543,7 @@ through the tokens, so components use tokens, never raw colors.
 | `background` / `foreground` | page and text; `foreground` is also the outline color |
 | `muted` / `muted-foreground` | hover fills, secondary text, empty states |
 | `selected` (blue) | only a chosen state: filled button, toggle on, active tab |
-| `destructive` | errors and destructive actions |
+| `destructive` | errors and destructive actions; hi-fi destructive actions (Button `destructive` variant) use `red-dark` |
 | `border`, `input`, `ring` | hairlines, field borders, focus rings |
 
 No Tailwind palette colors. The tournament status badge breaks this today
@@ -1559,7 +1561,7 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - `--radius` 0.625rem, with `rounded-sm`…`rounded-xl` derived from it. List cards
   use `rounded-md`; pills (tab nav, icon buttons, avatars) use `rounded-full`. 1px
   `border-foreground`, no shadows, except floating surfaces (select menu, dropdown,
-  date field popover, upload dialog) which use `shadow-md`.
+  date field popover, upload dialog, modal, filter sheet, toast) which use `shadow-md`.
 - Focus `focus-visible:ring-2 ring-ring`; hover `bg-muted`; disabled `opacity-50`.
 - Icons are Material's Outlined set from `@mui/icons-material`, imported by path
   (`@mui/icons-material/SearchOutlined`), at `size-4`, `aria-hidden` when
@@ -1575,13 +1577,22 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - The set includes the global nav, tab nav, section, list, card, chip (the filter
   tag), label, button, segmented button, search bar, dropdown, text field,
   select, date field, checkbox, radio, toggle, slider, calendar,
-  dropzone and upload dialog, dialogs and filter sheet, pagination, toast, tooltip,
+  dropzone and upload dialog, modal, filter sheet, pagination, toast, tooltip,
   progress indicators, and a loading spinner.
 - Form fields (text field, select, date field) share one hi-fi frame: a `text-xs`
   label above a `rounded-md border-outline` box that turns `border-blue` with a
   `ring-blue-lighter` halo on focus or open, `border-red-dark` when `aria-invalid`,
   and `bg-disabled` when disabled. Select is Radix Select; the date field opens the
   calendar in a Radix Popover.
+- Overlays: Modal is a `rounded-3xl p-5` card with an `text-xl` title and close (X)
+  header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a
+  filled or `destructive` action). The filter sheet is a `rounded-t-3xl` bottom sheet
+  whose search sections are a label above a `FilterSearchField` whose suggestions show
+  in a `Dropdown` of `DropdownOption` rows while typing; picked values show as
+  removable tags at the top until submitted. Other sections are a Distance slider and
+  rows of outline chips, then a full-width Clear All and a filled submit. The toast is
+  a single obsidian row with white `text-sm`, a leading icon, an `accent-green`
+  action, and no close button.
 - The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and `navigation-item`.
   `global-nav` renders `navbar` as its header. `navigation-bar` is the obsidian row of
   `navigation-item` tabs, and `tab-nav` renders it with the active tab taken from the

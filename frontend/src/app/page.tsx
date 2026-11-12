@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Toast as ToastPrimitive } from "radix-ui";
+import { Suspense, useRef, useState } from "react";
+import CheckOutlined from "@mui/icons-material/CheckOutlined";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
+import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
 import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
 import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
 import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
@@ -33,6 +37,7 @@ import { DateField } from "@/components/primitives/date-field";
 import { Dropzone } from "@/components/primitives/dropzone";
 import { FilterButton } from "@/components/primitives/filter-button";
 import { Label } from "@/components/primitives/label";
+import { Modal, ModalFooter } from "@/components/primitives/modal";
 import { List, ListItem } from "@/components/primitives/list";
 import { Menu, MenuItem } from "@/components/primitives/menu";
 import { CircularProgress } from "@/components/primitives/circular-progress";
@@ -62,7 +67,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/primitives/tabs";
 import { Tag } from "@/components/primitives/tag";
 import { TextField } from "@/components/primitives/text-field";
 import { UploadDialog, uploadAccept, type UploadFile } from "@/components/primitives/upload-dialog";
-import { useToast } from "@/components/primitives/toast";
+import { ToastItem, ToastViewport, useToast } from "@/components/primitives/toast";
 import { Toggle } from "@/components/primitives/toggle";
 import {
   Tooltip,
@@ -89,6 +94,8 @@ import { NavigationBar } from "@/components/primitives/navigation/navigation-bar
 import { NavigationDrawer } from "@/components/primitives/navigation/navigation-drawer";
 import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
 import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+import { PrivateTournamentDialog } from "@/features/tournament/components/private-tournament-dialog";
+import { FilterSheet } from "@/features/tournament/components/filter-sheet";
 import { WeekStrip } from "@/features/tournament/components/week-strip";
 import { Logo } from "@/components/primitives/logo";
 import { Navbar } from "@/components/primitives/navigation/navbar";
@@ -319,6 +326,68 @@ function UploadDialogDemo() {
         }
         onRemoveFile={(id) => setFiles((current) => current.filter((entry) => entry.id !== id))}
       />
+    </>
+  );
+}
+
+const undo = { label: "Undo", altText: "Undo" };
+
+const sampleToasts = [
+  { description: "Pins saved", icon: <CheckOutlined className="text-accent-green" />, action: undo },
+  { description: "Pinned Pool 1 · Strip 3", icon: <PushPinOutlined className="text-blue-light" />, action: undo },
+  { description: "Code not found", icon: <CloseOutlined className="text-red-dark" />, action: undo },
+];
+
+// Keeps the sample toasts open in the page instead of popping them up at the
+// bottom of the screen.
+function ToastPreview() {
+  return (
+    <ToastPrimitive.Provider>
+      {sampleToasts.map((options) => (
+        <ToastItem key={options.description} options={options} open duration={Infinity} />
+      ))}
+      <ToastViewport className="static w-full translate-x-0 p-0" />
+    </ToastPrimitive.Provider>
+  );
+}
+
+function PrivateTournamentDemo() {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <>
+      <Button ref={triggerRef} type="button" variant="outline" onClick={() => setOpen(true)}>
+        Private tournament
+      </Button>
+      <PrivateTournamentDialog open={open} onOpenChange={setOpen} returnFocusTo={triggerRef} />
+    </>
+  );
+}
+
+function LogoutModalDemo() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        Log out
+      </Button>
+      <Modal
+        open={open}
+        onOpenChange={setOpen}
+        title="Log out?"
+        description="You will need to sign in again to manage your tournaments."
+      >
+        <ModalFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="button" variant="destructive" onClick={() => setOpen(false)}>
+            Yes, log out
+          </Button>
+        </ModalFooter>
+      </Modal>
     </>
   );
 }
@@ -768,18 +837,24 @@ export default function Home() {
       </Section>
 
       <Section title="Toast">
-        <Button
-          onClick={() =>
-            toast({
-              description:
-                "Toasts provide brief messages about app processes at the bottom of the screen",
-              action: { label: "Label", altText: "Label" },
-              stacked: true,
-            })
-          }
-        >
-          Show toast
+        <ToastPreview />
+        <Button variant="outline" className="self-start" onClick={() => toast(sampleToasts[0])}>
+          Show a toast
         </Button>
+      </Section>
+
+      <Section title="Modal">
+        <div className="flex flex-wrap gap-3">
+          <PrivateTournamentDemo />
+          <LogoutModalDemo />
+        </div>
+      </Section>
+
+      <Section title="Filter Sheet">
+        {/* FilterSheet reads the URL's filters, which needs a Suspense boundary to prerender. */}
+        <Suspense>
+          <FilterSheet />
+        </Suspense>
       </Section>
 
       <Section title="Tabs">

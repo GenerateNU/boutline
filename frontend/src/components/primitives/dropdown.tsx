@@ -61,4 +61,37 @@ function DropdownItem({
   );
 }
 
-export { Dropdown, DropdownSection, DropdownItem };
+interface DropdownOptionProps extends React.ComponentProps<"button"> {
+  selected?: boolean;
+}
+
+// A row the user can pick, e.g. a suggestion under a search bar.
+function DropdownOption({ selected, className, ...props }: DropdownOptionProps) {
+  return (
+    <li data-slot="dropdown-option">
+      <button
+        type="button"
+        aria-pressed={selected}
+        className={labelVariants({
+          className: cn(
+            "w-full cursor-pointer text-left outline-none hover:bg-surface focus-visible:bg-surface aria-pressed:font-semibold",
+            className,
+          ),
+        })}
+        {...props}
+      />
+    </li>
+  );
+}
+
+function DropdownMessage({ className, ...props }: React.ComponentProps<"p">) {
+  return (
+    <p
+      data-slot="dropdown-message"
+      className={cn("px-2 py-2 text-sm text-neutral-muted", className)}
+      {...props}
+    />
+  );
+}
+
+export { Dropdown, DropdownItem, DropdownMessage, DropdownOption, DropdownSection };
