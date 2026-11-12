@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import { Pin } from "lucide-react";
+import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
 
 import { Button } from "@/components/primitives/button";
 
@@ -47,7 +47,7 @@ function PinButton({
       )}
       {...props}
     >
-      {children ?? <Pin aria-hidden />}
+      {children ?? <PushPinOutlined aria-hidden />}
     </Button>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { Upload } from "lucide-react";
+import UploadOutlined from "@mui/icons-material/UploadOutlined";
 import { type Accept, useDropzone } from "react-dropzone";
 
 type DropzoneProps = {
@@ -39,7 +39,7 @@ function Dropzone({ label, accept, onFile, onReject, className, children }: Drop
       <input {...getInputProps()} />
       {typeof children === "function" ? children(open) : (children ?? (
         <>
-          <Upload aria-hidden className="size-5" />
+          <UploadOutlined aria-hidden className="size-5" />
           <span>{label}</span>
         </>
       ))}

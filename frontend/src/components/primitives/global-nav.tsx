@@ -4,7 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
-import { CircleUserRound, KeyRound, Menu, Search, Settings, X } from "lucide-react";
+import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
+import KeyOutlined from "@mui/icons-material/KeyOutlined";
+import MenuOutlined from "@mui/icons-material/MenuOutlined";
+import SearchOutlined from "@mui/icons-material/SearchOutlined";
+import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
 import { useRef, useState } from "react";
 import { Dialog } from "radix-ui";
 
@@ -52,7 +57,7 @@ function GlobalNav() {
               aria-label="Open menu"
               className="relative ml-2.5 text-white hover:bg-background/10 [&_svg]:size-6"
             >
-              <Menu />
+              <MenuOutlined />
             </Button>
           </Dialog.Trigger>
           <Link href="/" className="relative ml-2.5 flex items-center gap-2.5">
@@ -80,7 +85,7 @@ function GlobalNav() {
                     aria-label="Close menu"
                     className="text-white hover:bg-background/10 [&_svg]:size-6"
                   >
-                    <X />
+                    <CloseOutlined />
                   </Button>
                 </Dialog.Close>
                 <Image src="/brand/logo-mark-sidebar.svg" alt="" width={27} height={31} />
@@ -95,7 +100,7 @@ function GlobalNav() {
                     aria-current={pathname === "/login" ? "page" : undefined}
                     className={sidebarItemClassName(pathname === "/login")}
                   >
-                    <CircleUserRound aria-hidden />
+                    <AccountCircleOutlined aria-hidden />
                     Admin Login
                   </Link>
                 </Dialog.Close>
@@ -105,7 +110,7 @@ function GlobalNav() {
                     aria-current={pathname === "/tournaments" ? "page" : undefined}
                     className={sidebarItemClassName(onTournaments)}
                   >
-                    <Search aria-hidden />
+                    <SearchOutlined aria-hidden />
                     Search Tournaments
                   </Link>
                 </Dialog.Close>
@@ -117,13 +122,13 @@ function GlobalNav() {
                   }}
                   className={sidebarItemClassName()}
                 >
-                  <KeyRound aria-hidden />
+                  <KeyOutlined aria-hidden />
                   Find Private Tournament
                 </button>
               </nav>
             </div>
             <p className="flex h-11 items-center gap-6 px-6 text-sm font-medium text-obsidian">
-              <Settings aria-hidden className="size-6" />
+              <SettingsOutlined aria-hidden className="size-6" />
               Settings
             </p>
           </Dialog.Content>

@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
 import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
@@ -51,7 +51,7 @@ function FilterSheetDialog({
                 aria-label="Close"
                 className="-m-2 text-obsidian [&_svg]:size-6"
               >
-                <X />
+                <CloseOutlined />
               </Button>
             </Dialog.Close>
           </div>

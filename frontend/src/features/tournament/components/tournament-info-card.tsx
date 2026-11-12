@@ -1,4 +1,6 @@
-import { Calendar, MapPin, User } from "lucide-react";
+import CalendarTodayOutlined from "@mui/icons-material/CalendarTodayOutlined";
+import LocationOnOutlined from "@mui/icons-material/LocationOnOutlined";
+import PersonOutlined from "@mui/icons-material/PersonOutlined";
 
 import { Card, CardDescription, CardTitle } from "@/components/primitives/card";
 
@@ -9,9 +11,9 @@ interface TournamentInfoCardProps {
 
 function TournamentInfoCard({ name, dates }: TournamentInfoCardProps) {
   const infoRows = [
-    { icon: Calendar, text: dates },
-    { icon: MapPin, text: "Location - TBC" },
-    { icon: User, text: "Organizer Contact - TBC" },
+    { icon: CalendarTodayOutlined, text: dates },
+    { icon: LocationOnOutlined, text: "Location - TBC" },
+    { icon: PersonOutlined, text: "Organizer Contact - TBC" },
   ];
 
   return (

@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Ellipsis, EllipsisVertical, House, Reply, Settings, Shapes, Swords } from "lucide-react";
+import CategoryOutlined from "@mui/icons-material/CategoryOutlined";
+import HomeOutlined from "@mui/icons-material/HomeOutlined";
+import MoreHorizOutlined from "@mui/icons-material/MoreHorizOutlined";
+import MoreVertOutlined from "@mui/icons-material/MoreVertOutlined";
+import ReplyOutlined from "@mui/icons-material/ReplyOutlined";
+import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
+import SportsMartialArtsOutlined from "@mui/icons-material/SportsMartialArtsOutlined";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { BackButton } from "@/components/primitives/back-button";
@@ -136,17 +142,17 @@ const demoClub = { name: "Boston Blade Club", competitorCount: 12 };
 const barItems = Array.from({ length: 5 }, (_, index) => ({
   id: `bar-${index}`,
   label: "Label",
-  icon: <Shapes />,
+  icon: <CategoryOutlined />,
 }));
 
 const drawerItems = Array.from({ length: 7 }, (_, index) => ({
   id: `drawer-${index}`,
   label: "Label",
-  icon: <Shapes />,
+  icon: <CategoryOutlined />,
   badge: "100+",
 }));
 
-const drawerFooter = [{ id: "settings", label: "Settings", icon: <Settings /> }];
+const drawerFooter = [{ id: "settings", label: "Settings", icon: <SettingsOutlined /> }];
 function DialogAvatar() {
   return (
     <Avatar className="size-8">
@@ -260,10 +266,10 @@ export default function Home() {
           <PinButton aria-label="Pin" variant="obsidian" />
           <PinButton aria-label="Pin" variant="primary" />
           <PinButton aria-label="Home" variant="primary">
-            <House aria-hidden />
+            <HomeOutlined aria-hidden />
           </PinButton>
           <PinButton aria-label="Back" variant="primary">
-            <Reply aria-hidden />
+            <ReplyOutlined aria-hidden />
           </PinButton>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -314,7 +320,7 @@ export default function Home() {
 
       <Section title="Tag">
         <div className="flex flex-wrap items-center gap-3">
-          <Tag icon={<Swords aria-hidden />}>Specialty: Foil</Tag>
+          <Tag icon={<SportsMartialArtsOutlined aria-hidden />}>Specialty: Foil</Tag>
         </div>
       </Section>
 
@@ -393,7 +399,7 @@ export default function Home() {
       <Section title="Chip">
         <div className="flex flex-wrap items-center gap-3">
           <Chip>Label</Chip>
-          <Chip icon={<Ellipsis />}>Label</Chip>
+          <Chip icon={<MoreHorizOutlined />}>Label</Chip>
           <Chip dismissible>Label</Chip>
           <Chip dropdown>Label</Chip>
         </div>
@@ -476,18 +482,18 @@ export default function Home() {
 
       <Section title="Navigation item">
         <div className="flex items-center gap-4">
-          <NavigationItem icon={<Shapes />} label="Label" />
-          <NavigationItem icon={<Shapes />} aria-label="Label" />
-          <NavigationItem icon={<Shapes />} label="Label" selected />
-          <NavigationItem icon={<Shapes />} aria-label="Label" selected />
+          <NavigationItem icon={<CategoryOutlined />} label="Label" />
+          <NavigationItem icon={<CategoryOutlined />} aria-label="Label" />
+          <NavigationItem icon={<CategoryOutlined />} label="Label" selected />
+          <NavigationItem icon={<CategoryOutlined />} aria-label="Label" selected />
         </div>
       </Section>
 
       <Section title="Navigation drawer item">
         <div className="flex flex-col gap-2">
-          <NavigationDrawerItem icon={<Shapes />} label="Label" badge="100+" />
+          <NavigationDrawerItem icon={<CategoryOutlined />} label="Label" badge="100+" />
           <NavigationDrawerItem
-            icon={<Shapes />}
+            icon={<CategoryOutlined />}
             label="Label"
             badge="100+"
             selected
@@ -520,10 +526,10 @@ export default function Home() {
           actions={
             <>
               <Button variant="text" size="icon" aria-label="Action">
-                <Shapes />
+                <CategoryOutlined />
               </Button>
               <Button variant="text" size="icon" aria-label="More options">
-                <EllipsisVertical />
+                <MoreVertOutlined />
               </Button>
             </>
           }
@@ -536,7 +542,7 @@ export default function Home() {
       <Section title="Menu">
         <Menu>
           {Array.from({ length: 10 }, (_, index) => (
-            <MenuItem key={index} icon={<Ellipsis aria-hidden />}>
+            <MenuItem key={index} icon={<MoreHorizOutlined aria-hidden />}>
               Dialog title
             </MenuItem>
           ))}
@@ -609,7 +615,7 @@ export default function Home() {
                   aria-label="More"
                   className="bg-background"
                 >
-                  <Ellipsis />
+                  <MoreHorizOutlined />
                 </Button>
               </CardAction>
             </CardHeader>
@@ -621,7 +627,7 @@ export default function Home() {
               <CardDescription>Subhead</CardDescription>
               <CardAction>
                 <Button variant="outline" size="icon" aria-label="More">
-                  <Ellipsis />
+                  <MoreHorizOutlined />
                 </Button>
               </CardAction>
             </CardHeader>
@@ -650,7 +656,7 @@ export default function Home() {
             <Tabs key={variant} defaultValue="one">
               <TabsList variant={variant}>
                 {["one", "two", "three"].map((value) => (
-                  <TabsTrigger key={value} value={value} icon={<Ellipsis />}>
+                  <TabsTrigger key={value} value={value} icon={<MoreHorizOutlined />}>
                     Tab
                   </TabsTrigger>
                 ))}
@@ -666,8 +672,8 @@ export default function Home() {
             label="Label"
             placeholder="Placeholder text"
             supportingText="Supporting text"
-            leading={<Ellipsis aria-hidden />}
-            trailing={<Ellipsis aria-hidden />}
+            leading={<MoreHorizOutlined aria-hidden />}
+            trailing={<MoreHorizOutlined aria-hidden />}
           />
         </div>
       </Section>

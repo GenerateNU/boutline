@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { Dialog } from "radix-ui";
@@ -77,7 +77,7 @@ function PrivateTournamentDialog({
                 aria-label="Close"
                 className="-m-2 text-obsidian [&_svg]:size-6"
               >
-                <X />
+                <CloseOutlined />
               </Button>
             </Dialog.Close>
           </div>
