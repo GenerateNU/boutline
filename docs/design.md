@@ -1560,7 +1560,11 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   use `rounded-md`; pills (tab nav, icon buttons, avatars) use `rounded-full`. 1px
   `border-foreground`, no shadows.
 - Focus `focus-visible:ring-2 ring-ring`; hover `bg-muted`; disabled `opacity-50`.
-- Icons from `lucide-react` at `size-4`, `aria-hidden` when decorative.
+- Icons are Material's Outlined set from `@mui/icons-material`, imported by path
+  (`@mui/icons-material/SearchOutlined`), at `size-4`, `aria-hidden` when
+  decorative. A filled glyph marks only a set state, like a pinned item.
+  `globals.css` puts MUI's `mui` layer before `utilities` so Tailwind sizes and
+  colors win.
 - Referee touch targets are large (`h-32`), because they are pressed under time
   pressure.
 

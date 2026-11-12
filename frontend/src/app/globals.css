@@ -1,3 +1,7 @@
+/* MUI's icon styles land in the `mui` layer (AppRouterCacheProvider's
+   enableCssLayer). Declaring it ahead of utilities lets Tailwind classes like
+   size-4 and text-* override MUI's default 1.5rem icon size. */
+@layer theme, base, mui, components, utilities;
 @import "tailwindcss";
 /* Supplies shadcn's @custom-variant set (data-disabled, data-checked, ...) that
    the generated component sources are written against. */

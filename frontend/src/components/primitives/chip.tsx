@@ -1,5 +1,6 @@
 import { cn } from "cn";
-import { ChevronDown, X } from "lucide-react";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
+import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
 
 type ChipProps = React.ComponentProps<"div"> & {
   icon?: React.ReactNode;
@@ -30,7 +31,7 @@ function Chip({
     >
       {icon}
       {children}
-      {dropdown ? <ChevronDown aria-hidden /> : null}
+      {dropdown ? <ExpandMoreOutlined aria-hidden /> : null}
       {dismissible || onDismiss ? (
         <button
           type="button"
@@ -38,7 +39,7 @@ function Chip({
           onClick={onDismiss}
           className="cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <X aria-hidden />
+          <CloseOutlined aria-hidden />
         </button>
       ) : null}
     </div>

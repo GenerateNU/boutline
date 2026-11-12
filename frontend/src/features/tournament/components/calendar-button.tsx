@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar } from "lucide-react";
+import CalendarTodayOutlined from "@mui/icons-material/CalendarTodayOutlined";
 
 import { Button } from "@/components/primitives/button";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
@@ -19,7 +19,7 @@ function CalendarButton() {
       onClick={() => setFilters({ view: open ? undefined : "calendar" })}
       className="-m-2 text-obsidian aria-pressed:bg-blue-lighter [&_svg]:size-6"
     >
-      <Calendar />
+      <CalendarTodayOutlined />
     </Button>
   );
 }

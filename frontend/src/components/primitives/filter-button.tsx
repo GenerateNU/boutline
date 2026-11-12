@@ -1,5 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { ChevronDown, SlidersHorizontal } from "lucide-react";
+import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
+import TuneOutlined from "@mui/icons-material/TuneOutlined";
 
 import { Button } from "@/components/primitives/button";
 
@@ -43,8 +44,8 @@ function FilterButton({
       className={filterButtonVariants({ size, className })}
       {...props}
     >
-      {children ?? <SlidersHorizontal aria-hidden />}
-      {dropdown ? <ChevronDown aria-hidden className="size-3.5!" /> : null}
+      {children ?? <TuneOutlined aria-hidden />}
+      {dropdown ? <ExpandMoreOutlined aria-hidden className="size-3.5!" /> : null}
     </Button>
   );
 }

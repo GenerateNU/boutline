@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
 import { Dialog } from "radix-ui";
 
 import { MockCountry } from "@/app/tournaments/[tournamentId]/_components/mock-country";
@@ -30,7 +30,7 @@ function ResultRow({ standing, fencerHref, place }: ResultRowProps) {
           </p>
         </div>
         <RatingBadge tone="subtle">{rating}</RatingBadge>
-        <ChevronRight aria-hidden className="size-4 shrink-0" />
+        <ChevronRightOutlined aria-hidden className="size-4 shrink-0" />
       </Dialog.Trigger>
       <FencerPoolDialog standing={standing} fencerHref={fencerHref} />
     </Dialog.Root>

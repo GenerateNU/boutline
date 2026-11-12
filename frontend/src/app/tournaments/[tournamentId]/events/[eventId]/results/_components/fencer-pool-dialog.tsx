@@ -1,4 +1,5 @@
-import { ArrowRight, X } from "lucide-react";
+import ArrowForwardOutlined from "@mui/icons-material/ArrowForwardOutlined";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
 import Link from "next/link";
 import { Dialog } from "radix-ui";
 
@@ -60,7 +61,7 @@ function FencerPoolDialog({ standing, fencerHref }: FencerPoolDialogProps) {
           <p className="text-xs font-medium text-muted-foreground uppercase">Fencer in pool {pool}</p>
           <Dialog.Close asChild>
             <Button variant="text" size="icon" aria-label="Close" className="-m-2">
-              <X aria-hidden className="size-4" />
+              <CloseOutlined aria-hidden className="size-4" />
             </Button>
           </Dialog.Close>
         </div>
@@ -94,7 +95,7 @@ function FencerPoolDialog({ standing, fencerHref }: FencerPoolDialogProps) {
           className="flex items-center justify-center gap-1 rounded-md border border-foreground py-2 text-sm outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
         >
           Open fencer details
-          <ArrowRight aria-hidden className="size-4" />
+          <ArrowForwardOutlined aria-hidden className="size-4" />
         </Link>
       </Dialog.Content>
     </Dialog.Portal>

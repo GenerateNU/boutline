@@ -1,7 +1,8 @@
 "use client";
 
 import { cn } from "cn";
-import { Menu as MenuIcon, Search } from "lucide-react";
+import MenuOutlined from "@mui/icons-material/MenuOutlined";
+import SearchOutlined from "@mui/icons-material/SearchOutlined";
 import { useState } from "react";
 
 import { Input } from "@/components/primitives/input";
@@ -37,13 +38,13 @@ function SearchBar({
       }}
     >
       <div className="flex items-center gap-3 px-3 py-2">
-        {leading ?? <MenuIcon aria-hidden className="size-5" />}
+        {leading ?? <MenuOutlined aria-hidden className="size-5" />}
         <Input
           type="text"
           className="h-auto w-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 focus-visible:ring-0"
           {...props}
         />
-        <Search aria-hidden className="size-5" />
+        <SearchOutlined aria-hidden className="size-5" />
         {trailing}
       </div>
       {open ? (
