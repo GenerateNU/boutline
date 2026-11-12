@@ -154,6 +154,15 @@ describe("Scoreboard", () => {
     await settle();
   });
 
+  it("announces loading until the bout loads", async () => {
+    installBackend([]);
+    render(<Scoreboard boutId={BOUT_ID} />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading");
+    await screen.findByLabelText("Alice Chen score");
+    expect(screen.queryByText("Loading")).not.toBeInTheDocument();
+  });
+
   it("explains which field failed when the bout id is rejected", async () => {
     installBackend([]);
     render(<Scoreboard boutId="p1" />);
