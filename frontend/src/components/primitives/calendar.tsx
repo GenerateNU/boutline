@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
 import { cn } from "cn";
 import {
   DayPicker,
@@ -52,6 +53,7 @@ function CalendarDayButton({
   day,
   modifiers,
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof DayButton>) {
   const ref = React.useRef<HTMLButtonElement>(null);
@@ -72,14 +74,20 @@ function CalendarDayButton({
       data-today={modifiers.today}
       data-outside={modifiers.outside}
       className={cn(
-        "border border-transparent text-sm text-obsidian disabled:opacity-50",
+        "relative border border-transparent text-sm text-obsidian disabled:opacity-50",
         "data-[outside=true]:text-neutral-muted",
         "data-[today=true]:border-[1.5px] data-[today=true]:border-blue data-[today=true]:font-semibold",
         "data-[selected=true]:bg-blue data-[selected=true]:font-semibold data-[selected=true]:text-white data-[selected=true]:hover:bg-blue-dark",
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+      {/* Callers mark days with events via modifiers={{ hasEvent: Date[] }}. */}
+      {modifiers.hasEvent && (
+        <span aria-hidden className="absolute bottom-1 size-1 rounded-full bg-accent-green" />
+      )}
+    </Button>
   );
 }
 
@@ -124,7 +132,7 @@ function Stepper({ label, unit, onStep }: StepperProps) {
         onClick={() => onStep(-1)}
         className={stepClassName}
       >
-        <ChevronLeft />
+        <ChevronLeftOutlined />
       </Button>
       <p className="min-w-10 text-center">{label}</p>
       <Button
@@ -135,7 +143,7 @@ function Stepper({ label, unit, onStep }: StepperProps) {
         onClick={() => onStep(1)}
         className={stepClassName}
       >
-        <ChevronRight />
+        <ChevronRightOutlined />
       </Button>
     </div>
   );

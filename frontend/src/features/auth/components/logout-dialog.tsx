@@ -1,6 +1,7 @@
 "use client";
 
-import { CircleUserRound, X } from "lucide-react";
+import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Dialog } from "radix-ui";
@@ -35,7 +36,7 @@ function LogoutDialog() {
           aria-label="Account"
           className="relative mr-2 ml-auto text-white hover:bg-background/10 [&_svg]:size-6"
         >
-          <CircleUserRound />
+          <AccountCircleOutlined />
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -50,7 +51,7 @@ function LogoutDialog() {
                 aria-label="Close"
                 className="-m-2 text-obsidian [&_svg]:size-6"
               >
-                <X />
+                <CloseOutlined />
               </Button>
             </Dialog.Close>
           </div>

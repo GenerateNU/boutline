@@ -1,10 +1,10 @@
 "use client";
 
-import { X } from "lucide-react";
 import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
 import { FilterButton } from "@/components/primitives/filter-button";
+import { ModalClose } from "@/components/primitives/modal";
 
 interface FilterSheetDialogProps {
   open: boolean;
@@ -43,17 +43,7 @@ function FilterSheetDialog({
             <Dialog.Title className="text-xl font-semibold text-obsidian">
               Filter
             </Dialog.Title>
-            <Dialog.Close asChild>
-              <Button
-                type="button"
-                variant="text"
-                size="icon"
-                aria-label="Close"
-                className="-m-2 text-obsidian [&_svg]:size-6"
-              >
-                <X />
-              </Button>
-            </Dialog.Close>
+            <ModalClose />
           </div>
           <Dialog.Description className="sr-only">{description}</Dialog.Description>
 

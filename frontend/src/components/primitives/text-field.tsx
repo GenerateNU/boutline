@@ -4,8 +4,7 @@ import { useId } from "react";
 import { Input } from "@/components/primitives/input";
 
 interface TextFieldProps extends React.ComponentProps<"input"> {
-  label: React.ReactNode;
-  variant?: "outline" | "filled";
+  label?: React.ReactNode;
   supportingText?: React.ReactNode;
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
@@ -15,7 +14,6 @@ function TextField({
   className,
   id,
   label,
-  variant = "outline",
   supportingText,
   leading,
   trailing,
@@ -33,39 +31,38 @@ function TextField({
   return (
     <div
       data-slot="text-field"
-      className={cn("flex flex-col", variant === "filled" ? "gap-1" : "gap-1.5", className)}
+      className={cn("group flex flex-col gap-1", className)}
     >
-      <label
-        htmlFor={inputId}
-        className={variant === "filled" ? "text-base" : "text-sm font-medium text-obsidian"}
-      >
-        {label}
-      </label>
+      {label ? (
+        <label
+          htmlFor={inputId}
+          className="text-xs font-medium text-neutral-secondary group-has-disabled:text-neutral-muted"
+        >
+          {label}
+        </label>
+      ) : null}
       <div
         role="group"
         className={cn(
-          "flex items-center gap-3 px-4 focus-within:ring-2 focus-within:ring-ring has-disabled:opacity-50 [&_svg]:size-5 [&_svg]:shrink-0",
-          variant === "filled"
-            ? "h-10 rounded-full bg-chip"
-            : "rounded-[12px] border border-outline bg-background py-3 shadow-sm",
+          "flex h-10 items-center gap-2 rounded-md border border-outline bg-background px-3 text-sm text-obsidian [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-neutral-secondary",
+          "not-has-disabled:hover:border-neutral-muted focus-within:border-blue focus-within:ring-3 focus-within:ring-blue-lighter",
+          "has-disabled:border-disabled-border has-disabled:bg-disabled has-disabled:text-disabled-foreground has-aria-invalid:border-red-dark",
         )}
       >
         {leading}
         <Input
           id={inputId}
           aria-describedby={describedBy}
-          className={cn(
-            "h-auto flex-1 rounded-none border-0 bg-transparent px-0 focus-visible:ring-0 disabled:opacity-100",
-            variant === "filled"
-              ? "text-base"
-              : "text-xs text-obsidian placeholder:text-neutral-secondary",
-          )}
+          className="h-auto flex-1 rounded-none border-0 bg-transparent px-0 text-sm text-inherit placeholder:text-neutral-muted focus-visible:ring-0 disabled:opacity-100"
           {...props}
         />
         {trailing}
       </div>
       {supportingText ? (
-        <p id={supportingId} className="px-6 text-sm">
+        <p
+          id={supportingId}
+          className="text-xs text-neutral-secondary group-has-aria-invalid:text-red-dark"
+        >
           {supportingText}
         </p>
       ) : null}

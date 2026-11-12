@@ -1,18 +1,17 @@
 "use client";
 
 import { cn } from "cn";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import { buttonVariants } from "@/components/primitives/button";
+import { Chip } from "@/components/primitives/chip";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
-import { Loading } from "@/components/primitives/loading";
 import {
   SegmentedButton,
   SegmentedButtonItem,
 } from "@/components/primitives/segmented-button";
 import { Slider } from "@/components/primitives/slider";
-import { ClubOptions } from "@/features/competitor/components/club-options";
 import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { countryName } from "@/features/tournament/lib/country-name";
@@ -21,14 +20,13 @@ import type {
   TournamentStatus,
   TournamentVisibility,
 } from "@/features/tournament/types/tournament";
-import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
+import { useSearchSuggestions } from "@/lib/hooks/use-search-suggestions";
 import { apiRequest } from "@/services/api-request";
-import type { Team, TeamListResult } from "@/types/competitor";
+import type { TeamListResult } from "@/types/competitor";
 
 const maxDistance = 100;
 const statusOrder: TournamentStatus[] = ["ended", "active", "pending"];
 
-const debounceMs = 300;
 const clubResultLimit = 10;
 const chipClassName = cn(
   buttonVariants({ variant: "outline", size: "sm" }),
@@ -53,36 +51,15 @@ function FilterSheet({ visibility }: FilterSheetProps) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState("");
   const [selectedClub, setSelectedClub] = useState("");
-  const [clubs, setClubs] = useState<Team[] | null>(null);
-  const [clubsFailed, setClubsFailed] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState("");
   const [countries, setCountries] = useState<Country[] | null>(null);
   const [countriesFailed, setCountriesFailed] = useState(false);
-  const [countryTerm, setCountryTerm] = useState("");
-  const latestRequestId = useRef(0);
-
-  async function searchClubs(term: string) {
-    // Typing fires overlapping requests whose responses can arrive out of
-    // order, so each gets an id and only the newest one may update the list.
-    const requestId = ++latestRequestId.current;
-    const query = new URLSearchParams({ limit: String(clubResultLimit) });
-    if (term) {
-      query.set("q", term);
-    }
-    try {
-      const result = await apiRequest<TeamListResult>(`/clubs?${query}`);
-      if (requestId !== latestRequestId.current) {
-        return;
-      }
-      setClubs(result.data);
-      setClubsFailed(false);
-    } catch {
-      if (requestId !== latestRequestId.current) {
-        return;
-      }
-      setClubsFailed(true);
-    }
-  }
+  const [countryQuery, setCountryQuery] = useState("");
+  const clubSearch = useSearchSuggestions(async (term) => {
+    const query = new URLSearchParams({ limit: String(clubResultLimit), q: term });
+    const result = await apiRequest<TeamListResult>(`/clubs?${query}`);
+    return result.data.map(({ name }) => ({ value: name, label: name }));
+  });
 
   async function loadCountries() {
     const query = visibility ? `?visibility=${visibility}` : "";
@@ -97,19 +74,13 @@ function FilterSheet({ visibility }: FilterSheetProps) {
     }
   }
 
-  const [debouncedSearchClubs, cancelClubSearch] = useDebouncedCallback(searchClubs, debounceMs);
-
-  // The active club may not be in the current results, and it needs a chip so
-  // it can be seen and cleared. ClubOptions only reads the name.
-  const selectedClubMissing =
-    clubs !== null && selectedClub !== "" && !clubs.some(({ name }) => name === selectedClub);
-  const shownClubs = selectedClubMissing
-    ? [{ name: selectedClub, competitorCount: 0 }, ...clubs]
-    : clubs;
-
+  const countryTerm = countryQuery.trim().toLowerCase();
   const shownCountries =
-    countries &&
-    countries.filter(({ code }) => countryName(code).toLowerCase().includes(countryTerm));
+    countries && countryTerm
+      ? countries
+          .map(({ code }) => ({ value: code, label: countryName(code) }))
+          .filter(({ label }) => label.toLowerCase().includes(countryTerm))
+      : null;
 
   return (
     <FilterSheetDialog
@@ -119,8 +90,8 @@ function FilterSheet({ visibility }: FilterSheetProps) {
           setStatus(searchParams.get("status") ?? "");
           setSelectedClub(searchParams.get("club") ?? "");
           setSelectedCountry(searchParams.get("country") ?? "");
-          setCountryTerm("");
-          void searchClubs("");
+          setCountryQuery("");
+          clubSearch.clear();
           void loadCountries();
         }
         setOpen(next);
@@ -132,10 +103,8 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         setStatus("");
         setSelectedClub("");
         setSelectedCountry("");
-        setCountryTerm("");
-        // The form reset empties the club searchbox, so the list must match it.
-        cancelClubSearch();
-        void searchClubs("");
+        setCountryQuery("");
+        clubSearch.clear();
       }}
       onSubmit={() => {
         setFilters({
@@ -146,42 +115,59 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         setOpen(false);
       }}
     >
+      {/* Picking a suggestion empties its search box, so the picks show here until submitted. */}
+      {(selectedCountry || selectedClub) && (
+        <div className="flex flex-wrap gap-2">
+          {selectedCountry && (
+            <Chip
+              onDismiss={() => setSelectedCountry("")}
+              dismissLabel={`Remove ${countryName(selectedCountry)}`}
+            >
+              {countryName(selectedCountry)}
+            </Chip>
+          )}
+          {selectedClub && (
+            <Chip onDismiss={() => setSelectedClub("")} dismissLabel={`Remove ${selectedClub}`}>
+              {selectedClub}
+            </Chip>
+          )}
+        </div>
+      )}
+
       <FilterSearchField
         label="Country"
-        onChange={(event) => setCountryTerm(event.target.value.trim().toLowerCase())}
-      >
-        <CountryOptions
-          countries={shownCountries}
-          failed={countriesFailed}
-          selectedCountry={selectedCountry}
-          onSelectCountry={setSelectedCountry}
-        />
-      </FilterSearchField>
+        value={countryQuery}
+        onChange={(event) => setCountryQuery(event.target.value)}
+        suggestions={shownCountries}
+        failed={countriesFailed && countryTerm !== ""}
+        loading={countryTerm !== "" && countries === null && !countriesFailed}
+        selected={selectedCountry}
+        onPick={(code) => {
+          setSelectedCountry(code);
+          setCountryQuery("");
+        }}
+        noun="countries"
+      />
 
       <FilterSearchField
         label="Club"
-        onChange={(event) => debouncedSearchClubs(event.target.value.trim())}
-      >
-        <ClubOptions
-          clubs={shownClubs}
-          failed={clubsFailed}
-          selectedClub={selectedClub}
-          onToggleClub={(name) => setSelectedClub(name === selectedClub ? "" : name)}
-        />
-      </FilterSearchField>
+        value={clubSearch.query}
+        onChange={(event) => clubSearch.change(event.target.value)}
+        suggestions={clubSearch.suggestions}
+        failed={clubSearch.failed}
+        loading={clubSearch.loading}
+        selected={selectedClub}
+        onPick={(name) => {
+          setSelectedClub(name);
+          clubSearch.clear();
+        }}
+        noun="clubs"
+      />
 
       <div className="flex flex-col gap-2">
         <p className="text-sm text-obsidian">Distance</p>
-        <div className="flex flex-col gap-2 px-5 py-2">
-          <Slider
-            aria-label="Distance"
-            max={maxDistance}
-            defaultValue={[maxDistance / 2]}
-          />
-          <div className="flex justify-between text-[11px] leading-4 font-semibold tracking-[0.88px] text-obsidian uppercase">
-            <p>0 mi</p>
-            <p>{maxDistance} mi</p>
-          </div>
+        <div className="px-5 pt-10 pb-2">
+          <Slider aria-label="Distance" unit="mi" showValue max={maxDistance} defaultValue={[maxDistance / 2]} />
         </div>
       </div>
 
@@ -193,40 +179,6 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         ))}
       </ChipGroup>
     </FilterSheetDialog>
-  );
-}
-
-interface CountryOptionsProps {
-  countries: Country[] | null;
-  failed: boolean;
-  selectedCountry: string;
-  onSelectCountry: (code: string) => void;
-}
-
-function CountryOptions({ countries, failed, selectedCountry, onSelectCountry }: CountryOptionsProps) {
-  if (failed) {
-    return <p className="text-sm text-muted-foreground">Couldn’t load countries.</p>;
-  }
-  if (countries === null) {
-    return <Loading className="py-2" />;
-  }
-  if (countries.length === 0) {
-    return <p className="text-sm text-muted-foreground">No countries match.</p>;
-  }
-  return (
-    <SegmentedButton
-      type="single"
-      aria-label="Countries"
-      value={selectedCountry}
-      onValueChange={onSelectCountry}
-      className="flex flex-wrap gap-2 overflow-visible rounded-none border-0 pt-1"
-    >
-      {countries.map(({ code }) => (
-        <SegmentedButtonItem key={code} value={code} className={chipClassName}>
-          {countryName(code)}
-        </SegmentedButtonItem>
-      ))}
-    </SegmentedButton>
   );
 }
 

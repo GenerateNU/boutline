@@ -1,10 +1,12 @@
 export interface Competitor {
   id: string;
+  eventId: string;
   // Absent for a competitor not entered in a tournament yet.
   tournamentId?: string;
   firstName: string;
   lastName: string;
   rating: string;
+  ratingYear: number | null;
   team: string;
 }
 

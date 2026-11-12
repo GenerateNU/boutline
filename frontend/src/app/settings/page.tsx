@@ -1,14 +1,15 @@
-import { Globe, UsersRound } from "lucide-react";
+import GroupOutlined from "@mui/icons-material/GroupOutlined";
+import LanguageOutlined from "@mui/icons-material/LanguageOutlined";
 
 const groups = [
   [
-    { label: "Profile", Icon: Globe },
-    { label: "Accessibility", Icon: UsersRound },
-    { label: "Language", Icon: Globe },
+    { label: "Profile", Icon: LanguageOutlined },
+    { label: "Accessibility", Icon: GroupOutlined },
+    { label: "Language", Icon: LanguageOutlined },
   ],
   [
-    { label: "Privacy Policy", Icon: Globe },
-    { label: "Help", Icon: Globe },
+    { label: "Privacy Policy", Icon: LanguageOutlined },
+    { label: "Help", Icon: LanguageOutlined },
   ],
 ];
 

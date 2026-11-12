@@ -14,6 +14,8 @@ const buttonVariants = cva(
           "border border-blue bg-background text-blue shadow-sm hover:bg-blue-lighter disabled:border-disabled-border disabled:bg-disabled-subtle",
         tonal:
           "bg-blue-lighter text-blue shadow-sm hover:bg-blue-light disabled:bg-disabled",
+        destructive:
+          "bg-red-dark text-white shadow-sm hover:bg-red-dark/90 disabled:bg-disabled",
       },
       size: {
         sm: "h-8 px-3 text-xs",

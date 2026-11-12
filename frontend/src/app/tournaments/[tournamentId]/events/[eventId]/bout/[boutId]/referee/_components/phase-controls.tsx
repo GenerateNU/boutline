@@ -1,4 +1,4 @@
-import { Undo2 } from "lucide-react";
+import UndoOutlined from "@mui/icons-material/UndoOutlined";
 
 import { Button } from "@/components/primitives/button";
 
@@ -32,7 +32,7 @@ export function PhaseControls({
       onClick={onUndo}
       className="h-14 w-full touch-manipulation rounded-xl text-base"
     >
-      <Undo2 />
+      <UndoOutlined />
       Undo last touch
     </Button>
   );

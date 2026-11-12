@@ -148,7 +148,7 @@ how to test it.
   through the real app: routing, OpenAPI security and the auth middleware, plus
   DB-backed login, search and list-filter tests. Those skip without Postgres;
   `REQUIRE_DB=1` makes them fail instead, as CI does.
-- **Frontend:** Jest with Testing Library, 31 test files. They cover the proxy,
+- **Frontend:** Jest with Testing Library, 64 test files. They cover the proxy,
   `apiRequest`, the API services, auth actions, the search and filter components,
   pagination, pinning and the referee screen. No browser end-to-end tests yet.
 
@@ -437,9 +437,10 @@ from the venue floor.
 **Status:** Completed.
 
 - **Global nav** (every page): an obsidian bar with the slanted blue plate and the
-  BOUTLINE wordmark. The menu opens a light sidebar with Admin Login, Search
-  Tournaments, Find Private Tournament, and Settings; the current route's item is
-  highlighted.
+  BOUTLINE wordmark. The menu slides a light sidebar in from the left (no motion
+  with reduced motion on) with Admin Login, Search Tournaments, Find Private
+  Tournament, and Settings; the current route's item is highlighted. An X at the
+  sidebar's top left closes it.
 - **`/settings`**: Profile, Accessibility and Language, then Privacy Policy and
   Help, in two cards. None has a page yet, so the rows are labels only.
 - **Tabs** (tournament and event pages): each tab has its own URL, but switching
@@ -469,7 +470,9 @@ from the venue floor.
 - **Filter sheet:** Status, Club and Country work; the Distance slider is inert, since
   tournaments have no coordinates (#122). Club suggests names from `GET /clubs` and
   sets `?club=`; Country offers only countries that have tournaments, from
-  `GET /countries`, and sets `?country=` to the code.
+  `GET /countries`, and sets `?country=` to the code. Suggestions appear only while
+  typing, in a dropdown under the search bar, and picked values show as removable filter tags at the top of the sheet.
+  Sections follow the Figma order: Country, Club, Distance, Tournament Status.
 - A "Create tournament" card links to the creation form when the viewer has a
   session cookie.
 - Each card shows the tournament's city and country code (e.g. "Boston, US"), or
@@ -485,11 +488,13 @@ Tabs: Overview · Fencers · Clubs · Events.
 - **Overview:** name, the date range (from its events, else `start_time`), and
   Ongoing and Upcoming event cards. Location and organizer contact read "TBC" until
   §10.1 adds them. An unknown ID is a 404.
-- **Fencers:** a searchable, paginated table of name, club and rating, from
-  `GET /competitors?tournament_id=`. The country flag is a placeholder showing US
-  for everyone.
+- **Fencers:** a searchable, paginated list of fencer cards (name, country · club,
+  rating), from `GET /competitors?tournament_id=`, each linking to the fencer's
+  page. The country is a placeholder showing US for everyone.
 - **Clubs:** a searchable, paginated table of clubs and their fencer counts, from
   `GET /tournaments/{id}/teams`.
+- Fencer cards, club rows and each pool on an event's Pooling tab have a pin
+  button that does nothing yet; the dashboard tickets wire it to pinning (§6.3).
 - **Events:** every event grouped by start time, with an accent-insensitive name
   search and a day strip that opens on today, the next day with events, or the
   last one. The strip's calendar button is disabled.
@@ -501,8 +506,8 @@ Tabs: Overview · Fencers · Clubs · Events.
 Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers. These
 replace the tournament's tabs rather than stacking under them.
 
-- **Fencers** (Completed): search, pagination, and a club filter sheet whose picker
-  searches the tournament's clubs. It lists every fencer in the tournament, since
+- **Fencers** (Completed): search, pagination, and a filter sheet with Fencer (sets
+  `?q=`) and Club (sets `?team=`) searches, each picked from a dropdown of matches. It lists every fencer in the tournament, since
   competitors don't belong to an event yet (§8.4). Rows link to a fencer page,
   which is placeholder text.
 - **Pooling** and **Tableau** (Placeholder): a bout list from a hardcoded fixture,
@@ -580,8 +585,8 @@ can score any bout.**
 
 ## 6. Pinning
 
-**Status:** Partial. The state and the batch fetch are built; no real page has a
-pin control yet.
+**Status:** Partial. The state, the batch fetch and the pinned view are built; no
+page has a pin control yet.
 
 **What it is:** a spectator pins the fencers and bouts they care about (their
 child, their clubmates, the bout on strip 4) and sees them together, without
@@ -592,16 +597,37 @@ creating an account.
 **Status:** Completed.
 
 Pins live in the browser's `sessionStorage` (`boutline:pinned`, up to 100 fencers
-and 100 bouts), never in the database. The pinned view fetches each type in one
-request with the `ids` filter on `/competitors` and `/bouts` (§B.1).
+and 100 bouts), never in the database. The pinned view fetches the pinned fencers
+in one request with the `ids` filter on `/competitors` (§B.1). The design pins
+fencers, clubs and pools, not bouts, so pinned bouts are stored but not shown;
+whether `boutIds` should become `clubIds` and `poolIds` is open.
 
-### 6.2 Pin controls and the pinned view
+### 6.2 The pinned view
+
+**Status:** Completed.
+
+`/pinned` is "View Pins": a Back link, then tabs All / Fencers / Clubs / Pools, as
+in the Figma, with loading, empty and error states. All lists Fencers, Clubs and
+Pools in that order, under black sentence-case headings.
+
+- A fencer card is a light blue card with the name, country · club and rating,
+  linking to `/tournaments/{tournamentId}/events/{eventId}/fencers/{id}`. Fencers
+  sort by name, and the card's navy pin unpins the fencer.
+- Clubs and Pools show an empty state until clubs and pools can be pinned.
+- Every tournament page except the referee screen has a fixed pin button in the
+  bottom-right corner linking to `/pinned?tournamentId=…`, which Back returns to.
+
+Pins are stored for every tournament together, so the page shows only the pins of
+the tournament in `?tournamentId=` (the floating button always passes it), or
+every pin when it's opened without one.
+
+### 6.3 Pin controls
 
 **Status:** Planned.
 
-`/pinned` is a scaffold for testing the state: dropdowns of every fencer and bout
-with Pin/Unpin buttons. The planned version puts a pin control on fencer rows and
-bout cards, and turns `/pinned` into the viewer's list of pinned fencers and bouts.
+A pin toggle on each fencer row (pinned rows turn light blue with a navy rating
+badge and pin), on clubs and on pools, and listing pinned clubs and pools (the
+Figma's Club and Pool cards).
 
 ---
 
@@ -1547,7 +1573,7 @@ through the tokens, so components use tokens, never raw colors.
 | `background` / `foreground` | page and text; `foreground` is also the outline color |
 | `muted` / `muted-foreground` | hover fills, secondary text, empty states |
 | `selected` (blue) | only a chosen state: filled button, toggle on, active tab |
-| `destructive` | errors and destructive actions |
+| `destructive` | errors and destructive actions; hi-fi destructive actions (Button `destructive` variant) use `red-dark` |
 | `border`, `input`, `ring` | hairlines, field borders, focus rings |
 
 No Tailwind palette colors. The tournament status badge breaks this today
@@ -1564,19 +1590,43 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 ### C.4 Shape and interaction
 - `--radius` 0.625rem, with `rounded-sm`…`rounded-xl` derived from it. List cards
   use `rounded-md`; pills (tab nav, icon buttons, avatars) use `rounded-full`. 1px
-  `border-foreground`, no shadows.
+  `border-foreground`, no shadows, except floating surfaces (select menu, dropdown,
+  date field popover, upload dialog, modal, filter sheet, toast) which use `shadow-md`.
 - Focus `focus-visible:ring-2 ring-ring`; hover `bg-muted`; disabled `opacity-50`.
-- Icons from `lucide-react` at `size-4`, `aria-hidden` when decorative.
+- Icons are Material's Outlined set from `@mui/icons-material`, imported by path
+  (`@mui/icons-material/SearchOutlined`), at `size-4`, `aria-hidden` when
+  decorative. A filled glyph marks only a set state, like a pinned item.
+  `globals.css` puts MUI's `mui` layer before `utilities` so Tailwind sizes and
+  colors win.
 - Referee touch targets are large (`h-32`), because they are pressed under time
   pressure.
 
 ### C.5 Components
 - Primitives live in `src/components/primitives/`: shadcn-generated, restyled, with
   `cva` variants, `cn`, `data-slot`, and behavior from `radix-ui`.
-- The set includes the global nav, tab nav, section, list, card, chip, button,
-  segmented button, text field, select, checkbox, radio, toggle, slider, date
-  picker, calendar, dropzone, dialogs and filter sheet, pagination, toast,
-  tooltip, progress indicators, and a loading spinner.
+- The set includes the global nav, tab nav, section, list, card, chip (the filter
+  tag), label, button, segmented button, search bar, dropdown, text field,
+  select, date field, checkbox, radio, toggle, slider, calendar,
+  dropzone and upload dialog, modal, filter sheet, pagination, toast, tooltip,
+  progress indicators, and a loading spinner.
+- Form fields (text field, select, date field) share one hi-fi frame: a `text-xs`
+  label above a `rounded-md border-outline` box that turns `border-blue` with a
+  `ring-blue-lighter` halo on focus or open, `border-red-dark` when `aria-invalid`,
+  and `bg-disabled` when disabled. Select is Radix Select; the date field opens the
+  calendar in a Radix Popover.
+- Overlays: Modal is a `rounded-3xl p-5` card with an `text-xl` title and close (X)
+  header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a
+  filled or `destructive` action). The filter sheet is a `rounded-t-3xl` bottom sheet
+  whose search sections are a label above a `FilterSearchField` whose suggestions show
+  in a `Dropdown` of `DropdownOption` rows while typing; picked values show as
+  removable tags at the top until submitted. Other sections are a Distance slider and
+  rows of outline chips, then a full-width Clear All and a filled submit. The toast is
+  a single obsidian row with white `text-sm`, a leading icon, an `accent-green`
+  action, and no close button.
+- The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and `navigation-item`.
+  `global-nav` renders `navbar` as its header. `navigation-bar` is the obsidian row of
+  `navigation-item` tabs, and `tab-nav` renders it with the active tab taken from the
+  route. The logo takes its tone from the text colour (`text-white` or `text-blue`).
 - Fetched content shows `Loading` until it arrives: a route's `loading.tsx` sits
   under its tab bar, and client fetches render it in place of their first result.
 - Many are only used by the `/` showcase so far.

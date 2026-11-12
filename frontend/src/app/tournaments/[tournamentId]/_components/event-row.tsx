@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
 import Link from "next/link";
 
 import { EventStatusBadge } from "@/features/event/components/event-status-badge";
@@ -22,7 +22,7 @@ function EventRow({ event }: EventRowProps) {
         <p className="truncate text-sm font-semibold text-obsidian uppercase">{event.name}</p>
       </div>
       <EventStatusBadge status={event.status} />
-      <ChevronRight aria-hidden className="size-6 shrink-0 text-neutral-muted" />
+      <ChevronRightOutlined aria-hidden className="size-6 shrink-0 text-neutral-muted" />
     </Link>
   );
 }

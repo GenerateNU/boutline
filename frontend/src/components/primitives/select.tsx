@@ -1,40 +1,75 @@
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "cn";
+"use client";
 
-const selectVariants = cva(
-  "h-10 w-full cursor-pointer px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        outline: "rounded-md border border-foreground bg-background",
-        filled: "rounded-full bg-chip",
-      },
-    },
-    defaultVariants: {
-      variant: "outline",
-    },
-  },
+import { cn } from "cn";
+import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
+import { Select as SelectPrimitive } from "radix-ui";
+
+// Shared with DateField, whose trigger looks the same.
+const selectTriggerClassName = cn(
+  "group flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-outline bg-background px-3 text-sm text-obsidian outline-none transition-colors",
+  "hover:bg-blue-lightest focus-visible:border-blue focus-visible:ring-3 focus-visible:ring-blue-lighter data-[state=open]:border-blue data-[state=open]:ring-3 data-[state=open]:ring-blue-lighter",
+  "aria-invalid:border-red-dark data-placeholder:text-neutral-muted",
+  "disabled:pointer-events-none disabled:border-disabled-border disabled:bg-disabled disabled:text-disabled-foreground",
 );
 
-type SelectProps = React.ComponentProps<"select"> &
-  VariantProps<typeof selectVariants> & { placeholder?: string };
+interface SelectProps extends React.ComponentProps<typeof SelectPrimitive.Root> {
+  id?: string;
+  className?: string;
+  placeholder?: string;
+  "aria-label"?: string;
+}
 
-function Select({ className, variant, placeholder, children, ...props }: SelectProps) {
+function Select({
+  id,
+  className,
+  placeholder = "Select an option",
+  "aria-label": ariaLabel,
+  children,
+  ...props
+}: SelectProps) {
   return (
-    <select
-      data-slot="select"
-      className={cn(selectVariants({ variant, className }))}
-      defaultValue={placeholder === undefined ? undefined : ""}
-      {...props}
-    >
-      {placeholder !== undefined && (
-        <option value="" disabled hidden>
-          {placeholder}
-        </option>
-      )}
-      {children}
-    </select>
+    <SelectPrimitive.Root {...props}>
+      <SelectPrimitive.Trigger
+        id={id}
+        aria-label={ariaLabel}
+        data-slot="select"
+        className={cn(selectTriggerClassName, className)}
+      >
+        <SelectPrimitive.Value placeholder={placeholder} />
+        <SelectPrimitive.Icon asChild>
+          <ExpandMoreOutlined className="size-4 shrink-0 text-neutral-secondary transition-transform group-data-[state=open]:rotate-180" />
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content
+          position="popper"
+          sideOffset={4}
+          className="z-50 w-(--radix-select-trigger-width) rounded-lg border border-outline bg-background shadow-md"
+        >
+          <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
+    </SelectPrimitive.Root>
   );
 }
 
-export { Select };
+function SelectItem({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+  return (
+    <SelectPrimitive.Item
+      data-slot="select-item"
+      className={cn(
+        "cursor-pointer rounded-md px-3 py-2 text-sm text-neutral-secondary outline-none data-highlighted:bg-blue-lightest",
+        className,
+      )}
+      {...props}
+    >
+      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    </SelectPrimitive.Item>
+  );
+}
+
+export { Select, SelectItem, selectTriggerClassName };

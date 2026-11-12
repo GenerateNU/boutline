@@ -1,4 +1,5 @@
-import { Calendar, MapPin } from "lucide-react";
+import CalendarTodayOutlined from "@mui/icons-material/CalendarTodayOutlined";
+import LocationOnOutlined from "@mui/icons-material/LocationOnOutlined";
 import Link from "next/link";
 
 import { Button } from "@/components/primitives/button";
@@ -26,13 +27,13 @@ function TournamentResultsCard({ tournament, eventCount, resultsHref }: Tourname
             {tournament.name}
           </CardTitle>
           <p className="flex items-center gap-1 text-xs text-neutral-secondary">
-            <Calendar aria-hidden className="size-3.5 shrink-0" />
+            <CalendarTodayOutlined aria-hidden className="size-3.5 shrink-0" />
             {date && <>{date} &middot; </>}
             {eventCount} {pluralize(eventCount, "event")}
           </p>
           {location && (
             <p className="flex items-center gap-1 text-xs text-neutral-secondary">
-              <MapPin aria-hidden className="size-3.5 shrink-0" />
+              <LocationOnOutlined aria-hidden className="size-3.5 shrink-0" />
               {location}
             </p>
           )}
