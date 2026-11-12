@@ -16,4 +16,16 @@ describe("GlobalNav", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  it("exposes the menu button as the drawer's trigger", () => {
+    render(<GlobalNav />);
+
+    const menu = screen.getByRole("button", { name: "Open menu" });
+    expect(menu).toHaveAttribute("aria-haspopup", "dialog");
+    expect(menu).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(menu);
+
+    expect(menu).toHaveAttribute("aria-expanded", "true");
+  });
 });

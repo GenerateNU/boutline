@@ -21,13 +21,7 @@ function NavigationBar({ items, className, ...props }: NavigationBarProps) {
       {...props}
     >
       {items.map(({ label, href, active, replace }) => (
-        <NavigationItem
-          key={label}
-          label={label}
-          href={href}
-          active={active}
-          replace={replace}
-        />
+        <NavigationItem key={label} label={label} href={href} active={active} replace={replace} />
       ))}
     </nav>
   );

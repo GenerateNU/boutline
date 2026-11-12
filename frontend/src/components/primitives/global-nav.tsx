@@ -34,7 +34,10 @@ function GlobalNav() {
   return (
     <>
       <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
-        <Navbar menuRef={menuButton} onMenuClick={() => setMenuOpen(true)} />
+        <Navbar
+          menuRef={menuButton}
+          wrapMenuButton={(button) => <Dialog.Trigger asChild>{button}</Dialog.Trigger>}
+        />
 
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40 motion-safe:data-open:animate-fade-in motion-safe:data-closed:animate-fade-out" />

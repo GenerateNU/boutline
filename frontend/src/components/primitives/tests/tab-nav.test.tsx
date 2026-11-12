@@ -36,19 +36,11 @@ describe("TabNav", () => {
       current: "Fencers",
       fencers: "/tournaments/1/fencers",
     },
-  ])(
-    "links and marks the current tab with $name",
-    ({ basePath, segment, current, fencers }) => {
-      mockSegment.mockReturnValue(segment);
-      render(<TabNav label="Sections" basePath={basePath} tabs={tabs} />);
+  ])("links and marks the current tab with $name", ({ basePath, segment, current, fencers }) => {
+    mockSegment.mockReturnValue(segment);
+    render(<TabNav label="Sections" basePath={basePath} tabs={tabs} />);
 
-      expect(screen.getByRole("link", { name: "Fencers" })).toHaveAttribute(
-        "href",
-        fencers,
-      );
-      expect(screen.getByRole("link", { current: "page" })).toHaveTextContent(
-        current,
-      );
-    },
-  );
+    expect(screen.getByRole("link", { name: "Fencers" })).toHaveAttribute("href", fencers);
+    expect(screen.getByRole("link", { current: "page" })).toHaveTextContent(current);
+  });
 });
