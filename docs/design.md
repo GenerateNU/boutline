@@ -436,6 +436,10 @@ from the venue floor.
   BOUTLINE wordmark. The menu opens a light sidebar with Admin Login, Search
   Tournaments, Find Private Tournament, and Settings (inert); the current route's
   item is highlighted.
+- **Tabs** (tournament and event pages): each tab has its own URL, but switching
+  tabs replaces the history entry, so the browser's Back button leaves the page
+  rather than stepping back through tabs. The exception is the active tab clicked
+  from a page nested under it (an event's Events tab), which adds an entry.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
 - **`/`**: quick links to login, tournaments and pinned items, then a showcase of
