@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "cn";
-import MenuOutlined from "@mui/icons-material/MenuOutlined";
 import SearchOutlined from "@mui/icons-material/SearchOutlined";
 import { useState } from "react";
 
@@ -29,7 +28,7 @@ function SearchBar({
     <div
       data-slot="search-bar"
       role="search"
-      className={cn("border border-foreground", className)}
+      className={cn("relative", className)}
       onFocus={() => setFocused(true)}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
@@ -37,20 +36,20 @@ function SearchBar({
         }
       }}
     >
-      <div className="flex items-center gap-3 px-3 py-2">
-        {leading ?? <MenuOutlined aria-hidden className="size-5" />}
+      <div className="flex h-11.5 items-center gap-2 rounded-lg border border-outline bg-background px-3 focus-within:border-blue">
+        {leading}
         <Input
           type="text"
-          className="h-auto w-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 focus-visible:ring-0"
+          className="h-auto w-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-sm text-obsidian placeholder:text-neutral-muted focus-visible:ring-0"
           {...props}
         />
-        <SearchOutlined aria-hidden className="size-5" />
+        <SearchOutlined aria-hidden className="size-4 text-neutral-secondary" />
         {trailing}
       </div>
       {open ? (
         <div
           data-slot="search-bar-results"
-          className="border-t border-border"
+          className="absolute inset-x-0 top-full z-10 mt-1"
           onMouseDown={(event) => event.preventDefault()}
         >
           {children}

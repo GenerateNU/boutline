@@ -1,5 +1,6 @@
 "use client";
 
+import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
 import { Button } from "@/components/primitives/button";
 import { Dropzone } from "@/components/primitives/dropzone";
 
@@ -15,11 +16,12 @@ interface ImportDropzoneProps {
 
 function ImportDropzone({ onFile }: ImportDropzoneProps) {
   return (
-    <Dropzone accept={importAccept} onFile={onFile} className="gap-5 rounded-2xl border-2 px-6 py-8">
+    <Dropzone accept={importAccept} onFile={onFile} className="gap-3 px-6 py-8">
       {(open) => (
         <>
-          <p className="text-lg font-semibold">Already have file?</p>
-          <Button type="button" className="w-full rounded-lg" onClick={open}>
+          <CloudUploadOutlined aria-hidden className="size-8 text-neutral-secondary" />
+          <p className="text-base font-semibold text-obsidian">Already have file?</p>
+          <Button type="button" className="w-full" onClick={open}>
             Upload
           </Button>
         </>
