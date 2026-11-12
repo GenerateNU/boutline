@@ -104,6 +104,14 @@ describe("PinnedItemsView", () => {
     expect(screen.queryByText(hides)).not.toBeInTheDocument();
   });
 
+  it("shows the loader until the pins arrive", async () => {
+    seed({ fencerIds: ["f1"], boutIds: [] });
+    global.fetch = jest.fn(() => new Promise(() => {})) as jest.Mock;
+    render(<PinnedItemsView />);
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Loading");
+  });
+
   it("shows the error when loading fails", async () => {
     seed({ fencerIds: ["f1"], boutIds: [] });
     global.fetch = jest.fn().mockRejectedValue(new Error("Network down"));

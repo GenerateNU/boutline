@@ -13,7 +13,8 @@ interface ListCardProps {
   badge?: React.ReactNode;
   href?: string;
   pinned?: boolean;
-  // Turns the pin into a button; without it the pin only shows the state.
+  // Rows can't pin yet (the dashboard tickets wire this up), so without it the
+  // pin button shows the state and does nothing.
   onTogglePin?: () => void;
 }
 
@@ -48,7 +49,7 @@ function ListCard({ title, description, badge, href, pinned, onTogglePin }: List
         <div className="min-w-0 flex-1">{header}</div>
       )}
       {badge}
-      {pinned !== undefined && onTogglePin && (
+      {pinned !== undefined && (
         <PinButton
           variant="plain"
           size="xs"
@@ -59,12 +60,6 @@ function ListCard({ title, description, badge, href, pinned, onTogglePin }: List
         >
           <PinIcon aria-hidden />
         </PinButton>
-      )}
-      {pinned !== undefined && !onTogglePin && (
-        <PinIcon
-          aria-hidden
-          className={cn("size-5 shrink-0", pinned ? "text-blue" : "text-neutral-muted")}
-        />
       )}
       {pinned === undefined && href && (
         <ChevronRightOutlined aria-hidden className="size-6 shrink-0 text-neutral-muted" />

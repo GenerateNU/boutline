@@ -54,9 +54,9 @@ describe("FencerCard", () => {
     expect(onTogglePin).toHaveBeenCalled();
   });
 
-  it("shows the pin without a button until pinning is wired up", () => {
+  it("shows a pin button even before pinning is wired up", () => {
     render(<FencerCard competitor={yan} pinned={false} />);
 
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByRole("button", { name: "Pin Yan Wang" })).toHaveAttribute("aria-pressed", "false");
   });
 });
