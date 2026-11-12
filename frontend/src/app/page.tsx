@@ -73,6 +73,8 @@ import { NavigationBar } from "@/components/primitives/navigation/navigation-bar
 import { NavigationDrawer } from "@/components/primitives/navigation/navigation-drawer";
 import { NavigationDrawerItem } from "@/components/primitives/navigation/navigation-drawer-item";
 import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
+import { Logo } from "@/components/primitives/logo";
+import { Navbar } from "@/components/primitives/navigation/navbar";
 
 const buttonVariantNames = ["filled", "outline", "tonal", "text"] as const;
 const buttonSizes = ["sm", "default", "lg"] as const;
@@ -139,10 +141,10 @@ const demoFencer = {
 };
 const demoClub = { name: "Boston Blade Club", competitorCount: 12 };
 
-const barItems = Array.from({ length: 5 }, (_, index) => ({
-  id: `bar-${index}`,
-  label: "Label",
-  icon: <CategoryOutlined />,
+const barItems = ["Overview", "Fencers", "Clubs", "Events"].map((label) => ({
+  label,
+  href: "#",
+  active: label === "Fencers",
 }));
 
 const drawerItems = Array.from({ length: 7 }, (_, index) => ({
@@ -481,12 +483,23 @@ export default function Home() {
       </Section>
 
       <Section title="Navigation item">
-        <div className="flex items-center gap-4">
-          <NavigationItem icon={<CategoryOutlined />} label="Label" />
-          <NavigationItem icon={<CategoryOutlined />} aria-label="Label" />
-          <NavigationItem icon={<CategoryOutlined />} label="Label" selected />
-          <NavigationItem icon={<CategoryOutlined />} aria-label="Label" selected />
+        <div className="flex rounded-xl bg-obsidian">
+          <NavigationItem href="#" label="Fencers" />
+          <NavigationItem href="#" label="Fencers" active />
         </div>
+      </Section>
+
+      <Section title="Logo">
+        <div className="flex flex-col gap-4">
+          <Logo />
+          <div className="bg-blue p-4">
+            <Logo className="text-white" />
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Navbar">
+        <Navbar />
       </Section>
 
       <Section title="Navigation drawer item">
@@ -502,7 +515,8 @@ export default function Home() {
       </Section>
 
       <Section title="Navigation bar">
-        <NavigationBar items={barItems} />
+        <NavigationBar aria-label="Sections" items={barItems.slice(0, 2)} />
+        <NavigationBar aria-label="Sections" items={barItems} />
       </Section>
 
       <Section title="Navigation drawer">

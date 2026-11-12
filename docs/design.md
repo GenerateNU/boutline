@@ -1575,6 +1575,10 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   segmented button, text field, select, checkbox, radio, toggle, slider, date
   picker, calendar, dropzone, dialogs and filter sheet, pagination, toast,
   tooltip, progress indicators, and a loading spinner.
+- The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and `navigation-item`.
+  `global-nav` renders `navbar` as its header. `navigation-bar` is the obsidian row of
+  `navigation-item` tabs, and `tab-nav` renders it with the active tab taken from the
+  route. The logo takes its tone from the text colour (`text-white` or `text-blue`).
 - Fetched content shows `Loading` until it arrives: a route's `loading.tsx` sits
   under its tab bar, and client fetches render it in place of their first result.
 - Many are only used by the `/` showcase so far.
