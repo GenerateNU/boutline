@@ -1,14 +1,14 @@
-const key = "tournament-draft";
+const KEY = "tournament-draft";
 
 export function saveTournamentDraft(form: HTMLFormElement) {
   try {
-    sessionStorage.setItem(key, JSON.stringify(Object.fromEntries(new FormData(form))));
+    sessionStorage.setItem(KEY, JSON.stringify(Object.fromEntries(new FormData(form))));
   } catch {}
 }
 
 export function readTournamentDraft(): Record<string, string> {
   try {
-    return JSON.parse(sessionStorage.getItem(key) ?? "{}");
+    return JSON.parse(sessionStorage.getItem(KEY) ?? "{}");
   } catch {
     return {};
   }
@@ -25,6 +25,6 @@ export function restoreTournamentDraft(form: HTMLFormElement) {
 
 export function clearTournamentDraft() {
   try {
-    sessionStorage.removeItem(key);
+    sessionStorage.removeItem(KEY);
   } catch {}
 }

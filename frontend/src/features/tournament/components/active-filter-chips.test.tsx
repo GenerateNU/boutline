@@ -3,12 +3,12 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { ActiveFilterChips } from "@/features/tournament/components/active-filter-chips";
 
 const replace = jest.fn();
-const currentParams = new URLSearchParams("status=active&club=Salle+Nord&country=FR&q=open");
+const CURRENT_PARAMS = new URLSearchParams("status=active&club=Salle+Nord&country=FR&q=open");
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ replace }),
   usePathname: () => "/tournaments",
-  useSearchParams: () => currentParams,
+  useSearchParams: () => CURRENT_PARAMS,
 }));
 jest.mock("../../../services/api-request", () => ({ apiRequest: jest.fn() }));
 

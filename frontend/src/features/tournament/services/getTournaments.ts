@@ -7,14 +7,14 @@ import type {
 // Server Components fetch Node-side, so this hits the backend directly
 // instead of going through the /api rewrite in next.config.ts, which only
 // applies to requests that reach the Next server over HTTP.
-const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
+const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 
 export async function getTournaments(
   limit: number,
   offset: number,
   { query, status, visibility, date, timeZone, club, country }: TournamentListFilters = {},
 ): Promise<TournamentListResult> {
-  const url = new URL("/api/v1/tournaments", apiProxyTarget);
+  const url = new URL("/api/v1/tournaments", API_PROXY_TARGET);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("offset", String(offset));
   if (query) {

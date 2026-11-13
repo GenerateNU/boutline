@@ -5,7 +5,7 @@ import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
 import { Select as SelectPrimitive } from "radix-ui";
 
 // Shared with DateField, whose trigger looks the same.
-const selectTriggerClassName = cn(
+const SELECT_TRIGGER_CLASS_NAME = cn(
   "group flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-outline bg-background px-3 text-sm text-obsidian outline-none transition-colors",
   "hover:bg-blue-lightest focus-visible:border-blue focus-visible:ring-3 focus-visible:ring-blue-lighter data-[state=open]:border-blue data-[state=open]:ring-3 data-[state=open]:ring-blue-lighter",
   "aria-invalid:border-red-dark data-placeholder:text-neutral-muted",
@@ -33,7 +33,7 @@ function Select({
         id={id}
         aria-label={ariaLabel}
         data-slot="select"
-        className={cn(selectTriggerClassName, className)}
+        className={cn(SELECT_TRIGGER_CLASS_NAME, className)}
       >
         <SelectPrimitive.Value placeholder={placeholder} />
         <SelectPrimitive.Icon asChild>
@@ -72,4 +72,4 @@ function SelectItem({
   );
 }
 
-export { Select, SelectItem, selectTriggerClassName };
+export { Select, SelectItem, SELECT_TRIGGER_CLASS_NAME as selectTriggerClassName };

@@ -3,7 +3,7 @@ import Link from "next/link";
 
 type NavigationSurface = "dark" | "light";
 
-const surfaces = {
+const SURFACES = {
   dark: {
     item: "h-12 items-center rounded-xl px-4",
     active: "text-white",
@@ -33,7 +33,7 @@ function NavigationItem({
   className,
   ...props
 }: NavigationItemProps) {
-  const styles = surfaces[surface];
+  const styles = SURFACES[surface];
 
   return (
     <Link

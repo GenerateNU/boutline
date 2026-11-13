@@ -5,7 +5,7 @@ import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
 import { type Accept, useDropzone } from "react-dropzone";
 
 // 50MB, the limit the upload designs show.
-const defaultMaxSize = 50 * 1024 * 1024;
+const DEFAULT_MAX_SIZE = 50 * 1024 * 1024;
 
 interface DropzoneProps {
   label?: string;
@@ -25,7 +25,7 @@ function Dropzone({
   onFile,
   multiple = false,
   onFiles,
-  maxSize = defaultMaxSize,
+  maxSize = DEFAULT_MAX_SIZE,
   onReject,
   className,
   children,

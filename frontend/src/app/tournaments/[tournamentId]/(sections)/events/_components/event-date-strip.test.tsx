@@ -2,8 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 
 import { EventDateStrip } from "./event-date-strip";
 
-const days = ["2026-10-04", "2026-10-05", "2026-10-06", "2026-10-07"];
-const base = "/tournaments/t1/events";
+const DAYS = ["2026-10-04", "2026-10-05", "2026-10-06", "2026-10-07"];
+const BASE = "/tournaments/t1/events";
 
 describe("EventDateStrip", () => {
   const cases = [
@@ -13,22 +13,22 @@ describe("EventDateStrip", () => {
       search: "",
       current: "Oct 4",
       previous: null,
-      next: `${base}?date=2026-10-05`,
+      next: `${BASE}?date=2026-10-05`,
     },
     {
       name: "a middle day with a search",
       selected: "2026-10-06",
       search: "foil",
       current: "Oct 6",
-      previous: `${base}?date=2026-10-05&q=foil`,
-      next: `${base}?date=2026-10-07&q=foil`,
+      previous: `${BASE}?date=2026-10-05&q=foil`,
+      next: `${BASE}?date=2026-10-07&q=foil`,
     },
     {
       name: "the last day",
       selected: "2026-10-07",
       search: "",
       current: "Oct 7",
-      previous: `${base}?date=2026-10-06`,
+      previous: `${BASE}?date=2026-10-06`,
       next: null,
     },
   ];
@@ -38,8 +38,8 @@ describe("EventDateStrip", () => {
     ({ selected, search, current, previous, next }) => {
       render(
         <EventDateStrip
-          basePath={base}
-          days={days}
+          basePath={BASE}
+          days={DAYS}
           selected={selected}
           search={search}
         />,

@@ -2,7 +2,7 @@ import { NavigationBar } from "@/components/primitives/navigation/navigation-bar
 import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import type { TournamentStatus } from "@/features/tournament/types/tournament";
 
-const tabs: (TournamentStatus | undefined)[] = [undefined, "ended", "active", "pending"];
+const TABS: (TournamentStatus | undefined)[] = [undefined, "ended", "active", "pending"];
 
 interface StatusTabsProps {
   basePath: string;
@@ -14,7 +14,7 @@ function StatusTabs({ basePath, status }: StatusTabsProps) {
     <NavigationBar
       aria-label="Tournament status"
       surface="light"
-      items={tabs.map((tab) => ({
+      items={TABS.map((tab) => ({
         label: tab ? statusLabels[tab] : "All",
         href: tab ? `${basePath}?status=${tab}` : basePath,
         active: tab === status,

@@ -7,7 +7,7 @@ import { Input } from "@/components/primitives/input";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
 
-const debounceMs = 300;
+const DEBOUNCE_MS = 300;
 
 interface SearchFormProps {
   action: string;
@@ -46,7 +46,7 @@ function SearchForm({
   };
   const [debouncedNavigate, cancelDebouncedNavigate] = useDebouncedCallback(
     navigate,
-    debounceMs,
+    DEBOUNCE_MS,
   );
 
   return (

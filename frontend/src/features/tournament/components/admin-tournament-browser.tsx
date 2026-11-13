@@ -4,11 +4,11 @@ import { StatusTabs } from "@/features/tournament/components/status-tabs";
 import { TournamentCard } from "@/features/tournament/components/tournament-card";
 import {
   parseTournamentFilters,
-  tournamentPageSize,
+  TOURNAMENT_PAGE_SIZE,
 } from "@/features/tournament/lib/tournament-filters";
 import { getTournaments } from "@/features/tournament/services/getTournaments";
 
-const basePath = "/admin/tournaments";
+const BASE_PATH = "/admin/tournaments";
 
 interface AdminTournamentBrowserProps {
   query: Record<string, string | string[] | undefined>;
@@ -17,7 +17,7 @@ interface AdminTournamentBrowserProps {
 async function AdminTournamentBrowser({ query }: AdminTournamentBrowserProps) {
   const { offset, status } = parseTournamentFilters(query);
   const { data, total, limit } = await getTournaments(
-    tournamentPageSize,
+    TOURNAMENT_PAGE_SIZE,
     offset,
     { status },
   );
@@ -30,7 +30,7 @@ async function AdminTournamentBrowser({ query }: AdminTournamentBrowserProps) {
         <h1 className="px-1 text-xl font-semibold text-obsidian">
           Manage Tournaments
         </h1>
-        <StatusTabs basePath={basePath} status={status} />
+        <StatusTabs basePath={BASE_PATH} status={status} />
       </div>
 
       {data.length === 0 && (
@@ -49,7 +49,7 @@ async function AdminTournamentBrowser({ query }: AdminTournamentBrowserProps) {
         total={total}
         limit={limit}
         offset={offset}
-        basePath={basePath}
+        basePath={BASE_PATH}
         params={{ status }}
       />
     </main>

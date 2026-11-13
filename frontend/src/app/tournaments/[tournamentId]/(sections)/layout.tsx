@@ -1,6 +1,6 @@
 import { TabNav } from "@/components/primitives/tab-nav";
 
-const tabs = [
+const TABS = [
   { label: "Overview", segment: null },
   { label: "Fencers", segment: "fencers" },
   { label: "Clubs", segment: "clubs" },
@@ -19,7 +19,7 @@ export default async function TournamentSectionsLayout({
       <TabNav
         label="Tournament sections"
         basePath={`/tournaments/${tournamentId}`}
-        tabs={tabs}
+        tabs={TABS}
       />
       {children}
     </div>

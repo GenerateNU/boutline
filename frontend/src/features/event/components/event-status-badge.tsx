@@ -1,7 +1,7 @@
 import { StatusBadge, type Status } from "@/components/primitives/status-badge";
 import type { EventStatus } from "@/features/event/types/event";
 
-const badgeStatus: Record<EventStatus, Status> = {
+const BADGE_STATUS: Record<EventStatus, Status> = {
   upcoming: "not-started",
   active: "in-progress",
   ended: "completed",
@@ -12,7 +12,7 @@ interface EventStatusBadgeProps extends React.ComponentProps<"div"> {
 }
 
 function EventStatusBadge({ status, ...props }: EventStatusBadgeProps) {
-  return <StatusBadge status={badgeStatus[status]} {...props} />;
+  return <StatusBadge status={BADGE_STATUS[status]} {...props} />;
 }
 
 export { EventStatusBadge };

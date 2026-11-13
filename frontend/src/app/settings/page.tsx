@@ -1,7 +1,7 @@
 import GroupOutlined from "@mui/icons-material/GroupOutlined";
 import LanguageOutlined from "@mui/icons-material/LanguageOutlined";
 
-const groups = [
+const GROUPS = [
   [
     { label: "Profile", Icon: LanguageOutlined },
     { label: "Accessibility", Icon: GroupOutlined },
@@ -17,7 +17,7 @@ export default function SettingsPage() {
   return (
     <main className="mx-auto flex w-full max-w-mobile flex-1 flex-col gap-5 px-6 pt-5 pb-4 font-manrope">
       <h1 className="pb-1.25 text-xl font-semibold text-obsidian">Settings</h1>
-      {groups.map((group) => (
+      {GROUPS.map((group) => (
         <ul
           key={group[0].label}
           className="flex flex-col rounded-[12px] border border-outline bg-background p-1 shadow-sm"

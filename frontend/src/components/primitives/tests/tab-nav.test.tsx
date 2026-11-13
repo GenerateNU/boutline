@@ -8,7 +8,7 @@ jest.mock("next/navigation", () => ({
   usePathname: () => "/tournaments/1",
 }));
 
-const tabs = [
+const TABS = [
   { label: "Overview", segment: null },
   { label: "Fencers", segment: "fencers" },
 ];
@@ -38,7 +38,7 @@ describe("TabNav", () => {
     },
   ])("links and marks the current tab with $name", ({ basePath, segment, current, fencers }) => {
     mockSegment.mockReturnValue(segment);
-    render(<TabNav label="Sections" basePath={basePath} tabs={tabs} />);
+    render(<TabNav label="Sections" basePath={basePath} tabs={TABS} />);
 
     expect(screen.getByRole("link", { name: "Fencers" })).toHaveAttribute("href", fencers);
     expect(screen.getByRole("link", { current: "page" })).toHaveTextContent(current);

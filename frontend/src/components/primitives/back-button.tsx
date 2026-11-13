@@ -8,7 +8,7 @@ import { Button } from "@/components/primitives/button";
 
 type BackButtonSize = "sm" | "default" | "lg";
 
-const sizeClasses: Record<BackButtonSize, string> = {
+const SIZE_CLASSES: Record<BackButtonSize, string> = {
   sm: "pr-3 pl-2",
   default: "pr-4 pl-3 [&_svg]:size-5",
   lg: "pr-5 pl-4 [&_svg]:size-6",
@@ -33,7 +33,7 @@ function BackButton({
       size={size}
       className={cn(
         "gap-1 aria-disabled:pointer-events-none aria-disabled:text-disabled-foreground",
-        sizeClasses[size],
+        SIZE_CLASSES[size],
         className,
       )}
     >

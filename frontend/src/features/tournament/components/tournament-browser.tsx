@@ -8,7 +8,7 @@ import { TournamentCard } from "@/features/tournament/components/tournament-card
 import { WeekStrip } from "@/features/tournament/components/week-strip";
 import {
   parseTournamentFilters,
-  tournamentPageSize,
+  TOURNAMENT_PAGE_SIZE,
 } from "@/features/tournament/lib/tournament-filters";
 import { getTournaments } from "@/features/tournament/services/getTournaments";
 import type { TournamentVisibility } from "@/features/tournament/types/tournament";
@@ -27,7 +27,7 @@ async function TournamentBrowser({
   const { offset, status, date, calendarView, search, tz, club, country } =
     parseTournamentFilters(query);
 
-  const { data, total, limit } = await getTournaments(tournamentPageSize, offset, {
+  const { data, total, limit } = await getTournaments(TOURNAMENT_PAGE_SIZE, offset, {
     query: search,
     status,
     visibility,

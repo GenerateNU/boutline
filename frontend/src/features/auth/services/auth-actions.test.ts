@@ -26,7 +26,7 @@ function fakeCookieStore() {
   };
 }
 
-const user = {
+const USER = {
   id: "0b6c1f0e-8d1f-4c55-9f43-1f2b3c4d5e6f",
   email: "ada@example.com",
   firstName: "Ada",
@@ -43,7 +43,7 @@ function formOf(fields: Record<string, string>) {
   return form;
 }
 
-const credentials = formOf({ email: "ada@example.com", password: "hunter2" });
+const CREDENTIALS = formOf({ email: "ada@example.com", password: "hunter2" });
 
 function respond(status: number, body: unknown) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
@@ -55,7 +55,7 @@ describe("auth actions", () => {
   it("passes credentials in a form whose logged form hides the password", () => {
     const { formatArgs } = jest.requireActual("next/dist/server/dev/server-action-logger.js");
 
-    expect(formatArgs([credentials])).toBe("{}");
+    expect(formatArgs([CREDENTIALS])).toBe("{}");
   });
 
   const fetchMock = jest.fn();
@@ -74,7 +74,7 @@ describe("auth actions", () => {
   it.each([
     {
       name: "login",
-      call: () => login(credentials),
+      call: () => login(CREDENTIALS),
       path: "/api/v1/auth/login",
       wantBody: { email: "ada@example.com", password: "hunter2" },
     },
@@ -86,11 +86,11 @@ describe("auth actions", () => {
       wantBody: { email: "ada@example.com", password: "hunter2", firstName: "Ada", lastName: "Lovelace" },
     },
   ])("$name stores the token in an httpOnly session cookie", async ({ call, path, wantBody }) => {
-    fetchMock.mockResolvedValue(respond(200, { token: "jwt-abc", user }));
+    fetchMock.mockResolvedValue(respond(200, { token: "jwt-abc", user: USER }));
 
     const result = await call();
 
-    expect(result).toEqual({ ok: true, user });
+    expect(result).toEqual({ ok: true, user: USER });
     expect(new URL(fetchMock.mock.calls[0][0]).pathname).toBe(path);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual(wantBody);
     await expect(getSessionToken()).resolves.toBe("jwt-abc");
@@ -132,7 +132,7 @@ describe("auth actions", () => {
     const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
     fetchMock.mockRejectedValue(new TypeError("fetch failed"));
 
-    await expect(login(credentials)).resolves.toEqual({
+    await expect(login(CREDENTIALS)).resolves.toEqual({
       ok: false,
       error: "Couldn't reach the server. Try again in a moment.",
     });
@@ -141,8 +141,8 @@ describe("auth actions", () => {
   });
 
   it("logout ends the session", async () => {
-    fetchMock.mockResolvedValue(respond(200, { token: "jwt-abc", user }));
-    await login(credentials);
+    fetchMock.mockResolvedValue(respond(200, { token: "jwt-abc", user: USER }));
+    await login(CREDENTIALS);
 
     await logout();
 

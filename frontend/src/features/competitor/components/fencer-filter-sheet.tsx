@@ -11,7 +11,7 @@ import { useSearchSuggestions } from "@/lib/hooks/use-search-suggestions";
 import { apiRequest } from "@/services/api-request";
 import type { CompetitorListResult, TeamListResult } from "@/types/competitor";
 
-const suggestionLimit = 10;
+const SUGGESTION_LIMIT = 10;
 
 interface FencerFilterSheetProps {
   tournamentId: string;
@@ -26,7 +26,7 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
   const fencerSearch = useSearchSuggestions(async (term) => {
     const query = new URLSearchParams({
       tournament_id: tournamentId,
-      limit: String(suggestionLimit),
+      limit: String(SUGGESTION_LIMIT),
       q: term,
     });
     const result = await apiRequest<CompetitorListResult>(`/competitors?${query}`);
@@ -36,7 +36,7 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
     });
   });
   const clubSearch = useSearchSuggestions(async (term) => {
-    const query = new URLSearchParams({ limit: String(suggestionLimit), q: term });
+    const query = new URLSearchParams({ limit: String(SUGGESTION_LIMIT), q: term });
     const result = await apiRequest<TeamListResult>(
       `/tournaments/${encodeURIComponent(tournamentId)}/teams?${query}`,
     );

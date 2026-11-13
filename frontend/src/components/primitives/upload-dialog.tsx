@@ -30,7 +30,7 @@ interface UploadDialogProps {
   maxSize?: number;
 }
 
-const uploadAccept: Accept = {
+const UPLOAD_ACCEPT: Accept = {
   "image/jpeg": [".jpg", ".jpeg"],
   "image/png": [".png"],
   "application/pdf": [".pdf"],
@@ -98,7 +98,7 @@ function UploadDialog({
   onAddFiles,
   onRemoveFile,
   onReject,
-  accept = uploadAccept,
+  accept = UPLOAD_ACCEPT,
   maxSize,
 }: UploadDialogProps) {
   const [rejection, setRejection] = useState<string>();
@@ -174,4 +174,4 @@ function UploadDialog({
   );
 }
 
-export { UploadDialog, uploadAccept, type UploadFile };
+export { UploadDialog, UPLOAD_ACCEPT as uploadAccept, type UploadFile };

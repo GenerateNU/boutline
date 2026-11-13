@@ -8,13 +8,13 @@ function fencer(id: string, firstName: string, tournamentId = "t1"): Competitor 
   return { id, eventId: "e1", tournamentId, firstName, lastName: "Smith", rating: "A", ratingYear: 26, team: "" };
 }
 
-const ann = fencer("f1", "Ann");
-const cara = fencer("f3", "Cara", "t2");
+const ANN = fencer("f1", "Ann");
+const CARA = fencer("f3", "Cara", "t2");
 
 function mockApi() {
   global.fetch = jest.fn(async (input: RequestInfo | URL) => {
     const ids = new URL(String(input), "http://localhost").searchParams.get("ids")?.split(",") ?? [];
-    const data = [ann, cara].filter(({ id }) => ids.includes(id));
+    const data = [ANN, CARA].filter(({ id }) => ids.includes(id));
     return { ok: true, status: 200, json: async () => ({ data, total: data.length, limit: data.length, offset: 0 }) };
   }) as jest.Mock;
 }

@@ -3,7 +3,7 @@ import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
 
 import { Button } from "@/components/primitives/button";
 
-const variants = {
+const VARIANTS = {
   outline: {
     variant: "outline",
     className:
@@ -15,15 +15,15 @@ const variants = {
   plain: { variant: "text", className: "text-neutral-muted shadow-none aria-pressed:text-blue" },
 } as const;
 
-const sizes = {
+const SIZES = {
   xs: "size-8 rounded-md [&_svg]:size-4",
   sm: "size-11.5 [&_svg]:size-6",
   default: "size-17.5 [&_svg]:size-11.25",
 };
 
 interface PinButtonProps extends React.ComponentProps<"button"> {
-  variant?: keyof typeof variants;
-  size?: keyof typeof sizes;
+  variant?: keyof typeof VARIANTS;
+  size?: keyof typeof SIZES;
   active?: boolean;
   asChild?: boolean;
 }
@@ -41,14 +41,14 @@ function PinButton({
     <Button
       asChild={asChild}
       type={asChild ? undefined : "button"}
-      variant={variants[variant].variant}
+      variant={VARIANTS[variant].variant}
       size="icon"
       data-slot="pin-button"
       aria-pressed={active}
       className={cn(
         "rounded-[12px] shadow-md",
-        variants[variant].className,
-        sizes[size],
+        VARIANTS[variant].className,
+        SIZES[size],
         className,
       )}
       {...props}

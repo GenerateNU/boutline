@@ -119,7 +119,7 @@ interface StepperProps {
   onStep: (step: number) => void;
 }
 
-const stepClassName = "size-6 text-obsidian [&_svg]:size-6";
+const STEP_CLASS_NAME = "size-6 text-obsidian [&_svg]:size-6";
 
 function Stepper({ label, unit, onStep }: StepperProps) {
   return (
@@ -130,7 +130,7 @@ function Stepper({ label, unit, onStep }: StepperProps) {
         size="icon"
         aria-label={`Previous ${unit}`}
         onClick={() => onStep(-1)}
-        className={stepClassName}
+        className={STEP_CLASS_NAME}
       >
         <ChevronLeftOutlined />
       </Button>
@@ -141,7 +141,7 @@ function Stepper({ label, unit, onStep }: StepperProps) {
         size="icon"
         aria-label={`Next ${unit}`}
         onClick={() => onStep(1)}
-        className={stepClassName}
+        className={STEP_CLASS_NAME}
       >
         <ChevronRightOutlined />
       </Button>

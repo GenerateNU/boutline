@@ -1,7 +1,7 @@
-const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
+const COUNTRY_NAMES = new Intl.DisplayNames(["en"], { type: "region" });
 
 function countryName(code: string) {
-  return countryNames.of(code) ?? code;
+  return COUNTRY_NAMES.of(code) ?? code;
 }
 
 export { countryName };

@@ -8,19 +8,19 @@ export interface EventTimeGroup {
 // Every formatter uses UTC so a day label matches eventDay(), which slices the
 // UTC ISO string. Formatting in local time could put a late-evening event on
 // the next or previous day.
-const dayFormat = new Intl.DateTimeFormat("en-US", {
+const DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
   timeZone: "UTC",
 });
 
-const longDayFormat = new Intl.DateTimeFormat("en-US", {
+const LONG_DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
   month: "long",
   day: "numeric",
   timeZone: "UTC",
 });
 
-const timeFormat = new Intl.DateTimeFormat("en-US", {
+const TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
   minute: "2-digit",
   timeZone: "UTC",
@@ -107,7 +107,7 @@ export function eventsWithStatus(
 }
 
 export function formatDayLabel(day: string): string {
-  return dayFormat.format(utcMidnight(day));
+  return DAY_FORMAT.format(utcMidnight(day));
 }
 
 // "October 12" for a one-day tournament, "October 12 – October 14" otherwise.
@@ -122,10 +122,10 @@ export function formatEventDateRange(
     return null;
   }
   const last = days[days.length - 1] ?? first;
-  const format = (day: string) => longDayFormat.format(utcMidnight(day));
+  const format = (day: string) => LONG_DAY_FORMAT.format(utcMidnight(day));
   return first === last ? format(first) : `${format(first)} – ${format(last)}`;
 }
 
 export function formatTimeLabel(startTime: string): string {
-  return timeFormat.format(new Date(startTime));
+  return TIME_FORMAT.format(new Date(startTime));
 }
