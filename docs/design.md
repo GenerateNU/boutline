@@ -25,7 +25,7 @@ Every chapter and subsection carries a status:
 | Part | Chapters | Status |
 | --- | --- | --- |
 | Built | 1 Platform · 2 Data and API · 3 Accounts · 4 Browsing tournaments · 5 Live scoring · 6 Pinning | Completed or Partial |
-| Current scope | 7 Identity and access · 8 Schema corrections · 9 Bout integrity · 10 Tournament setup · 11 Pools · 12 Direct elimination · 13 Results · 14 Live updates | Planned |
+| Current scope | 7 Identity and access · 8 Schema corrections · 9 Bout integrity · 10 Tournament setup · 11 Pools · 12 Direct elimination · 13 Results · 14 Live updates | Planned or Partial |
 | After the current scope | 15 Bout clock · 16 Cards · 17 Withdrawal | Next in line, then Out of scope |
 
 A planned chapter's "Done when" list gates the backend work of the next chapter.
@@ -625,13 +625,18 @@ Pins are stored for every tournament together, so the page shows only the pins o
 the tournament in `?tournamentId=` (the floating button always passes it), or
 every pin when it's opened without one.
 
+Pinning has one level: `/pinned` is the only place pins are listed. Tournament and
+event dashboards don't list pinned items at the top.
+
 ### 6.3 Pin controls
 
-**Status:** Planned.
+**Status:** Partial. Fencer rows and the Pooling tab's pool cards render a pin
+button, but every page passes it `pinned={false}` with no handler, so it does
+nothing yet.
 
 A pin toggle on each fencer row (pinned rows turn light blue with a navy rating
 badge and pin), on clubs and on pools, and listing pinned clubs and pools (the
-Figma's Club and Pool cards).
+Figma's Club and Pool cards) on `/pinned`.
 
 ---
 
@@ -700,7 +705,7 @@ codes, few enough to enumerate without a limit.
 
 **Status:** Planned. Issue: #176.
 
-Email and password change (TODO in `user/types.go`), and stronger password
+Email and password change (TODO in `user/repository.go`), and stronger password
 requirements than the current 1–72 bytes.
 
 ---
@@ -747,7 +752,8 @@ the tournament and bout `end` state.
 
 ### 8.4 One competitor per event
 
-**Status:** Planned. Issue: #77.
+**Status:** Partial. Issue: #77. `event_id` and the new columns are built, except
+`seed` (§11.5) and `checked_in_at` (§10.5); `team` is still on the row.
 
 - A competitor row belongs to exactly one event (`event_id`, required). A person
   fencing foil and épée has two rows, one per event. Because ratings are per
@@ -806,9 +812,9 @@ editable. Block writes to all of them once the tournament has ended.
 - `GET /scoring/match/{id}` returns newest first, but its description says "in the
   order they were recorded".
 - With `points_to_win = 1`, both fencers show as on match point at 0–0.
-- Status guards the CRUD routes lack: a pool can be created in a stage that has
-  started, a pool's referee can be changed after it has ended, and a DE can be
-  deleted in any state.
+- Status guards the CRUD routes lack: a pool's referee can be changed after it has
+  ended, and a DE can be deleted in any state. (Pool create already refuses a
+  stage that has started.)
 
 ---
 
@@ -874,7 +880,8 @@ time separately and picks the reason by hand.
 
 ### 9.3 Bout constraints
 
-**Status:** Planned.
+**Status:** Partial. Issue: #193. The CHECK is built (`chk_bouts_single_stage`);
+the event and referee checks are planned.
 
 - A CHECK makes `pool_id` and `direct_elimination_id` mutually exclusive.
 - Both competitors must belong to the bout's event (§8.4), and the referee must be a
@@ -896,7 +903,8 @@ it, from what, and why. This is the one exception to forward-only lifecycles
 
 ### 9.5 Parent-row locking
 
-**Status:** Planned. Issue: #181.
+**Status:** Partial. Issue: #181. Pool create and re-seat lock the pool stage row
+(§11.2); ending a bout takes no lock yet.
 
 This is the shared mechanism for derived transitions (§B.2). Ending a bout locks
 its parent row (`SELECT … FOR UPDATE` on the pool stage or DE) and runs the
@@ -920,7 +928,8 @@ Fencing, adding staff, and checking fencers in on the day.
 
 ### 10.1 Tournament fields and lifecycle
 
-**Status:** Planned.
+**Status:** Partial. Issue: #194. City and country are stored, and the start and
+complete routes exist without their preconditions; the other fields are planned.
 
 - Fields the creation form already collects but the backend lacks: location
   (city/state), venue, organizer contact, fees, sanctioning authority (askFRED,
@@ -1002,8 +1011,9 @@ generates the DE once pools end.
 
 ## 11. Pools
 
-**Status:** Partial. Seeding, the manual pool and stage transitions and the pool
-sheet are built; generation, stage results and the screens are planned.
+**Status:** Partial. Seeding, the three generation routes (propose, create,
+re-seat), the manual pool and stage transitions and the pool sheet are built;
+stage results, the automatic transitions and the screens are planned.
 
 **What it is:** the first round of an event. Fencers are split into pools of about
 six or seven, equally strong and with clubmates apart, and everyone in a pool
@@ -1185,7 +1195,8 @@ filter sheet.
 
 ## 12. Direct elimination
 
-**Status:** Planned.
+**Status:** Partial. The bracket schema and the tableau endpoint are built; the
+draw, advancement, placings and the Tableau tab are planned.
 
 **What it is:** the knockout round. The pool ranking seeds a bracket, with byes for
 the top seeds when the field isn't a power of two. Each bout's winner moves on
@@ -1198,7 +1209,7 @@ until one fencer is left. Spectators watch the bracket fill in live.
 
 ### 12.1 Bracket data
 
-**Status:** Planned.
+**Status:** Completed.
 
 **Entries.** `direct_elimination_entries(direct_elimination_id, competitor_id, seed)`
 is the tableau's seed list: one row for each fencer who made the cut, written by
@@ -1275,7 +1286,8 @@ once the event's pool stage has ended:
 
 ### 12.4 Completion and placings
 
-**Status:** Planned.
+**Status:** Planned. A manual `POST /{id}/complete` exists today with no check on
+the final.
 
 - The final ending completes the DE and the event. `POST /{id}/complete` is refused
   (409) while the final has not ended.
@@ -1285,7 +1297,8 @@ once the event's pool stage has ended:
 
 ### 12.5 Tableau endpoint and tab
 
-**Status:** Planned. Issues: #156, #100, #168.
+**Status:** Partial. Issues: #100, #168. The endpoint is built; the tab is still
+the fixture.
 
 - `GET /events/{id}/tableau` (public) returns every round from the bracket size
   down to the final, each with its bouts in slot order and each fencer's seed.
@@ -1355,8 +1368,9 @@ referee screen in scope, the épée double touch.
 
 **Status:** Planned. Issues: #13, #102.
 
-Spectators follow bouts through SSE or polling against `/history`. Redis is
-already connected and is the obvious pub/sub channel.
+Spectators follow bouts through SSE or polling against `/history`. Scoring reads
+and writes already go through a Redis cache (#167), and Redis is the obvious
+pub/sub channel.
 
 ### 14.2 Double touches
 
