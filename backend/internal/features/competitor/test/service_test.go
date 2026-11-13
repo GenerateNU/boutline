@@ -294,6 +294,41 @@ func TestGetCompetitorByID(t *testing.T) {
 	})
 }
 
+func TestMemberNumberVisibility(t *testing.T) {
+	t.Parallel()
+	stored := seeded("Lee", "Kiefer", competitor.RatingA, "")
+	stored.MemberNumber = ptr("100000123")
+	service := NewTestService(NewFakeCompetitorRepository(stored))
+
+	tests := []struct {
+		name     string
+		signedIn bool
+		want     *string
+	}{
+		{name: "shows the member number to a signed-in caller", signedIn: true, want: ptr("100000123")},
+		{name: "hides the member number from an anonymous caller", signedIn: false, want: nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := t.Context()
+			if tt.signedIn {
+				ctx = user.WithUserID(ctx, uuid.New())
+			}
+
+			got, err := service.GetCompetitorByID(ctx, &competitor.CompetitorIDInput{ID: stored.ID.String()})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got.Body.MemberNumber)
+
+			list, err := service.ListCompetitors(ctx, &competitor.CompetitorListInput{Limit: 20})
+			require.NoError(t, err)
+			require.Len(t, list.Body.Data, 1)
+			assert.Equal(t, tt.want, list.Body.Data[0].MemberNumber)
+		})
+	}
+}
+
 func TestListCompetitors(t *testing.T) {
 	t.Parallel()
 	seed := []competitor.Competitor{

@@ -17,13 +17,14 @@ type CompetitorResponse struct {
 	RatingYear    *int16    `json:"ratingYear" nullable:"true"`
 	PrimaryClub   *string   `json:"primaryClub" nullable:"true"`
 	SecondaryClub *string   `json:"secondaryClub" nullable:"true"`
+	MemberNumber  *string   `json:"memberNumber" nullable:"true"`
 	AthleteID     *string   `json:"athleteId" nullable:"true" format:"uuid"`
 	Team          string    `json:"team"`
 	CreatedAt     time.Time `json:"createdAt"`
 	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
-func newCompetitorResponse(competitor Competitor) CompetitorResponse {
+func newCompetitorResponse(competitor Competitor, showMemberNumber bool) CompetitorResponse {
 	// Not every competitor is entered in a tournament yet, so the column is
 	// nullable and an untagged competitor reports an empty id.
 	tournamentID := ""
@@ -34,6 +35,10 @@ func newCompetitorResponse(competitor Competitor) CompetitorResponse {
 	if competitor.AthleteID != nil {
 		id := competitor.AthleteID.String()
 		athleteID = &id
+	}
+	var memberNumber *string
+	if showMemberNumber {
+		memberNumber = competitor.MemberNumber
 	}
 	return CompetitorResponse{
 		ID:            competitor.ID.String(),
@@ -48,6 +53,7 @@ func newCompetitorResponse(competitor Competitor) CompetitorResponse {
 		RatingYear:    competitor.RatingYear,
 		PrimaryClub:   competitor.PrimaryClub,
 		SecondaryClub: competitor.SecondaryClub,
+		MemberNumber:  memberNumber,
 		AthleteID:     athleteID,
 		Team:          competitor.Team,
 		CreatedAt:     competitor.CreatedAt,

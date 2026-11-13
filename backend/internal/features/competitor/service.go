@@ -97,10 +97,17 @@ func (s *competitorService) CreateCompetitor(
 	if competitor.MemberNumber != nil {
 		competitor.AthleteID = s.linkAthlete(ctx, competitor.ID, *competitor.MemberNumber)
 	}
-	return &CompetitorOutput{Body: newCompetitorResponse(*competitor)}, nil
+	return &CompetitorOutput{Body: newCompetitorResponse(*competitor, memberNumberVisible(ctx))}, nil
 }
 
 // linkAthlete is best-effort: a failure is logged and never fails the request.
+// Competitor reads are public, so member numbers go only to signed-in callers;
+// otherwise anyone could page through the list and collect them with names.
+func memberNumberVisible(ctx context.Context) bool {
+	_, ok := user.UserIDFrom(ctx)
+	return ok
+}
+
 func (s *competitorService) linkAthlete(ctx context.Context, competitorID uuid.UUID, memberNumber string) *uuid.UUID {
 	if memberNumber == "" {
 		return nil
@@ -190,7 +197,7 @@ func (s *competitorService) GetCompetitorByID(
 		return nil, errs.HumaError(fmt.Errorf("get competitor: %w", err))
 	}
 
-	return &CompetitorOutput{Body: newCompetitorResponse(*competitor)}, nil
+	return &CompetitorOutput{Body: newCompetitorResponse(*competitor, memberNumberVisible(ctx))}, nil
 }
 
 func (s *competitorService) UpdateCompetitorByID(
@@ -216,7 +223,7 @@ func (s *competitorService) UpdateCompetitorByID(
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("get updated competitor: %w", err))
 	}
-	return &CompetitorOutput{Body: newCompetitorResponse(*competitor)}, nil
+	return &CompetitorOutput{Body: newCompetitorResponse(*competitor, memberNumberVisible(ctx))}, nil
 }
 
 func competitorUpdateFrom(body CompetitorUpdateBody) (*CompetitorUpdate, error) {
@@ -337,9 +344,10 @@ func (s *competitorService) ListCompetitors(
 		return nil, errs.HumaError(fmt.Errorf("list competitors: %w", err))
 	}
 
+	showMemberNumber := memberNumberVisible(ctx)
 	data := make([]CompetitorResponse, 0, len(competitors))
 	for _, competitor := range competitors {
-		data = append(data, newCompetitorResponse(competitor))
+		data = append(data, newCompetitorResponse(competitor, showMemberNumber))
 	}
 	return &CompetitorListOutput{Body: CompetitorListBody{
 		Data:   data,

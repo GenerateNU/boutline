@@ -39,18 +39,30 @@ func TestAthleteLinkingAndReads(t *testing.T) {
 	app := testkit.GetDBTestApp(t)
 	memberNumber := randomMemberNumber()
 
-	var athleteID string
+	var athleteID, competitorID string
 	for _, eventID := range []string{openEpeeEventID, mixedEpeeEventID, openSabreEventID} {
 		body := createAthleteCompetitor(t, app, eventID, memberNumber, "Vanderquist")
 
 		id, ok := body["athleteId"].(string)
 		require.True(t, ok, "competitor in event %s has no athleteId: %v", eventID, body)
 		if athleteID == "" {
-			athleteID = id
+			athleteID, competitorID = id, createdID(t, body)
 		}
 		assert.Equal(t, athleteID, id, "event %s linked to a different athlete", eventID)
-		assert.NotContains(t, body, "memberNumber")
+		assert.Equal(t, memberNumber, body["memberNumber"])
 	}
+
+	t.Run("only signed-in readers see the member number", func(t *testing.T) {
+		route := "/api/v1/competitors/" + competitorID
+		assert.Equal(t, memberNumber, send(t, app, testkit.GET, route, nil, http.StatusOK)["memberNumber"])
+
+		anonymous := testkit.New(t).
+			Request(testkit.Request{App: app, Route: route, Method: testkit.GET}).
+			AssertStatus(http.StatusOK).
+			GetBody()
+		assert.Contains(t, anonymous, "memberNumber")
+		assert.Nil(t, anonymous["memberNumber"])
+	})
 
 	similarID := createAthleteCompetitor(t, app, openEpeeEventID, randomMemberNumber(), "Vanderquest")["athleteId"]
 

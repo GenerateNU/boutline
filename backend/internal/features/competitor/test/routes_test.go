@@ -452,17 +452,18 @@ func TestAthleteLinkingEndpoint(t *testing.T) {
 		assert.Nil(t, fields["athleteId"])
 	})
 
-	t.Run("never exposes the member number", func(t *testing.T) {
+	t.Run("links the athlete but hides the member number from anonymous callers", func(t *testing.T) {
 		t.Parallel()
 		api := newTestAPI(t)
 		created := api.Post("/api/v1/competitors", body)
 		require.Equal(t, http.StatusCreated, created.Code)
 		createdFields := decodeBody(t, created.Body.Bytes())
-		assert.NotContains(t, createdFields, "memberNumber")
+		assert.Contains(t, createdFields, "memberNumber")
+		assert.Nil(t, createdFields["memberNumber"])
 		assert.Equal(t, FakeAthleteID("100000123").String(), createdFields["athleteId"])
 
 		fetched := api.Get("/api/v1/competitors/" + createdFields["id"].(string))
 		require.Equal(t, http.StatusOK, fetched.Code)
-		assert.NotContains(t, decodeBody(t, fetched.Body.Bytes()), "memberNumber")
+		assert.Nil(t, decodeBody(t, fetched.Body.Bytes())["memberNumber"])
 	})
 }
