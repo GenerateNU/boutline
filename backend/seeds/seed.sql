@@ -121,6 +121,23 @@ INSERT INTO competitors (id, event_id, tournament_id, first_name, last_name, rat
   ('d0000000-0000-4000-8000-000000000016', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Sofia', 'Rossi', 'C', 'Boston Fencing Club', 'F', '1996-03-05', 'New York', now(), now(), 'Boston Fencing Club', NULL)
 ON CONFLICT DO NOTHING;
 
+-- Maya and Kenji each entered two events; the shared athlete row is what
+-- ties their per-event competitor records together.
+INSERT INTO athletes (id, member_number, created_at, updated_at) VALUES
+  ('aa000000-0000-4000-8000-000000000001', '100000001', now(), now()),
+  ('aa000000-0000-4000-8000-000000000002', '100000002', now(), now())
+ON CONFLICT DO NOTHING;
+
+UPDATE competitors SET member_number = v.member_number, athlete_id = athletes.id
+FROM (VALUES
+  ('d0000000-0000-4000-8000-000000000001'::uuid, '100000001'),
+  ('d0000000-0000-4000-8000-000000000013'::uuid, '100000001'),
+  ('d0000000-0000-4000-8000-000000000010'::uuid, '100000002'),
+  ('d0000000-0000-4000-8000-000000000014'::uuid, '100000002')
+) v(id, member_number)
+JOIN athletes ON athletes.member_number = v.member_number
+WHERE competitors.id = v.id;
+
 -- Mixed Épée is mid-way through its pool stage; Women's Foil has one planned
 -- but not yet split into pools.
 INSERT INTO pool_stages (id, event_id, max_competitor_per_pool, status, start_time, started_at, completed_at, created_at, updated_at) VALUES

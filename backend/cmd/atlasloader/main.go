@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 
+	"boutline/internal/features/athlete"
 	"boutline/internal/features/bout"
 	"boutline/internal/features/competitor"
 	"boutline/internal/features/directelimination"
@@ -45,6 +46,7 @@ func main() {
 
 func run() error {
 	stmts, err := gormschema.New("postgres").Load(
+		&athlete.Athlete{},
 		&bout.Bout{},
 		&event.Event{},
 		&tournament.Tournament{},

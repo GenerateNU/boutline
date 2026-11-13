@@ -1,4 +1,4 @@
-h1:x8X/PYcA7j3vUqve1qmZEoxRpHgL7WnuvNC9rRnPm1A=
+h1:Z4sxwG2L6vInhtQKcqKA3qIQV8e5aZrHekf9/dQfRnI=
 20260912065155_create_examples.sql h1:0KjoBLsLY6UbTg23Ctie16NbsSEZPGfFV/QxvOV7NHE=
 20260919030549_create_tournaments.sql h1:x/6bQNnr7O+E76TEIpBmjwvZeZDH9AYV8c6v8SEB0w4=
 20260921045710_create_users.sql h1:sYJ+YDgRgLEeCsWY1twv4IioM7e9VT5NQwjkT99CngM=
@@ -24,3 +24,4 @@ h1:x8X/PYcA7j3vUqve1qmZEoxRpHgL7WnuvNC9rRnPm1A=
 20261106191910_add_tournament_location.sql h1:db7ivxsw09HJOtqwfmx0FdWgeUQgfCa4PCYwqav2teY=
 20261109190839_index_competitor_clubs.sql h1:B9HipwjfZ/E9ndpWMSPjPngt4xxIN1VMLvIAe2G/xME=
 20261111203000_raise_pool_stage_minimum.sql h1:CgPtBAE7levyHbz9D2XNUsxlHACTAr4Py+J+Jl6mpME=
+20261112211104_add_athletes.sql h1:UzJvS76vPlErLpeaCuP6glpgoOn5vNFU1S0W1YPGlUQ=
