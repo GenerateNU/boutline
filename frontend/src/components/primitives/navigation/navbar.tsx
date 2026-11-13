@@ -16,6 +16,7 @@ function Navbar({
   menuRef,
   wrapMenuButton = (button) => button,
   className,
+  children,
   ...props
 }: NavbarProps) {
   return (
@@ -55,6 +56,7 @@ function Navbar({
         <Image src="/brand/logo-mark.svg" alt="" width={21} height={24} />
         <span className="font-wordmark text-[17px] tracking-[1.02px] text-white">BOUTLINE</span>
       </Link>
+      {children}
     </header>
   );
 }

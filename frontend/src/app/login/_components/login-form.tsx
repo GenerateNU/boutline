@@ -34,41 +34,40 @@ function LoginForm({ redirectTo, signupHref }: LoginFormProps) {
   }
 
   return (
-    <>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+    <form onSubmit={handleSubmit} className="flex w-full flex-col items-center gap-5">
+      <div className="flex w-full flex-col gap-7.5">
         <TextField
           label="Email"
           name="email"
           type="email"
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder="Enter your email"
           required
         />
-        <div className="flex flex-col gap-2">
-          <TextField
-            label="Password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
-        </div>
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-        <Button type="submit" className="mx-auto w-40 rounded-none" disabled={pending}>
-          Sign in
-        </Button>
-      </form>
-      <p className="text-center">
-        New admin?{" "}
-        <Link href={signupHref} className="underline">
-          Sign up here
+        <TextField
+          label="Password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="Enter your password"
+          required
+        />
+      </div>
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <Button type="submit" className="mt-5 min-w-24.5 rounded-lg" disabled={pending}>
+        Sign in
+      </Button>
+      <p className="text-xs text-obsidian">
+        Don&apos;t have an account? Register{" "}
+        <Link href={signupHref} className="text-mint hover:underline">
+          here
         </Link>
       </p>
-    </>
+    </form>
   );
 }
 

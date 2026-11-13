@@ -54,11 +54,12 @@ function DateField({
             id={triggerId}
             type="button"
             disabled={disabled}
-            aria-invalid={ariaInvalid}
             data-placeholder={date ? undefined : ""}
+            // A plain button can't carry aria-invalid, so the error shows as the border alone.
             className={cn(
               selectTriggerClassName,
               "focus-visible:border-accent-green focus-visible:ring-mint-light data-[state=open]:border-accent-green data-[state=open]:ring-mint-light",
+              ariaInvalid && "border-red-dark",
             )}
           >
             <p>{date ? format(date, "MMM d, yyyy") : placeholder}</p>
