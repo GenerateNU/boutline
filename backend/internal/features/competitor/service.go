@@ -100,23 +100,21 @@ func (s *competitorService) CreateCompetitor(
 	return &CompetitorOutput{Body: newCompetitorResponse(*competitor)}, nil
 }
 
-// linkAthlete is best-effort: a failure is logged and never fails the request. A failed upsert still
-// unlinks, so a changed number cannot stay attached to the previous number's athlete.
+// linkAthlete is best-effort: a failure is logged and never fails the request.
 func (s *competitorService) linkAthlete(ctx context.Context, competitorID uuid.UUID, memberNumber string) *uuid.UUID {
-	var athleteID *uuid.UUID
-	if memberNumber != "" {
-		id, err := s.athletes.UpsertAthleteByMemberNumber(ctx, memberNumber)
-		if err != nil {
-			slog.ErrorContext(ctx, "upsert athlete", "competitor_id", competitorID, "err", err)
-		} else {
-			athleteID = &id
-		}
+	if memberNumber == "" {
+		return nil
 	}
-	if err := s.repo.SetCompetitorAthlete(ctx, competitorID, athleteID); err != nil {
+	athleteID, err := s.athletes.UpsertAthleteByMemberNumber(ctx, memberNumber)
+	if err != nil {
+		slog.ErrorContext(ctx, "upsert athlete", "competitor_id", competitorID, "err", err)
+		return nil
+	}
+	if err := s.repo.SetCompetitorAthlete(ctx, competitorID, memberNumber, athleteID); err != nil {
 		slog.ErrorContext(ctx, "set competitor athlete", "competitor_id", competitorID, "err", err)
 		return nil
 	}
-	return athleteID
+	return &athleteID
 }
 
 func competitorFromCreate(body CompetitorCreateBody) (*Competitor, error) {

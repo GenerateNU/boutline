@@ -33,7 +33,7 @@ type CompetitorRepository interface {
 	ListCompetitors(ctx context.Context, filter CompetitorListFilter) ([]Competitor, int64, error)
 	UpdateCompetitorByID(ctx context.Context, id uuid.UUID, update CompetitorUpdate) error
 	DeleteCompetitor(ctx context.Context, id uuid.UUID) error
-	SetCompetitorAthlete(ctx context.Context, id uuid.UUID, athleteID *uuid.UUID) error
+	SetCompetitorAthlete(ctx context.Context, id uuid.UUID, memberNumber string, athleteID uuid.UUID) error
 	ListCompetitorTeams(ctx context.Context, filter CompetitorTeamListFilter) ([]CompetitorTeamCount, int64, error)
 	ListCompetitorClubs(ctx context.Context, filter CompetitorClubListFilter) ([]CompetitorTeamCount, int64, error)
 }
@@ -175,8 +175,17 @@ func (r *competitorRepository) UpdateCompetitorByID(
 	return nil
 }
 
-func (r *competitorRepository) SetCompetitorAthlete(ctx context.Context, id uuid.UUID, athleteID *uuid.UUID) error {
-	err := r.db.WithContext(ctx).Model(&Competitor{}).Where("id = ?", id).Update("athlete_id", athleteID).Error
+// SetCompetitorAthlete links only while the competitor still has memberNumber, so a link resolved
+// from a number a newer update has replaced updates no rows.
+func (r *competitorRepository) SetCompetitorAthlete(
+	ctx context.Context,
+	id uuid.UUID,
+	memberNumber string,
+	athleteID uuid.UUID,
+) error {
+	err := r.db.WithContext(ctx).Model(&Competitor{}).
+		Where("id = ? AND member_number = ?", id, memberNumber).
+		Update("athlete_id", athleteID).Error
 	if err != nil {
 		return fmt.Errorf("set competitor %s athlete: %w", id, err)
 	}

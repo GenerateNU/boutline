@@ -57,7 +57,8 @@ func NewTestServiceWithAthletes(
 var _ competitor.AthleteLinker = FakeAthleteLinker{}
 
 type FakeAthleteLinker struct {
-	Err error // when set, every upsert fails with it
+	Err      error  // when set, every upsert fails with it
+	OnUpsert func() // when set, runs inside every upsert, e.g. to land a competing write first
 }
 
 func FakeAthleteID(number string) uuid.UUID {
@@ -65,6 +66,9 @@ func FakeAthleteID(number string) uuid.UUID {
 }
 
 func (f FakeAthleteLinker) UpsertAthleteByMemberNumber(_ context.Context, number string) (uuid.UUID, error) {
+	if f.OnUpsert != nil {
+		f.OnUpsert()
+	}
 	if f.Err != nil {
 		return uuid.Nil, f.Err
 	}
@@ -336,13 +340,17 @@ func (f *FakeCompetitorRepository) DeleteCompetitor(_ context.Context, id uuid.U
 func (f *FakeCompetitorRepository) SetCompetitorAthlete(
 	_ context.Context,
 	id uuid.UUID,
-	athleteID *uuid.UUID,
+	memberNumber string,
+	athleteID uuid.UUID,
 ) error {
 	if f.Err != nil {
 		return f.Err
 	}
-	stored := f.Competitors[id]
-	stored.AthleteID = athleteID
+	stored, ok := f.Competitors[id]
+	if !ok || stored.MemberNumber == nil || *stored.MemberNumber != memberNumber {
+		return nil
+	}
+	stored.AthleteID = &athleteID
 	f.Competitors[id] = stored
 	return nil
 }

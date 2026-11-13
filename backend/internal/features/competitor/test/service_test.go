@@ -1112,6 +1112,7 @@ func TestUpdateCompetitorAthleteLink(t *testing.T) {
 		name     string
 		linker   FakeAthleteLinker
 		body     competitor.CompetitorUpdateBody
+		racing   string // a member number a concurrent update saves and links while this one upserts
 		wantLink *uuid.UUID
 	}{
 		{
@@ -1131,6 +1132,12 @@ func TestUpdateCompetitorAthleteLink(t *testing.T) {
 			wantLink: nil,
 		},
 		{
+			name:     "a link resolved from a number a newer update replaced keeps the newer athlete",
+			body:     competitor.CompetitorUpdateBody{MemberNumber: ptr("100000999")},
+			racing:   "100000555",
+			wantLink: ptr(FakeAthleteID("100000555")),
+		},
+		{
 			name:     "leaving the member number out keeps the athlete",
 			body:     competitor.CompetitorUpdateBody{Rating: ptr("A")},
 			wantLink: ptr(FakeAthleteID("100000123")),
@@ -1140,7 +1147,16 @@ func TestUpdateCompetitorAthleteLink(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			repo := NewFakeCompetitorRepository(linked)
-			out, err := NewTestServiceWithAthletes(repo, tt.linker).UpdateCompetitorByID(t.Context(),
+			linker := tt.linker
+			if tt.racing != "" {
+				linker.OnUpsert = func() {
+					stored := repo.Competitors[linked.ID]
+					stored.MemberNumber = ptr(tt.racing)
+					stored.AthleteID = ptr(FakeAthleteID(tt.racing))
+					repo.Competitors[linked.ID] = stored
+				}
+			}
+			out, err := NewTestServiceWithAthletes(repo, linker).UpdateCompetitorByID(t.Context(),
 				&competitor.CompetitorUpdateInput{ID: linked.ID.String(), Body: tt.body})
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantLink, repo.Competitors[linked.ID].AthleteID)
