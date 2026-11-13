@@ -13,20 +13,19 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-const upsertAthleteByMemberNumberSQL = `
-INSERT INTO athletes (member_number, created_at, updated_at) VALUES (?, now(), now())
-ON CONFLICT (member_number) DO UPDATE SET updated_at = now()
-RETURNING id`
-
 const (
 	publicHistoryJoin = "JOIN tournaments ON tournaments.id = competitors.tournament_id " +
 		"AND tournaments.visibility = ? AND tournaments.status = ?"
 	recencyOrder = "COALESCE(tournaments.start_time, tournaments.created_at) DESC"
 
 	athleteNameTrigramExpr = "competitors.first_name || ' ' || competitors.last_name"
-)
 
-const athleteProfilesSQL = `
+	upsertAthleteByMemberNumberSQL = `
+INSERT INTO athletes (member_number, created_at, updated_at) VALUES (?, now(), now())
+ON CONFLICT (member_number) DO UPDATE SET updated_at = now()
+RETURNING id`
+
+	athleteProfilesSQL = `
 SELECT DISTINCT ON (athletes.id) athletes.id,
   COALESCE(users.first_name, competitors.first_name) AS first_name,
   COALESCE(users.last_name, competitors.last_name) AS last_name,
@@ -37,6 +36,7 @@ JOIN competitors ON competitors.athlete_id = athletes.id
 LEFT JOIN users ON users.id = athletes.user_id
 WHERE athletes.id IN ?
 ORDER BY athletes.id, ` + recencyOrder + `, competitors.created_at DESC`
+)
 
 type AthleteRepository interface {
 	UpsertAthleteByMemberNumber(ctx context.Context, memberNumber string) (uuid.UUID, error)
