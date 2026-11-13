@@ -51,7 +51,8 @@ func TestRedisCacheGenerationGuard(t *testing.T) {
 	// Hold the generation this read saw, then invalidate: the held generation
 	// must no longer be publishable.
 	stale := entry.Gen
-	require.NoError(t, c.Drop(ctx, key))
+	_, err = c.Drop(ctx, key)
+	require.NoError(t, err)
 
 	entry, err = c.Load(ctx, key)
 	require.NoError(t, err)

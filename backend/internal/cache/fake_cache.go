@@ -57,14 +57,14 @@ func (f *FakeCache) Save(_ context.Context, key string, gen Generation, raw []by
 	return nil
 }
 
-func (f *FakeCache) Drop(_ context.Context, key string) error {
+func (f *FakeCache) Drop(_ context.Context, key string) (Generation, error) {
 	if f.Err != nil {
-		return f.Err
+		return Generation{}, f.Err
 	}
 
 	token, err := newGenerationToken()
 	if err != nil {
-		return err
+		return Generation{}, err
 	}
 
 	f.mu.Lock()
@@ -73,7 +73,7 @@ func (f *FakeCache) Drop(_ context.Context, key string) error {
 	f.generations[key] = token
 	delete(f.entries, key)
 
-	return nil
+	return Generation{token: token, valid: true}, nil
 }
 
 // Has reports whether key currently holds an entry.

@@ -38,7 +38,7 @@ type Cache interface {
 	// Generation mismatch is not an error, but no write happens
 	Save(ctx context.Context, key string, gen Generation, raw []byte, ttl time.Duration) error
 	// Invalidates a key and updates its generation to a new random token
-	Drop(ctx context.Context, key string) error
+	Drop(ctx context.Context, key string) (Generation, error)
 }
 
 // `Cache.Load` simultaneously returns data and a generation token
@@ -89,16 +89,18 @@ func Fetch[T any](
 		var cached T
 		if err := json.Unmarshal(entry.Raw, &cached); err != nil {
 			slog.Error("unmarshal cache key", "key", key, "err", err)
+
 			// Drop the invalid cache item
-			if err := c.Drop(ctx, key); err != nil {
-				slog.Error("drop undecodable cache key", "key", key, "err", err)
+			gen, dropErr := c.Drop(ctx, key)
+			if dropErr != nil {
+				slog.Error("drop undecodable cache key", "key", key, "err", dropErr)
+				return load(ctx)
 			}
-
-			return load(ctx)
+			entry.Gen = gen
+		} else {
+			// Return cached value if successful
+			return cached, nil
 		}
-
-		// Return cached value if successful
-		return cached, nil
 	}
 
 	// Load using fallback
@@ -209,10 +211,10 @@ func (c *redisCache) Save(ctx context.Context, key string, gen Generation, raw [
 	return nil
 }
 
-func (c *redisCache) Drop(ctx context.Context, key string) error {
+func (c *redisCache) Drop(ctx context.Context, key string) (Generation, error) {
 	token, err := newGenerationToken()
 	if err != nil {
-		return fmt.Errorf("drop cache key %s: %w", key, err)
+		return Generation{}, fmt.Errorf("drop cache key %s: %w", key, err)
 	}
 
 	_, err = c.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
@@ -221,8 +223,8 @@ func (c *redisCache) Drop(ctx context.Context, key string) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("drop cache key %s: %w", key, err)
+		return Generation{}, fmt.Errorf("drop cache key %s: %w", key, err)
 	}
 
-	return nil
+	return Generation{token: token, valid: true}, nil
 }

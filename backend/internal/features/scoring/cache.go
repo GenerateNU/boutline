@@ -39,7 +39,7 @@ func (r *cachedScoringRepository) ListScoringHistory(ctx context.Context, boutID
 }
 
 func (r *cachedScoringRepository) clearHistoryCache(ctx context.Context, boutID uuid.UUID) {
-	if err := r.cache.Drop(ctx, historyCacheKey(boutID)); err != nil {
+	if _, err := r.cache.Drop(ctx, historyCacheKey(boutID)); err != nil {
 		slog.Error("clear scoring history cache", "bout_id", boutID, "err", err)
 	}
 }

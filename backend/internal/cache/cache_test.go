@@ -69,7 +69,8 @@ func TestFetch(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, want, got)
 
-		require.NoError(t, fakeCache.Drop(t.Context(), testKey))
+		_, err = fakeCache.Drop(t.Context(), testKey)
+		require.NoError(t, err)
 		assert.False(t, fakeCache.Has(testKey))
 
 		other := payload{Name: "fleche", Count: 7}
@@ -116,14 +117,15 @@ func TestFetch(t *testing.T) {
 		// before the fill reaches the cache -- the race the generation guards.
 		got, err := cache.Fetch(t.Context(), fakeCache, testKey, testTTL,
 			func(ctx context.Context) (payload, error) {
-				return want, fakeCache.Drop(ctx, testKey)
+				_, err := fakeCache.Drop(ctx, testKey)
+				return want, err
 			})
 		require.NoError(t, err)
 		assert.Equal(t, want, got, "the caller still gets the snapshot it loaded")
 		assert.False(t, fakeCache.Has(testKey), "the stale snapshot must not be published")
 	})
 
-	t.Run("an undecodable entry is dropped rather than failing reads until its ttl", func(t *testing.T) {
+	t.Run("an undecodable entry is dropped and refilled rather than failing reads until its ttl", func(t *testing.T) {
 		t.Parallel()
 
 		fakeCache := cache.NewFakeCache()
@@ -140,6 +142,12 @@ func TestFetch(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, want, got)
 		assert.Equal(t, 1, *calls)
-		assert.False(t, fakeCache.Has(testKey), "the entry that failed to decode should be gone")
+
+		// If the refill under the new generation didn't take, this would
+		// reach the loader again instead of being served from cache.
+		got, err = cache.Fetch(t.Context(), fakeCache, testKey, testTTL, load)
+		require.NoError(t, err)
+		assert.Equal(t, want, got)
+		assert.Equal(t, 1, *calls, "the refill after the decode failure should have been published")
 	})
 }
