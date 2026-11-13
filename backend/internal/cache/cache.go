@@ -13,9 +13,9 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Data key/value pairs have associated "generation" key/value pairs for 
+// Data key/value pairs have associated "generation" key/value pairs for
 // handling race conditions.
-// 
+//
 // Conceptually, "generation" tracks the version of the *database* data,
 // not the cache data. The process for data modification looks like
 //  (a) modify data in the database as desired
@@ -28,7 +28,6 @@ import (
 //  (b) otherwise, read new data from the database
 //  (c) write new data into cache *unless* generation has changed since (a)
 // The `Fetch` function below handles (a),(b),(c)
-
 
 // Interface for caching with Redis
 type Cache interface {
@@ -50,13 +49,13 @@ type Entry struct {
 
 type Generation struct {
 	token string // empty when the generation key doesn't exist or has expired
-	valid bool // true on cache hit or miss, false only on genuine error
+	valid bool   // true on cache hit or miss, false only on genuine error
 }
 
 // A TTL for generation keys. Generation keys must outlast the longest possible write.
 const GenerationTTL = time.Hour
 
-// Generates a random generation token. 
+// Generates a random generation token.
 func newGenerationToken() (string, error) {
 	var token [16]byte
 
@@ -70,7 +69,7 @@ func newGenerationToken() (string, error) {
 	return hex.EncodeToString(token[:]), nil
 }
 
-// Fetch returns the cached value, or on a cache miss calls the `load` fallback 
+// Fetch returns the cached value, or on a cache miss calls the `load` fallback
 // and uses that to populate the cache
 //
 // Cache failures are logged, not fatal
