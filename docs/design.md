@@ -625,8 +625,9 @@ Pins are stored for every tournament together, so the page shows only the pins o
 the tournament in `?tournamentId=` (the floating button always passes it), or
 every pin when it's opened without one.
 
-Pinning has one level: `/pinned` is the only place pins are listed. Tournament and
-event dashboards don't list pinned items at the top.
+Pinning lives at the tournament level. A viewer pins fencers, clubs, pools and
+tableaus within a tournament, and the tournament's pages list them. Pinning a fencer
+also pins their bouts. Event pages have no pinned section of their own.
 
 ### 6.3 Pin controls
 
@@ -635,8 +636,9 @@ button, but every page passes it `pinned={false}` with no handler, so it does
 nothing yet.
 
 A pin toggle on each fencer row (pinned rows turn light blue with a navy rating
-badge and pin), on clubs and on pools, and listing pinned clubs and pools (the
-Figma's Club and Pool cards) on `/pinned`.
+badge and pin), on clubs, pools and tableaus, and listing pinned clubs, pools and
+tableaus (the Figma's Club and Pool cards). A pinned fencer's bouts are listed with
+them.
 
 ---
 
@@ -677,6 +679,8 @@ logged-in user reseat another tournament's pools.
 - The creator becomes an `admin` member automatically on create (today they don't).
 - Starting, scoring and ending a bout requires the `referee` role and being the
   bout's assigned referee (open question in §D).
+- A referee assigns themselves to a bout that has no referee yet. An admin can
+  still assign or change a pool's referee.
 - Guard against removing or demoting the last admin.
 
 ### 7.3 Visibility
@@ -907,9 +911,9 @@ it, from what, and why. This is the one exception to forward-only lifecycles
 (§11.2); ending a bout takes no lock yet.
 
 This is the shared mechanism for derived transitions (§B.2). Ending a bout locks
-its parent row (`SELECT … FOR UPDATE` on the pool stage or DE) and runs the
-parent's transition before committing. Chapters 11 and 12 plug their transitions
-into it.
+its parent row (`SELECT … FOR UPDATE` on the DE) and runs the parent's transition
+before committing. DE advancement (§12.3) is its user; the pool stage is ended by
+hand (§11.4), so pool bouts don't need it.
 
 ---
 
@@ -1012,8 +1016,8 @@ generates the DE once pools end.
 ## 11. Pools
 
 **Status:** Partial. Seeding, the three generation routes (propose, create,
-re-seat), the manual pool and stage transitions and the pool sheet are built;
-stage results, the automatic transitions and the screens are planned.
+re-seat), the pool and stage transitions and the pool sheet are built; stage
+results, the admin-only stage end and the screens are planned.
 
 **What it is:** the first round of an event. Fencers are split into pools of about
 six or seven, equally strong and with clubmates apart, and everyone in a pool
@@ -1022,7 +1026,7 @@ ranking seeds the tableau.
 
 **Done when:**
 - An admin can generate, adjust and save pools for an event.
-- Referees fence them, and the pool stage ends by itself with a final ranking.
+- Referees fence them, and an admin ends the pool stage with a final ranking.
 
 ### 11.1 Pool data
 
@@ -1157,16 +1161,15 @@ time can be `V3`–`D2`, and a priority win can be `V2`–`D2`.
 
 ### 11.4 Pool and stage lifecycle
 
-**Status:** Partial. The manual transitions are built (§2.6); the automatic ones
-depend on §9.5.
+**Status:** Partial. The transitions are built (§2.6); the admin-only check is
+planned.
 
-- **Built:** an admin starts and ends pools and the stage by hand. A stage needs at
+- **Built:** pools and the stage are started and ended by hand. A stage needs at
   least one pool to start and every pool completed to end. A pool needs a referee
   and an active stage to start, and every bout ended to end.
-- **Planned:** these run automatically. A pool starts with its first bout and ends
-  with its last; the stage starts with its first pool and ends with its last. Each
-  runs under the stage row lock in the transaction that ends the bout. The manual
-  routes stay for an admin to force an edge case.
+- **Planned:** only an admin may end the pool stage (403 otherwise). Nothing ends it
+  automatically. Ending it is the admin's signal that pools are final and the DE
+  can be drawn (§12.2).
 
 Withdrawals are out of scope (chapter 17). Until then, a fencer who leaves
 mid-pool leaves their remaining bouts `upcoming`, and the stage cannot end.
@@ -1495,8 +1498,8 @@ ended bout without moving any status backwards.
 | --- | --- | --- | --- |
 | Tournament | `pending → active → ended` | `POST /tournaments/{id}/start`, `/complete` | Completed (§2.2); rules in §10.1 |
 | Event | `upcoming → active → ended`, or `upcoming → cancelled` | derived from its stages; cancel by an admin | Planned (§10.2) |
-| PoolStage | `upcoming → active → ended` | `POST /pool-stages/{id}/start`, `/end` | Completed (§2.6); automatic in §11.4 |
-| Pool | no status; `started_at`, `completed_at` | `POST /pools/{id}/start`, `/end` | Completed (§2.6); automatic in §11.4 |
+| PoolStage | `upcoming → active → ended` | `POST /pool-stages/{id}/start`, `/end` | Completed (§2.6); admin only in §11.4 |
+| Pool | no status; `started_at`, `completed_at` | `POST /pools/{id}/start`, `/end` | Completed (§2.6) |
 | DirectElimination | `upcoming → active → ended` | `POST /direct-eliminations/{id}/start`, `/complete` | Completed (§2.7); completion in §12.4 |
 | Bout | `upcoming → active → ended` | `POST /bouts/{id}/start`, `/end` | Completed (§2.8); result in §9.2 |
 
