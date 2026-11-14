@@ -32,7 +32,7 @@ const FILLED_EVENT = {
   date: "2026-11-20",
   time: "09:00",
   weapon: "Foil",
-  genderMix: "Women",
+  genderMix: "Female",
   ageCategory: "Y14",
   ratingLevel: "Open",
   qualifier: "No",
@@ -269,7 +269,7 @@ describe("NewTournamentForm", () => {
     fireEvent.click(within(card).getByRole("button", { name: "Save event" }));
 
     await waitFor(() => expect(within(card).queryByRole("textbox")).not.toBeInTheDocument());
-    expect(card).toHaveTextContent("Foil · Women · Y14 · Open");
+    expect(card).toHaveTextContent("Foil · Female · Y14 · Open");
     expect(card).toHaveTextContent("Nov 20, 2026 at 09:00");
 
     fireEvent.click(within(card).getByRole("button", { name: "Edit" }));
@@ -436,7 +436,7 @@ describe("NewTournamentForm", () => {
 
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/tournaments/id-1"));
     expect(requests()).toEqual(["POST /api/v1/tournaments", "POST /api/v1/events"]);
-    expect(apiCalls[1].body).toMatchObject({ tournament_id: "id-1", weapon: "foil", gender: "women" });
+    expect(apiCalls[1].body).toMatchObject({ tournament_id: "id-1", weapon: "foil", gender: "female" });
     const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY)!);
     expect(stored).toMatchObject({ name: "", saved: false });
     expect(stored.tournamentId).toBeUndefined();

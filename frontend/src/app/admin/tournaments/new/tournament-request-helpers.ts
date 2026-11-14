@@ -10,7 +10,7 @@ export const AUTHORITY_VALUES: Record<string, string> = {
 };
 export const EVENT_TYPE_VALUES: Record<string, string> = { Individual: "individual" };
 export const WEAPON_VALUES: Record<string, string> = { Foil: "foil", Épée: "epee", Sabre: "sabre" };
-export const GENDER_MIX_VALUES: Record<string, string> = { Men: "men", Women: "women", Mixed: "mixed" };
+export const GENDER_MIX_VALUES: Record<string, string> = { Male: "male", Female: "female", Other: "other" };
 export const AGE_CATEGORY_VALUES: Record<string, string> = {
   Y8: "y8",
   Y10: "y10",

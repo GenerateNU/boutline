@@ -21,7 +21,7 @@ describe("option lists", () => {
   it.each([
     { name: "authorities", options: AUTHORITIES, want: ["askFRED", "USA Fencing", "FIE", "Other"] },
     { name: "weapons", options: WEAPONS, want: ["Foil", "Épée", "Sabre"] },
-    { name: "gender mixes", options: GENDER_MIXES, want: ["Men", "Women", "Mixed"] },
+    { name: "gender mixes", options: GENDER_MIXES, want: ["Male", "Female", "Other"] },
     { name: "age categories", options: AGE_CATEGORIES, want: ["Y8", "Y10", "Y12", "Y14", "Cadet", "Junior", "Senior", "Veteran", "Open"] },
     {
       name: "rating levels",
@@ -69,7 +69,7 @@ describe("eventRequest", () => {
     date: "2026-11-20",
     time: "10:00",
     weapon: "Foil",
-    genderMix: "Women",
+    genderMix: "Female",
     ageCategory: "Y14",
     ratingLevel: "Open",
     qualifier: "No",
@@ -81,7 +81,7 @@ describe("eventRequest", () => {
       start_time: localStartTime("2026-11-20", "10:00"),
       type: "individual",
       weapon: "foil",
-      gender: "women",
+      gender: "female",
       age_category: "y14",
       rating_limit: "open",
       qualifier: false,

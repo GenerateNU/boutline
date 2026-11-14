@@ -149,12 +149,12 @@ describe("missingEventFields", () => {
     },
     {
       name: "treats whitespace as empty",
-      patch: { name: "  ", date: "2026-11-20", time: "09:00", weapon: "Foil", genderMix: "Women", ageCategory: "Y14", ratingLevel: "Open", qualifier: "No" },
+      patch: { name: "  ", date: "2026-11-20", time: "09:00", weapon: "Foil", genderMix: "Female", ageCategory: "Y14", ratingLevel: "Open", qualifier: "No" },
       want: ["name"],
     },
     {
       name: "is empty once everything is filled",
-      patch: { name: "Y14 Foil", date: "2026-11-20", time: "09:00", weapon: "Foil", genderMix: "Women", ageCategory: "Y14", ratingLevel: "Open", qualifier: "No" },
+      patch: { name: "Y14 Foil", date: "2026-11-20", time: "09:00", weapon: "Foil", genderMix: "Female", ageCategory: "Y14", ratingLevel: "Open", qualifier: "No" },
       want: [],
     },
   ])("$name", ({ patch, want }) => {

@@ -3,7 +3,7 @@ export type EventFormat = "pool_then_direct_elimination";
 
 export type EventType = "individual" | "team";
 export type EventWeapon = "foil" | "epee" | "sabre";
-export type EventGender = "men" | "women" | "mixed";
+export type EventGender = "male" | "female" | "other";
 export type EventAgeCategory =
   | "y8"
   | "y10"
