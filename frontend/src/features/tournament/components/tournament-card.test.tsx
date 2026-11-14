@@ -11,13 +11,15 @@ const TOURNAMENT: Tournament = {
   status: "active",
   created_by: "u1",
   start_time: null,
-  venue: null,
   city: "Oakland",
   country: "US",
+  venue: null,
+  sanctioning_authority: null,
   started_at: null,
   completed_at: null,
   created_at: "2026-10-06T12:00:00Z",
   updated_at: "2026-10-06T12:00:00Z",
+  role: null,
 };
 
 describe("TournamentCard", () => {
@@ -53,5 +55,22 @@ describe("TournamentCard", () => {
     render(<TournamentCard tournament={{ ...TOURNAMENT, status: "pending" }} admin={admin} />);
 
     expect(screen.getByText(want)).toBeInTheDocument();
+  });
+
+  it.each([
+    { role: "admin" as const, want: "Admin", notWant: "Referee" },
+    { role: "referee" as const, want: "Referee", notWant: "Admin" },
+  ])("shows the caller's $role role", ({ role, want, notWant }) => {
+    render(<TournamentCard tournament={{ ...TOURNAMENT, role }} admin />);
+
+    expect(screen.getByText(want)).toBeInTheDocument();
+    expect(screen.queryByText(notWant)).not.toBeInTheDocument();
+  });
+
+  it("shows no role when the caller has none", () => {
+    render(<TournamentCard tournament={TOURNAMENT} admin />);
+
+    expect(screen.queryByText("Admin")).not.toBeInTheDocument();
+    expect(screen.queryByText("Referee")).not.toBeInTheDocument();
   });
 });

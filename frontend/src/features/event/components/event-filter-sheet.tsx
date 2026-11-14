@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { ChipGroup } from "@/components/primitives/chip-group";
+import { ChipGroup, ChipGroupOptions } from "@/components/primitives/chip-group";
 import { ComingSoonNote } from "@/components/primitives/coming-soon-note";
 import { DateField } from "@/components/primitives/date-field";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
@@ -90,7 +90,9 @@ function EventFilterSheet({ eventDays }: EventFilterSheetProps) {
         />
       ))}
 
-      <ChipGroup label="Weapon" options={WEAPON_OPTIONS} {...groupProps("weapon")} />
+      <ChipGroup label="Weapon" {...groupProps("weapon")}>
+        <ChipGroupOptions options={WEAPON_OPTIONS} />
+      </ChipGroup>
 
       <SelectField
         label="Age Category"
@@ -99,8 +101,12 @@ function EventFilterSheet({ eventDays }: EventFilterSheetProps) {
         {...groupProps("age")}
       />
 
-      <ChipGroup label="Gender" options={GENDER_OPTIONS} {...groupProps("gender")} />
-      <ChipGroup label="Event Status" options={STATUS_OPTIONS} {...groupProps("status")} />
+      <ChipGroup label="Gender" {...groupProps("gender")}>
+        <ChipGroupOptions options={GENDER_OPTIONS} />
+      </ChipGroup>
+      <ChipGroup label="Event Status" {...groupProps("status")}>
+        <ChipGroupOptions options={STATUS_OPTIONS} />
+      </ChipGroup>
 
       <DateField
         key={date?.getTime()}
@@ -110,7 +116,9 @@ function EventFilterSheet({ eventDays }: EventFilterSheetProps) {
         eventDates={eventDays.flatMap((day) => parseDateParam(day) ?? [])}
       />
 
-      <ChipGroup label="Event Type" options={TYPE_OPTIONS} {...groupProps("type")} />
+      <ChipGroup label="Event Type" {...groupProps("type")}>
+        <ChipGroupOptions options={TYPE_OPTIONS} />
+      </ChipGroup>
     </FilterSheetDialog>
   );
 }

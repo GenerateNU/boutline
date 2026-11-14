@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { ChipGroup } from "@/components/primitives/chip-group";
+import { ChipGroup, ChipGroupOptions } from "@/components/primitives/chip-group";
 import { ComingSoonNote } from "@/components/primitives/coming-soon-note";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
@@ -37,7 +37,9 @@ function ClubFilterSheet() {
         />
       ))}
 
-      <ChipGroup label="Weapon" options={WEAPON_OPTIONS} disabled />
+      <ChipGroup label="Weapon" disabled>
+        <ChipGroupOptions options={WEAPON_OPTIONS} />
+      </ChipGroup>
     </FilterSheetDialog>
   );
 }

@@ -1,8 +1,9 @@
 import { CompetitorImportRow, ImportedCompetitor } from "@/types/competitor-import";
 
 import { EventDraft, FencerDraft, TournamentDraft } from "./_types/tournament-draft";
+import { EVENT_TYPE_VALUES } from "./tournament-request-helpers";
 
-export const EVENT_TYPES = ["Individual"];
+export const EVENT_TYPES = Object.keys(EVENT_TYPE_VALUES);
 export const EVENT_FORMATS = ["Pool to Direct Elimination"];
 
 function draftId() {
@@ -161,7 +162,9 @@ export function importFencers(events: EventDraft[], rows: CompetitorImportRow[])
       return event;
     }
     groups.delete(eventKey(event.name));
-    return { ...event, fencers: group.fencers, saved: false };
+    const replaced = event.fencers.flatMap((fencer) => (fencer.competitorId ? [fencer.competitorId] : []));
+    const removedCompetitorIds = [...(event.removedCompetitorIds ?? []), ...replaced];
+    return { ...event, fencers: group.fencers, removedCompetitorIds, saved: false };
   });
 
   // Leftover groups fill blank cards with no fencers yet, such as the untouched
@@ -175,6 +178,26 @@ export function importFencers(events: EventDraft[], rows: CompetitorImportRow[])
 
   // Whatever is still left gets a new card each.
   return [...filled, ...unmatched.map((group) => newEventDraft(group.name, group.fencers))];
+}
+
+// Drops a fencer from a card, remembering its saved competitor so Save event deletes it.
+export function withoutFencer(event: EventDraft, fencerId: string): EventDraft {
+  const removed = event.fencers.find((fencer) => fencer.id === fencerId);
+  const removedIds = removed?.competitorId ? [removed.competitorId] : [];
+  return {
+    ...event,
+    fencers: event.fencers.filter((fencer) => fencer.id !== fencerId),
+    removedCompetitorIds: [...(event.removedCompetitorIds ?? []), ...removedIds],
+  };
+}
+
+// What Save event still has to send for a card's fencers.
+export function fencerChanges(event: EventDraft) {
+  return {
+    toDelete: event.removedCompetitorIds ?? [],
+    toUpdate: event.fencers.filter((fencer) => fencer.competitorId && fencer.dirty),
+    toCreate: event.fencers.filter((fencer) => !fencer.competitorId),
+  };
 }
 
 // How many events an upload's valid rows fill, matching importFencers' grouping.

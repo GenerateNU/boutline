@@ -223,34 +223,50 @@ func (s *tournamentService) ListTournaments(
 	term := strings.TrimSpace(input.Query)
 	limit, offset := page(input.Limit, input.Offset)
 
-	var createdBy uuid.UUID
+	caller, signedIn := session.UserIDFrom(ctx)
+	if input.Mine && !signedIn {
+		return nil, errs.HumaError(errs.Public("sign in to see your tournaments", errs.ErrForbidden))
+	}
+	var associatedUserID uuid.UUID
 	if input.Mine {
-		caller, ok := session.UserIDFrom(ctx)
-		if !ok {
-			return nil, errs.HumaError(errs.Public("sign in to see your tournaments", errs.ErrForbidden))
-		}
-		createdBy = caller
+		associatedUserID = caller
 	}
 
 	tournaments, total, err := s.repo.ListTournaments(ctx, TournamentListFilter{
-		Status:     input.Status,
-		Term:       term,
-		StartFrom:  input.StartFrom,
-		StartTo:    input.StartTo,
-		Visibility: input.Visibility,
-		Club:       strings.TrimSpace(input.Club),
-		Country:    input.Country,
-		CreatedBy:  createdBy,
-		Limit:      limit,
-		Offset:     offset,
+		Status:           input.Status,
+		Term:             term,
+		StartFrom:        input.StartFrom,
+		StartTo:          input.StartTo,
+		Visibility:       input.Visibility,
+		Club:             strings.TrimSpace(input.Club),
+		Country:          input.Country,
+		AssociatedUserID: associatedUserID,
+		Limit:            limit,
+		Offset:           offset,
 	})
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list tournaments: %w", err))
 	}
 
+	roles := map[uuid.UUID]tournamentuser.TournamentUserRole{}
+	if signedIn {
+		ids := make([]uuid.UUID, 0, len(tournaments))
+		for _, listed := range tournaments {
+			ids = append(ids, listed.ID)
+		}
+		roles, err = s.membershipRepo.ListRolesByUser(ctx, caller, ids)
+		if err != nil {
+			return nil, errs.HumaError(fmt.Errorf("list caller roles: %w", err))
+		}
+	}
+
 	data := make([]TournamentResponse, 0, len(tournaments))
 	for _, listed := range tournaments {
-		data = append(data, NewTournamentResponse(listed))
+		response := NewTournamentResponse(listed)
+		if role, ok := roles[listed.ID]; ok {
+			response.Role = &role
+		}
+		data = append(data, response)
 	}
 
 	return &TournamentListOutput{Body: TournamentListBody{

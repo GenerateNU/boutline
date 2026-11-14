@@ -15,6 +15,8 @@ const EVENT: TournamentEvent = {
   weapon: "foil",
   gender: "female",
   age_category: "senior",
+  rating_limit: null,
+  qualifier: false,
   start_time: null,
   started_at: null,
   completed_at: null,

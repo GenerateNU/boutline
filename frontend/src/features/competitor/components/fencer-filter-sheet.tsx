@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { Chip } from "@/components/primitives/chip";
-import { ChipGroup } from "@/components/primitives/chip-group";
+import { ChipGroup, ChipGroupOptions } from "@/components/primitives/chip-group";
 import { ComingSoonNote } from "@/components/primitives/coming-soon-note";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
@@ -86,7 +86,9 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         noun="clubs"
       />
 
-      <ChipGroup label="Weapon" options={WEAPON_OPTIONS} disabled />
+      <ChipGroup label="Weapon" disabled>
+        <ChipGroupOptions options={WEAPON_OPTIONS} />
+      </ChipGroup>
 
       <SelectField label="Age Category" placeholder="Any age category" options={AGE_OPTIONS} disabled />
 
@@ -98,7 +100,9 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         onValueChange={setRating}
       />
 
-      <ChipGroup label="Gender" options={GENDER_OPTIONS} disabled />
+      <ChipGroup label="Gender" disabled>
+        <ChipGroupOptions options={GENDER_OPTIONS} />
+      </ChipGroup>
     </FilterSheetDialog>
   );
 }

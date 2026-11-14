@@ -52,6 +52,7 @@
   --color-amber-dark: var(--amber-dark);
   --color-lavender-light: var(--lavender-light);
   --color-lavender-dark: var(--lavender-dark);
+  --color-green: var(--green);
   --color-green-light: var(--green-light);
   --color-green-dark: var(--green-dark);
   --color-mint-light: var(--mint-light);
@@ -186,7 +187,7 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --brand: oklch(0.274 0.097 269.29);
+  --brand: var(--blue);
   --chip: oklch(0.885 0 0);
   --radius: 0.625rem;
   --blue: #21358b;
@@ -209,6 +210,7 @@
   --amber-dark: #764c00;
   --lavender-light: #e9e8f3;
   --lavender-dark: #65647b;
+  --green: #32944b;
   --green-light: #ddf0df;
   --green-dark: #076127;
   --mint-light: #d5f7e1;

@@ -26,8 +26,8 @@ export default async function TournamentDashboardLayout({
     getEvents(tournamentId),
   ]);
 
-  // The role check lives here, while the backend still guards every write.
-  if (!tournament || role !== "admin") {
+  // Any staff role gets in; the backend still guards every write, so referees can look but not change.
+  if (!tournament || role === null) {
     notFound();
   }
 

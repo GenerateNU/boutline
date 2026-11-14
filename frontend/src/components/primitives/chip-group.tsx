@@ -1,28 +1,25 @@
-"use client";
-
 import { cn } from "cn";
 
 import { buttonVariants } from "@/components/primitives/button";
 import type { SelectOption } from "@/components/primitives/select-field";
-import {
-  SegmentedButton,
-  SegmentedButtonItem,
-} from "@/components/primitives/segmented-button";
+import { SegmentedButton, SegmentedButtonItem } from "@/components/primitives/segmented-button";
 
 const CHIP_CLASS_NAME = cn(
   buttonVariants({ variant: "outline", size: "sm" }),
-  "flex-1 rounded-lg first:border-l data-[state=on]:bg-blue data-[state=on]:text-white data-[state=on]:hover:bg-blue-dark",
+  "flex-none rounded-lg first:border-l data-[state=on]:bg-blue data-[state=on]:text-white data-[state=on]:hover:bg-blue-dark",
 );
 
 interface ChipGroupProps {
   label: string;
+  // Optional so a disabled placeholder group needs no handlers.
   value?: string;
   onValueChange?: (value: string) => void;
-  options: SelectOption[];
   disabled?: boolean;
+  className?: string;
+  children: React.ReactNode;
 }
 
-function ChipGroup({ label, value, onValueChange, options, disabled }: ChipGroupProps) {
+function ChipGroup({ label, value, onValueChange, disabled, className, children }: ChipGroupProps) {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm text-obsidian">{label}</p>
@@ -32,16 +29,29 @@ function ChipGroup({ label, value, onValueChange, options, disabled }: ChipGroup
         value={value}
         onValueChange={onValueChange}
         disabled={disabled}
-        className="flex gap-3 overflow-visible rounded-none border-0 shadow-none"
+        className={cn("flex gap-3 overflow-visible rounded-none border-0 shadow-none", className)}
       >
-        {options.map(({ value: optionValue, label: optionLabel }) => (
-          <SegmentedButtonItem key={optionValue} value={optionValue} className={CHIP_CLASS_NAME}>
-            {optionLabel}
-          </SegmentedButtonItem>
-        ))}
+        {children}
       </SegmentedButton>
     </div>
   );
 }
 
-export { ChipGroup };
+function ChipGroupItem({ className, ...props }: React.ComponentProps<typeof SegmentedButtonItem>) {
+  return <SegmentedButtonItem className={cn(CHIP_CLASS_NAME, className)} {...props} />;
+}
+
+interface ChipGroupOptionsProps {
+  options: SelectOption[];
+}
+
+// Equal-width items for a plain list of options.
+function ChipGroupOptions({ options }: ChipGroupOptionsProps) {
+  return options.map(({ value, label }) => (
+    <ChipGroupItem key={value} value={value} className="flex-1">
+      {label}
+    </ChipGroupItem>
+  ));
+}
+
+export { ChipGroup, ChipGroupItem, ChipGroupOptions };

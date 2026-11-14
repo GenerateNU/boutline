@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { Chip } from "@/components/primitives/chip";
-import { ChipGroup } from "@/components/primitives/chip-group";
+import { ChipGroup, ChipGroupItem } from "@/components/primitives/chip-group";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
 import { Slider } from "@/components/primitives/slider";
@@ -11,17 +11,16 @@ import { statusLabels } from "@/features/tournament/components/tournament-status
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { countryName } from "@/features/tournament/lib/country-name";
 import { COUNTRY_CODE_PATTERN } from "@/features/tournament/lib/tournament-filters";
-import type { TournamentVisibility } from "@/features/tournament/types/tournament";
+import type {
+  TournamentStatus,
+  TournamentVisibility,
+} from "@/features/tournament/types/tournament";
 import { useFilterSearch } from "@/lib/hooks/use-filter-search";
 import { apiRequest } from "@/services/api-request";
 import type { TeamListResult } from "@/types/competitor";
 
 const MAX_DISTANCE = 100;
-const STATUS_OPTIONS = [
-  { value: "ended", label: statusLabels.ended },
-  { value: "active", label: statusLabels.active },
-  { value: "pending", label: statusLabels.pending },
-];
+const STATUS_ORDER: TournamentStatus[] = ["ended", "active", "pending"];
 
 const CLUB_RESULT_LIMIT = 10;
 
@@ -159,12 +158,13 @@ function FilterSheet({ visibility }: FilterSheetProps) {
         </div>
       </div>
 
-      <ChipGroup
-        label="Tournament Status"
-        value={status}
-        onValueChange={setStatus}
-        options={STATUS_OPTIONS}
-      />
+      <ChipGroup label="Tournament Status" value={status} onValueChange={setStatus}>
+        {STATUS_ORDER.map((value) => (
+          <ChipGroupItem key={value} value={value} className="flex-1">
+            {statusLabels[value]}
+          </ChipGroupItem>
+        ))}
+      </ChipGroup>
     </FilterSheetDialog>
   );
 }

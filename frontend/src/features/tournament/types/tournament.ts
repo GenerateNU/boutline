@@ -1,5 +1,6 @@
 export type TournamentVisibility = "private" | "public";
 export type TournamentStatus = "pending" | "active" | "ended";
+export type TournamentRole = "admin" | "referee";
 
 export interface Tournament {
   id: string;
@@ -9,13 +10,16 @@ export interface Tournament {
   status: TournamentStatus;
   created_by: string;
   start_time: string | null;
-  venue: string | null;
   city: string | null;
   country: string | null;
+  venue: string | null;
+  sanctioning_authority: string | null;
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  // The signed-in caller's role; null when signed out or not staff.
+  role: TournamentRole | null;
 }
 
 export interface TournamentListFilters {
@@ -26,6 +30,9 @@ export interface TournamentListFilters {
   timeZone?: string;
   club?: string;
   country?: string;
+  // Only tournaments the caller created or is staff in. Sent as `mine=true`,
+  // which the API refuses without a session token.
+  mine?: boolean;
 }
 
 export interface TournamentListResult {
@@ -34,8 +41,6 @@ export interface TournamentListResult {
   limit: number;
   offset: number;
 }
-
-export type TournamentRole = "admin" | "referee";
 
 export interface TournamentRoleResponse {
   role: TournamentRole | null;

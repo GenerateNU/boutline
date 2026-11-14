@@ -13,6 +13,8 @@ const EVENT: TournamentEvent = {
   weapon: null,
   gender: null,
   age_category: null,
+  rating_limit: null,
+  qualifier: false,
   start_time: "2026-10-05T13:00:00Z",
   started_at: null,
   completed_at: null,

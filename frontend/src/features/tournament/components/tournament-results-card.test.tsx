@@ -11,13 +11,15 @@ const TOURNAMENT: Tournament = {
   status: "ended",
   created_by: "u1",
   start_time: null,
-  venue: null,
   city: "Boston",
   country: "US",
+  venue: null,
+  sanctioning_authority: null,
   started_at: null,
   completed_at: null,
   created_at: "2026-10-06T12:00:00Z",
   updated_at: "2026-10-06T12:00:00Z",
+  role: null,
 };
 
 describe("TournamentResultsCard", () => {

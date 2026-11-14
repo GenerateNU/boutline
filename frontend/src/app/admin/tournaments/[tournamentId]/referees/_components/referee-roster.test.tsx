@@ -38,10 +38,10 @@ const REFEREES: RefereeResponse[] = [
   },
 ];
 
-function renderRoster(referees: RefereeResponse[]) {
+function renderRoster(referees: RefereeResponse[], canManage = true) {
   render(
     <Toaster>
-      <RefereeRoster tournamentId="t-1" referees={referees} events={[]} />
+      <RefereeRoster tournamentId="t-1" referees={referees} events={[]} canManage={canManage} />
     </Toaster>,
   );
 }
@@ -75,6 +75,14 @@ describe("RefereeRoster", () => {
 
     texts.forEach((text) => expect(screen.getByText(text)).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "Add Referees" })).toBeInTheDocument();
+  });
+
+  it("shows a referee the roster without Add or Remove", () => {
+    renderRoster(REFEREES, false);
+
+    expect(screen.getByText("Ana Diaz")).toBeInTheDocument();
+    expect(screen.getByText("Yan Wang")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("asks before removing, and Cancel keeps the referee", () => {

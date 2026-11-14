@@ -30,15 +30,17 @@ function RefereeCard({ referees, onRemove }: RefereeCardProps) {
                 {pool && <p className="text-xs font-medium text-obsidian">{pool}</p>}
               </div>
             </div>
-            <Button
-              variant="text"
-              size="sm"
-              className="min-w-20"
-              aria-label={`Remove ${name}`}
-              onClick={() => onRemove?.(id)}
-            >
-              Remove
-            </Button>
+            {onRemove && (
+              <Button
+                variant="text"
+                size="sm"
+                className="min-w-20"
+                aria-label={`Remove ${name}`}
+                onClick={() => onRemove(id)}
+              >
+                Remove
+              </Button>
+            )}
           </li>
         ))}
       </ul>

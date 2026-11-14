@@ -197,7 +197,7 @@ for sharing it privately.
 | Method | Path | Notes |
 | --- | --- | --- |
 | POST | `/tournaments` | create; the code is server-generated |
-| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&mine&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly). `mine=true` keeps only tournaments the caller created; it needs a signed-in caller (anonymous gets 403) |
+| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&mine&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly). `mine=true` keeps only tournaments the caller created or holds a `tournament_users` row in; it needs a signed-in caller (anonymous gets 403). For a signed-in caller each row carries their `role` (`admin`, `referee`, or null) |
 | GET | `/tournaments/{id}` | |
 | GET | `/tournaments/code/{code}` | open by code |
 | PATCH | `/tournaments/{id}` | name, visibility, start_time, city, country, venue, sanctioning_authority (an empty string clears city, country or venue); 409 once ended |
@@ -432,8 +432,9 @@ different roles in different tournaments.
 
 ## 4. Browsing tournaments
 
-**Status:** Partial. The tournament screens are wired to the real API. The event
-tabs for pools, tableau and results are placeholders until chapters 11–13.
+**Status:** Partial. The tournament screens are wired to the real API, and so is the
+event's Pools tab (§11.6). The tableau and results tabs run on placeholder data until
+chapters 12–13.
 
 **What it is:** the public face of Boutline. Anyone can find a tournament by name
 or date, open a private one by its code, and look through its events, fencers and
@@ -468,8 +469,9 @@ from the venue floor.
 
 - A server-rendered list of public tournaments with a status badge (Upcoming /
   Active / Ended), empty states, and Previous/Next pagination, 20 per page.
-- **Loading:** a skeleton of the page (dark date row, search bar, title, five
-  shimmering card placeholders) shows until the list arrives.
+- **Loading:** the date strip stays live above a skeleton of the rest of the
+  page (search bar, title, five shimmering card placeholders) until the list
+  arrives.
 - **Search:** a plain GET form that works without JS; with JS it updates `?q=`
   after a 300 ms debounce.
 - **Dates:** five day tabs in a dark row under the global nav, with paging. A
@@ -546,11 +548,13 @@ than stacking under them, and a "< {tournament name}" link above the content lea
 back to the tournament.
 
 - **Fencers** (Completed): a "Fencers" heading and the same list as the tournament's
-  Fencers tab (search with suggestions, Club and Rating filters, chips, chevron
-  rows). It lists every fencer in the tournament, since competitors don't belong
-  to an event yet (§8.4). Rows link to a fencer page, which is placeholder text.
-- **Pooling** and **Tableau** (Placeholder): a bout list from a hardcoded fixture,
-  the same for every event. Replaced in §11.6 and §12.5.
+  Fencers tab (search with suggestions, Club and Rating filters, chips, and rows
+  with the pin button). It lists every fencer in the tournament, since competitors
+  don't belong to an event yet (§8.4). Rows link to a fencer page, which is
+  placeholder text.
+- **Pooling** (Partial): see §11.6 for its current state.
+- **Tableau** (Placeholder): a bout list from a hardcoded fixture, the same for every
+  event. Replaced in §12.5.
 - **Results** (Placeholder): static text. Replaced in §13.3.
 - **Bout page** (`…/bout/[boutId]`, Placeholder): two score tiles, a "Referee
   view" button and a touch log, from the fixture. Only its referee link reaches
@@ -563,20 +567,25 @@ back to the tournament.
 Where login and signup land by default, behind the login gate. A solid-outlined
 "Create tournament" card linking to the creation form (§10.6), then "Manage
 Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) over
-every tournament (not yet only the caller's, #198), paginated. Cards show the created
-date instead of the location and link to the tournament's dashboard (§4.6), which
-only that tournament's admins can open; public `/tournaments` cards still link to
+the tournaments the caller created or is staff in (`GET /tournaments?mine=true`,
+which matches `created_by` or any `tournament_users` row, admin or referee; the
+`created_by` match keeps tournaments made before creators got an admin row),
+paginated. Cards show the created date instead of the location, then a thin
+vertical divider and the caller's role as plain text ("Admin" or "Referee", from
+the list's `role` field), and link to the tournament's dashboard (§4.6), which
+only that tournament's staff can open; public `/tournaments` cards still link to
 the public page. Organizers see `pending` as "Scheduled" with the blue badge; public
 screens keep "Upcoming". `/admin` redirects here until the console (§10.7) exists.
-It switches to `GET /users/{me}/tournaments` in §10.7.
 
 ### 4.6 Tournament dashboard (`/admin/tournaments/[id]`)
 
 **Status:** Partial.
 
-The organizer's page for one tournament, visible only to its admins. The page asks
-`GET /tournaments/{id}/role` (§2.3); anyone who isn't an admin, referees included,
-gets a 404. Signed-out visitors are redirected to login by the proxy (§3.3).
+The staff page for one tournament, visible to its admins and referees. The page
+asks `GET /tournaments/{id}/role` (§2.3); anyone without a role gets a 404.
+Referees see the same tabs read-only: the controls that change the tournament
+are hidden, and the backend refuses those writes anyway. Signed-out visitors are
+redirected to login by the proxy (§3.3).
 
 Header, top to bottom: a "< All tournaments" link back to `/admin/tournaments`; a
 small gray "Tournament Management Dashboard" with the status badge on the right
@@ -590,7 +599,8 @@ Tabs: Fencers (the index page) · Referees · Events · Settings.
   `GET /tournaments/{id}/users?role=referee`. "Add Referees" opens a dialog that
   searches users by name or email and adds one as referee, optionally to one of the
   tournament's pools, then closes. Each row shows Occupied or Available and the
-  referee's pool (§10.3), and its Remove asks for confirmation first.
+  referee's pool (§10.3), and its Remove asks for confirmation first. Add Referees
+  and Remove are admin-only.
 - **Fencers**, **Events** and **Settings** (Planned): empty until a ticket defines
   what they show.
 
@@ -851,7 +861,7 @@ the tournament and bout `end` state.
 ### 8.5 Event attributes and bout settings
 
 **Status:** Partial. The first six attributes below are built (type through
-qualifier). Issue: #186 (touches and time).
+qualifier, saved by the creation form). Issue: #186 (touches and time).
 
 Event attributes the creation form collects. `type`, `weapon`, `gender`,
 `age_category`, `rating_limit` and `qualifier` are columns; the rest are planned:
@@ -991,7 +1001,8 @@ into it.
 
 ## 10. Tournament setup
 
-**Status:** Planned. The screens exist; nothing is saved yet.
+**Status:** Partial. The creation form saves; staff, check-in and starting are
+still to build.
 
 **What it is:** everything an organizer does before the first bout. That means
 creating the tournament and its events, importing fencers from askFRED or USA
@@ -1004,12 +1015,12 @@ Fencing, adding staff, and checking fencers in on the day.
 
 ### 10.1 Tournament fields and lifecycle
 
-**Status:** Planned.
+**Status:** Partial.
 
-- Fields the creation form already collects but the backend lacks: location
-  (city/state), venue, organizer contact, fees, sanctioning authority (askFRED,
-  USA Fencing, FIE, Other), description. They replace the hardcoded "City,
-  Country" and "TBC" in §4.2 and §4.3.
+- Built: venue and sanctioning authority (askFRED, USA Fencing, FIE, Other). The
+  form's Location is stored in `city`. Still missing: organizer contact, fees,
+  description. They replace the hardcoded "City, Country" and "TBC" in §4.2 and
+  §4.3.
 - Starting a tournament requires at least one event. Completing it requires every
   event to be `ended` or `cancelled`, so an event that never ran doesn't block it.
 
@@ -1087,10 +1098,20 @@ are placed into pools.
   autofilled and how many rows were skipped; a file that can't be read gets an
   inline error instead, so it doesn't vanish before it's fixed.
 - **Saving:** the tournament details card has its own Save, and Save event stays
-  disabled until it is saved. Either Save checks only its own card (an event also
-  checks its fencers), marks empty fields with `aria-invalid`, then collapses the
-  card to a summary until Edit reopens it. An upload that replaces a saved card's
-  fencers reopens it for review.
+  disabled until the tournament exists on the server. Either Save checks only its
+  own card (an event also checks its fencers) and marks empty fields with
+  `aria-invalid`. It then sends the card to the API and collapses it to a summary
+  until Edit reopens it. The first Save tournament is `POST /tournaments`, later
+  ones `PATCH`. Save event does `POST`/`PATCH /events`, then deletes fencers
+  removed from the card, `PATCH`es fencers edited since their last save, and
+  `POST`s new ones. Each server id is written to the draft as soon as it arrives,
+  so a retry after a failure sends only what failed. While a card saves its fields
+  are disabled and its Save reads "Saving…". Removing a saved card deletes the
+  event first and drops the card only if that succeeds. An upload that replaces a
+  saved card's fencers deletes the old competitors on the next save and reopens
+  the card for review. A fencer's errors show on its card as "First Last: message".
+  The form sends the location as `city`, the date and time as the admin's local
+  time converted to an instant, and a blank rating as `U`.
 - **Fencers:** each is a card inside its event, showing name, club, rating and
   member number, plus what it is still missing. First and last name, gender, birth
   date and division are required, as `POST /competitors` requires them. Imported
@@ -1107,19 +1128,25 @@ are placed into pools.
   clears `account:` keys, and so does signing in as a different account than the
   one that owned them (an expired session skips logout). The same account signing
   back in keeps its draft.
-- **Planned:** submit creates the tournament, then its events, then imports
-  competitors and adds staff, showing per-row errors and landing on the new
-  tournament (#252). Today submit clears the draft and returns to the admin home.
-  Adding an event to an existing tournament has no screen.
+- **Submit:** Create tournament runs the same checks, saves the tournament if it
+  isn't saved, then every unsaved event in parallel. When all succeed it clears
+  the draft and opens the tournament dashboard (§4.6). Otherwise it stays, names
+  the cards that failed, and keeps the draft; the button is disabled while anything
+  saves.
+- **Accepted risk:** requests carry no idempotency key, so a create that succeeds
+  on the server but fails on the network can be duplicated by the retry.
+- **Planned:** adding staff and showing the competitor and staff counts on the
+  new tournament (#252). Adding an event to an existing tournament has no screen.
 
 ### 10.7 Organizer console (`/admin`)
 
 **Status:** Partial.
 
 Planned as a hub for the organizer's tools; until it exists, `/admin` redirects to
-the admin home (§4.5). The tournaments list switches to
-`GET /users/{me}/tournaments`. The tournament dashboard (§4.6) is the console's
-per-tournament page.
+the admin home (§4.5). The admin home already lists the caller's tournaments with
+`GET /tournaments?mine=true`; it moves to `GET /users/{me}/tournaments` when that
+endpoint exists. The tournament dashboard (§4.6) is the console's per-tournament
+page.
 
 On the day, the admin checks fencers in, starts the tournament, generates pools
 (which creates bouts, so it needs the tournament `active`), assigns referees, and
@@ -1299,14 +1326,30 @@ results, stored on the DE entry (§12.1).
 
 ### 11.6 Pooling tab and pool screen
 
-**Status:** Planned. Issue: #127.
+**Status:** Partial. Issue: #127. Each part below is built to the hi-fi design and
+reads the pool sheets API unless marked Planned. Tests build the pools they need
+with `buildPool` (`pooling/_fixtures/build-pool.ts`).
 
-The Pooling tab lists the event's pools with their fencers, referee, strip and
-progress, each linking to a pool screen. The pool screen shows the classic grid
-(fencer × fencer, `V5` / `D3` cells) plus the summary columns from §11.3, and the
-pool's bouts in order. Today the tab is the shared fixture (§4.4). A branch
-(`claude/boutline-frontend-setup-e6b230`) has a draft pool list, pool page and
-filter sheet.
+- **Pool list:** the event's pools from `GET /api/v1/pool-sheets?event_id=…`, with
+  "No pools yet." when there are none. A "Search pools" field sits above a card per
+  pool, always open. While typing, the field drops down matching names in a Fencers
+  and a Clubs group (up to five each); picking one searches for it. A card
+  has a Bouts | Standings toggle that shows the V/D grid or the standings table (# ·
+  Fencer · V · V/M · TS · TR · Ind, by place, names as "Last, First"), and a View
+  pool link. Pool pins are not built yet (§6.3).
+- **Filter sheet:** a filter button beside the search opens the shared
+  `FilterSheetDialog`. Fencer and Club suggest names from the pools as you type, and
+  a pick shows as a removable chip; then Pool Status and Pool Number chips, and Sort
+  by Pool Number, Start time or Strip, with Clear All and Show pools. The button
+  shows its pressed look while filters are applied.
+- **Pool page:** one pool from `GET /api/v1/pool-sheets/{id}` (not-found for an
+  unknown or malformed id): a back button to the list, the status pill and fencer
+  count, and the V/D grid (`V5` / `D3` cells). Below it sits the standings table. Tapping a
+  bout cell outlines it in navy and swaps the standings for "Showing the bout you
+  tapped" and a bout card: Bout N of M, "Pool bout", an All bouts link, winner and
+  loser rows with V/D tiles and scores, Status / Pool / Strip, and links to both
+  fencers.
+- Club short codes and fencer country are not shown yet, since the data has neither.
 
 ---
 
@@ -1687,8 +1730,9 @@ Network code must survive retries and races:
 
 ## Appendix C. Visual language
 
-The UI is a **lofi** pass: monochrome, outlined, light mode only. Polish comes later
-through the tokens, so components use tokens, never raw colors.
+The hi-fi pass is underway: a navy brand, a palette of tokens, and status colors,
+light mode only. Screens move over one at a time, and the rest still look like the
+earlier outlined set. Components use tokens, never raw colors.
 
 ### C.1 Layout
 - Mobile-first, one column:
@@ -1708,15 +1752,16 @@ through the tokens, so components use tokens, never raw colors.
 | `selected` (blue) | only a chosen state: filled button, toggle on, active tab |
 | `destructive` | errors and destructive actions; hi-fi destructive actions (Button `destructive` variant) use `red-dark` |
 | `border`, `input`, `ring` | hairlines, field borders, focus rings |
+| `brand` | alias of the hi-fi navy `blue` (#21358b), kept for existing uses |
+| `green` (#32944b) | the V tile on the pool bout card |
 
-No Tailwind palette colors. The tournament status badge breaks this today
-(`bg-amber-600`, `bg-emerald-600`); status colors become tokens next time it is
-touched.
+No Tailwind palette colors. Status pills (tournament, pool and event status) go
+through the `StatusBadge` primitive, which maps a status to one of the status pairs.
 
 ### C.3 Type
 Geist Sans; Geist Mono for aligned numbers. Hi-fi screens (global nav, tournament
-browser, filter sheet) use Manrope (`font-manrope`), and the BOUTLINE wordmark uses
-Special Gothic Expanded One (`font-wordmark`). Body and controls `text-sm`, metadata
+browser, filter sheet, Pools tab) use Manrope (`font-manrope`), and the BOUTLINE
+wordmark uses Special Gothic Expanded One (`font-wordmark`). Body and controls `text-sm`, metadata
 `text-xs text-muted-foreground`, at most `font-medium`. Sizes from `text-2xl` up are
 reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 Page text uses the `Text` primitive (`textVariants` inside other primitives' slots):
@@ -1730,6 +1775,8 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
   use `rounded-md`; pills (tab nav, icon buttons, avatars) use `rounded-full`. 1px
   `border-foreground`, no shadows, except floating surfaces (select menu, dropdown,
   date field popover, upload dialog, modal, filter sheet, toast) which use `shadow-md`.
+- Hi-fi pool cards are white with a `border-outline` border, `rounded-[12px]` and
+  `shadow-sm`; pool grid cells and their header pills use a 4px radius.
 - Focus `focus-visible:ring-2 ring-ring`; hover `bg-muted`; disabled `opacity-50`.
 - Icons are Material's Outlined set from `@mui/icons-material`, imported by path
   (`@mui/icons-material/SearchOutlined`), at `size-4`, `aria-hidden` when
@@ -1761,7 +1808,9 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
   whose search sections are a label above a `FilterSearchField` whose suggestions show
   in a `Dropdown` of `DropdownOption` rows while typing; picked values show as
   removable tags at the top until submitted. Other sections are a Distance slider and
-  rows of outline chips, then a full-width Clear All and a filled submit. The toast is
+  rows of outline chips (`ChipGroup` / `ChipGroupItem`), then a full-width Clear All
+  and a filled submit. `triggerActive` gives the trigger its pressed look while
+  filters are applied. The toast is
   a single obsidian row with white `text-sm`, a leading icon, an `accent-green`
   action, and no close button.
 - The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and `navigation-item`.
@@ -1779,7 +1828,7 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
 
 ## Appendix D. Open questions
 
-- Hi-fi design: brand color, dark mode, and whether `selected` stays blue.
+- Hi-fi design: dark mode, and whether `selected` stays blue.
 - Desktop layouts for the organizer console, which may outgrow 440px.
 - Team events (relay scoring to 45) are in the form but have no model.
 - Do spectators need accounts (to follow fencers across devices) or stay

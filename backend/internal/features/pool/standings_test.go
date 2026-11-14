@@ -12,13 +12,13 @@ func competitorID(n int) uuid.UUID {
 	return uuid.MustParse(fmt.Sprintf("d0000000-0000-4000-8000-%012d", n))
 }
 
-func fencersOf(ns ...int) []PoolSheetFencerRow {
-	rows := make([]PoolSheetFencerRow, 0, len(ns))
-	for i, n := range ns {
-		rows = append(rows, PoolSheetFencerRow{CompetitorID: competitorID(n), Position: i + 1})
+func fencersOf(ns ...int) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(ns))
+	for _, n := range ns {
+		ids = append(ids, competitorID(n))
 	}
 
-	return rows
+	return ids
 }
 
 func boutOf(status string, c1, score1, c2, score2 int) PoolSheetBoutRow {
@@ -48,12 +48,12 @@ func standingOf(place, victories, matches, scored, received int) PoolStanding {
 	return standing
 }
 
-func TestPoolStandings(t *testing.T) {
+func TestRankPoolFencers(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name    string
-		fencers []PoolSheetFencerRow
+		fencers []uuid.UUID
 		bouts   []PoolSheetBoutRow
 		want    map[int]PoolStanding
 	}{
@@ -154,13 +154,48 @@ func TestPoolStandings(t *testing.T) {
 				1: standingOf(1, 1, 1, 5, 1),
 			},
 		},
+		{
+			name:    "fencers from two pools interleave by exact ratio, then indicator",
+			fencers: fencersOf(1, 2, 3, 4, 5, 6, 7),
+			bouts: []PoolSheetBoutRow{
+				boutOf("ended", 1, 5, 2, 0),
+				boutOf("ended", 1, 5, 3, 1),
+				boutOf("ended", 4, 5, 1, 4),
+				boutOf("ended", 5, 5, 6, 0),
+				boutOf("ended", 7, 5, 5, 3),
+			},
+			want: map[int]PoolStanding{
+				7: standingOf(1, 1, 1, 5, 3),
+				4: standingOf(2, 1, 1, 5, 4),
+				1: standingOf(3, 2, 3, 14, 6),
+				5: standingOf(4, 1, 2, 8, 5),
+				3: standingOf(5, 0, 1, 1, 5),
+				2: standingOf(6, 0, 1, 0, 5),
+				6: standingOf(6, 0, 1, 0, 5),
+			},
+		},
+		{
+			name:    "a full tie across pools shares a place and the next place is skipped",
+			fencers: fencersOf(1, 2, 3, 4, 5),
+			bouts: []PoolSheetBoutRow{
+				boutOf("ended", 1, 5, 2, 0),
+				boutOf("ended", 3, 5, 4, 0),
+			},
+			want: map[int]PoolStanding{
+				1: standingOf(1, 1, 1, 5, 0),
+				3: standingOf(1, 1, 1, 5, 0),
+				5: standingOf(3, 0, 0, 0, 0),
+				2: standingOf(4, 0, 1, 0, 5),
+				4: standingOf(4, 0, 1, 0, 5),
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := poolStandings(tt.fencers, tt.bouts)
+			got := RankPoolFencers(tt.fencers, tt.bouts)
 
 			assert.Len(t, got, len(tt.want))
 			for n, want := range tt.want {

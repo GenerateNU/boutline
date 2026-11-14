@@ -81,4 +81,12 @@ describe("FilterSearchField", () => {
 
     expect(screen.getByText(want)).toBeInTheDocument();
   });
+
+  // jsdom doesn't move focus on a label click, so check what the browser relies on: the box labels the input.
+  it("makes its whole box the input's label, so a click anywhere in it focuses the input", () => {
+    renderField();
+    const input = screen.getByRole("searchbox", { name: "Club" });
+
+    expect(input.closest("label")?.control).toBe(input);
+  });
 });

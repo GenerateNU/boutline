@@ -2,7 +2,7 @@
 
 import { cn } from "cn";
 import SearchOutlined from "@mui/icons-material/SearchOutlined";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { Input } from "@/components/primitives/input";
 
@@ -25,6 +25,8 @@ function SearchBar({
 }: SearchBarProps) {
   const [focused, setFocused] = useState(false);
   const open = expanded ?? focused;
+  const generatedId = useId();
+  const inputId = props.id ?? generatedId;
 
   return (
     <div
@@ -38,16 +40,21 @@ function SearchBar({
         }
       }}
     >
-      <div className="flex h-11.5 items-center gap-2 rounded-lg border border-outline bg-background px-3 focus-within:border-blue">
+      {/* The input is only a line tall; making the whole box its label lets a click anywhere in it focus the input. */}
+      <label
+        htmlFor={inputId}
+        className="flex h-11.5 cursor-text items-center gap-2 rounded-lg border border-outline bg-background px-3 focus-within:border-blue"
+      >
         {leading}
         <Input
           type="text"
           className="h-auto w-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-sm text-obsidian placeholder:text-neutral-muted focus-visible:ring-0 [&::-webkit-search-cancel-button]:appearance-none"
           {...props}
+          id={inputId}
         />
         {icon}
         {trailing}
-      </div>
+      </label>
       {open ? (
         <div
           data-slot="search-bar-results"
