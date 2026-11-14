@@ -53,7 +53,7 @@ describe("boutsTable", () => {
     const table = boutsTable(pool([fencer("c", 3), fencer("a", 1), fencer("b", 2)], []));
 
     expect(table.headers).toEqual(["1", "2", "3"]);
-    expect(table.rows.map((row) => row.name)).toEqual(["A Fencer", "B Fencer", "C Fencer"]);
+    expect(table.rows.map((row) => row.name)).toEqual(["Fencer, A", "Fencer, B", "Fencer, C"]);
     expect(table.rows.map((row) => row.team)).toEqual(["a club", "b club", "c club"]);
   });
 

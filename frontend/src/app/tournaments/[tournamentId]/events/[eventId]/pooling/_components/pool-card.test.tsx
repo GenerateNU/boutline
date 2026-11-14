@@ -24,7 +24,7 @@ describe("PoolCard", () => {
     expect(screen.getByRole("heading", { name: "Pool 1 · Strip 3" })).toBeInTheDocument();
     expect(screen.getByText("In Progress")).toBeInTheDocument();
     expect(trigger).toHaveAttribute("aria-expanded", "true");
-    expect(within(screen.getByRole("row", { name: /Yan Wang/ })).getByRole("cell", { name: "V5" })).toBeInTheDocument();
+    expect(within(screen.getByRole("row", { name: /Wang, Yan/ })).getByRole("cell", { name: "V5" })).toBeInTheDocument();
   });
 
   it("switches to standings", () => {

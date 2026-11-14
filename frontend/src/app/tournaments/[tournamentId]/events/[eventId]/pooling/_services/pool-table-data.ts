@@ -1,7 +1,7 @@
 import { PoolBoard, PoolFencer } from "../_types/pool-board";
 import { PoolTableCell, PoolTableData } from "../_types/pool-table";
 
-import { fencerName } from "./fencer-name";
+import { fencerListName } from "./fencer-name";
 
 // Rows follow `position` because that is the pool sheet order the column numbers refer to.
 function byPosition(pool: PoolBoard): PoolFencer[] {
@@ -28,7 +28,7 @@ export function boutsTable(pool: PoolBoard): PoolTableData {
   return {
     headers: fencers.map((fencer) => String(fencer.position)),
     rows: fencers.map((row) => ({
-      name: fencerName(row),
+      name: fencerListName(row),
       team: row.team,
       cells: fencers.map((column) => (column === row ? { kind: "self" } : boutCell(pool, row, column))),
     })),

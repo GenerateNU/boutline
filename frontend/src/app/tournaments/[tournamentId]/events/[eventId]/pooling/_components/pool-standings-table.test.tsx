@@ -31,21 +31,21 @@ describe("PoolStandingsTable", () => {
       .map((header) => header.querySelector("span")?.textContent);
 
     expect(names).toEqual([
-      "Ava Johnson",
-      "Oliver Brown",
-      "Mateo Garcia",
-      "Zoe Kim",
-      "Lucas Martin",
-      "Isla Nguyen",
-      "Felix Wagner",
-      "Nora Silva",
+      "Johnson, Ava",
+      "Brown, Oliver",
+      "Garcia, Mateo",
+      "Kim, Zoe",
+      "Martin, Lucas",
+      "Nguyen, Isla",
+      "Wagner, Felix",
+      "Silva, Nora",
     ]);
   });
 
   it("shows the signed indicator in a fencer's row", () => {
     render(<PoolStandingsTable pool={poolBoards[3]} />);
 
-    const row = screen.getByRole("row", { name: /Ava Johnson/ });
+    const row = screen.getByRole("row", { name: /Johnson, Ava/ });
 
     expect(within(row).getByRole("cell", { name: "+4" })).toBeInTheDocument();
   });
