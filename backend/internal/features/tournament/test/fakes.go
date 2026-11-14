@@ -155,12 +155,6 @@ func (f *FakeTournamentRepository) ListTournaments(
 		if filter.Club != "" && !slices.Contains(f.Clubs[candidate.ID], filter.Club) {
 			continue
 		}
-		if filter.ManagedBy != uuid.Nil {
-			membership, ok := f.Members.Memberships[keyOf(candidate.ID, filter.ManagedBy)]
-			if !ok || membership.Role != tournamentuser.TournamentUserRoleAdmin {
-				continue
-			}
-		}
 		if !strings.Contains(strings.ToLower(candidate.Name), term) {
 			continue
 		}

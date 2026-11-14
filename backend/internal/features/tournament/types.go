@@ -92,7 +92,6 @@ type TournamentListInput struct {
 	Visibility TournamentVisibility `query:"visibility" enum:"public,private" doc:"Filter by visibility; omit for all"`
 	Club       string               `query:"club" maxLength:"120" doc:"Only tournaments with a competitor whose primary or secondary club is exactly this"`
 	Country    string               `query:"country" pattern:"^[A-Z]{2}$" doc:"Only tournaments in this country (exact ISO 3166-1 alpha-2 code)"`
-	Managed    bool                 `query:"managed" doc:"Only tournaments the caller is an admin of; needs a token"`
 }
 
 type TournamentCountryListInput struct {

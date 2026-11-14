@@ -195,7 +195,7 @@ for sharing it privately.
 | Method | Path | Notes |
 | --- | --- | --- |
 | POST | `/tournaments` | create; the code is server-generated |
-| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&managed&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly). `managed=true` keeps only tournaments the caller is an admin of and combines with the other filters; it needs a token, else the request is refused |
+| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly) |
 | GET | `/tournaments/{id}` | |
 | GET | `/tournaments/code/{code}` | open by code |
 | PATCH | `/tournaments/{id}` | name, visibility, start_time, city, country (an empty string clears city or country); 409 once ended |
@@ -419,8 +419,8 @@ different roles in different tournaments.
   lifetime, so page scripts never see it.
 - `src/proxy.ts` moves the cookie into the `Authorization` header on `/api/*`. It
   redirects `/admin/*` and `/…/referee` to `/login?next=…` when there is no cookie.
-- Server components that call the backend themselves (the role lookup and the managed
-  tournaments list) use `sessionAuthHeaders()`, which sends the cookie's token as
+- Server components that call the backend themselves (the dashboard's role lookup)
+  use `sessionAuthHeaders()`, which sends the cookie's token as
   `Authorization: Bearer`, the same as the `/api` proxy.
 
 ---
@@ -537,11 +537,12 @@ replace the tournament's tabs rather than stacking under them.
 Where login and signup land by default, behind the login gate. A solid-outlined
 "Create tournament" card linking to the creation form (§10.6), then "Manage
 Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) over
-the tournaments the caller is an admin of (`managed=true`, §2.2), paginated. Cards
-show the created date instead of the location and link to the tournament's
-dashboard (§4.6); public `/tournaments` cards still link to the public page.
-Organizers see `pending` as "Scheduled" with the blue badge; public screens keep
-"Upcoming". `/admin` redirects here until the console (§10.7) exists.
+every tournament (not yet only the caller's, #198), paginated. Cards show the created
+date instead of the location and link to the tournament's dashboard (§4.6), which
+only that tournament's admins can open; public `/tournaments` cards still link to
+the public page. Organizers see `pending` as "Scheduled" with the blue badge; public
+screens keep "Upcoming". `/admin` redirects here until the console (§10.7) exists.
+It switches to `GET /users/{me}/tournaments` in §10.7.
 
 ### 4.6 Tournament dashboard (`/admin/tournaments/[id]`)
 
@@ -1086,9 +1087,9 @@ are placed into pools.
 **Status:** Partial.
 
 Planned as a hub for the organizer's tools; until it exists, `/admin` redirects to
-the admin home (§4.5), which already lists only the caller's tournaments
-(`managed=true`). The tournament dashboard (§4.6) is the console's per-tournament
-page.
+the admin home (§4.5). The tournaments list switches to
+`GET /users/{me}/tournaments`. The tournament dashboard (§4.6) is the console's
+per-tournament page.
 
 On the day, the admin checks fencers in, starts the tournament, generates pools
 (which creates bouts, so it needs the tournament `active`), assigns referees, and

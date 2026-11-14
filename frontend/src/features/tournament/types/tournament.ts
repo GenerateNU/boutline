@@ -25,7 +25,6 @@ export interface TournamentListFilters {
   timeZone?: string;
   club?: string;
   country?: string;
-  managed?: boolean;
 }
 
 export interface TournamentListResult {

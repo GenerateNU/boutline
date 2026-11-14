@@ -212,19 +212,10 @@ func (s *tournamentService) ListTournaments(
 	if !input.StartFrom.IsZero() && !input.StartTo.IsZero() && !input.StartTo.After(input.StartFrom) {
 		return nil, errs.HumaError(errs.Public("start_to must be after start_from", errs.ErrInvalidInput))
 	}
-	var managedBy uuid.UUID
-	if input.Managed {
-		caller, ok := session.UserIDFrom(ctx)
-		if !ok {
-			return nil, errs.HumaError(errs.Public("sign in to see the tournaments you manage", errs.ErrForbidden))
-		}
-		managedBy = caller
-	}
 	term := strings.TrimSpace(input.Query)
 	limit, offset := page(input.Limit, input.Offset)
 
 	tournaments, total, err := s.repo.ListTournaments(ctx, TournamentListFilter{
-		ManagedBy:  managedBy,
 		Status:     input.Status,
 		Term:       term,
 		StartFrom:  input.StartFrom,
