@@ -14,7 +14,7 @@ describe("PinsLinkButton", () => {
     jest.mocked(usePathname).mockReturnValue(pathname);
     render(<PinsLinkButton tournamentId="t1" />);
 
-    const link = screen.queryByRole("link", { name: "View pins" });
+    const link = screen.queryByRole("link", { name: "Pinned" });
     if (linked) {
       expect(link).toHaveAttribute("href", "/pinned?tournamentId=t1");
     } else {

@@ -186,7 +186,9 @@ for sharing it privately.
 - `tournaments`: `name` (1–120), `visibility` (`private` | `public`, default
   private), `code` (unique), `status` (`pending` | `active` | `ended`),
   `created_by` (user), `start_time`, `started_at`, `completed_at`, `city`
-  (free text, optional), `country` (ISO 3166-1 alpha-2 such as `US`, optional).
+  (free text, optional; the creation form stores its Location here), `country`
+  (ISO 3166-1 alpha-2 such as `US`, optional), `venue` (free text, optional),
+  `sanctioning_authority` (`askfred` | `usa_fencing` | `fie` | `other`, optional).
 - **Join code:** six characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, which
   leaves out the look-alikes 0/O and 1/I/L. Generated with `crypto/rand` and
   retried up to five times on collision. Lookup is case-insensitive and trims
@@ -195,10 +197,10 @@ for sharing it privately.
 | Method | Path | Notes |
 | --- | --- | --- |
 | POST | `/tournaments` | create; the code is server-generated |
-| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly) |
+| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&mine&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly). `mine=true` keeps only tournaments the caller created; it needs a signed-in caller (anonymous gets 403) |
 | GET | `/tournaments/{id}` | |
 | GET | `/tournaments/code/{code}` | open by code |
-| PATCH | `/tournaments/{id}` | name, visibility, start_time, city, country (an empty string clears city or country); 409 once ended |
+| PATCH | `/tournaments/{id}` | name, visibility, start_time, city, country, venue, sanctioning_authority (an empty string clears city, country or venue); 409 once ended |
 | GET | `/countries?visibility&limit&offset` | the countries that have tournaments, with a count each, sorted by code |
 | POST | `/tournaments/{id}/start` | `pending → active` |
 | POST | `/tournaments/{id}/complete` | `active → ended` |
@@ -230,8 +232,11 @@ An event is one competition inside a tournament, such as "Y14 Men's Foil". Each
 event runs its own pools and tableau.
 
 `events`: `tournament_id`, `name` (1–200), `format` (only
-`pool_then_direct_elimination`), `status` (`upcoming` | `active` | `ended`),
-`start_time`, `started_at`, `completed_at`.
+`pool_then_direct_elimination`, set by the server), `status` (`upcoming` | `active`
+| `ended`), `start_time`, `started_at`, `completed_at`, and the attributes in §8.5:
+`type`, `weapon`, `gender`, `age_category`, `rating_limit` (each optional, so older
+events stay valid) and `qualifier` (boolean, default false). `POST /events` and
+`PATCH /events/{id}` accept the six attributes; the responses return them.
 
 `POST /events` (tournament must exist), `GET /events?tournament_id&status`,
 `GET /events/{id}`, `PATCH /events/{id}` and `DELETE /events/{id}` (both only while
@@ -252,9 +257,8 @@ are not a table of their own; a club is the set of distinct `team` values.
 - `GET /competitors?q&tournament_id&rating&team&ids`: fuzzy name search,
   alphabetical when there is no `q`, exact `team` match.
 - `GET /competitors/{id}`, and `PATCH /competitors/{id}` (an empty `team` clears it).
-- `DELETE /competitors/{id}`: 403 unless the caller created the row, created the
-  tournament, or is its admin; 409 once the competitor has fenced a bout. This is
-  the only route that checks the caller today.
+- `DELETE /competitors/{id}`: tournament admins only (§7.2); 409 once the
+  competitor has fenced a bout.
 - `GET /tournaments/{id}/teams?q`: the tournament's clubs with a fencer count each,
   fuzzy-searchable, leaving out fencers with no club.
 - `GET /clubs?q&limit&offset`: every club across all tournaments, built from
@@ -380,7 +384,7 @@ gate. Reading stays public.
 | --- | --- | --- |
 | Spectator / fencer | public, no account needed | browse tournaments, events, pools, tableau, results, live scores |
 | Account holder | global | create tournaments, be added as staff |
-| Tournament **admin** | one tournament | edit it, run its lifecycle, manage events, competitors, staff, pools, brackets |
+| Tournament **admin** | one tournament | edit it, run its lifecycle, manage events, competitors, staff, pools, brackets; referee a bout only when assigned to it |
 | Tournament **referee** | one tournament | start, score and end bouts they are assigned to |
 
 Roles are per tournament. There is no global superuser, and a user can hold
@@ -398,7 +402,7 @@ different roles in different tournaments.
 - The auth middleware makes reads public and every other method require
   `Authorization: Bearer <token>`. An operation can override this; `GET /users`
   and `GET /users/{id}` require a token. Handlers read the verified ID with
-  `user.UserIDFrom`.
+  `session.UserIDFrom`.
 - `JWT_SECRET` must be at least 32 bytes. A built-in dev secret is allowed only
   when `APP_ENVIRONMENT=dev`.
 
@@ -443,15 +447,16 @@ from the venue floor.
   sidebar's top left closes it.
 - **`/settings`**: Profile, Accessibility and Language, then Privacy Policy and
   Help, in two cards. None has a page yet, so the rows are labels only.
-- **Tabs** (tournament and event pages): each tab has its own URL, but switching
+- **Tabs** (tournament and event pages): a full-width obsidian row directly under
+  the global nav, like the tournaments date strip. Each tab has its own URL, but switching
   tabs replaces the history entry, so the browser's Back button leaves the page
   rather than stepping back through tabs. The exception is the active tab clicked
   from a page nested under it (an event's Events tab), which adds an entry.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
-- **`/`**: quick links to login, tournaments and pinned items, then a showcase of
-  the design-system primitives (Appendix C). The showcase is a development page,
-  not the product's home.
+- **`/`**: redirects to `/tournaments`.
+- **404** (`app/not-found.tsx`): unmatched URLs and `notFound()` calls show the
+  logo, "Page not found" and a Back to home button that links to `/`.
 
 ### 4.2 Tournament search (`/tournaments`)
 
@@ -459,16 +464,21 @@ from the venue floor.
 
 - A server-rendered list of public tournaments with a status badge (Upcoming /
   Active / Ended), empty states, and Previous/Next pagination, 20 per page.
+- **Loading:** a skeleton of the page (dark date row, search bar, title, five
+  shimmering card placeholders) shows until the list arrives.
 - **Search:** a plain GET form that works without JS; with JS it updates `?q=`
   after a 300 ms debounce.
-- **Dates:** five day tabs in a dark row under the global nav, with paging and a
-  day toggle. The strip opens with the selected day (else today) leftmost.
+- **Dates:** five day tabs in a dark row under the global nav, with paging. A
+  day is always selected: tapping the selected day keeps it, and a missing or
+  invalid `?date=` falls back to today. The server uses today in `?tz=` (else
+  UTC), then the strip rewrites the URL to the browser's own today and zone. The
+  strip opens with the selected day leftmost.
   Dragging the row locks to the previous, current or next five days: past a
   quarter of its width it turns the page, otherwise it springs back. Turning a
   page, by drag or chevron, selects its first day; tapping a day selects it
-  without moving the strip. The icon beside the title toggles a month calendar (with month and
-  year steppers) open above the search bar, on the same screen. Both filter by
-  `start_time`.
+  without moving the strip. The icon beside the title opens a Calendar pop-up
+  (month and year steppers); picking a day and pressing Show Tournaments applies
+  it. Both filter by `start_time`.
 - **Active filters:** each applied Status, Club or Country filter shows as a pill
   under the search bar; its × removes just that filter.
 - **Filter sheet:** Status, Club and Country work; the Distance slider is inert, since
@@ -521,14 +531,17 @@ replace the tournament's tabs rather than stacking under them.
   view" button and a touch log, from the fixture. Only its referee link reaches
   the real API.
 
-### 4.5 Organizer list (`/admin/tournaments`)
+### 4.5 Admin home (`/admin/tournaments`)
 
 **Status:** Partial.
 
-Behind the login gate: a dashed "Create tournament" card, then "Manage
-Tournaments" with All / Completed / In Progress / Upcoming tabs (`?status=`) over
+Where login and signup land by default, behind the login gate. A solid-outlined
+"Create tournament" card linking to the creation form (§10.6), then "Manage
+Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) over
 every tournament (not yet only the caller's), paginated. Cards show the created
-date instead of the location. It switches to `GET /users/{me}/tournaments` in §10.7.
+date instead of the location. Organizers see `pending` as "Scheduled" with the blue
+badge; public screens keep "Upcoming". `/admin` redirects here until the console
+(§10.7) exists. It switches to `GET /users/{me}/tournaments` in §10.7.
 
 ---
 
@@ -620,6 +633,7 @@ Pools in that order, under black sentence-case headings.
 - Clubs and Pools show an empty state until clubs and pools can be pinned.
 - Every tournament page except the referee screen has a fixed pin button in the
   bottom-right corner linking to `/pinned?tournamentId=…`, which Back returns to.
+  From `lg` up it grows into a larger pill labelled "Pinned".
 
 Pins are stored for every tournament together, so the page shows only the pins of
 the tournament in `?tournamentId=` (the floating button always passes it), or
@@ -656,8 +670,9 @@ logged-in user reseat another tournament's pools.
 
 **Status:** Planned. Issue: #184.
 
-- `created_by` (tournament, scoring), `revoked_by` and the acting referee come from
-  `UserIDFrom`, not the request body. Today all three are client-supplied.
+- Scoring's `created_by`, `revoked_by` and the acting referee come from
+  `UserIDFrom`, not the request body. Today all three are client-supplied. A
+  tournament's `created_by` already comes from the session (§7.2).
 - `PATCH` and `DELETE /users/{id}` only for the caller's own ID (403 otherwise).
   Today any logged-in user can rename or delete any other user.
 - The referee screen drops `FALLBACK_SCORER_ID` (§5.3) and restores its
@@ -665,14 +680,26 @@ logged-in user reseat another tournament's pools.
 
 ### 7.2 Role checks
 
-**Status:** Planned. Issue: #4.
+**Status:** Built. Issue: #4. Tournaments created before their creator was made
+an admin still need that row backfilled, which is its own ticket.
 
-- An authorization helper, `requireRole(tournamentID, admin|referee)`, runs on every
-  mutating route. Today only competitor delete checks the caller.
-- The creator becomes an `admin` member automatically on create (today they don't).
-- Starting, scoring and ending a bout requires the `referee` role and being the
-  bout's assigned referee (open question in §D).
-- Guard against removing or demoting the last admin.
+- **Built:** `tournamentuser.RequireRole(ctx, memberships, tournamentID, role)`
+  runs on every mutating route and returns 403 unless the caller holds the role in
+  that tournament. An admin passes a referee check. Bout start and end and the
+  scoring writes need `referee`. Every other write needs `admin`, except creating
+  a tournament, which any signed-in user can do.
+- **Built:** creating a tournament records the signed-in caller as its
+  `created_by`, which the request body can't set, and writes them into
+  `tournament_users` as `admin` in the same transaction. `tournament_users` alone
+  decides who may act; `created_by` is read only to keep the creator an admin.
+- **Built:** `tournamentuser.RequireAssignedReferee(ctx, memberships, tournamentID,
+  refereeID)` guards bout start and end and every scoring write. The caller needs the `referee` role and
+  must be the bout's `referee_id`: 403 otherwise, and 409 while the bout has no
+  referee. An admin passes the role check but still referees only the bouts they
+  are assigned to.
+- **Built:** the creator stays an admin. Changing their role to `referee` or
+  removing them is refused with 409. Every tournament's creator is made an admin
+  on create, so no tournament can be left without an admin.
 
 ### 7.3 Visibility
 
@@ -768,15 +795,17 @@ the tournament and bout `end` state.
 
 ### 8.5 Event attributes and bout settings
 
-**Status:** Planned. Issue: #186 (touches and time).
+**Status:** Partial. The first six attributes below are built (type through
+qualifier). Issue: #186 (touches and time).
 
-Event attributes the creation form already collects, to add as columns:
+Event attributes the creation form collects. `type`, `weapon`, `gender`,
+`age_category`, `rating_limit` and `qualifier` are columns; the rest are planned:
 
 | Field | Values |
 | --- | --- |
 | type | individual, team |
 | weapon | foil, épée, sabre |
-| gender | men, women, mixed (both boxes checked) |
+| gender | male, female, other |
 | age category | Y8, Y10, Y12, Y14, Cadet, Junior, Senior, Veteran, Open |
 | rating limit | e.g. "D and under", "Open" |
 | seeding | by rating, by ranking points, random |
@@ -963,9 +992,13 @@ name, club and rating.
 - **Built:** the parser (`frontend/src/lib/competitor-import/`). It maps headers,
   checks ratings and birthdates, finds duplicates by member number, and caps
   uploads at 2 MiB and 5000 rows, with tests.
-- **Planned:** the dropzones on the form call the parser (today they ignore their
-  files), a preview screen shows what will be created, and a backend route commits
-  it.
+- **Sample:** the creation form's dropzone says it takes only `.csv` and opens a
+  sample CSV in a dialog. The sample is the valid rows of #80's example upload
+  (`example-competitor-import.ts`), and a parser test keeps every row of it valid.
+- **Autofill:** the creation form's dropzone runs the parser and sorts valid rows
+  into event cards (§10.6). Rejected files and parse errors show inline.
+- **Planned:** submit commits the fencers with `POST /competitors` and reports
+  created and skipped counts (#208).
 
 ### 10.5 Check-in
 
@@ -974,24 +1007,54 @@ name, club and rating.
 Admins mark fencers present on the day (`checked_in_at`). Only checked-in fencers
 are placed into pools.
 
-### 10.6 Creation form (`/admin/tournament/new`)
+### 10.6 Creation form (`/admin/tournaments/new`)
 
-**Status:** Partial. Issue: #136.
+**Status:** Partial. Issues: #136, #252.
 
-- **Built (UI only):** tournament fields (§10.1), four import dropzones (§10.4),
-  an admins field (§10.3), and any number of event blocks with every attribute in
-  §8.5.
+- **Built (UI only):** one page holds the tournament fields (§10.1), a CSV
+  dropzone (§10.4), and one card per event, titled by its event name ("Event 2"
+  until it has one), with the attributes in §8.5. Cards can be added and removed,
+  keeping at least one. Text fields carry example placeholders. From `lg` up the
+  upload spans the page, then two columns: tournament and submit on the left,
+  events on the right. Phones keep one column: upload, tournament, events, submit.
+- **Import:** the CSV's valid rows are sorted into cards by their Event column. A
+  card with a matching name (ignoring case) gets those fencers in place of its own,
+  so a second upload doesn't double them. Other events fill a blank card that has no
+  fencers yet, then get new cards. A toast says how many events and fencers were
+  autofilled and how many rows were skipped; a file that can't be read gets an
+  inline error instead, so it doesn't vanish before it's fixed.
+- **Saving:** the tournament details card has its own Save, and Save event stays
+  disabled until it is saved. Either Save checks only its own card (an event also
+  checks its fencers), marks empty fields with `aria-invalid`, then collapses the
+  card to a summary until Edit reopens it. An upload that replaces a saved card's
+  fencers reopens it for review.
+- **Fencers:** each is a card inside its event, showing name, club, rating and
+  member number, plus what it is still missing. First and last name, gender, birth
+  date and division are required, as `POST /competitors` requires them. Imported
+  genders are mapped to F, M or O; anything else is left blank to be filled in. While the
+  event is being edited, fencers can be edited, removed, or added by hand.
+- **Collapsing:** event cards and fencer lists use Radix Collapsible, animating
+  height and opacity (`animate-collapsible-down`/`-up`, off with reduced motion).
+  A card's header shows its title and fencer count, open or closed. Collapsed fields
+  escape the browser's required check, so submit reopens any unsaved card that is
+  missing fields or has incomplete fencers, and names it.
+- **Draft:** the whole form, events and fencers included, is kept in
+  sessionStorage, so a reload doesn't lose it. Its key starts with `account:`.
+  Fencers' details mustn't reach the next account in the tab, so logging out
+  clears `account:` keys, and so does signing in as a different account than the
+  one that owned them (an expired session skips logout). The same account signing
+  back in keeps its draft.
 - **Planned:** submit creates the tournament, then its events, then imports
   competitors and adds staff, showing per-row errors and landing on the new
-  tournament. Today submit discards everything and navigates away, and event
-  blocks cannot be removed.
+  tournament (#252). Today submit clears the draft and returns to the admin home.
+  Adding an event to an existing tournament has no screen.
 
 ### 10.7 Organizer console (`/admin`)
 
 **Status:** Partial.
 
-A hub linking to the organizer's tournaments (§4.5) and the creation form, plus
-inert buttons (tools, reports, view, save). The tournaments list switches to
+Planned as a hub for the organizer's tools; until it exists, `/admin` redirects to
+the admin home (§4.5). The tournaments list switches to
 `GET /users/{me}/tournaments`.
 
 On the day, the admin checks fencers in, starts the tournament, generates pools
@@ -1570,6 +1633,8 @@ through the tokens, so components use tokens, never raw colors.
 - Spacing: `gap-1`/`gap-2` inside a control, `gap-3`/`gap-4` between items in a list
   or section, `gap-10` between page sections.
 - Group content with `Section`, whose title is a small uppercase muted label.
+- The page scrollbar is hidden everywhere (`scrollbar-width: none` on `html`); pages
+  still scroll. Scrollable areas inside a page keep their scrollbars.
 
 ### C.2 Color tokens (`src/app/globals.css`)
 | Token | Use |
@@ -1612,12 +1677,15 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   tag), label, button, segmented button, search bar, dropdown, text field,
   select, date field, checkbox, radio, toggle, slider, calendar,
   dropzone and upload dialog, modal, filter sheet, pagination, toast, tooltip,
-  progress indicators, and a loading spinner.
+  progress indicators, a loading spinner, and a shimmering skeleton block.
 - Form fields (text field, select, date field) share one hi-fi frame: a `text-xs`
   label above a `rounded-md border-outline` box that turns `border-blue` with a
-  `ring-blue-lighter` halo on focus or open, `border-red-dark` when `aria-invalid`,
-  and `bg-disabled` when disabled. Select is Radix Select; the date field opens the
-  calendar in a Radix Popover.
+  `ring-blue-lighter` halo on focus or open, a 2px `border-red-dark` when
+  `aria-invalid` or `:user-invalid` (a required field left empty once edited or
+  submitted), and `bg-disabled` when disabled. A required field's label
+  ends in a `text-red-dark` asterisk, hidden from screen readers since `required`
+  is already announced. Select is Radix Select; the date field opens the calendar
+  in a Radix Popover.
 - Overlays: Modal is a `rounded-3xl p-5` card with an `text-xl` title and close (X)
   header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a
   filled or `destructive` action). The filter sheet is a `rounded-t-3xl` bottom sheet
@@ -1633,7 +1701,8 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   route. The logo takes its tone from the text colour (`text-white` or `text-blue`).
 - Fetched content shows `Loading` until it arrives: a route's `loading.tsx` sits
   under its tab bar, and client fetches render it in place of their first result.
-- Many are only used by the `/` showcase so far.
+  `/tournaments` shows a `Skeleton` layout of the page instead (§4.2). `Skeleton`
+  shimmers with `motion-safe:` and stays flat when reduced motion is on.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.
 
@@ -1652,8 +1721,6 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - Épée double touch at one touch from the end (4–4, 14–14): annul it, or allow
   5–5? The current rules give a bout no winner in that case, so the scoring
   rules and the `confirming` phase have to pick one.
-- May a tournament admin referee and score bouts, or only users with the
-  `referee` role?
 - What happens when a referee has to step away from a pool mid-way? Reassigning
   the pool's referee moves its upcoming bouts to the new one (§11.1), but an
   active bout keeps its referee, and only the assigned referee can score it

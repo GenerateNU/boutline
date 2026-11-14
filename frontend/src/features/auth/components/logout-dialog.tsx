@@ -7,6 +7,7 @@ import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
 import { ModalClose } from "@/components/primitives/modal";
+import { clearAccountStorage } from "@/features/auth/services/account-storage";
 import { logout } from "@/features/auth/services/auth-actions";
 
 function LogoutDialog() {
@@ -23,6 +24,9 @@ function LogoutDialog() {
         setError("Couldn't log out. Try again in a moment.");
         return;
       }
+      // Drafts can hold fencers' personal details, so the next account in this tab
+      // mustn't see them.
+      clearAccountStorage();
       router.push("/login");
     });
   }
@@ -40,8 +44,8 @@ function LogoutDialog() {
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40" />
-        <Dialog.Content className="fixed inset-x-2 top-1/2 z-50 mx-auto flex max-w-87.5 -translate-y-1/2 flex-col gap-4 rounded-[20px] bg-background p-5 font-manrope shadow-lg">
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40 motion-safe:data-[state=open]:animate-fade-in motion-safe:data-[state=closed]:animate-fade-out" />
+        <Dialog.Content className="fixed inset-x-2 top-1/2 z-50 mx-auto flex max-w-87.5 -translate-y-1/2 flex-col gap-4 rounded-[20px] bg-background p-5 font-manrope shadow-lg motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out">
           <div className="flex items-center justify-between">
             <Dialog.Title className="text-xl font-semibold text-obsidian">Log out?</Dialog.Title>
             <ModalClose />

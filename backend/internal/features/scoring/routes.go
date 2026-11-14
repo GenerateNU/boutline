@@ -5,6 +5,7 @@ import (
 
 	"boutline/internal/cache"
 	"boutline/internal/features/bout"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -22,7 +23,11 @@ func RegisterScoringRoutes(api huma.API, params *types.ServiceParams) {
 		repo = NewCachedScoringRepository(repo, cache.NewRedisCache(params.Redis))
 	}
 
-	RegisterScoringService(api, NewScoringService(repo, bout.NewBoutRepository(params.DB)))
+	RegisterScoringService(api, NewScoringService(
+		repo,
+		bout.NewBoutRepository(params.DB),
+		tournamentuser.NewTournamentUserRepository(params.DB),
+	))
 }
 
 func RegisterScoringService(api huma.API, service ScoringService) {
