@@ -10,6 +10,7 @@ import { Button } from "@/components/primitives/button";
 import { ButtonGroup } from "@/components/primitives/button-group";
 import { Input } from "@/components/primitives/input";
 import type { Tableau } from "../../_types/tableau";
+import { latestMatchingRoundId } from "./latest-matching-round";
 import { TableauBracket } from "./tableau-bracket";
 import { TableauList } from "./tableau-list";
 
@@ -44,7 +45,15 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
               type="text"
               aria-label="Search fencers or clubs"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                const next = event.target.value;
+                setQuery(next);
+                // Jump to the furthest-along round the searched fencer appears in.
+                const roundId = latestMatchingRoundId(tableau.rounds, next);
+                if (roundId) {
+                  setSelectedRoundId(roundId);
+                }
+              }}
               placeholder="Enter search text"
               className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 placeholder:text-neutral-secondary focus-visible:ring-0"
             />

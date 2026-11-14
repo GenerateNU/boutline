@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 import type { TableauRound } from "../../_types/tableau";
 import { BracketRound } from "./bracket-round";
+import { latestMatchingRoundId } from "./latest-matching-round";
 
 // How long scrolling pauses before settling and snapping to the nearest round.
 const SCROLL_SETTLE_MS = 100;
@@ -35,7 +36,44 @@ function TableauBracket({
   // True while a scroll was started by picking a round button, so the settle
   // handler doesn't treat it as the user swiping and overwrite the pick.
   const scrollingToButtonPick = useRef(false);
+  // True when the selected round changed because the user swiped there, so the
+  // effect below shouldn't scroll again (it would jump back to the top).
+  const focusFromSwipe = useRef(false);
   const firstRoundId = rounds[0]?.id;
+
+  // Scrolls so the column sits at the left edge and the bout sits just below the
+  // round buttons floating above the scroller (hence the pt-16 clearance).
+  function scrollToBout(column: HTMLElement, bout: HTMLElement) {
+    const scroller = scrollerRef.current;
+    if (!scroller) {
+      return;
+    }
+    const clearance = 64;
+    const scrollerRect = scroller.getBoundingClientRect();
+    const left =
+      scroller.scrollLeft +
+      column.getBoundingClientRect().left -
+      scrollerRect.left;
+    const top =
+      scroller.scrollTop +
+      bout.getBoundingClientRect().top -
+      scrollerRect.top -
+      clearance;
+    // The last rounds can't reach the left edge (nothing left to scroll), so clamp.
+    const maxLeft = scroller.scrollWidth - scroller.clientWidth;
+    const maxTop = scroller.scrollHeight - scroller.clientHeight;
+    const targetLeft = Math.min(Math.max(left, 0), maxLeft);
+    const targetTop = Math.min(Math.max(top, 0), maxTop);
+    // No movement means no scroll event, which would leave the pick flag stuck.
+    if (
+      Math.abs(targetLeft - scroller.scrollLeft) < 1 &&
+      Math.abs(targetTop - scroller.scrollTop) < 1
+    ) {
+      return;
+    }
+    scrollingToButtonPick.current = true;
+    scroller.scrollTo({ left: targetLeft, top: targetTop, behavior: "smooth" });
+  }
 
   // Round picked in the button group (or by a swipe): scroll to its column by the left edge.
   useEffect(() => {
@@ -46,29 +84,30 @@ function TableauBracket({
         return;
       }
     }
-    const scroller = scrollerRef.current;
+    if (focusFromSwipe.current) {
+      focusFromSwipe.current = false;
+      return;
+    }
     const column = columnRefs.current[focusedRoundId];
-    if (!scroller || !column) {
-      return;
+    // The round's first (top) bout: a link, or a TBA placeholder.
+    const firstBout = column?.querySelector<HTMLElement>("a, [role='group']");
+    if (column && firstBout) {
+      scrollToBout(column, firstBout);
     }
-    // Distance from scroller's left edge to the column; positive means the column is to the right.
-    const offset =
-      column.getBoundingClientRect().left -
-      scroller.getBoundingClientRect().left;
-    // The last rounds can't reach the left edge (nothing left to scroll), so skip the scroll.
-    const roomRight =
-      scroller.scrollWidth - scroller.clientWidth - scroller.scrollLeft;
-    const canMove =
-      offset > 1 ? roomRight > 1 : offset < -1 && scroller.scrollLeft > 1;
-    if (!canMove) {
-      return;
-    }
-    scrollingToButtonPick.current = true;
-    scroller.scrollTo({
-      left: scroller.scrollLeft + offset,
-      behavior: "smooth",
-    });
   }, [focusedRoundId, firstRoundId]);
+
+  // On a new search, scroll to the first match in the latest round it appears in.
+  // Declared after the effect above so its scroll wins when both fire.
+  useEffect(() => {
+    const roundId = latestMatchingRoundId(rounds, query);
+    const column = roundId ? columnRefs.current[roundId] : null;
+    const match = column?.querySelector<HTMLElement>("[data-matched]");
+    if (column && match) {
+      scrollToBout(column, match);
+    }
+    // Only re-run when the search text changes, not on every swipe.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   // Clear any pending settle timer on unmount.
   useEffect(() => () => clearTimeout(settleTimer.current), []);
@@ -85,6 +124,7 @@ function TableauBracket({
       }
       const roundId = snappedRoundId();
       if (roundId && roundId !== focusedRoundId) {
+        focusFromSwipe.current = true;
         onFocusedRoundChange(roundId);
       }
     }, SCROLL_SETTLE_MS);

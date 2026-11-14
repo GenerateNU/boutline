@@ -25,6 +25,7 @@ function BracketMatch({
   return (
     <Link
       href={href}
+      data-matched={matched || undefined}
       className={cn(
         "block w-full rounded-lg bg-card px-3 shadow-md transition-colors hover:bg-muted",
         matched && "h-27 border-2 border-blue-vivid",
