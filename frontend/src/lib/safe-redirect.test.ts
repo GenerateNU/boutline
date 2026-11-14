@@ -2,7 +2,7 @@ import { safeRedirectPath } from "@/lib/safe-redirect";
 
 describe("safeRedirectPath", () => {
   it.each([
-    { name: "a same-site path", next: "/admin/tournament/new?step=2", want: "/admin/tournament/new?step=2" },
+    { name: "a same-site path", next: "/admin/tournaments/new?step=2", want: "/admin/tournaments/new?step=2" },
     { name: "the site root", next: "/", want: "/" },
     { name: "a missing value", next: undefined, want: "/fallback" },
     { name: "a repeated query param", next: ["/a", "/b"], want: "/fallback" },

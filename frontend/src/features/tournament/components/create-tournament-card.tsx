@@ -4,7 +4,7 @@ import Link from "next/link";
 function CreateTournamentCard() {
   return (
     <Link
-      href="/admin/tournament/new"
+      href="/admin/tournaments/new"
       className="flex items-center gap-3 rounded-[12px] border-[1.5px] border-blue bg-blue-lightest p-4.5 transition-colors hover:bg-blue-lighter"
     >
       <div className="flex flex-1 flex-col gap-0.5">
