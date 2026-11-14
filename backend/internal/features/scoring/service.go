@@ -48,14 +48,14 @@ func NewScoringService(
 	return &scoringService{repo: repo, bouts: bouts, memberships: memberships}
 }
 
-// requireReferee loads the bout a score belongs to and checks the caller referees its tournament.
-func (s *scoringService) requireReferee(ctx context.Context, boutID uuid.UUID) error {
+// requireAssignedReferee loads the bout a score belongs to and checks the caller is its assigned referee.
+func (s *scoringService) requireAssignedReferee(ctx context.Context, boutID uuid.UUID) error {
 	match, err := s.bouts.GetBoutByID(ctx, boutID)
 	if err != nil {
 		return fmt.Errorf("get bout: %w", err)
 	}
 
-	return tournamentuser.RequireRole(ctx, s.memberships, match.TournamentID, tournamentuser.TournamentUserRoleReferee)
+	return bout.RequireAssignedReferee(ctx, s.memberships, match)
 }
 
 func (s *scoringService) CreateScoring(
@@ -75,7 +75,7 @@ func (s *scoringService) CreateScoring(
 		return nil, errs.HumaError(err)
 	}
 
-	if err := s.requireReferee(ctx, BoutID); err != nil {
+	if err := s.requireAssignedReferee(ctx, BoutID); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("create scoring: %w", err))
 	}
 
@@ -153,7 +153,7 @@ func (s *scoringService) UpdateScoringByID(
 		return nil, errs.HumaError(fmt.Errorf("get scoring: %w", err))
 	}
 
-	if err := s.requireReferee(ctx, scoring.BoutID); err != nil {
+	if err := s.requireAssignedReferee(ctx, scoring.BoutID); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("update scoring: %w", err))
 	}
 
@@ -199,7 +199,7 @@ func (s *scoringService) RevokeScoring(
 		return nil, errs.HumaError(fmt.Errorf("get scoring: %w", err))
 	}
 
-	if err := s.requireReferee(ctx, scoring.BoutID); err != nil {
+	if err := s.requireAssignedReferee(ctx, scoring.BoutID); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("revoke scoring: %w", err))
 	}
 

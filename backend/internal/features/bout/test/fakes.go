@@ -244,17 +244,20 @@ func (f *FakePoolLookup) GetPoolTournamentID(_ context.Context, id uuid.UUID) (u
 }
 
 var (
-	TestAdminID   = uuid.New()
-	TestRefereeID = uuid.New()
+	TestAdminID        = uuid.New()
+	TestRefereeID      = uuid.New()
+	TestOtherRefereeID = uuid.New()
 )
 
-// staffOf seeds TestAdminID as admin and TestRefereeID as referee of each tournament.
+// staffOf seeds TestAdminID as admin, and TestRefereeID and TestOtherRefereeID as
+// referees, of each tournament.
 func staffOf(tournamentIDs ...uuid.UUID) *tournamentusertest.FakeMembershipLookup {
-	seed := make([]tournamentuser.TournamentUser, 0, 2*len(tournamentIDs))
+	seed := make([]tournamentuser.TournamentUser, 0, 3*len(tournamentIDs))
 	for _, id := range tournamentIDs {
 		seed = append(seed,
 			tournamentuser.TournamentUser{TournamentID: id, UserID: TestAdminID, Role: tournamentuser.TournamentUserRoleAdmin},
 			tournamentuser.TournamentUser{TournamentID: id, UserID: TestRefereeID, Role: tournamentuser.TournamentUserRoleReferee},
+			tournamentuser.TournamentUser{TournamentID: id, UserID: TestOtherRefereeID, Role: tournamentuser.TournamentUserRoleReferee},
 		)
 	}
 

@@ -183,6 +183,11 @@ admin passes a referee check. Bout start and end and the scoring writes need
 write any signed-in user can make, and it writes the creator into
 `tournament_users` as the tournament's first admin.
 
+Bout start and end and the scoring writes go through
+`bout.RequireAssignedReferee` instead, which also requires the caller to be the
+bout's `referee_id`. An admin passes its role check but referees only the
+bouts they are assigned to.
+
 ## Layout
 
 ```

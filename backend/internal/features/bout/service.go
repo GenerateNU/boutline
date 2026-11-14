@@ -266,7 +266,7 @@ func (s *boutService) UpdateBoutByID(ctx context.Context, input *BoutUpdateInput
 		return nil, errs.HumaError(err)
 	}
 
-	if _, err := s.loadAuthorized(ctx, id, tournamentuser.TournamentUserRoleAdmin); err != nil {
+	if _, err := s.loadAuthorized(ctx, id, requireBoutAdmin); err != nil {
 		return nil, errs.HumaError(err)
 	}
 
@@ -275,14 +275,18 @@ func (s *boutService) UpdateBoutByID(ctx context.Context, input *BoutUpdateInput
 	return s.afterUpdate(ctx, id, err, "only an upcoming bout can be edited")
 }
 
-// loadAuthorized keeps a missing bout a 404 for every caller, then checks the
-// caller's role in the bout's tournament.
-func (s *boutService) loadAuthorized(ctx context.Context, id uuid.UUID, role tournamentuser.TournamentUserRole) (*Bout, error) {
+// loadAuthorized keeps a missing bout a 404 for every caller, then lets
+// authorize refuse the caller.
+func (s *boutService) loadAuthorized(
+	ctx context.Context,
+	id uuid.UUID,
+	authorize func(context.Context, tournamentuser.MembershipLookup, *Bout) error,
+) (*Bout, error) {
 	bout, err := s.repo.GetBoutByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("get bout: %w", err)
 	}
-	if err := tournamentuser.RequireRole(ctx, s.memberships, bout.TournamentID, role); err != nil {
+	if err := authorize(ctx, s.memberships, bout); err != nil {
 		return nil, fmt.Errorf("authorize bout: %w", err)
 	}
 
@@ -378,7 +382,7 @@ func (s *boutService) StartBout(ctx context.Context, input *BoutIDInput) (*BoutO
 		return nil, errs.HumaError(err)
 	}
 
-	bout, err := s.loadAuthorized(ctx, id, tournamentuser.TournamentUserRoleReferee)
+	bout, err := s.loadAuthorized(ctx, id, RequireAssignedReferee)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -390,10 +394,6 @@ func (s *boutService) StartBout(ctx context.Context, input *BoutIDInput) (*BoutO
 	if tourney.Status != tournament.TournamentStatusActive {
 		return nil, errs.HumaError(errs.Public(
 			"bouts can only be started in an active tournament", errs.ErrConflict))
-	}
-	if bout.RefereeID == nil {
-		return nil, errs.HumaError(errs.Public(
-			"a referee must be assigned before the bout can start", errs.ErrConflict))
 	}
 
 	now := time.Now().UTC()
@@ -412,7 +412,7 @@ func (s *boutService) EndBout(ctx context.Context, input *BoutIDInput) (*BoutOut
 		return nil, errs.HumaError(err)
 	}
 
-	if _, err := s.loadAuthorized(ctx, id, tournamentuser.TournamentUserRoleReferee); err != nil {
+	if _, err := s.loadAuthorized(ctx, id, RequireAssignedReferee); err != nil {
 		return nil, errs.HumaError(err)
 	}
 
@@ -432,7 +432,7 @@ func (s *boutService) DeleteBoutByID(ctx context.Context, input *BoutIDInput) (*
 		return nil, errs.HumaError(err)
 	}
 
-	if _, err := s.loadAuthorized(ctx, id, tournamentuser.TournamentUserRoleAdmin); err != nil {
+	if _, err := s.loadAuthorized(ctx, id, requireBoutAdmin); err != nil {
 		return nil, errs.HumaError(err)
 	}
 

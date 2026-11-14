@@ -30,6 +30,8 @@ func apiError(t *testing.T, err error) (int, string) {
 
 func ptr[T any](v T) *T { return &v }
 
+const notAssignedDetail = "only the bout's assigned referee can start, score or end it"
+
 // callerCtx runs as caller; uuid.Nil means no signed-in caller.
 func callerCtx(t *testing.T, caller uuid.UUID) context.Context {
 	t.Helper()
@@ -79,10 +81,10 @@ func TestCreateScoring(t *testing.T) {
 			wantPoints: 1,
 		},
 		{
-			name:       "lets an admin score",
-			caller:     TestAdminID,
-			input:      createInput(creator, competitor, match, 1),
-			wantPoints: 1,
+			name:     "refuses an admin who is not the bout's referee",
+			caller:   TestAdminID,
+			input:    createInput(creator, competitor, match, 1),
+			wantCode: http.StatusForbidden,
 		},
 		{
 			name:     "refuses a request with no caller",
@@ -388,10 +390,11 @@ func TestUpdateScoringByID(t *testing.T) {
 			wantCode:     http.StatusNotFound,
 		},
 		{
-			name:       "lets an admin edit",
+			name:       "refuses an admin who is not the bout's referee",
 			caller:     TestAdminID,
 			body:       scoring.ScoringUpdateBody{Points: ptr(3)},
-			wantPoints: 3,
+			wantCode:   http.StatusForbidden,
+			wantDetail: notAssignedDetail,
 		},
 		{
 			name:     "refuses a request with no caller",
@@ -468,7 +471,7 @@ func TestRevokeScoring(t *testing.T) {
 		wantCode     int
 	}{
 		{name: "marks the score as revoked", caller: TestRefereeID, revokedBy: referee},
-		{name: "lets an admin revoke", caller: TestAdminID, revokedBy: referee},
+		{name: "refuses an admin who is not the bout's referee", caller: TestAdminID, revokedBy: referee, wantCode: http.StatusForbidden},
 		{name: "refuses a request with no caller", revokedBy: referee, wantCode: http.StatusForbidden},
 		{name: "refuses a caller outside the tournament", caller: TestOutsiderID, revokedBy: referee, wantCode: http.StatusForbidden},
 		{

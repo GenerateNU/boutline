@@ -33,8 +33,9 @@ func TestPoolEditReachesItsUpcomingBouts(t *testing.T) {
 
 	upcoming := createPoolBout(t, app, poolID)
 	started := createPoolBout(t, app, poolID)
-	send(t, app, testkit.POST, started+"/start", nil, http.StatusOK)
-	t.Cleanup(func() { send(t, app, testkit.POST, started+"/end", nil, http.StatusOK) })
+	// Only the bout's assigned referee, Jordan through the pool, may start and end it.
+	sendAs(t, app, jordanLee, testkit.POST, started+"/start", nil, http.StatusOK)
+	t.Cleanup(func() { sendAs(t, app, jordanLee, testkit.POST, started+"/end", nil, http.StatusOK) })
 
 	send(t, app, testkit.PATCH, poolRoute, map[string]any{
 		"number": 91, "strip": "Strip 10", "referee_id": samRivera,

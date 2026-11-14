@@ -379,7 +379,7 @@ gate. Reading stays public.
 | --- | --- | --- |
 | Spectator / fencer | public, no account needed | browse tournaments, events, pools, tableau, results, live scores |
 | Account holder | global | create tournaments, be added as staff |
-| Tournament **admin** | one tournament | edit it, run its lifecycle, manage events, competitors, staff, pools, brackets |
+| Tournament **admin** | one tournament | edit it, run its lifecycle, manage events, competitors, staff, pools, brackets; referee a bout only when assigned to it |
 | Tournament **referee** | one tournament | start, score and end bouts they are assigned to |
 
 Roles are per tournament. There is no global superuser, and a user can hold
@@ -667,8 +667,9 @@ logged-in user reseat another tournament's pools.
 
 ### 7.2 Role checks
 
-**Status:** Partial. Issue: #4. The role helper runs on every mutating route and
-the creator is made an admin; the rest of this section is planned.
+**Status:** Partial. Issue: #4. The role helper runs on every mutating route, the
+creator is made an admin, and only a bout's assigned referee runs it; the
+last-admin guard is planned.
 
 - **Built:** `tournamentuser.RequireRole(ctx, memberships, tournamentID, role)`
   runs on every mutating route and returns 403 unless the caller holds the role in
@@ -679,8 +680,11 @@ the creator is made an admin; the rest of this section is planned.
   `tournament_users` as `admin` in the same transaction. `tournament_users` is the
   only record of who administers a tournament; `created_by` is never read for
   authorization.
-- Starting, scoring and ending a bout requires the `referee` role and being the
-  bout's assigned referee (open question in §D).
+- **Built:** `bout.RequireAssignedReferee(ctx, memberships, bout)` guards bout
+  start and end and every scoring write. The caller needs
+  the `referee` role and must be the bout's `referee_id`: 403 otherwise, and 409
+  while the bout has no referee. An admin passes the role check but still
+  referees only the bouts they are assigned to.
 - Guard against removing or demoting the last admin.
 
 ### 7.3 Visibility
@@ -1662,8 +1666,6 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - Épée double touch at one touch from the end (4–4, 14–14): annul it, or allow
   5–5? The current rules give a bout no winner in that case, so the scoring
   rules and the `confirming` phase have to pick one.
-- May a tournament admin referee and score bouts, or only users with the
-  `referee` role?
 - What happens when a referee has to step away from a pool mid-way? Reassigning
   the pool's referee moves its upcoming bouts to the new one (§11.1), but an
   active bout keeps its referee, and only the assigned referee can score it

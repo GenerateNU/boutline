@@ -98,12 +98,13 @@ func TestCreateEndpoint(t *testing.T) {
 			wantFields: map[string]any{"points": float64(1)},
 		},
 		{
-			name:   "lets an admin score",
+			name:   "refuses an admin who is not the bout's referee",
 			caller: TestAdminID,
 			body: map[string]any{
 				"created_by": creator, "competitor_id": competitor, "bout_id": match,
 			},
-			wantStatus: http.StatusCreated,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": notAssignedDetail},
 		},
 		{
 			name: "refuses a request with no caller",
@@ -353,11 +354,12 @@ func TestUpdateEndpoint(t *testing.T) {
 			wantFields: map[string]any{"detail": "score has been revoked and can no longer be edited"},
 		},
 		{
-			name:       "lets an admin edit",
+			name:       "refuses an admin who is not the bout's referee",
 			caller:     TestAdminID,
 			id:         1,
 			body:       map[string]any{"points": 3},
-			wantStatus: http.StatusOK,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": notAssignedDetail},
 		},
 		{
 			name:       "refuses a request with no caller",
@@ -408,7 +410,7 @@ func TestRevokeEndpoint(t *testing.T) {
 		wantStatus int
 	}{
 		{name: "revokes the score", caller: TestRefereeID, path: "1", body: map[string]any{"revoked_by": referee}, wantStatus: http.StatusOK},
-		{name: "lets an admin revoke", caller: TestAdminID, path: "1", body: map[string]any{"revoked_by": referee}, wantStatus: http.StatusOK},
+		{name: "refuses an admin who is not the bout's referee", caller: TestAdminID, path: "1", body: map[string]any{"revoked_by": referee}, wantStatus: http.StatusForbidden},
 		{name: "refuses a request with no caller", path: "1", body: map[string]any{"revoked_by": referee}, wantStatus: http.StatusForbidden},
 		{name: "refuses a caller outside the tournament", caller: TestOutsiderID, path: "1", body: map[string]any{"revoked_by": referee}, wantStatus: http.StatusForbidden},
 		{name: "rejects a missing revoked_by", path: "1", body: map[string]any{}, wantStatus: http.StatusUnprocessableEntity},
