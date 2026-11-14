@@ -530,8 +530,8 @@ Where login and signup land by default, behind the login gate. A solid-outlined
 Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) over
 every tournament (not yet only the caller's), paginated. Cards show the created
 date instead of the location. Organizers see `pending` as "Scheduled" with the blue
-badge; public screens keep "Upcoming". `/admin/tournaments` redirects here. It
-switches to `GET /users/{me}/tournaments` in §10.7.
+badge; public screens keep "Upcoming". It switches to
+`GET /users/{me}/tournaments` in §10.7.
 
 ---
 
