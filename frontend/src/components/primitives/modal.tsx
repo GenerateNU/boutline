@@ -12,6 +12,7 @@ interface ModalProps {
   title: string;
   description: string;
   onCloseAutoFocus?: (event: Event) => void;
+  className?: string;
   children: React.ReactNode;
 }
 
@@ -21,6 +22,7 @@ function Modal({
   title,
   description,
   onCloseAutoFocus,
+  className,
   children,
 }: ModalProps) {
   return (
@@ -30,7 +32,10 @@ function Modal({
         <Dialog.Content
           data-slot="modal"
           onCloseAutoFocus={onCloseAutoFocus}
-          className="fixed inset-x-2 top-1/2 z-50 mx-auto flex max-w-86.25 -translate-y-1/2 flex-col gap-5 rounded-3xl bg-background p-5 pt-6 font-manrope shadow-lg"
+          className={cn(
+            "fixed inset-x-2 top-1/2 z-50 mx-auto flex max-w-86.25 -translate-y-1/2 flex-col gap-5 rounded-3xl bg-background p-5 pt-6 font-manrope shadow-lg",
+            className,
+          )}
         >
           <div className="flex items-center justify-between">
             <Dialog.Title className="text-xl font-semibold text-obsidian">{title}</Dialog.Title>

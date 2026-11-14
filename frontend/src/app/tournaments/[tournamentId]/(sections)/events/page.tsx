@@ -65,7 +65,7 @@ export default async function EventsTab({
       />
       {sessionToken && (
         <Button asChild className="self-start rounded-2xl">
-          <Link href={`/admin/tournament/new/event?tournamentId=${tournamentId}`}>
+          <Link href={`/admin/tournaments/new/event?tournamentId=${tournamentId}`}>
             Add event
           </Link>
         </Button>

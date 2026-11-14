@@ -31,7 +31,7 @@ function NewTournamentForm() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     saveTournamentDraft(event.currentTarget);
-    router.push("/admin/tournament/new/event");
+    router.push("/admin/tournaments/new/event");
   }
 
   return (

@@ -5,7 +5,7 @@ import { NewEventForm } from "./_components/new-event-form";
 
 export default async function NewEventPage({
   searchParams,
-}: PageProps<"/admin/tournament/new/event">) {
+}: PageProps<"/admin/tournaments/new/event">) {
   const { tournamentId } = await searchParams;
   const eventsHref =
     typeof tournamentId === "string"
@@ -13,7 +13,7 @@ export default async function NewEventPage({
       : undefined;
   const back = eventsHref
     ? { href: eventsHref, label: "Events" }
-    : { href: "/admin/tournament/new", label: "Tournament" };
+    : { href: "/admin/tournaments/new", label: "Tournament" };
 
   return (
     <main className="mx-auto flex w-full max-w-mobile flex-col gap-6 px-7 py-5">

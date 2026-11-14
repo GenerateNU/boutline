@@ -966,6 +966,9 @@ name, club and rating.
 - **Built:** the parser (`frontend/src/lib/competitor-import/`). It maps headers,
   checks ratings and birthdates, finds duplicates by member number, and caps
   uploads at 2 MiB and 5000 rows, with tests.
+- **Sample:** the creation form's dropzone says it takes only `.csv` and opens a
+  sample CSV in a dialog. The sample is the valid rows of #80's example upload
+  (`example-competitor-import.ts`), and a parser test keeps every row of it valid.
 - **Planned:** the dropzones on the form call the parser (today they ignore their
   files), a preview screen shows what will be created, and a backend route commits
   it.
@@ -977,7 +980,7 @@ name, club and rating.
 Admins mark fencers present on the day (`checked_in_at`). Only checked-in fencers
 are placed into pools.
 
-### 10.6 Creation form (`/admin/tournament/new`)
+### 10.6 Creation form (`/admin/tournaments/new`)
 
 **Status:** Partial. Issue: #136.
 
@@ -1621,8 +1624,11 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - Form fields (text field, select, date field) share one hi-fi frame: a `text-xs`
   label above a `rounded-md border-outline` box that turns `border-blue` with a
   `ring-blue-lighter` halo on focus or open, `border-red-dark` when `aria-invalid`,
-  and `bg-disabled` when disabled. Select is Radix Select; the date field opens the
-  calendar in a Radix Popover.
+  a 2px `border-red-dark` when `:user-invalid` (a required field left empty once
+  edited or submitted), and `bg-disabled` when disabled. A required field's label
+  ends in a `text-red-dark` asterisk, hidden from screen readers since `required`
+  is already announced. Select is Radix Select; the date field opens the calendar
+  in a Radix Popover.
 - Overlays: Modal is a `rounded-3xl p-5` card with an `text-xl` title and close (X)
   header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a
   filled or `destructive` action). The filter sheet is a `rounded-t-3xl` bottom sheet

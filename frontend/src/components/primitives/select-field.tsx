@@ -16,8 +16,15 @@ function SelectField({ className, id, label, options, ...props }: SelectFieldPro
     <div data-slot="select-field" className={cn("group flex flex-col gap-1", className)}>
       <label htmlFor={selectId} className="text-xs font-medium text-neutral-secondary group-has-disabled:text-neutral-muted">
         {label}
+        {props.required ? <span aria-hidden className="text-red-dark"> *</span> : null}
       </label>
-      <Select id={selectId} {...props}>
+      {/* Inside a form, Radix renders a hidden native select beside the trigger, and
+          that select is what the browser marks invalid. */}
+      <Select
+        id={selectId}
+        className="group-has-[select:user-invalid]:border-2 group-has-[select:user-invalid]:border-red-dark group-has-[select:user-invalid]:px-2.75"
+        {...props}
+      >
         {options.map((option) => (
           <SelectItem key={option} value={option}>
             {option}

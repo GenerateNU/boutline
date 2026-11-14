@@ -10,8 +10,8 @@ jest.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 jest.mock("../../../features/auth/services/auth-actions", () => ({ login: jest.fn() }));
 
 function submit() {
-  fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@b.co" } });
-  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "pw" } });
+  fireEvent.change(screen.getByLabelText("Email", { exact: false }), { target: { value: "a@b.co" } });
+  fireEvent.change(screen.getByLabelText("Password", { exact: false }), { target: { value: "pw" } });
   fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 }
 

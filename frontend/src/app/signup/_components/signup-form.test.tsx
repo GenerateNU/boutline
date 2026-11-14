@@ -18,7 +18,7 @@ function fillAndSubmit(confirm: string, password = "secret") {
     "Confirm Password": confirm,
   };
   for (const [label, value] of Object.entries(values)) {
-    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.change(screen.getByLabelText(label, { exact: false }), { target: { value } });
   }
   fireEvent.click(screen.getByRole("button", { name: "Register" }));
 }
