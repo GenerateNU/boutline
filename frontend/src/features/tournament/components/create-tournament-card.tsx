@@ -9,7 +9,6 @@ function CreateTournamentCard() {
     >
       <div className="flex flex-1 flex-col gap-0.5">
         <p className="font-medium text-blue">Create tournament</p>
-        <p className="text-xs text-neutral-secondary">Upload a file or set it up manually</p>
       </div>
       <AddOutlined aria-hidden className="size-10 shrink-0 rounded-full bg-blue p-2.5 text-white" />
     </Link>
