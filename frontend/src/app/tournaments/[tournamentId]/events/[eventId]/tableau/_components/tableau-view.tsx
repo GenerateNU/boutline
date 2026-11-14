@@ -30,9 +30,9 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <label className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-md border border-foreground px-4">
-          <p className="sr-only">Search fencers or clubs</p>
           <Input
             type="search"
+            aria-label="Search fencers or clubs"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Enter search text"
