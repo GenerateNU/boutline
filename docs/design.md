@@ -547,12 +547,11 @@ replace the tournament's tabs rather than stacking under them.
 Where login and signup land by default, behind the login gate. A solid-outlined
 "Create tournament" card linking to the creation form (§10.6), then "Manage
 Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) over
-every tournament (not yet only the caller's, #198), paginated. Cards show the created
+the tournaments the caller created (`mine=true`), paginated. Cards show the created
 date instead of the location and link to the tournament's dashboard (§4.6), which
 only that tournament's admins can open; public `/tournaments` cards still link to
 the public page. Organizers see `pending` as "Scheduled" with the blue badge; public
 screens keep "Upcoming". `/admin` redirects here until the console (§10.7) exists.
-It switches to `GET /users/{me}/tournaments` in §10.7.
 
 ### 4.6 Tournament dashboard (`/admin/tournaments/[id]`)
 
@@ -835,7 +834,7 @@ the tournament and bout `end` state.
 ### 8.5 Event attributes and bout settings
 
 **Status:** Partial. The first six attributes below are built (type through
-qualifier). Issue: #186 (touches and time).
+qualifier, saved by the creation form). Issue: #186 (touches and time).
 
 Event attributes the creation form collects. `type`, `weapon`, `gender`,
 `age_category`, `rating_limit` and `qualifier` are columns; the rest are planned:
@@ -975,7 +974,8 @@ into it.
 
 ## 10. Tournament setup
 
-**Status:** Planned. The screens exist; nothing is saved yet.
+**Status:** Partial. The creation form saves; staff, check-in and starting are
+still to build.
 
 **What it is:** everything an organizer does before the first bout. That means
 creating the tournament and its events, importing fencers from askFRED or USA
@@ -988,12 +988,12 @@ Fencing, adding staff, and checking fencers in on the day.
 
 ### 10.1 Tournament fields and lifecycle
 
-**Status:** Planned.
+**Status:** Partial.
 
-- Fields the creation form already collects but the backend lacks: location
-  (city/state), venue, organizer contact, fees, sanctioning authority (askFRED,
-  USA Fencing, FIE, Other), description. They replace the hardcoded "City,
-  Country" and "TBC" in §4.2 and §4.3.
+- Built: venue and sanctioning authority (askFRED, USA Fencing, FIE, Other). The
+  form's Location is stored in `city`. Still missing: organizer contact, fees,
+  description. They replace the hardcoded "City, Country" and "TBC" in §4.2 and
+  §4.3.
 - Starting a tournament requires at least one event. Completing it requires every
   event to be `ended` or `cancelled`, so an event that never ran doesn't block it.
 
@@ -1071,10 +1071,20 @@ are placed into pools.
   autofilled and how many rows were skipped; a file that can't be read gets an
   inline error instead, so it doesn't vanish before it's fixed.
 - **Saving:** the tournament details card has its own Save, and Save event stays
-  disabled until it is saved. Either Save checks only its own card (an event also
-  checks its fencers), marks empty fields with `aria-invalid`, then collapses the
-  card to a summary until Edit reopens it. An upload that replaces a saved card's
-  fencers reopens it for review.
+  disabled until the tournament exists on the server. Either Save checks only its
+  own card (an event also checks its fencers) and marks empty fields with
+  `aria-invalid`. It then sends the card to the API and collapses it to a summary
+  until Edit reopens it. The first Save tournament is `POST /tournaments`, later
+  ones `PATCH`. Save event does `POST`/`PATCH /events`, then deletes fencers
+  removed from the card, `PATCH`es fencers edited since their last save, and
+  `POST`s new ones. Each server id is written to the draft as soon as it arrives,
+  so a retry after a failure sends only what failed. While a card saves its fields
+  are disabled and its Save reads "Saving…". Removing a saved card deletes the
+  event first and drops the card only if that succeeds. An upload that replaces a
+  saved card's fencers deletes the old competitors on the next save and reopens
+  the card for review. A fencer's errors show on its card as "First Last: message".
+  The form sends the location as `city`, the date and time as the admin's local
+  time converted to an instant, and a blank rating as `U`.
 - **Fencers:** each is a card inside its event, showing name, club, rating and
   member number, plus what it is still missing. First and last name, gender, birth
   date and division are required, as `POST /competitors` requires them. Imported
@@ -1091,19 +1101,25 @@ are placed into pools.
   clears `account:` keys, and so does signing in as a different account than the
   one that owned them (an expired session skips logout). The same account signing
   back in keeps its draft.
-- **Planned:** submit creates the tournament, then its events, then imports
-  competitors and adds staff, showing per-row errors and landing on the new
-  tournament (#252). Today submit clears the draft and returns to the admin home.
-  Adding an event to an existing tournament has no screen.
+- **Submit:** Create tournament runs the same checks, saves the tournament if it
+  isn't saved, then every unsaved event in parallel. When all succeed it clears
+  the draft and opens the tournament dashboard (§4.6). Otherwise it stays, names
+  the cards that failed, and keeps the draft; the button is disabled while anything
+  saves.
+- **Accepted risk:** requests carry no idempotency key, so a create that succeeds
+  on the server but fails on the network can be duplicated by the retry.
+- **Planned:** adding staff and showing the competitor and staff counts on the
+  new tournament (#252). Adding an event to an existing tournament has no screen.
 
 ### 10.7 Organizer console (`/admin`)
 
 **Status:** Partial.
 
 Planned as a hub for the organizer's tools; until it exists, `/admin` redirects to
-the admin home (§4.5). The tournaments list switches to
-`GET /users/{me}/tournaments`. The tournament dashboard (§4.6) is the console's
-per-tournament page.
+the admin home (§4.5). The admin home already lists the caller's tournaments with
+`GET /tournaments?mine=true`; it moves to `GET /users/{me}/tournaments` when that
+endpoint exists. The tournament dashboard (§4.6) is the console's per-tournament
+page.
 
 On the day, the admin checks fencers in, starts the tournament, generates pools
 (which creates bouts, so it needs the tournament `active`), assigns referees, and

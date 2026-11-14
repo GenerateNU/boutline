@@ -8,16 +8,17 @@ import { TextField } from "@/components/primitives/text-field";
 
 import { TournamentDraft } from "../_types/tournament-draft";
 import { missingTournamentFields, RequiredTournamentField } from "../tournament-draft-helpers";
-
-const AUTHORITIES = ["askFRED", "USA Fencing", "FIE", "Other"];
+import { AUTHORITIES } from "../tournament-request-helpers";
 
 interface TournamentDraftFieldsProps {
   draft: TournamentDraft;
   onField: (field: RequiredTournamentField, value: string) => void;
   onSave: () => void;
+  saving: boolean;
+  error: string | null;
 }
 
-function TournamentDraftFields({ draft, onField, onSave }: TournamentDraftFieldsProps) {
+function TournamentDraftFields({ draft, onField, onSave, saving, error }: TournamentDraftFieldsProps) {
   const [attempted, setAttempted] = useState(false);
   // Recomputed from the draft, so a field turns back to normal once it's filled.
   const invalid = new Set<RequiredTournamentField>(attempted ? missingTournamentFields(draft) : []);
@@ -37,7 +38,7 @@ function TournamentDraftFields({ draft, onField, onSave }: TournamentDraftFields
   }
 
   return (
-    <>
+    <fieldset disabled={saving} className="flex min-w-0 flex-col gap-4">
       <TextField
         label="Name of tournament"
         placeholder="Northeastern Open"
@@ -94,10 +95,15 @@ function TournamentDraftFields({ draft, onField, onSave }: TournamentDraftFields
           Fill in the highlighted fields to save the tournament.
         </p>
       ) : null}
-      <Button type="button" variant="tonal" className="h-10 rounded-full" onClick={handleSave}>
-        Save tournament
+      {error ? (
+        <p role="alert" className="text-xs text-red-dark">
+          {error}
+        </p>
+      ) : null}
+      <Button type="button" variant="tonal" className="h-10 rounded-full" disabled={saving} onClick={handleSave}>
+        {saving ? "Saving…" : "Save tournament"}
       </Button>
-    </>
+    </fieldset>
   );
 }
 
