@@ -230,3 +230,70 @@ func TestPoolSheetWinnerID(t *testing.T) {
 		})
 	}
 }
+
+func TestRankPoolStage(t *testing.T) {
+	t.Parallel()
+
+	type placed struct{ competitor, place int }
+
+	tests := []struct {
+		name    string
+		fencers []uuid.UUID
+		bouts   []PoolSheetBoutRow
+		want    []placed
+	}{
+		{
+			name:    "pools of different sizes are ranked by victory ratio, not victory count",
+			fencers: fencersOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+			bouts: []PoolSheetBoutRow{
+				boutOf("ended", 1, 5, 2, 0),
+				boutOf("ended", 1, 5, 3, 0),
+				boutOf("ended", 4, 5, 1, 0),
+				boutOf("ended", 5, 5, 6, 0),
+				boutOf("ended", 5, 5, 7, 0),
+				boutOf("ended", 5, 5, 8, 0),
+				boutOf("ended", 9, 5, 5, 0),
+				boutOf("ended", 10, 5, 5, 0),
+				boutOf("ended", 11, 5, 5, 0),
+			},
+			want: []placed{
+				{4, 1}, {9, 1}, {10, 1}, {11, 1},
+				{1, 5},
+				{5, 6},
+				{2, 7}, {3, 7}, {6, 7}, {7, 7}, {8, 7},
+			},
+		},
+		{
+			name:    "an exact tie shares a place and the next place skips",
+			fencers: fencersOf(1, 2, 3, 4),
+			bouts: []PoolSheetBoutRow{
+				boutOf("ended", 1, 5, 2, 0),
+				boutOf("ended", 3, 5, 4, 0),
+			},
+			want: []placed{{1, 1}, {3, 1}, {2, 3}, {4, 3}},
+		},
+		{
+			name:    "equal places are ordered by competitor id whatever the input order",
+			fencers: fencersOf(3, 1, 2),
+			want:    []placed{{1, 1}, {2, 1}, {3, 1}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := RankPoolStage(tt.fencers, tt.bouts)
+
+			gotPlaced := make([]placed, 0, len(got))
+			for _, rank := range got {
+				for n := 1; n <= len(tt.fencers); n++ {
+					if competitorID(n) == rank.CompetitorID {
+						gotPlaced = append(gotPlaced, placed{n, rank.Standing.Place})
+					}
+				}
+			}
+			assert.Equal(t, tt.want, gotPlaced)
+		})
+	}
+}

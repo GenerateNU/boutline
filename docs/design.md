@@ -1354,7 +1354,7 @@ with `buildPool` (`pooling/_fixtures/build-pool.ts`).
 
 ## 12. Direct elimination
 
-**Status:** Planned.
+**Status:** Partial.
 
 **What it is:** the knockout round. The pool ranking seeds a bracket, with byes for
 the top seeds when the field isn't a power of two. Each bout's winner moves on
@@ -1409,7 +1409,7 @@ draw's single write and the cleanup when the DE is deleted all belong to the DE.
 
 ### 12.2 Draw
 
-**Status:** Planned.
+**Status:** Partial. `POST /direct-eliminations/{id}/generate` is built; touches and time come from the request (default 15 and 180 s) until §8.5.
 
 `POST /direct-eliminations/{id}/generate`, admin only, while `upcoming`, and only
 once the event's pool stage has ended:
