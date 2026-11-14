@@ -87,7 +87,7 @@ func (s *competitorService) CreateCompetitor(
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("get event: %w", err))
 	}
-	competitor.TournamentID = &owningEvent.TournamentID
+	competitor.TournamentID = owningEvent.TournamentID
 	if callerID, ok := user.UserIDFrom(ctx); ok {
 		competitor.UserID = &callerID
 	}
@@ -390,11 +390,8 @@ func (s *competitorService) authorizeCompetitorDelete(ctx context.Context, store
 	if stored.UserID != nil && *stored.UserID == caller {
 		return nil
 	}
-	if stored.TournamentID == nil {
-		return errCompetitorDeleteForbidden
-	}
 
-	owningTournament, err := s.tournaments.GetTournamentByID(ctx, *stored.TournamentID)
+	owningTournament, err := s.tournaments.GetTournamentByID(ctx, stored.TournamentID)
 	if err != nil {
 		return fmt.Errorf("get tournament: %w", err)
 	}
@@ -402,7 +399,7 @@ func (s *competitorService) authorizeCompetitorDelete(ctx context.Context, store
 		return nil
 	}
 
-	membership, err := s.memberships.GetTournamentUser(ctx, *stored.TournamentID, caller)
+	membership, err := s.memberships.GetTournamentUser(ctx, stored.TournamentID, caller)
 	if err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			return errCompetitorDeleteForbidden

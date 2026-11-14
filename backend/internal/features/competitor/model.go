@@ -44,11 +44,10 @@ func (g Gender) IsValid() bool {
 }
 
 type Competitor struct {
-	ID      uuid.UUID    `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	EventID uuid.UUID    `gorm:"type:uuid;not null;index;uniqueIndex:idx_competitors_event_member_number"`
-	Event   *event.Event `gorm:"foreignKey:EventID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
-	// Nullable for now: not every competitor is tied to a tournament yet.
-	TournamentID *uuid.UUID             `gorm:"type:uuid;index"`
+	ID           uuid.UUID              `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	EventID      uuid.UUID              `gorm:"type:uuid;not null;index;uniqueIndex:idx_competitors_event_member_number"`
+	Event        *event.Event           `gorm:"foreignKey:EventID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	TournamentID uuid.UUID              `gorm:"type:uuid;not null;index"`
 	Tournament   *tournament.Tournament `gorm:"foreignKey:TournamentID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 	// The fencer this record belongs to. Nullable: competitors created before
 	// ownership existed have no owner, and deleting the account unlinks rather

@@ -22,7 +22,7 @@ func seeded(firstName, lastName string, rating competitor.Rating, team string) c
 	return competitor.Competitor{
 		ID:           uuid.New(),
 		EventID:      testEventID,
-		TournamentID: ptr(TestTournamentID),
+		TournamentID: TestTournamentID,
 		FirstName:    firstName,
 		LastName:     lastName,
 		Gender:       competitor.GenderF,
@@ -206,7 +206,7 @@ func TestCreateCompetitorTagsTheEventsTournament(t *testing.T) {
 
 	require.Equal(t, TestTournamentID.String(), out.Body.TournamentID)
 	for _, stored := range repo.Competitors {
-		assert.Equal(t, ptr(TestTournamentID), stored.TournamentID)
+		assert.Equal(t, TestTournamentID, stored.TournamentID)
 	}
 }
 
@@ -747,11 +747,6 @@ func TestDeleteCompetitor(t *testing.T) {
 		return c
 	}
 	unowned := seeded("Lee", "Kiefer", competitor.RatingU, "")
-	noTournament := competitor.Competitor{
-		ID: uuid.New(), FirstName: "Lee", LastName: "Kiefer", Rating: competitor.RatingU,
-	}
-	ownedNoTournament := noTournament
-	ownedNoTournament.UserID = ptr(TestRefereeID)
 
 	tests := []struct {
 		name       string
@@ -769,10 +764,6 @@ func TestDeleteCompetitor(t *testing.T) {
 		},
 		{name: "tournament admin deletes an unowned competitor", caller: ptr(TestAdminID), stored: unowned},
 		{
-			name: "owner deletes a competitor with no tournament", caller: ptr(TestRefereeID),
-			stored: ownedNoTournament,
-		},
-		{
 			name: "referee is refused", caller: ptr(TestRefereeID), stored: unowned,
 			wantStatus: http.StatusForbidden, wantDetail: forbidden,
 		},
@@ -787,10 +778,6 @@ func TestDeleteCompetitor(t *testing.T) {
 		{
 			name: "unauthenticated caller is refused", stored: unowned,
 			wantStatus: http.StatusForbidden, wantDetail: forbidden,
-		},
-		{
-			name: "nobody can delete an unowned competitor with no tournament", caller: ptr(TestAdminID),
-			stored: noTournament, wantStatus: http.StatusForbidden, wantDetail: forbidden,
 		},
 		{
 			name: "reports an unknown id as not found", caller: ptr(TestAdminID), stored: unowned,
@@ -883,7 +870,7 @@ func TestListCompetitorsByTournament(t *testing.T) {
 	other := uuid.New()
 	entered := seeded("A", "Adams", competitor.RatingU, "NU Fencing")
 	elsewhere := seeded("B", "Baker", competitor.RatingU, "BU Fencing")
-	elsewhere.TournamentID = &other
+	elsewhere.TournamentID = other
 	service := NewTestService(NewFakeCompetitorRepository(entered, elsewhere))
 
 	t.Run("returns only the tournament's competitors", func(t *testing.T) {
@@ -968,7 +955,7 @@ func TestListTeamsByTournament(t *testing.T) {
 	t.Parallel()
 	other := uuid.New()
 	elsewhere := seeded("E", "Evans", competitor.RatingU, "Elsewhere FC")
-	elsewhere.TournamentID = &other
+	elsewhere.TournamentID = other
 	seed := []competitor.Competitor{
 		seeded("A", "Adams", competitor.RatingU, "NU Fencing"),
 		seeded("B", "Baker", competitor.RatingU, "BU Fencing"),
