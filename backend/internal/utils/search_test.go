@@ -99,3 +99,65 @@ func TestTrigramPredicate(t *testing.T) {
 		})
 	}
 }
+
+func TestSubstringPredicate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		columns  []string
+		term     string
+		wantSQL  string
+		wantArgs []any
+	}{
+		{
+			name:     "empty term returns no predicate",
+			columns:  []string{"team"},
+			term:     "",
+			wantSQL:  "",
+			wantArgs: nil,
+		},
+		{
+			name:     "a partial term matches anywhere in the column",
+			columns:  []string{"team"},
+			term:     "bos",
+			wantSQL:  "(team ILIKE ?)",
+			wantArgs: []any{"%bos%"},
+		},
+		{
+			name:     "a single character is not special-cased the way trigram matching is",
+			columns:  []string{"team"},
+			term:     "b",
+			wantSQL:  "(team ILIKE ?)",
+			wantArgs: []any{"%b%"},
+		},
+		{
+			name:    "several columns are OR'd so either may contain the term",
+			columns: []string{"competitors.primary_club", "competitors.secondary_club"},
+			term:    "Boston Fencing Club",
+			wantSQL: "(competitors.primary_club ILIKE ? OR competitors.secondary_club ILIKE ?)",
+			wantArgs: []any{
+				"%Boston Fencing Club%",
+				"%Boston Fencing Club%",
+			},
+		},
+		{
+			name:     "metacharacters are escaped so they match literally",
+			columns:  []string{"team"},
+			term:     `100%_a\b`,
+			wantSQL:  "(team ILIKE ?)",
+			wantArgs: []any{`%100\%\_a\\b%`},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			gotSQL, gotArgs := SubstringPredicate(tt.columns, tt.term)
+
+			assert.Equal(t, tt.wantSQL, gotSQL)
+			assert.Equal(t, tt.wantArgs, gotArgs)
+		})
+	}
+}

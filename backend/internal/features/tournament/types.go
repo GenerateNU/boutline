@@ -90,7 +90,7 @@ type TournamentListInput struct {
 	StartFrom  time.Time            `query:"start_from" doc:"Inclusive lower bound on start_time (RFC3339); rows without a start_time are excluded when a bound is set"`
 	StartTo    time.Time            `query:"start_to" doc:"Exclusive upper bound on start_time (RFC3339); rows without a start_time are excluded when a bound is set"`
 	Visibility TournamentVisibility `query:"visibility" enum:"public,private" doc:"Filter by visibility; omit for all"`
-	Club       string               `query:"club" maxLength:"120" doc:"Fuzzy match against a competitor's primary or secondary club; omit to return every tournament"`
+	Club       string               `query:"club" maxLength:"120" doc:"Only tournaments with a competitor whose primary or secondary club contains this text; omit to return every tournament"`
 	Country    string               `query:"country" pattern:"^[A-Z]{2}$" doc:"Only tournaments in this country (exact ISO 3166-1 alpha-2 code)"`
 	Mine       bool                 `query:"mine" doc:"Only tournaments the signed-in caller created; requires a signed-in caller"`
 }
