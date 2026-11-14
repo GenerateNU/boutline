@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useState } from "react";
 import AccountTreeOutlined from "@mui/icons-material/AccountTreeOutlined";
 import ListOutlined from "@mui/icons-material/ListOutlined";
 import SearchOutlined from "@mui/icons-material/SearchOutlined";
@@ -20,9 +20,9 @@ interface TableauViewProps {
 }
 
 function TableauView({ tableau, boutBasePath }: TableauViewProps) {
-  const [view, setView] = React.useState<View>("bracket");
-  const [selectedRoundId, setSelectedRoundId] = React.useState(tableau.rounds[0]?.id ?? "");
-  const [query, setQuery] = React.useState("");
+  const [view, setView] = useState<View>("bracket");
+  const [selectedRoundId, setSelectedRoundId] = useState(tableau.rounds[0]?.id ?? "");
+  const [query, setQuery] = useState("");
 
   if (tableau.rounds.length === 0) {
     return <p className="py-8 text-center text-muted-foreground">The tableau hasn&apos;t been drawn yet.</p>;

@@ -1,4 +1,4 @@
-import * as React from "react";
+import type { Ref } from "react";
 
 import type { TableauBout, TableauRound } from "../../_types/tableau";
 import { BracketGroup, type Slot } from "./bracket-group";
@@ -16,7 +16,7 @@ interface BracketRoundProps {
   isLast: boolean;
   query: string;
   boutBasePath: string;
-  ref: React.Ref<HTMLDivElement>;
+  ref: Ref<HTMLDivElement>;
 }
 
 // One column of a tableau's bracket, e.g. "Semi-finals": its matches and the

@@ -1,12 +1,13 @@
 "use client";
 
 import { cn } from "cn";
+import type { ReactNode } from "react";
 
 import { Button } from "@/components/primitives/button";
 
 interface ButtonGroupOption {
   value: string;
-  label: React.ReactNode;
+  label: ReactNode;
 }
 
 interface ButtonGroupProps {

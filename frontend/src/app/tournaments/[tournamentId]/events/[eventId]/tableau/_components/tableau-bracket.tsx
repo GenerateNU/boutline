@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useEffect, useRef } from "react";
 
 import type { TableauRound } from "../../_types/tableau";
 import { BracketRound } from "./bracket-round";
@@ -25,14 +25,14 @@ function TableauBracket({
   query,
   boutBasePath,
 }: TableauBracketProps) {
-  const scrollerRef = React.useRef<HTMLDivElement>(null);
-  const columnRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
-  const hasMounted = React.useRef(false);
-  const settleTimer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
-  const scrollingToButtonPick = React.useRef(false);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const hasMounted = useRef(false);
+  const settleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const scrollingToButtonPick = useRef(false);
   const firstRoundId = rounds[0]?.id;
 
-  React.useEffect(() => {
+  useEffect(() => {
     // The first round is already in view on mount; any other selected round needs scrolling to.
     if (!hasMounted.current) {
       hasMounted.current = true;
@@ -55,7 +55,7 @@ function TableauBracket({
     column.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
   }, [focusedRoundId, firstRoundId]);
 
-  React.useEffect(() => () => clearTimeout(settleTimer.current), []);
+  useEffect(() => () => clearTimeout(settleTimer.current), []);
 
   function handleScroll() {
     clearTimeout(settleTimer.current);
