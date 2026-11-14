@@ -272,7 +272,7 @@ func TestDeleteEndpointRefusesActiveEvent(t *testing.T) {
 var eventAttributes = map[string]any{
 	"type":         "team",
 	"weapon":       "sabre",
-	"gender":       "mixed",
+	"gender":       "other",
 	"age_category": "veteran",
 	"rating_limit": "c_and_under",
 	"qualifier":    true,
@@ -334,7 +334,7 @@ func TestUpdateEndpointAttributes(t *testing.T) {
 	}{
 		{name: "sets type", patch: map[string]any{"type": "team"}, wantStatus: http.StatusOK, wantFields: map[string]any{"type": "team"}},
 		{name: "sets weapon", patch: map[string]any{"weapon": "epee"}, wantStatus: http.StatusOK, wantFields: map[string]any{"weapon": "epee"}},
-		{name: "sets gender", patch: map[string]any{"gender": "women"}, wantStatus: http.StatusOK, wantFields: map[string]any{"gender": "women"}},
+		{name: "sets gender", patch: map[string]any{"gender": "female"}, wantStatus: http.StatusOK, wantFields: map[string]any{"gender": "female"}},
 		{name: "sets age category", patch: map[string]any{"age_category": "y12"}, wantStatus: http.StatusOK, wantFields: map[string]any{"age_category": "y12"}},
 		{name: "sets rating limit", patch: map[string]any{"rating_limit": "unrated"}, wantStatus: http.StatusOK, wantFields: map[string]any{"rating_limit": "unrated"}},
 		{name: "sets qualifier", patch: map[string]any{"qualifier": true}, wantStatus: http.StatusOK, wantFields: map[string]any{"qualifier": true}},

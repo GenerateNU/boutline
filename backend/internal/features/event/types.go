@@ -10,7 +10,7 @@ type EventResponse struct {
 	Status       EventStatus       `json:"status" enum:"upcoming,active,ended"`
 	Type         *EventType        `json:"type" enum:"individual,team"`
 	Weapon       *EventWeapon      `json:"weapon" enum:"foil,epee,sabre"`
-	Gender       *EventGender      `json:"gender" enum:"men,women,mixed"`
+	Gender       *EventGender      `json:"gender" enum:"male,female,other"`
 	AgeCategory  *EventAgeCategory `json:"age_category" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open"`
 	RatingLimit  *EventRatingLimit `json:"rating_limit" enum:"open,b_and_under,c_and_under,d_and_under,e_and_under,unrated"`
 	Qualifier    bool              `json:"qualifier"`
@@ -47,7 +47,7 @@ type EventCreateBody struct {
 	Name         string            `json:"name" minLength:"1" maxLength:"200"`
 	Type         *EventType        `json:"type,omitempty" enum:"individual,team"`
 	Weapon       *EventWeapon      `json:"weapon,omitempty" enum:"foil,epee,sabre"`
-	Gender       *EventGender      `json:"gender,omitempty" enum:"men,women,mixed"`
+	Gender       *EventGender      `json:"gender,omitempty" enum:"male,female,other"`
 	AgeCategory  *EventAgeCategory `json:"age_category,omitempty" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open"`
 	RatingLimit  *EventRatingLimit `json:"rating_limit,omitempty" enum:"open,b_and_under,c_and_under,d_and_under,e_and_under,unrated"`
 	Qualifier    *bool             `json:"qualifier,omitempty"`
@@ -66,7 +66,7 @@ type EventUpdateBody struct {
 	Name        *string           `json:"name,omitempty" minLength:"1" maxLength:"200"`
 	Type        *EventType        `json:"type,omitempty" enum:"individual,team"`
 	Weapon      *EventWeapon      `json:"weapon,omitempty" enum:"foil,epee,sabre"`
-	Gender      *EventGender      `json:"gender,omitempty" enum:"men,women,mixed"`
+	Gender      *EventGender      `json:"gender,omitempty" enum:"male,female,other"`
 	AgeCategory *EventAgeCategory `json:"age_category,omitempty" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open"`
 	RatingLimit *EventRatingLimit `json:"rating_limit,omitempty" enum:"open,b_and_under,c_and_under,d_and_under,e_and_under,unrated"`
 	Qualifier   *bool             `json:"qualifier,omitempty"`
