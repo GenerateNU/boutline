@@ -272,7 +272,7 @@ func TestDeleteEndpointRefusesActiveEvent(t *testing.T) {
 var eventAttributes = map[string]any{
 	"type":         "team",
 	"weapon":       "sabre",
-	"gender":       "mixed",
+	"gender":       "other",
 	"age_category": "veteran",
 	"rating_limit": "c_and_under",
 	"qualifier":    true,
@@ -296,7 +296,7 @@ func TestCreateEndpointAttributes(t *testing.T) {
 		{name: "defaults omitted attributes to null and false", wantStatus: http.StatusCreated, wantFields: nulls},
 		{name: "rejects an unknown type", extra: map[string]any{"type": "relay"}, wantStatus: http.StatusUnprocessableEntity},
 		{name: "rejects an unknown weapon", extra: map[string]any{"weapon": "saber"}, wantStatus: http.StatusUnprocessableEntity},
-		{name: "rejects an unknown gender", extra: map[string]any{"gender": "other"}, wantStatus: http.StatusUnprocessableEntity},
+		{name: "rejects an unknown gender", extra: map[string]any{"gender": "mixed"}, wantStatus: http.StatusUnprocessableEntity},
 		{name: "rejects an unknown age category", extra: map[string]any{"age_category": "u9"}, wantStatus: http.StatusUnprocessableEntity},
 		{name: "rejects an unknown rating limit", extra: map[string]any{"rating_limit": "a_and_under"}, wantStatus: http.StatusUnprocessableEntity},
 		{name: "rejects a non-boolean qualifier", extra: map[string]any{"qualifier": "yes"}, wantStatus: http.StatusUnprocessableEntity},
@@ -334,7 +334,7 @@ func TestUpdateEndpointAttributes(t *testing.T) {
 	}{
 		{name: "sets type", patch: map[string]any{"type": "team"}, wantStatus: http.StatusOK, wantFields: map[string]any{"type": "team"}},
 		{name: "sets weapon", patch: map[string]any{"weapon": "epee"}, wantStatus: http.StatusOK, wantFields: map[string]any{"weapon": "epee"}},
-		{name: "sets gender", patch: map[string]any{"gender": "women"}, wantStatus: http.StatusOK, wantFields: map[string]any{"gender": "women"}},
+		{name: "sets gender", patch: map[string]any{"gender": "female"}, wantStatus: http.StatusOK, wantFields: map[string]any{"gender": "female"}},
 		{name: "sets age category", patch: map[string]any{"age_category": "y12"}, wantStatus: http.StatusOK, wantFields: map[string]any{"age_category": "y12"}},
 		{name: "sets rating limit", patch: map[string]any{"rating_limit": "unrated"}, wantStatus: http.StatusOK, wantFields: map[string]any{"rating_limit": "unrated"}},
 		{name: "sets qualifier", patch: map[string]any{"qualifier": true}, wantStatus: http.StatusOK, wantFields: map[string]any{"qualifier": true}},

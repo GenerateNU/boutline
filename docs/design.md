@@ -802,7 +802,7 @@ Event attributes the creation form collects. `type`, `weapon`, `gender`,
 | --- | --- |
 | type | individual, team |
 | weapon | foil, épée, sabre |
-| gender | men, women, mixed (both boxes checked) |
+| gender | male, female, other |
 | age category | Y8, Y10, Y12, Y14, Cadet, Junior, Senior, Veteran, Open |
 | rating limit | e.g. "D and under", "Open" |
 | seeding | by rating, by ranking points, random |

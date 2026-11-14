@@ -60,15 +60,15 @@ func (v EventWeapon) IsValid() bool {
 type EventGender string
 
 const (
-	EventGenderMen   EventGender = "men"
-	EventGenderWomen EventGender = "women"
-	EventGenderMixed EventGender = "mixed"
+	EventGenderMale   EventGender = "male"
+	EventGenderFemale EventGender = "female"
+	EventGenderOther  EventGender = "other"
 )
 
 func (v EventGender) IsValid() bool {
-	return v == EventGenderMen ||
-		v == EventGenderWomen ||
-		v == EventGenderMixed
+	return v == EventGenderMale ||
+		v == EventGenderFemale ||
+		v == EventGenderOther
 }
 
 type EventAgeCategory string
@@ -134,7 +134,7 @@ type Event struct {
 	Status       EventStatus            `gorm:"type:text;not null;default:upcoming;check:chk_events_status,status IN ('upcoming','active','ended')"`
 	Type         *EventType             `gorm:"type:text;check:chk_events_type,type IN ('individual','team')"`
 	Weapon       *EventWeapon           `gorm:"type:text;check:chk_events_weapon,weapon IN ('foil','epee','sabre')"`
-	Gender       *EventGender           `gorm:"type:text;check:chk_events_gender,gender IN ('men','women','mixed')"`
+	Gender       *EventGender           `gorm:"type:text;check:chk_events_gender,gender IN ('male','female','other')"`
 	AgeCategory  *EventAgeCategory      `gorm:"type:text;check:chk_events_age_category,age_category IN ('y8','y10','y12','y14','cadet','junior','senior','veteran','open')"`
 	RatingLimit  *EventRatingLimit      `gorm:"type:text;check:chk_events_rating_limit,rating_limit IN ('open','b_and_under','c_and_under','d_and_under','e_and_under','unrated')"`
 	Qualifier    bool                   `gorm:"not null;default:false"`
