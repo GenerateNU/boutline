@@ -3,6 +3,7 @@ import {
   COMPETITOR_IMPORT_MAX_ROWS,
   parseCompetitorImport,
 } from "@/lib/competitor-import/parse-competitor-import";
+import { EXAMPLE_COMPETITOR_IMPORT } from "@/lib/competitor-import/example-competitor-import";
 
 // jsdom's Blob lacks text(), which every browser has. FileReader decodes the
 // same way: UTF-8, byte-order mark stripped, invalid bytes as U+FFFD.
@@ -74,6 +75,15 @@ describe("parseCompetitorImport with the ticket's example file", () => {
     const { rows, unknownColumns } = await parseCompetitorImport(csv(EXAMPLE));
 
     expect(rows.map((row) => row.line)).toEqual([2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(unknownColumns).toEqual([]);
+  });
+});
+
+describe("parseCompetitorImport with the creation form's sample", () => {
+  it("reads every row as valid", async () => {
+    const { rows, unknownColumns } = await parseCompetitorImport(csv(EXAMPLE_COMPETITOR_IMPORT));
+
+    expect(rows.map((row) => row.status)).toEqual(["valid", "valid", "valid", "valid", "valid"]);
     expect(unknownColumns).toEqual([]);
   });
 });

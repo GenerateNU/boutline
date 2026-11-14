@@ -9,12 +9,17 @@ jest.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 jest.mock("../services/auth-actions", () => ({ logout: jest.fn() }));
 
 describe("LogoutDialog", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    sessionStorage.clear();
+  });
 
   it.each([
     { button: "Yes, log out", loggedOut: true },
     { button: "Cancel", loggedOut: false },
   ])("$button logs out: $loggedOut", async ({ button, loggedOut }) => {
+    sessionStorage.setItem("account:tournament-creation-draft", "{}");
+    sessionStorage.setItem("pinned-fencers", "[]");
     render(<LogoutDialog />);
 
     fireEvent.click(screen.getByRole("button", { name: "Account" }));
@@ -26,5 +31,8 @@ describe("LogoutDialog", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     }
     expect(logout).toHaveBeenCalledTimes(loggedOut ? 1 : 0);
+    // Logging out drops the account's drafts but keeps per-tab pins.
+    expect(sessionStorage.getItem("account:tournament-creation-draft") === null).toBe(loggedOut);
+    expect(sessionStorage.getItem("pinned-fencers")).toBe("[]");
   });
 });

@@ -18,7 +18,7 @@ function fillAndSubmit(confirm: string, password = "secret") {
     "Confirm Password": confirm,
   };
   for (const [label, value] of Object.entries(values)) {
-    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.change(screen.getByLabelText(label, { exact: false }), { target: { value } });
   }
   fireEvent.click(screen.getByRole("button", { name: "Register" }));
 }
@@ -31,7 +31,7 @@ describe("SignupForm", () => {
       name: "rejects a password over 72 bytes even when it is under 72 characters",
       password: "é".repeat(40),
       confirm: "é".repeat(40),
-      result: { ok: true },
+      result: { ok: true, user: { id: "u1" } },
       alert: "at most 72 bytes",
       redirected: false,
       calls: 0,
@@ -39,7 +39,7 @@ describe("SignupForm", () => {
     {
       name: "rejects mismatched passwords without calling the server",
       confirm: "other",
-      result: { ok: true },
+      result: { ok: true, user: { id: "u1" } },
       alert: "Passwords don't match.",
       redirected: false,
       calls: 0,
@@ -55,7 +55,7 @@ describe("SignupForm", () => {
     {
       name: "redirects after a successful signup",
       confirm: "secret",
-      result: { ok: true },
+      result: { ok: true, user: { id: "u1" } },
       alert: null,
       redirected: true,
       calls: 1,

@@ -7,6 +7,7 @@ import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
 import { ModalClose } from "@/components/primitives/modal";
+import { clearAccountStorage } from "@/features/auth/services/account-storage";
 import { logout } from "@/features/auth/services/auth-actions";
 
 function LogoutDialog() {
@@ -23,6 +24,9 @@ function LogoutDialog() {
         setError("Couldn't log out. Try again in a moment.");
         return;
       }
+      // Drafts can hold fencers' personal details, so the next account in this tab
+      // mustn't see them.
+      clearAccountStorage();
       router.push("/login");
     });
   }

@@ -50,8 +50,8 @@ describe("proxy", () => {
   it.each([
     { path: "/admin", want: "http://localhost:3000/login?next=%2Fadmin" },
     {
-      path: "/admin/tournament/new?step=2",
-      want: "http://localhost:3000/login?next=%2Fadmin%2Ftournament%2Fnew%3Fstep%3D2",
+      path: "/admin/tournaments/new?step=2",
+      want: "http://localhost:3000/login?next=%2Fadmin%2Ftournaments%2Fnew%3Fstep%3D2",
     },
     {
       path: "/tournaments/t1/events/e1/bout/b1/referee",
@@ -69,7 +69,7 @@ describe("proxy", () => {
   it.each([
     { path: "/api/v1/tournaments", want: true },
     { path: "/admin", want: true },
-    { path: "/admin/tournament/new", want: true },
+    { path: "/admin/tournaments/new", want: true },
     { path: "/tournaments/t1/events/e1/bout/b1/referee", want: true },
     { path: "/tournaments", want: false },
     { path: "/tournaments/t1/events/e1/bout/b1", want: false },

@@ -8,7 +8,7 @@ import { Select as SelectPrimitive } from "radix-ui";
 const SELECT_TRIGGER_CLASS_NAME = cn(
   "group flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-outline bg-background px-3 text-sm text-obsidian outline-none transition-colors",
   "hover:bg-blue-lightest focus-visible:border-blue focus-visible:ring-3 focus-visible:ring-blue-lighter data-[state=open]:border-blue data-[state=open]:ring-3 data-[state=open]:ring-blue-lighter",
-  "aria-invalid:border-red-dark data-placeholder:text-neutral-muted",
+  "aria-invalid:border-2 aria-invalid:border-red-dark aria-invalid:px-2.75 data-placeholder:text-neutral-muted",
   "disabled:pointer-events-none disabled:border-disabled-border disabled:bg-disabled disabled:text-disabled-foreground",
 );
 
@@ -17,6 +17,8 @@ interface SelectProps extends React.ComponentProps<typeof SelectPrimitive.Root> 
   className?: string;
   placeholder?: string;
   "aria-label"?: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
 
 function Select({
@@ -24,6 +26,8 @@ function Select({
   className,
   placeholder = "Select an option",
   "aria-label": ariaLabel,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   children,
   ...props
 }: SelectProps) {
@@ -32,6 +36,8 @@ function Select({
       <SelectPrimitive.Trigger
         id={id}
         aria-label={ariaLabel}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         data-slot="select"
         className={cn(SELECT_TRIGGER_CLASS_NAME, className)}
       >
