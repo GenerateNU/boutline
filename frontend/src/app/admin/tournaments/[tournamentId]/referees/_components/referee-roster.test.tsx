@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import { Toaster } from "@/components/primitives/toast";
-import type { TournamentMember } from "@/features/referee/types/referee";
+import type { RefereeResponse } from "@/features/referee/types/referee";
 import { apiRequest } from "@/services/api-request";
 
 import { RefereeRoster } from "./referee-roster";
@@ -13,7 +13,7 @@ jest.mock("../../../../../../services/api-request", () => ({ apiRequest: jest.fn
 
 const apiRequestMock = jest.mocked(apiRequest);
 
-const REFEREES: TournamentMember[] = [
+const REFEREES: RefereeResponse[] = [
   {
     user_id: "u-1",
     tournament_id: "t-1",
@@ -38,7 +38,7 @@ const REFEREES: TournamentMember[] = [
   },
 ];
 
-function renderRoster(referees: TournamentMember[]) {
+function renderRoster(referees: RefereeResponse[]) {
   render(
     <Toaster>
       <RefereeRoster tournamentId="t-1" referees={referees} events={[]} />

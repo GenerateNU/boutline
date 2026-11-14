@@ -1,4 +1,4 @@
-import type { TournamentMember } from "@/features/referee/types/referee";
+import type { RefereeResponse } from "@/features/referee/types/referee";
 import type { ListResponse } from "@/types/list-response";
 
 const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
@@ -8,7 +8,7 @@ export async function getReferees(
   limit: number,
   offset: number,
   query?: string,
-): Promise<ListResponse<TournamentMember>> {
+): Promise<ListResponse<RefereeResponse>> {
   const url = new URL(`/api/v1/tournaments/${tournamentId}/users`, API_PROXY_TARGET);
   url.searchParams.set("role", "referee");
   url.searchParams.set("limit", String(limit));

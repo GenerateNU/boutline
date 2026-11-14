@@ -8,13 +8,13 @@ import { Modal, ModalFooter } from "@/components/primitives/modal";
 import { useToast } from "@/components/primitives/toast";
 import { RefereeCard, type Referee } from "@/features/referee/components/referee-card";
 import type { TournamentEvent } from "@/features/event/types/event";
-import type { TournamentMember } from "@/features/referee/types/referee";
+import type { RefereeResponse } from "@/features/referee/types/referee";
 import { apiRequest } from "@/services/api-request";
 import { errorMessage } from "@/utils/error-message";
 
 import { AddRefereeDialog } from "./add-referee-dialog";
 
-function toReferee({ user_id, first_name, last_name, occupied, pool_number }: TournamentMember): Referee {
+function toReferee({ user_id, first_name, last_name, occupied, pool_number }: RefereeResponse): Referee {
   return {
     id: user_id,
     name: `${first_name} ${last_name}`,
@@ -25,7 +25,7 @@ function toReferee({ user_id, first_name, last_name, occupied, pool_number }: To
 
 interface RefereeRosterProps {
   tournamentId: string;
-  referees: TournamentMember[];
+  referees: RefereeResponse[];
   events: TournamentEvent[];
 }
 

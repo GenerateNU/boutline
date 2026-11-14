@@ -1,6 +1,6 @@
 import type { TournamentRole } from "@/features/tournament/types/tournament";
 
-export interface TournamentMember {
+export interface RefereeResponse {
   user_id: string;
   tournament_id: string;
   role: TournamentRole;

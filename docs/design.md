@@ -560,15 +560,13 @@ location with a pin icon, each omitted when empty.
 
 Tabs: Fencers (the index page) · Referees · Events · Settings.
 
-- **Fencers** and **Events:** the same content as the public tabs (§4.3), through
-  shared components. Search and pagination stay inside the dashboard; rows link to
-  the public pages.
 - **Referees:** a searchable, paginated roster of the tournament's referees, from
   `GET /tournaments/{id}/users?role=referee`. "Add Referees" opens a dialog that
   searches users by name or email and adds one as referee, optionally to one of the
   tournament's pools, then closes. Each row shows Occupied or Available and the
   referee's pool (§10.3), and its Remove asks for confirmation first.
-- **Settings** (Placeholder): static text.
+- **Fencers**, **Events** and **Settings** (Planned): empty until a ticket defines
+  what they show.
 
 ---
 
