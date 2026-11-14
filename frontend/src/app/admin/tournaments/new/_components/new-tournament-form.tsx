@@ -14,8 +14,12 @@ import { errorMessage } from "@/utils/error-message";
 
 import { useTournamentDraft } from "../_hooks/use-tournament-draft";
 import { eventTitle, importedEventCount, missingEventFields, missingFencerFields } from "../tournament-draft-helpers";
+import { CsvSampleButton } from "./csv-sample-button";
 import { EventDraftCard } from "./event-draft-card";
 import { TournamentDetailsCard } from "./tournament-details-card";
+
+// The parser reads CSV only.
+const CSV_ACCEPT = { "text/csv": [".csv"] };
 
 function NewTournamentForm() {
   const router = useRouter();
@@ -105,7 +109,9 @@ function NewTournamentForm() {
       className="flex flex-col gap-10 lg:grid lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10 lg:gap-y-6"
     >
       <div className="flex flex-col gap-4">
-        <ImportDropzone onFile={handleFile} />
+        <ImportDropzone accept={CSV_ACCEPT} hint="Only .csv files are accepted." onFile={handleFile}>
+          <CsvSampleButton />
+        </ImportDropzone>
         {importError ? (
           <p role="alert" className="text-xs text-red-dark">
             {importError}

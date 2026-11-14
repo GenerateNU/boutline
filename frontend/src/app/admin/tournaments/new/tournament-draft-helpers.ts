@@ -11,6 +11,7 @@ function draftId() {
   return Math.random().toString(36).slice(2);
 }
 
+// A fencer added by hand. Unrated, as the parser reads a blank rating.
 const BLANK_FENCER: ImportedCompetitor = {
   firstName: "",
   lastName: "",
@@ -33,6 +34,7 @@ const REQUIRED_FENCER_FIELDS = ["firstName", "lastName", "gender", "birthdate", 
 
 export type RequiredFencerField = (typeof REQUIRED_FENCER_FIELDS)[number];
 
+// Wording for a fencer card's "Missing …" line.
 export const FENCER_FIELD_LABELS: Record<RequiredFencerField, string> = {
   firstName: "first name",
   lastName: "last name",
@@ -45,6 +47,7 @@ export function missingFencerFields(fencer: FencerDraft): RequiredFencerField[] 
   return REQUIRED_FENCER_FIELDS.filter((field) => fencer[field].trim() === "");
 }
 
+// Type and format have one option each today, so they start chosen.
 export function newEventDraft(name = "", fencers: FencerDraft[] = []): EventDraft {
   return {
     id: draftId(),
@@ -68,6 +71,7 @@ export function eventTitle(event: EventDraft, index: number) {
   return event.name.trim() || `Event ${index + 1}`;
 }
 
+// Every field on an event card is required.
 const REQUIRED_EVENT_FIELDS = [
   "name",
   "type",
@@ -95,6 +99,7 @@ export function missingTournamentFields(draft: TournamentDraft): RequiredTournam
   return REQUIRED_TOURNAMENT_FIELDS.filter((field) => draft[field].trim() === "");
 }
 
+// Starts with one blank event card, so there is always one to fill in or import into.
 export const EMPTY_TOURNAMENT_DRAFT: TournamentDraft = {
   name: "",
   location: "",
@@ -106,17 +111,15 @@ export const EMPTY_TOURNAMENT_DRAFT: TournamentDraft = {
   events: [newEventDraft()],
 };
 
+// Event names match ignoring case and surrounding spaces ("Y14 Foil " = "y14 foil").
 function eventKey(name: string) {
   return name.trim().toLowerCase();
 }
 
-// Sorts an upload's valid rows into event cards by their Event column. A card
-// whose name matches (ignoring case) gets that group in place of its fencers, so
-// uploading the same file twice doesn't double them, and reopens if it was saved,
-// since the new fencers haven't been reviewed. Rows without an event match a card
-// with no name. Any other group fills a blank card that has no fencers yet (like
-// the untouched first card), then gets a new card.
+// Sorts an upload's valid rows into event cards by their Event column.
 export function importFencers(events: EventDraft[], rows: CompetitorImportRow[]): EventDraft[] {
+  // Group the rows by event, keeping the file's order. Invalid and duplicate rows
+  // are left out; rows with no event form a group named "".
   const groups = new Map<string, { name: string; fencers: FencerDraft[] }>();
   for (const row of rows) {
     if (row.status !== "valid") {
@@ -128,6 +131,9 @@ export function importFencers(events: EventDraft[], rows: CompetitorImportRow[])
     groups.set(key, group);
   }
 
+  // A card with the same name takes its group in place of its fencers, so a second
+  // upload of the file doesn't double them. It reopens if it was saved, since the
+  // new fencers haven't been reviewed.
   const matched = events.map((event) => {
     const group = groups.get(eventKey(event.name));
     if (!group) {
@@ -137,12 +143,16 @@ export function importFencers(events: EventDraft[], rows: CompetitorImportRow[])
     return { ...event, fencers: group.fencers, saved: false };
   });
 
+  // Leftover groups fill blank cards with no fencers yet, such as the untouched
+  // first card, so it isn't left empty beside the new ones.
   const unmatched = [...groups.values()];
   const filled = matched.map((event) => {
     const isPlaceholder = event.name.trim() === "" && event.fencers.length === 0;
     const group = isPlaceholder ? unmatched.shift() : undefined;
     return group ? { ...event, name: group.name, fencers: group.fencers } : event;
   });
+
+  // Whatever is still left gets a new card each.
   return [...filled, ...unmatched.map((group) => newEventDraft(group.name, group.fencers))];
 }
 

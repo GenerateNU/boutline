@@ -1,18 +1,29 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
 import { ImportDropzone } from "@/features/tournament/components/import-dropzone";
 
+const CSV = { "text/csv": [".csv"] };
+
 describe("ImportDropzone", () => {
-  it("shows the sample CSV in a dialog without leaving the page", () => {
-    render(<ImportDropzone />);
+  it.each([
+    { name: "the default title alone", props: {}, want: ["Already have file?"], notWant: ["Only CSV"] },
+    {
+      name: "a custom title, hint and extra action",
+      props: { title: "Import fencers", hint: "Only CSV", children: <a href="/sample">Sample</a> },
+      want: ["Import fencers", "Only CSV", "Sample"],
+      notWant: ["Already have file?"],
+    },
+  ])("renders $name", ({ props, want, notWant }) => {
+    render(<ImportDropzone accept={CSV} {...props} />);
 
-    expect(screen.getByText("Only .csv files are accepted.")).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload" })).toBeInTheDocument();
+    want.forEach((text) => expect(screen.getByText(text)).toBeInTheDocument());
+    notWant.forEach((text) => expect(screen.queryByText(text)).not.toBeInTheDocument());
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "View sample CSV" }));
+  it("limits the file picker to the accepted types", () => {
+    const { container } = render(<ImportDropzone accept={CSV} />);
 
-    expect(screen.getByRole("dialog", { name: "Sample CSV" })).toHaveTextContent(
-      "Last Name,First Name,Member #,Club",
-    );
+    expect(container.querySelector('input[type="file"]')).toHaveAttribute("accept", "text/csv,.csv");
   });
 });

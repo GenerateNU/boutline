@@ -30,22 +30,55 @@ export function useTournamentDraft() {
     );
   }
 
+  function setField(field: TournamentField, value: string) {
+    setDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  function setTournamentSaved(saved: boolean) {
+    setDraft((current) => ({ ...current, saved }));
+  }
+
+  function addEvent() {
+    updateEvents((events) => [...events, newEventDraft()]);
+  }
+
+  function removeEvent(id: string) {
+    updateEvents((events) => events.filter((event) => event.id !== id));
+  }
+
+  function addFencer(eventId: string) {
+    updateFencers(eventId, (fencers) => [...fencers, newFencerDraft()]);
+  }
+
+  function updateFencer(eventId: string, fencerId: string, patch: Partial<FencerDraft>) {
+    updateFencers(eventId, (fencers) =>
+      fencers.map((fencer) => (fencer.id === fencerId ? { ...fencer, ...patch } : fencer)),
+    );
+  }
+
+  function removeFencer(eventId: string, fencerId: string) {
+    updateFencers(eventId, (fencers) => fencers.filter((fencer) => fencer.id !== fencerId));
+  }
+
+  function importRows(rows: CompetitorImportRow[]) {
+    updateEvents((events) => importFencers(events, rows));
+  }
+
+  function clear() {
+    setDraft(EMPTY_TOURNAMENT_DRAFT);
+  }
+
   return {
     draft,
-    setField: (field: TournamentField, value: string) =>
-      setDraft((current) => ({ ...current, [field]: value })),
-    setTournamentSaved: (saved: boolean) => setDraft((current) => ({ ...current, saved })),
-    addEvent: () => updateEvents((events) => [...events, newEventDraft()]),
+    setField,
+    setTournamentSaved,
+    addEvent,
     updateEvent,
-    removeEvent: (id: string) => updateEvents((events) => events.filter((event) => event.id !== id)),
-    addFencer: (eventId: string) => updateFencers(eventId, (fencers) => [...fencers, newFencerDraft()]),
-    updateFencer: (eventId: string, fencerId: string, patch: Partial<FencerDraft>) =>
-      updateFencers(eventId, (fencers) =>
-        fencers.map((fencer) => (fencer.id === fencerId ? { ...fencer, ...patch } : fencer)),
-      ),
-    removeFencer: (eventId: string, fencerId: string) =>
-      updateFencers(eventId, (fencers) => fencers.filter((fencer) => fencer.id !== fencerId)),
-    importRows: (rows: CompetitorImportRow[]) => updateEvents((events) => importFencers(events, rows)),
-    clear: () => setDraft(EMPTY_TOURNAMENT_DRAFT),
+    removeEvent,
+    addFencer,
+    updateFencer,
+    removeFencer,
+    importRows,
+    clear,
   };
 }

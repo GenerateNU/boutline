@@ -1,48 +1,40 @@
 "use client";
 
 import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
-import { useState } from "react";
+import { Accept } from "react-dropzone";
 
 import { Button } from "@/components/primitives/button";
 import { Dropzone } from "@/components/primitives/dropzone";
-import { CsvSampleDialog } from "@/features/tournament/components/csv-sample-dialog";
-
-const IMPORT_ACCEPT = { "text/csv": [".csv"] };
 
 interface ImportDropzoneProps {
+  accept: Accept;
+  title?: string;
+  // Under the Upload button, e.g. which files are accepted.
+  hint?: React.ReactNode;
   onFile?: (file: File) => void;
+  // Extra actions under the hint, such as a link to a sample file.
+  children?: React.ReactNode;
 }
 
-function ImportDropzone({ onFile }: ImportDropzoneProps) {
-  const [sampleOpen, setSampleOpen] = useState(false);
-
+function ImportDropzone({ accept, title = "Already have file?", hint, onFile, children }: ImportDropzoneProps) {
   return (
-    <>
-      <Dropzone accept={IMPORT_ACCEPT} onFile={onFile} className="gap-3 px-6 py-8">
-        {(open) => (
-          <>
-            <CloudUploadOutlined aria-hidden className="size-8 text-neutral-secondary" />
-            <p className="text-base font-semibold text-obsidian">Already have file?</p>
-            <Button type="button" className="w-full" onClick={open}>
-              Upload
-            </Button>
+    <Dropzone accept={accept} onFile={onFile} className="gap-3 px-6 py-8">
+      {(open) => (
+        <>
+          <CloudUploadOutlined aria-hidden className="size-8 text-neutral-secondary" />
+          <p className="text-base font-semibold text-obsidian">{title}</p>
+          <Button type="button" className="w-full" onClick={open}>
+            Upload
+          </Button>
+          {hint || children ? (
             <div className="flex flex-col items-center">
-              <p className="text-xs text-neutral-secondary">Only .csv files are accepted.</p>
-              <Button
-                type="button"
-                variant="text"
-                size="sm"
-                className="h-auto py-1"
-                onClick={() => setSampleOpen(true)}
-              >
-                View sample CSV
-              </Button>
+              {hint ? <p className="text-xs text-neutral-secondary">{hint}</p> : null}
+              {children}
             </div>
-          </>
-        )}
-      </Dropzone>
-      <CsvSampleDialog open={sampleOpen} onOpenChange={setSampleOpen} />
-    </>
+          ) : null}
+        </>
+      )}
+    </Dropzone>
   );
 }
 
