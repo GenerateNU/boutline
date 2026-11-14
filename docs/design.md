@@ -521,14 +521,17 @@ replace the tournament's tabs rather than stacking under them.
   view" button and a touch log, from the fixture. Only its referee link reaches
   the real API.
 
-### 4.5 Organizer list (`/admin/tournaments`)
+### 4.5 Admin home (`/admin/tournaments`)
 
 **Status:** Partial.
 
-Behind the login gate: a dashed "Create tournament" card, then "Manage
-Tournaments" with All / Completed / In Progress / Upcoming tabs (`?status=`) over
+Where login and signup land by default, behind the login gate. A solid-outlined
+"Create tournament" card linking to the creation form (§10.6), then "Manage
+Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) over
 every tournament (not yet only the caller's), paginated. Cards show the created
-date instead of the location. It switches to `GET /users/{me}/tournaments` in §10.7.
+date instead of the location. Organizers see `pending` as "Scheduled" with the blue
+badge; public screens keep "Upcoming". `/admin` redirects here until the console
+(§10.7) exists. It switches to `GET /users/{me}/tournaments` in §10.7.
 
 ---
 
@@ -990,8 +993,8 @@ are placed into pools.
 
 **Status:** Partial.
 
-A hub linking to the organizer's tournaments (§4.5) and the creation form, plus
-inert buttons (tools, reports, view, save). The tournaments list switches to
+Planned as a hub for the organizer's tools; until it exists, `/admin` redirects to
+the admin home (§4.5). The tournaments list switches to
 `GET /users/{me}/tournaments`.
 
 On the day, the admin checks fencers in, starts the tournament, generates pools
@@ -1570,6 +1573,8 @@ through the tokens, so components use tokens, never raw colors.
 - Spacing: `gap-1`/`gap-2` inside a control, `gap-3`/`gap-4` between items in a list
   or section, `gap-10` between page sections.
 - Group content with `Section`, whose title is a small uppercase muted label.
+- The page scrollbar is hidden everywhere (`scrollbar-width: none` on `html`); pages
+  still scroll. Scrollable areas inside a page keep their scrollbars.
 
 ### C.2 Color tokens (`src/app/globals.css`)
 | Token | Use |

@@ -32,4 +32,13 @@ describe("TournamentCard", () => {
     expect(screen.queryByText(notWant)).not.toBeInTheDocument();
     expect(screen.getByText("In Progress")).toBeInTheDocument();
   });
+
+  it.each([
+    { name: "public", admin: false, want: "Upcoming" },
+    { name: "admin", admin: true, want: "Scheduled" },
+  ])("labels a pending tournament for the $name view", ({ admin, want }) => {
+    render(<TournamentCard tournament={{ ...TOURNAMENT, status: "pending" }} admin={admin} />);
+
+    expect(screen.getByText(want)).toBeInTheDocument();
+  });
 });
