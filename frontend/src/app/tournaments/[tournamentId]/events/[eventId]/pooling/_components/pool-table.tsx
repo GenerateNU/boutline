@@ -9,12 +9,9 @@ interface PoolTableProps {
   onSelectBout?: (boutId: string) => void;
 }
 
-// Eight or more fencers get a narrower name column and shorter rows so the grid still fits a phone.
-function sizing(columns: number): { nameWidth: string; height: string; name: string } {
-  return columns <= 7
-    ? { nameWidth: "w-26", height: "h-9", name: "text-sm" }
-    : { nameWidth: "w-20", height: "h-8", name: "text-xs" };
-}
+// Up to this many fencers the grid stretches to fit a phone; past it the cells keep a fixed size and the
+// grid scrolls sideways, with the name column pinned so each row stays readable.
+const MAX_FITTING_FENCERS = 6;
 
 function cellColor(cell: PoolTableCell): string {
   if (cell.kind === "self") {
@@ -27,20 +24,21 @@ function cellColor(cell: PoolTableCell): string {
 }
 
 export function PoolTable({ caption, data, selectedBoutId = null, onSelectBout }: PoolTableProps) {
-  const size = sizing(data.headers.length);
+  const scrolls = data.headers.length > MAX_FITTING_FENCERS;
+  const nameCell = cn("pr-1 text-left font-normal", scrolls && "sticky left-0 z-10 bg-card");
 
-  return (
-    <table className="w-full table-fixed border-separate border-spacing-1">
+  const table = (
+    <table className={cn("border-separate border-spacing-1", scrolls ? "w-max" : "w-full table-fixed")}>
       <caption className="sr-only">{caption}</caption>
       <colgroup>
-        <col className={size.nameWidth} />
+        <col className="w-26" />
         {data.headers.map((header) => (
-          <col key={header} />
+          <col key={header} className={cn(scrolls && "w-10")} />
         ))}
       </colgroup>
       <thead>
         <tr>
-          <th scope="col">
+          <th scope="col" className={nameCell}>
             <span className="sr-only">Fencer</span>
           </th>
           {data.headers.map((header) => (
@@ -55,16 +53,16 @@ export function PoolTable({ caption, data, selectedBoutId = null, onSelectBout }
       <tbody>
         {data.rows.map((row) => (
           <tr key={row.name}>
-            <th scope="row" className="pr-1 text-left font-normal">
-              <span className={cn("block truncate uppercase", size.name)}>{row.name}</span>
-              <span className="block truncate text-xs text-neutral-secondary">{row.team}</span>
+            <th scope="row" className={nameCell}>
+              <span className="block w-25 truncate text-sm uppercase">{row.name}</span>
+              <span className="block w-25 truncate text-xs text-neutral-secondary">{row.team}</span>
             </th>
             {row.cells.map((cell, column) => {
               const boutId = cell.kind === "bout" ? cell.boutId : null;
               const selected = boutId !== null && boutId === selectedBoutId;
               const boxClass = cn(
-                "flex w-full items-center justify-center rounded-[4px] text-sm",
-                size.height,
+                "flex h-9 items-center justify-center rounded-[4px] text-sm",
+                scrolls ? "w-10" : "w-full",
                 cellColor(cell),
               );
 
@@ -95,5 +93,19 @@ export function PoolTable({ caption, data, selectedBoutId = null, onSelectBout }
         ))}
       </tbody>
     </table>
+  );
+
+  // A scrollable region needs to be focusable so keyboard users can scroll it.
+  return scrolls ? (
+    <div
+      role="region"
+      aria-label={caption}
+      tabIndex={0}
+      className="overflow-x-auto rounded-[4px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {table}
+    </div>
+  ) : (
+    table
   );
 }
