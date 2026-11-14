@@ -10,6 +10,8 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/bout"
 	"boutline/internal/features/scoring"
+	"boutline/internal/features/tournamentuser"
+	tournamentusertest "boutline/internal/features/tournamentuser/test"
 
 	"github.com/google/uuid"
 )
@@ -18,6 +20,32 @@ var (
 	_ scoring.ScoringRepository = (*FakeScoringRepository)(nil)
 	_ scoring.BoutLookup        = (*FakeBoutLookup)(nil)
 )
+
+var (
+	TestTournamentID = uuid.New()
+	TestBoutID       = uuid.New()
+	TestAdminBoutID  = uuid.New()
+	TestAdminID      = uuid.New()
+	TestRefereeID    = uuid.New()
+	TestOutsiderID   = uuid.New()
+)
+
+// NewTestBouts holds TestBoutID, refereed by TestRefereeID, and TestAdminBoutID,
+// refereed by TestAdminID.
+func NewTestBouts() *FakeBoutLookup {
+	return NewFakeBoutLookup(
+		bout.Bout{ID: TestBoutID, TournamentID: TestTournamentID, RefereeID: &TestRefereeID},
+		bout.Bout{ID: TestAdminBoutID, TournamentID: TestTournamentID, RefereeID: &TestAdminID},
+	)
+}
+
+// NewTestMemberships makes TestAdminID an admin and TestRefereeID a referee of TestTournamentID.
+func NewTestMemberships() *tournamentusertest.FakeMembershipLookup {
+	return tournamentusertest.NewFakeMembershipLookup(
+		tournamentuser.TournamentUser{TournamentID: TestTournamentID, UserID: TestAdminID, Role: tournamentuser.TournamentUserRoleAdmin},
+		tournamentuser.TournamentUser{TournamentID: TestTournamentID, UserID: TestRefereeID, Role: tournamentuser.TournamentUserRoleReferee},
+	)
+}
 
 type FakeBoutLookup struct {
 	Bouts map[uuid.UUID]bout.Bout

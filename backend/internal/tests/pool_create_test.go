@@ -331,7 +331,7 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 
 		poolCreatePatchFencers(t, app, referee, pools[1], 6, 1, 5, 8).
 			AssertStatus(http.StatusForbidden).
-			AssertField("detail", "only the tournament's admins can re-seat its pools")
+			AssertField("detail", "this requires the admin role in the tournament")
 	})
 
 	// Pool 1 is 6, 1, 5, 2 on Strip 3 and pool 2 is 12, 4, 3, 7. Moving 12 into pool 1

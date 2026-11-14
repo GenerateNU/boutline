@@ -9,14 +9,73 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/directelimination"
+	"boutline/internal/features/event"
+	"boutline/internal/features/tournamentuser"
+	tournamentusertest "boutline/internal/features/tournamentuser/test"
 
 	"github.com/google/uuid"
 )
 
-var _ directelimination.DirectEliminationRepository = (*FakeDirectEliminationRepository)(nil)
+var (
+	_ directelimination.DirectEliminationRepository = (*FakeDirectEliminationRepository)(nil)
+	_ directelimination.EventLookup                 = (*FakeEventLookup)(nil)
+)
+
+var (
+	TestTournamentID  = uuid.New()
+	OtherTournamentID = uuid.New()
+	TestAdminID       = uuid.New()
+	TestRefereeID     = uuid.New()
+	TestOutsiderID    = uuid.New()
+
+	// TestEventID and TestSecondEventID belong to TestTournamentID; OtherEventID
+	// belongs to OtherTournamentID, which none of the test users staff.
+	TestEventID       = uuid.New()
+	TestSecondEventID = uuid.New()
+	OtherEventID      = uuid.New()
+)
+
+type FakeEventLookup struct {
+	Events map[uuid.UUID]event.Event
+}
+
+func NewFakeEventLookup() *FakeEventLookup {
+	events := map[uuid.UUID]event.Event{
+		TestEventID:       {ID: TestEventID, TournamentID: TestTournamentID},
+		TestSecondEventID: {ID: TestSecondEventID, TournamentID: TestTournamentID},
+		OtherEventID:      {ID: OtherEventID, TournamentID: OtherTournamentID},
+	}
+
+	return &FakeEventLookup{Events: events}
+}
+
+func (f *FakeEventLookup) GetEventByID(_ context.Context, id uuid.UUID) (*event.Event, error) {
+	found, ok := f.Events[id]
+	if !ok {
+		return nil, fmt.Errorf("select event %s: %w", id, errs.ErrNotFound)
+	}
+
+	return &found, nil
+}
+
+// NewTestService wires the service to the repo's events and to an admin and a
+// referee of TestTournamentID.
+func NewTestService(repo *FakeDirectEliminationRepository) directelimination.DirectEliminationService {
+	memberships := tournamentusertest.NewFakeMembershipLookup(
+		tournamentuser.TournamentUser{
+			UserID: TestAdminID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleAdmin,
+		},
+		tournamentuser.TournamentUser{
+			UserID: TestRefereeID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleReferee,
+		},
+	)
+
+	return directelimination.NewDirectEliminationService(repo, repo.Events, memberships)
+}
 
 type FakeDirectEliminationRepository struct {
 	DirectEliminations map[uuid.UUID]directelimination.DirectElimination
+	Events             *FakeEventLookup
 	Err                error // when set, every method fails with it
 }
 
@@ -28,7 +87,7 @@ func NewFakeDirectEliminationRepository(
 		rounds[seeded.ID] = seeded
 	}
 
-	return &FakeDirectEliminationRepository{DirectEliminations: rounds}
+	return &FakeDirectEliminationRepository{DirectEliminations: rounds, Events: NewFakeEventLookup()}
 }
 
 func (f *FakeDirectEliminationRepository) CreateDirectElimination(
@@ -61,6 +120,23 @@ func (f *FakeDirectEliminationRepository) GetDirectEliminationByID(
 	}
 
 	return &found, nil
+}
+
+func (f *FakeDirectEliminationRepository) GetDirectEliminationTournamentID(
+	ctx context.Context,
+	id uuid.UUID,
+) (uuid.UUID, error) {
+	stored, err := f.GetDirectEliminationByID(ctx, id)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	ev, err := f.Events.GetEventByID(ctx, stored.EventID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return ev.TournamentID, nil
 }
 
 func (f *FakeDirectEliminationRepository) ListDirectElimination(

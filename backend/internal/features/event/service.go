@@ -8,6 +8,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -35,10 +36,15 @@ type EventService interface {
 type eventService struct {
 	repo        EventRepository
 	tournaments TournamentLookup
+	memberships tournamentuser.MembershipLookup
 }
 
-func NewEventService(repo EventRepository, tournaments TournamentLookup) EventService {
-	return &eventService{repo: repo, tournaments: tournaments}
+func NewEventService(
+	repo EventRepository,
+	tournaments TournamentLookup,
+	memberships tournamentuser.MembershipLookup,
+) EventService {
+	return &eventService{repo: repo, tournaments: tournaments, memberships: memberships}
 }
 
 func (s *eventService) CreateEvent(ctx context.Context, input *EventCreateInput) (*EventOutput, error) {
@@ -57,6 +63,9 @@ func (s *eventService) CreateEvent(ctx context.Context, input *EventCreateInput)
 				"tournament_id must reference an existing tournament", errs.ErrInvalidInput))
 		}
 		return nil, errs.HumaError(fmt.Errorf("get tournament: %w", err))
+	}
+	if err := tournamentuser.RequireRole(ctx, s.memberships, tournamentID, tournamentuser.TournamentUserRoleAdmin); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("create event: %w", err))
 	}
 
 	event := &Event{
@@ -150,6 +159,10 @@ func (s *eventService) UpdateEventByID(ctx context.Context, input *EventUpdateIn
 		return nil, errs.HumaError(errs.Public("provide at least one field to update", errs.ErrInvalidInput))
 	}
 
+	if err := s.requireEventAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("update event: %w", err))
+	}
+
 	if err := s.repo.UpdateEventByID(ctx, id, EventUpdate(body)); err != nil {
 		if errors.Is(err, errs.ErrConflict) {
 			return nil, errs.HumaError(fmt.Errorf("update event: %w",
@@ -172,6 +185,10 @@ func (s *eventService) DeleteEventByID(ctx context.Context, input *EventIDInput)
 		return nil, errs.HumaError(err)
 	}
 
+	if err := s.requireEventAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("delete event: %w", err))
+	}
+
 	if err := s.repo.DeleteEventByID(ctx, id); err != nil {
 		if errors.Is(err, errs.ErrConflict) {
 			return nil, errs.HumaError(fmt.Errorf("delete event: %w",
@@ -181,4 +198,13 @@ func (s *eventService) DeleteEventByID(ctx context.Context, input *EventIDInput)
 	}
 
 	return nil, nil
+}
+
+func (s *eventService) requireEventAdmin(ctx context.Context, eventID uuid.UUID) error {
+	event, err := s.repo.GetEventByID(ctx, eventID)
+	if err != nil {
+		return fmt.Errorf("get event: %w", err)
+	}
+
+	return tournamentuser.RequireRole(ctx, s.memberships, event.TournamentID, tournamentuser.TournamentUserRoleAdmin)
 }

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"testing"
@@ -8,6 +9,7 @@ import (
 
 	"boutline/internal/features/event"
 	"boutline/internal/features/tournament"
+	"boutline/internal/session"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -17,7 +19,7 @@ import (
 
 func seededTournament() tournament.Tournament {
 	return tournament.Tournament{
-		ID:         uuid.New(),
+		ID:         TestTournamentID,
 		Name:       "bracket",
 		Visibility: tournament.TournamentVisibilityPrivate,
 		Code:       "ABCDEF",
@@ -45,6 +47,12 @@ func apiError(t *testing.T, err error) (int, string) {
 	return model.Status, model.Detail
 }
 
+func asUser(t *testing.T, id uuid.UUID) context.Context {
+	t.Helper()
+
+	return session.WithUserID(t.Context(), id)
+}
+
 func ptr[T any](v T) *T { return &v }
 
 func TestCreateEvent(t *testing.T) {
@@ -60,6 +68,8 @@ func TestCreateEvent(t *testing.T) {
 		wantDetail  string
 		wantName    string
 		wantNoEvent bool
+		caller      uuid.UUID // zero means the admin
+		anonymous   bool
 	}{
 		{
 			name:   "creates an upcoming event",
@@ -112,6 +122,33 @@ func TestCreateEvent(t *testing.T) {
 			wantNoEvent: true,
 		},
 		{
+			name:        "refuses a request with no caller",
+			lookup:      NewFakeTournamentLookup(tourney),
+			input:       &event.EventCreateInput{Body: event.EventCreateBody{TournamentID: tourney.ID.String(), Name: "lightweight"}},
+			anonymous:   true,
+			wantCode:    http.StatusForbidden,
+			wantDetail:  "this requires the admin role in the tournament",
+			wantNoEvent: true,
+		},
+		{
+			name:        "refuses a caller who is not a member",
+			lookup:      NewFakeTournamentLookup(tourney),
+			input:       &event.EventCreateInput{Body: event.EventCreateBody{TournamentID: tourney.ID.String(), Name: "lightweight"}},
+			caller:      uuid.New(),
+			wantCode:    http.StatusForbidden,
+			wantDetail:  "this requires the admin role in the tournament",
+			wantNoEvent: true,
+		},
+		{
+			name:        "refuses a referee",
+			lookup:      NewFakeTournamentLookup(tourney),
+			input:       &event.EventCreateInput{Body: event.EventCreateBody{TournamentID: tourney.ID.String(), Name: "lightweight"}},
+			caller:      TestRefereeID,
+			wantCode:    http.StatusForbidden,
+			wantDetail:  "this requires the admin role in the tournament",
+			wantNoEvent: true,
+		},
+		{
 			name:        "reports a tournament lookup failure as a server error",
 			lookup:      &FakeTournamentLookup{Err: errors.New("connection refused")},
 			input:       &event.EventCreateInput{Body: event.EventCreateBody{TournamentID: tourney.ID.String(), Name: "lightweight"}},
@@ -125,8 +162,17 @@ func TestCreateEvent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			ctx := t.Context()
+			switch {
+			case tt.anonymous:
+			case tt.caller != uuid.Nil:
+				ctx = asUser(t, tt.caller)
+			default:
+				ctx = asUser(t, TestAdminID)
+			}
+
 			repo := NewFakeEventRepository()
-			out, err := event.NewEventService(repo, tt.lookup).CreateEvent(t.Context(), tt.input)
+			out, err := event.NewEventService(repo, tt.lookup, NewTestMemberships()).CreateEvent(ctx, tt.input)
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -208,7 +254,7 @@ func TestListEvents(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := event.NewEventService(NewFakeEventRepository(tt.seed...), NewFakeTournamentLookup()).
+			out, err := event.NewEventService(NewFakeEventRepository(tt.seed...), NewFakeTournamentLookup(), NewTestMemberships()).
 				ListEvents(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
@@ -232,10 +278,10 @@ func TestUpdateEventByID(t *testing.T) {
 	t.Run("edits an upcoming event", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededEvent(event.EventStatusUpcoming, uuid.New())
+		stored := seededEvent(event.EventStatusUpcoming, TestTournamentID)
 		repo := NewFakeEventRepository(stored)
 
-		out, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
+		out, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).UpdateEventByID(asUser(t, TestAdminID),
 			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{
 				Name: ptr("heavyweight"),
 			}})
@@ -248,10 +294,10 @@ func TestUpdateEventByID(t *testing.T) {
 	t.Run("stores a name trimmed of surrounding whitespace", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededEvent(event.EventStatusUpcoming, uuid.New())
+		stored := seededEvent(event.EventStatusUpcoming, TestTournamentID)
 		repo := NewFakeEventRepository(stored)
 
-		out, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
+		out, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).UpdateEventByID(asUser(t, TestAdminID),
 			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{
 				Name: ptr("  heavyweight  "),
 			}})
@@ -264,10 +310,10 @@ func TestUpdateEventByID(t *testing.T) {
 	t.Run("refuses to edit an active event", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededEvent(event.EventStatusActive, uuid.New())
+		stored := seededEvent(event.EventStatusActive, TestTournamentID)
 		repo := NewFakeEventRepository(stored)
 
-		_, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
+		_, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).UpdateEventByID(asUser(t, TestAdminID),
 			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{Name: ptr("heavyweight")}})
 
 		code, detail := apiError(t, err)
@@ -278,10 +324,10 @@ func TestUpdateEventByID(t *testing.T) {
 	t.Run("refuses to edit an ended event", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededEvent(event.EventStatusEnded, uuid.New())
+		stored := seededEvent(event.EventStatusEnded, TestTournamentID)
 		repo := NewFakeEventRepository(stored)
 
-		_, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
+		_, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).UpdateEventByID(asUser(t, TestAdminID),
 			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{Name: ptr("heavyweight")}})
 
 		code, detail := apiError(t, err)
@@ -292,10 +338,10 @@ func TestUpdateEventByID(t *testing.T) {
 	t.Run("refuses an empty patch", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededEvent(event.EventStatusUpcoming, uuid.New())
+		stored := seededEvent(event.EventStatusUpcoming, TestTournamentID)
 		repo := NewFakeEventRepository(stored)
 
-		_, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
+		_, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).UpdateEventByID(asUser(t, TestAdminID),
 			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{}})
 
 		code, detail := apiError(t, err)
@@ -306,10 +352,10 @@ func TestUpdateEventByID(t *testing.T) {
 	t.Run("rejects a blank name", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededEvent(event.EventStatusUpcoming, uuid.New())
+		stored := seededEvent(event.EventStatusUpcoming, TestTournamentID)
 		repo := NewFakeEventRepository(stored)
 
-		_, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
+		_, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).UpdateEventByID(asUser(t, TestAdminID),
 			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{Name: ptr("")}})
 
 		code, detail := apiError(t, err)
@@ -320,10 +366,10 @@ func TestUpdateEventByID(t *testing.T) {
 	t.Run("rejects a whitespace-only name", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededEvent(event.EventStatusUpcoming, uuid.New())
+		stored := seededEvent(event.EventStatusUpcoming, TestTournamentID)
 		repo := NewFakeEventRepository(stored)
 
-		_, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
+		_, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).UpdateEventByID(asUser(t, TestAdminID),
 			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{Name: ptr("   ")}})
 
 		code, detail := apiError(t, err)
@@ -334,11 +380,11 @@ func TestUpdateEventByID(t *testing.T) {
 	t.Run("updates only the scheduled start time", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededEvent(event.EventStatusUpcoming, uuid.New())
+		stored := seededEvent(event.EventStatusUpcoming, TestTournamentID)
 		repo := NewFakeEventRepository(stored)
 		newStart := time.Date(2026, 11, 1, 9, 0, 0, 0, time.UTC)
 
-		out, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
+		out, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).UpdateEventByID(asUser(t, TestAdminID),
 			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{StartTime: &newStart}})
 
 		require.NoError(t, err)
@@ -352,12 +398,44 @@ func TestUpdateEventByID(t *testing.T) {
 
 		repo := NewFakeEventRepository()
 
-		_, err := event.NewEventService(repo, NewFakeTournamentLookup()).UpdateEventByID(t.Context(),
+		_, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).UpdateEventByID(asUser(t, TestAdminID),
 			&event.EventUpdateInput{ID: uuid.New().String(), Body: event.EventUpdateBody{Name: ptr("heavyweight")}})
 
 		code, _ := apiError(t, err)
 		assert.Equal(t, http.StatusNotFound, code)
 	})
+
+	forbidden := []struct {
+		name      string
+		caller    uuid.UUID
+		anonymous bool
+	}{
+		{name: "refuses a request with no caller", anonymous: true},
+		{name: "refuses a caller who is not a member", caller: uuid.New()},
+		{name: "refuses a referee", caller: TestRefereeID},
+	}
+
+	for _, tt := range forbidden {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			stored := seededEvent(event.EventStatusUpcoming, TestTournamentID)
+			repo := NewFakeEventRepository(stored)
+			ctx := t.Context()
+			if !tt.anonymous {
+				ctx = asUser(t, tt.caller)
+			}
+
+			_, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).
+				UpdateEventByID(ctx, &event.EventUpdateInput{
+					ID: stored.ID.String(), Body: event.EventUpdateBody{Name: ptr("heavyweight")},
+				})
+
+			code, _ := apiError(t, err)
+			assert.Equal(t, http.StatusForbidden, code)
+			assert.Equal(t, stored.Name, repo.Events[stored.ID].Name)
+		})
+	}
 }
 
 func TestDeleteEventByID(t *testing.T) {
@@ -367,6 +445,8 @@ func TestDeleteEventByID(t *testing.T) {
 		name       string
 		status     event.EventStatus
 		unknownID  bool
+		caller     uuid.UUID // zero means the admin
+		anonymous  bool
 		wantCode   int
 		wantDetail string
 	}{
@@ -389,21 +469,48 @@ func TestDeleteEventByID(t *testing.T) {
 			unknownID: true,
 			wantCode:  http.StatusNotFound,
 		},
+		{
+			name:      "refuses a request with no caller",
+			status:    event.EventStatusUpcoming,
+			anonymous: true,
+			wantCode:  http.StatusForbidden,
+		},
+		{
+			name:     "refuses a caller who is not a member",
+			status:   event.EventStatusUpcoming,
+			caller:   uuid.New(),
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "refuses a referee",
+			status:   event.EventStatusUpcoming,
+			caller:   TestRefereeID,
+			wantCode: http.StatusForbidden,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			stored := seededEvent(tt.status, uuid.New())
+			stored := seededEvent(tt.status, TestTournamentID)
 			repo := NewFakeEventRepository(stored)
 			id := stored.ID
 			if tt.unknownID {
 				id = uuid.New()
 			}
 
-			_, err := event.NewEventService(repo, NewFakeTournamentLookup()).
-				DeleteEventByID(t.Context(), &event.EventIDInput{ID: id.String()})
+			ctx := t.Context()
+			switch {
+			case tt.anonymous:
+			case tt.caller != uuid.Nil:
+				ctx = asUser(t, tt.caller)
+			default:
+				ctx = asUser(t, TestAdminID)
+			}
+
+			_, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).
+				DeleteEventByID(ctx, &event.EventIDInput{ID: id.String()})
 
 			if tt.wantCode == 0 {
 				require.NoError(t, err)
@@ -427,7 +534,7 @@ func TestEventRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo := NewFakeEventRepository()
 	repo.Err = errors.New("connection refused")
 
-	_, err := event.NewEventService(repo, NewFakeTournamentLookup()).
+	_, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).
 		ListEvents(t.Context(), &event.EventListInput{})
 
 	code, detail := apiError(t, err)

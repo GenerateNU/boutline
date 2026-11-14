@@ -9,9 +9,28 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/event"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
+	tournamentusertest "boutline/internal/features/tournamentuser/test"
 
 	"github.com/google/uuid"
 )
+
+var (
+	TestTournamentID = uuid.MustParse("00000000-0000-4000-8000-0000000000a1")
+	TestAdminID      = uuid.MustParse("00000000-0000-4000-8000-0000000000b1")
+	TestRefereeID    = uuid.MustParse("00000000-0000-4000-8000-0000000000b2")
+)
+
+func NewTestMemberships() *tournamentusertest.FakeMembershipLookup {
+	return tournamentusertest.NewFakeMembershipLookup(
+		tournamentuser.TournamentUser{
+			UserID: TestAdminID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleAdmin,
+		},
+		tournamentuser.TournamentUser{
+			UserID: TestRefereeID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleReferee,
+		},
+	)
+}
 
 var _ event.EventRepository = (*FakeEventRepository)(nil)
 
