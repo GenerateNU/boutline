@@ -76,6 +76,13 @@ function NewTournamentForm() {
     }
   }
 
+  // A rejected file still supersedes any upload still parsing, so that one can't
+  // finish later, apply an older file, and clear this error.
+  function handleReject(message: string) {
+    latestUpload.current++;
+    setImportError(`Couldn't import that file: ${message}`);
+  }
+
   function setExpanded(ids: string[], expanded: boolean) {
     setCollapsed((current) => {
       const next = new Set(current);
@@ -126,7 +133,7 @@ function NewTournamentForm() {
           accept={CSV_ACCEPT}
           hint="Only .csv files are accepted."
           onFile={handleFile}
-          onReject={(message) => setImportError(`Couldn't import that file: ${message}`)}
+          onReject={handleReject}
         >
           <CsvSampleButton />
         </ImportDropzone>

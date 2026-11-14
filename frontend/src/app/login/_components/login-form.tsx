@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { TextField } from "@/components/primitives/text-field";
+import { claimAccountStorage } from "@/features/auth/services/account-storage";
 import { login } from "@/features/auth/services/auth-actions";
 
 interface LoginFormProps {
@@ -29,6 +30,7 @@ function LoginForm({ redirectTo, signupHref }: LoginFormProps) {
         setError(result.error);
         return;
       }
+      claimAccountStorage(result.user.id);
       router.push(redirectTo);
     });
   }

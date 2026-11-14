@@ -25,7 +25,7 @@ describe("LoginForm", () => {
       alert: "invalid credentials",
       pushed: 0,
     },
-    { name: "redirects after a successful login", result: { ok: true }, alert: null, pushed: 1 },
+    { name: "redirects after a successful login", result: { ok: true, user: { id: "u1" } }, alert: null, pushed: 1 },
   ])("$name", async ({ result, alert, pushed }) => {
     jest.mocked(login).mockResolvedValue(result as never);
     render(<LoginForm redirectTo="/admin" signupHref="/signup" />);
@@ -36,5 +36,17 @@ describe("LoginForm", () => {
       expect(await screen.findByRole("alert")).toHaveTextContent(alert);
     }
     await waitFor(() => expect(push).toHaveBeenCalledTimes(pushed));
+  });
+
+  it("drops a previous account's draft when someone else signs in", async () => {
+    sessionStorage.setItem("account-owner", "u0");
+    sessionStorage.setItem("account:tournament-creation-draft", "{}");
+    jest.mocked(login).mockResolvedValue({ ok: true, user: { id: "u1" } } as never);
+    render(<LoginForm redirectTo="/admin" signupHref="/signup" />);
+
+    submit();
+
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    expect(sessionStorage.getItem("account:tournament-creation-draft")).toBeNull();
   });
 });

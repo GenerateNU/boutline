@@ -1013,9 +1013,11 @@ are placed into pools.
   escape the browser's required check, so submit reopens any unsaved card that is
   missing fields or has incomplete fencers, and names it.
 - **Draft:** the whole form, events and fencers included, is kept in
-  sessionStorage, so a reload doesn't lose it. Its key starts with `account:`, so
-  logging out clears it (fencers' details shouldn't reach the next account in the
-  tab), and differs from the old two-step form's `tournament-draft`.
+  sessionStorage, so a reload doesn't lose it. Its key starts with `account:`.
+  Fencers' details mustn't reach the next account in the tab, so logging out
+  clears `account:` keys, and so does signing in as a different account than the
+  one that owned them (an expired session skips logout). The same account signing
+  back in keeps its draft.
 - **Planned:** submit creates the tournament, then its events, then imports
   competitors and adds staff, showing per-row errors and landing on the new
   tournament (#252). Today submit clears the draft and returns to the admin home.

@@ -1,4 +1,4 @@
-import { fireEvent, render as renderWithoutToaster, screen, within } from "@testing-library/react";
+import { act, fireEvent, render as renderWithoutToaster, screen, waitFor, within } from "@testing-library/react";
 
 import { Toaster } from "@/components/primitives/toast";
 
@@ -104,6 +104,26 @@ describe("NewTournamentForm", () => {
     });
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't import that file");
+  });
+
+  it("drops a CSV still parsing when a newer file is rejected", async () => {
+    let finishParsing: ((text: string) => void) | undefined;
+    const slowCsv = Object.assign(new File([""], "registrations.csv", { type: "text/csv" }), {
+      text: () => new Promise<string>((resolve) => (finishParsing = resolve)),
+    });
+    const { container } = render(<NewTournamentForm />);
+    const input = container.querySelector('input[type="file"]')!;
+
+    fireEvent.change(input, { target: { files: [slowCsv] } });
+    // Only drop the second file once the first is mid-parse, or there's no race.
+    await waitFor(() => expect(finishParsing).toBeDefined());
+    fireEvent.change(input, { target: { files: [new File(["hi"], "notes.txt", { type: "text/plain" })] } });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't import that file");
+    await act(async () => finishParsing!(EXAMPLE_COMPETITOR_IMPORT));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't import that file");
+    expect(screen.queryByText(/Autofilled/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Y14 Women's Foil" })).not.toBeInTheDocument();
   });
 
   it("won't submit while a tournament field is only spaces", () => {

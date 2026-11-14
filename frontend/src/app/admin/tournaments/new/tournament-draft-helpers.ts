@@ -23,25 +23,26 @@ const BLANK_FENCER: ImportedCompetitor = {
   event: "",
 };
 
-// Spellings a registration export might use for each gender POST /competitors accepts.
-const GENDER_SPELLINGS: Record<string, string> = {
-  f: "F",
-  female: "F",
-  w: "F",
-  woman: "F",
-  women: "F",
-  m: "M",
-  male: "M",
-  man: "M",
-  men: "M",
-  o: "O",
-  other: "O",
-};
+// Spellings a registration export might use for each gender POST /competitors
+// accepts. A Map, so a cell like "constructor" can't reach Object.prototype.
+const GENDER_SPELLINGS = new Map([
+  ["f", "F"],
+  ["female", "F"],
+  ["w", "F"],
+  ["woman", "F"],
+  ["women", "F"],
+  ["m", "M"],
+  ["male", "M"],
+  ["man", "M"],
+  ["men", "M"],
+  ["o", "O"],
+  ["other", "O"],
+]);
 
 export function newFencerDraft(competitor: ImportedCompetitor = BLANK_FENCER): FencerDraft {
   // The parser keeps the file's gender as written. Anything unrecognized becomes
   // blank, so the card asks for it instead of keeping a value the API would reject.
-  const gender = GENDER_SPELLINGS[competitor.gender.trim().toLowerCase()] ?? "";
+  const gender = GENDER_SPELLINGS.get(competitor.gender.trim().toLowerCase()) ?? "";
   return { ...competitor, gender, id: draftId() };
 }
 

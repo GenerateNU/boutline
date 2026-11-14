@@ -140,6 +140,8 @@ describe("newFencerDraft", () => {
     { gender: "Men", want: "M" },
     { gender: "other", want: "O" },
     { gender: "X", want: "" },
+    { gender: "constructor", want: "" },
+    { gender: "__proto__", want: "" },
     { gender: "", want: "" },
   ])("reads an imported gender of \"$gender\" as \"$want\"", ({ gender, want }) => {
     expect(newFencerDraft({ ...row("Ada", "").competitor, gender }).gender).toBe(want);
