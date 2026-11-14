@@ -503,10 +503,19 @@ func TestStartDirectElimination(t *testing.T) {
 		caller       uuid.UUID
 		seedStatus   directelimination.DirectEliminationStatus
 		useUnknownID bool
+		noEntries    bool
 		wantCode     int
 		wantDetail   string
 	}{
 		{name: "moves an upcoming round to active", caller: TestAdminID, seedStatus: directelimination.DirectEliminationStatusUpcoming},
+		{
+			name:       "refuses a round whose tableau has not been drawn",
+			caller:     TestAdminID,
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
+			noEntries:  true,
+			wantCode:   http.StatusConflict,
+			wantDetail: "the tableau must be drawn before the direct elimination can start",
+		},
 		{
 			name:       "refuses a round that has already started",
 			caller:     TestAdminID,
@@ -553,6 +562,9 @@ func TestStartDirectElimination(t *testing.T) {
 
 			stored := seededDirectElimination(TestEventID, tt.seedStatus)
 			repo := NewFakeDirectEliminationRepository(stored)
+			if !tt.noEntries {
+				repo.Entries[stored.ID] = 1
+			}
 
 			id := stored.ID.String()
 			if tt.useUnknownID {

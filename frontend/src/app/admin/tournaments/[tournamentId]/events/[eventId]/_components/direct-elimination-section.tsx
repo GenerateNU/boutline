@@ -5,6 +5,7 @@ import { getEventDirectElimination } from "../_services/get-event-direct-elimina
 import { getTableauDrawn } from "../_services/get-tableau-drawn";
 import { CreateDirectEliminationButton } from "./create-direct-elimination-button";
 import { GenerateTableauForm } from "./generate-tableau-form";
+import { StartDirectEliminationButton } from "./start-direct-elimination-button";
 
 interface DirectEliminationSectionProps {
   tournamentId: string;
@@ -21,7 +22,12 @@ async function DirectEliminationSection({ tournamentId, eventId }: DirectElimina
         <>
           <EventStatusBadge status={directElimination.status} />
           {drawn ? (
-            <p className="text-sm text-neutral-secondary">Tableau drawn.</p>
+            <>
+              <p className="text-sm text-neutral-secondary">Tableau drawn.</p>
+              {directElimination.status === "upcoming" && (
+                <StartDirectEliminationButton directEliminationId={directElimination.id} />
+              )}
+            </>
           ) : (
             directElimination.status === "upcoming" && (
               <GenerateTableauForm
