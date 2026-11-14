@@ -8,7 +8,6 @@ export const TOURNAMENT_PAGE_SIZE = 20;
 export const COUNTRY_CODE_PATTERN = /^[A-Z]{2}$/;
 
 export function parseTournamentFilters(query: SearchParams) {
-  const calendarView = query.view === "calendar";
   const day = parseDateParam(readStringParam(query, "date") || undefined);
   const club = readStringParam(query, "club");
   const country = readStringParam(query, "country");
@@ -18,8 +17,7 @@ export function parseTournamentFilters(query: SearchParams) {
     status: STATUSES.find((status) => status === query.status),
     day,
     date: day && formatDateParam(day),
-    calendarView,
-    search: calendarView ? "" : readStringParam(query, "q"),
+    search: readStringParam(query, "q"),
     tz: readStringParam(query, "tz") || undefined,
     // Values the backend would reject are dropped, since a 422 would break the page.
     club: club && club.length <= MAX_CLUB_LENGTH ? club : undefined,

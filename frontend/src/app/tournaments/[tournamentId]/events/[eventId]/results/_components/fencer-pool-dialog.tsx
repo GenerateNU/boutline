@@ -52,10 +52,10 @@ function FencerPoolDialog({ standing, fencerHref }: FencerPoolDialogProps) {
 
   return (
     <Dialog.Portal>
-      <Dialog.Overlay className="fixed inset-0 z-40 bg-foreground/20" />
+      <Dialog.Overlay className="fixed inset-0 z-40 bg-foreground/20 motion-safe:data-[state=open]:animate-fade-in motion-safe:data-[state=closed]:animate-fade-out" />
       <Dialog.Content
         aria-describedby={undefined}
-        className="fixed inset-x-4 top-1/2 z-50 mx-auto flex max-h-dvh max-w-88 -translate-y-1/2 flex-col overflow-y-auto gap-4 rounded-xl border border-foreground bg-background p-4"
+        className="fixed inset-x-4 top-1/2 z-50 mx-auto flex max-h-dvh max-w-88 -translate-y-1/2 flex-col overflow-y-auto gap-4 rounded-xl border border-foreground bg-background p-4 motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out"
       >
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground uppercase">Fencer in pool {pool}</p>

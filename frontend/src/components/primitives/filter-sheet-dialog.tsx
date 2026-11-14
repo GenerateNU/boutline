@@ -37,8 +37,8 @@ function FilterSheetDialog({
         </FilterButton>
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-obsidian/40" />
-        <Dialog.Content className="fixed inset-x-0 bottom-0 mx-auto flex max-h-dvh w-full max-w-mobile flex-col gap-4 overflow-y-auto rounded-t-3xl bg-background px-4 pt-4 pb-8 font-manrope">
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40 motion-safe:data-[state=open]:animate-fade-in motion-safe:data-[state=closed]:animate-fade-out" />
+        <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-dvh w-full max-w-mobile flex-col gap-4 overflow-y-auto rounded-t-3xl bg-background px-4 pt-4 pb-8 font-manrope motion-safe:data-[state=open]:animate-sheet-in motion-safe:data-[state=closed]:animate-sheet-out">
           <div className="flex items-center justify-between">
             <Dialog.Title className="text-xl font-semibold text-obsidian">
               Filter

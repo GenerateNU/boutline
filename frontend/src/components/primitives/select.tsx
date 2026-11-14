@@ -44,7 +44,7 @@ function Select({
         <SelectPrimitive.Content
           position="popper"
           sideOffset={4}
-          className="z-50 w-(--radix-select-trigger-width) rounded-lg border border-outline bg-background shadow-md"
+          className="z-50 w-(--radix-select-trigger-width) origin-(--radix-select-content-transform-origin) rounded-lg border border-outline bg-background shadow-md motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out"
         >
           <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
         </SelectPrimitive.Content>
