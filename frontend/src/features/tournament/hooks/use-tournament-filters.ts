@@ -29,10 +29,10 @@ function useTournamentFilters() {
     });
   }
 
-  function setDate(day: Date | undefined) {
+  function setDate(day: Date) {
     setFilters({
-      date: day ? formatDateParam(day) : undefined,
-      tz: day ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined,
+      date: formatDateParam(day),
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
   }
 
