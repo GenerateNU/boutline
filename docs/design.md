@@ -631,7 +631,7 @@ also pins their bouts. Event pages have no pinned section of their own.
 
 ### 6.3 Pin controls
 
-**Status:** Partial. Fencer rows and the Pooling tab's pool cards render a pin
+**Status:** Partial. Issue: #232. Fencer rows and the Pooling tab's pool cards render a pin
 button, but every page passes it `pinned={false}` with no handler, so it does
 nothing yet.
 
@@ -907,7 +907,7 @@ it, from what, and why. This is the one exception to forward-only lifecycles
 
 ### 9.5 Parent-row locking
 
-**Status:** Partial. Issue: #181. Pool create and re-seat lock the pool stage row
+**Status:** Partial. Issue: #203. Pool create and re-seat lock the pool stage row
 (§11.2); ending a bout takes no lock yet.
 
 This is the shared mechanism for derived transitions (§B.2). Ending a bout locks
@@ -1161,8 +1161,8 @@ time can be `V3`–`D2`, and a priority win can be `V2`–`D2`.
 
 ### 11.4 Pool and stage lifecycle
 
-**Status:** Partial. The transitions are built (§2.6); the admin-only check is
-planned.
+**Status:** Partial. Issue: #262. The transitions are built (§2.6); the admin-only
+check is planned.
 
 - **Built:** pools and the stage are started and ended by hand. A stage needs at
   least one pool to start and every pool completed to end. A pool needs a referee
@@ -1185,7 +1185,7 @@ results, stored on the DE entry (§12.1).
 
 ### 11.6 Pooling tab and pool screen
 
-**Status:** Planned. Issue: #127.
+**Status:** Planned. Issues: #127, #261.
 
 The Pooling tab lists the event's pools with their fencers, referee, strip and
 progress, each linking to a pool screen. The pool screen shows the classic grid
@@ -1300,7 +1300,7 @@ the final.
 
 ### 12.5 Tableau endpoint and tab
 
-**Status:** Partial. Issues: #100, #168. The endpoint is built; the tab is still
+**Status:** Partial. Issue: #100. The endpoint is built; the tab is still
 the fixture.
 
 - `GET /events/{id}/tableau` (public) returns every round from the bracket size
