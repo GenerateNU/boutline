@@ -1707,3 +1707,186 @@ func TestGetCallerTournamentRole(t *testing.T) {
 		})
 	}
 }
+
+func TestListTournamentsMine(t *testing.T) {
+	t.Parallel()
+
+	own := seeded("own pending", tournament.TournamentStatusPending)
+	own.CreatedBy = TestAdminID
+	ownActive := seeded("own active", tournament.TournamentStatusActive)
+	ownActive.CreatedBy = TestAdminID
+	theirs := seeded("theirs", tournament.TournamentStatusPending)
+	theirs.CreatedBy = TestStrangerID
+
+	tests := []struct {
+		name      string
+		caller    Caller
+		input     *tournament.TournamentListInput
+		wantNames []string
+		wantCode  int
+	}{
+		{
+			name:      "signed in sees only their own",
+			caller:    CallerAdmin,
+			input:     &tournament.TournamentListInput{Mine: true},
+			wantNames: []string{"own active", "own pending"},
+		},
+		{
+			name:      "another user sees only theirs",
+			caller:    CallerStranger,
+			input:     &tournament.TournamentListInput{Mine: true},
+			wantNames: []string{"theirs"},
+		},
+		{
+			name:      "combines with the status filter",
+			caller:    CallerAdmin,
+			input:     &tournament.TournamentListInput{Mine: true, Status: tournament.TournamentStatusActive},
+			wantNames: []string{"own active"},
+		},
+		{
+			name:      "without mine everything is listed",
+			caller:    CallerAdmin,
+			input:     &tournament.TournamentListInput{},
+			wantNames: []string{"own active", "own pending", "theirs"},
+		},
+		{
+			name:      "anonymous without mine still lists",
+			caller:    CallerAnonymous,
+			input:     &tournament.TournamentListInput{},
+			wantNames: []string{"own active", "own pending", "theirs"},
+		},
+		{
+			name:     "anonymous with mine is forbidden",
+			caller:   CallerAnonymous,
+			input:    &tournament.TournamentListInput{Mine: true},
+			wantCode: http.StatusForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			service := tournament.NewTournamentService(
+				NewFakeTournamentRepository(own, ownActive, theirs), NewFakeTournamentUserRepository())
+
+			out, err := service.ListTournaments(tt.caller.Context(t.Context()), tt.input)
+
+			if tt.wantCode != 0 {
+				status, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, status)
+				assert.Equal(t, "sign in to see your tournaments", detail)
+				return
+			}
+			require.NoError(t, err)
+			names := make([]string, 0, len(out.Body.Data))
+			for _, row := range out.Body.Data {
+				names = append(names, row.Name)
+			}
+			assert.Equal(t, tt.wantNames, names)
+			assert.Equal(t, int64(len(tt.wantNames)), out.Body.Total)
+		})
+	}
+}
+
+func TestTournamentVenueAndAuthority(t *testing.T) {
+	t.Parallel()
+
+	withDetails := seeded("before", tournament.TournamentStatusPending)
+	withDetails.Venue = ptr("Old Gym")
+	withDetails.SanctioningAuthority = ptr(tournament.TournamentSanctioningAuthorityFIE)
+
+	tests := []struct {
+		name          string
+		body          tournament.TournamentUpdateBody
+		wantVenue     *string
+		wantAuthority *tournament.TournamentSanctioningAuthority
+		wantCode      int
+	}{
+		{
+			name:          "sets both and trims the venue",
+			body:          tournament.TournamentUpdateBody{Venue: ptr("  Main Hall "), SanctioningAuthority: ptr(tournament.TournamentSanctioningAuthorityUSAFencing)},
+			wantVenue:     ptr("Main Hall"),
+			wantAuthority: ptr(tournament.TournamentSanctioningAuthorityUSAFencing),
+		},
+		{
+			name:          "an empty venue clears it and leaves the authority",
+			body:          tournament.TournamentUpdateBody{Venue: ptr("")},
+			wantVenue:     nil,
+			wantAuthority: ptr(tournament.TournamentSanctioningAuthorityFIE),
+		},
+		{
+			name:          "only an authority counts as a field",
+			body:          tournament.TournamentUpdateBody{SanctioningAuthority: ptr(tournament.TournamentSanctioningAuthorityOther)},
+			wantVenue:     ptr("Old Gym"),
+			wantAuthority: ptr(tournament.TournamentSanctioningAuthorityOther),
+		},
+		{
+			name:     "rejects an unknown authority",
+			body:     tournament.TournamentUpdateBody{SanctioningAuthority: ptr(tournament.TournamentSanctioningAuthority("nope"))},
+			wantCode: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakeTournamentRepository(withDetails)
+			out, err := tournament.NewTournamentService(repo, NewFakeTournamentUserRepository(Staff(withDetails.ID)...)).
+				UpdateTournamentByID(CallerAdmin.Context(t.Context()),
+					&tournament.TournamentUpdateInput{ID: withDetails.ID.String(), Body: tt.body})
+
+			if tt.wantCode != 0 {
+				status, _ := apiError(t, err)
+				assert.Equal(t, tt.wantCode, status)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantVenue, out.Body.Venue)
+			assert.Equal(t, tt.wantAuthority, out.Body.SanctioningAuthority)
+			assert.Equal(t, tt.wantVenue, repo.Tournaments[withDetails.ID].Venue)
+			assert.Equal(t, tt.wantAuthority, repo.Tournaments[withDetails.ID].SanctioningAuthority)
+		})
+	}
+}
+
+func TestCreateTournamentStoresVenueAndAuthority(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		venue         string
+		authority     *tournament.TournamentSanctioningAuthority
+		wantVenue     *string
+		wantAuthority *tournament.TournamentSanctioningAuthority
+		wantCode      int
+	}{
+		{name: "stores a trimmed venue and the authority", venue: " Main Hall ", authority: ptr(tournament.TournamentSanctioningAuthorityAskFred),
+			wantVenue: ptr("Main Hall"), wantAuthority: ptr(tournament.TournamentSanctioningAuthorityAskFred)},
+		{name: "a blank venue and no authority become null", venue: "  "},
+		{name: "rejects an unknown authority", authority: ptr(tournament.TournamentSanctioningAuthority("nope")), wantCode: http.StatusBadRequest},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			input := createInput("n", "")
+			input.Body.Venue = tt.venue
+			input.Body.SanctioningAuthority = tt.authority
+
+			out, err := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository()).
+				CreateTournament(CallerAdmin.Context(t.Context()), input)
+
+			if tt.wantCode != 0 {
+				status, _ := apiError(t, err)
+				assert.Equal(t, tt.wantCode, status)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantVenue, out.Body.Venue)
+			assert.Equal(t, tt.wantAuthority, out.Body.SanctioningAuthority)
+		})
+	}
+}

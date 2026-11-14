@@ -73,6 +73,12 @@ func (s *eventService) CreateEvent(ctx context.Context, input *EventCreateInput)
 		Format:       EventFormatPoolThenDirectElimination,
 		Name:         name,
 		Status:       EventStatusUpcoming,
+		Type:         input.Body.Type,
+		Weapon:       input.Body.Weapon,
+		Gender:       input.Body.Gender,
+		AgeCategory:  input.Body.AgeCategory,
+		RatingLimit:  input.Body.RatingLimit,
+		Qualifier:    input.Body.Qualifier != nil && *input.Body.Qualifier,
 		StartTime:    input.Body.StartTime,
 	}
 	if err := s.repo.CreateEvent(ctx, event); err != nil {
@@ -155,7 +161,7 @@ func (s *eventService) UpdateEventByID(ctx context.Context, input *EventUpdateIn
 		}
 		body.Name = &name
 	}
-	if body.Name == nil && body.StartTime == nil {
+	if body == (EventUpdateBody{}) {
 		return nil, errs.HumaError(errs.Public("provide at least one field to update", errs.ErrInvalidInput))
 	}
 

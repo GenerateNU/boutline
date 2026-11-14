@@ -119,6 +119,24 @@ func (f *FakeEventRepository) UpdateEventByID(_ context.Context, id uuid.UUID, u
 	if update.Name != nil {
 		stored.Name = *update.Name
 	}
+	if update.Type != nil {
+		stored.Type = update.Type
+	}
+	if update.Weapon != nil {
+		stored.Weapon = update.Weapon
+	}
+	if update.Gender != nil {
+		stored.Gender = update.Gender
+	}
+	if update.AgeCategory != nil {
+		stored.AgeCategory = update.AgeCategory
+	}
+	if update.RatingLimit != nil {
+		stored.RatingLimit = update.RatingLimit
+	}
+	if update.Qualifier != nil {
+		stored.Qualifier = *update.Qualifier
+	}
 	if update.StartTime != nil {
 		stored.StartTime = update.StartTime
 	}

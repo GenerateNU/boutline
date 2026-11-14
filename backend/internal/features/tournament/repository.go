@@ -28,15 +28,17 @@ type TournamentRepository interface {
 }
 
 type TournamentUpdate struct {
-	Name       *string
-	Visibility *TournamentVisibility
-	StartTime  *time.Time
-	City       *string
-	Country    *string
+	Name                 *string
+	Visibility           *TournamentVisibility
+	StartTime            *time.Time
+	City                 *string
+	Country              *string
+	Venue                *string
+	SanctioningAuthority *TournamentSanctioningAuthority
 }
 
 func (e TournamentUpdate) columns() map[string]any {
-	columns := make(map[string]any, 5)
+	columns := make(map[string]any, 7)
 
 	if e.Name != nil {
 		columns["name"] = *e.Name
@@ -52,6 +54,12 @@ func (e TournamentUpdate) columns() map[string]any {
 	}
 	if e.Country != nil {
 		columns["country"] = nullIfEmpty(*e.Country)
+	}
+	if e.Venue != nil {
+		columns["venue"] = nullIfEmpty(*e.Venue)
+	}
+	if e.SanctioningAuthority != nil {
+		columns["sanctioning_authority"] = *e.SanctioningAuthority
 	}
 
 	return columns
@@ -84,6 +92,7 @@ type TournamentListFilter struct {
 	Visibility TournamentVisibility
 	Club       string
 	Country    string
+	CreatedBy  uuid.UUID
 	Limit      int
 	Offset     int
 }
@@ -218,6 +227,9 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 	}
 	if filter.Country != "" {
 		query = query.Where("country = ?", filter.Country)
+	}
+	if filter.CreatedBy != uuid.Nil {
+		query = query.Where("created_by = ?", filter.CreatedBy)
 	}
 	if filter.Club != "" {
 		// Raw SQL: importing the competitor package here would be an import cycle.

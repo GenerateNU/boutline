@@ -70,6 +70,11 @@ func (s *tournamentService) CreateTournament(
 		return nil, errs.HumaError(errs.Public("name must not be blank", errs.ErrInvalidInput))
 	}
 
+	if authority := input.Body.SanctioningAuthority; authority != nil && !authority.IsValid() {
+		return nil, errs.HumaError(errs.Public(
+			fmt.Sprintf("unknown sanctioning_authority %q", *authority), errs.ErrInvalidInput))
+	}
+
 	visibility := input.Body.Visibility
 	if visibility == "" {
 		visibility = TournamentVisibilityPrivate
@@ -85,13 +90,15 @@ func (s *tournamentService) CreateTournament(
 	}
 
 	tournament := &Tournament{
-		Name:       name,
-		Visibility: visibility,
-		Status:     TournamentStatusPending,
-		CreatedBy:  createdBy,
-		StartTime:  input.Body.StartTime,
-		City:       optionalText(strings.TrimSpace(input.Body.City)),
-		Country:    optionalText(input.Body.Country),
+		Name:                 name,
+		Visibility:           visibility,
+		Status:               TournamentStatusPending,
+		CreatedBy:            createdBy,
+		StartTime:            input.Body.StartTime,
+		City:                 optionalText(strings.TrimSpace(input.Body.City)),
+		Country:              optionalText(input.Body.Country),
+		Venue:                optionalText(strings.TrimSpace(input.Body.Venue)),
+		SanctioningAuthority: input.Body.SanctioningAuthority,
 		// tournament_users is the only record of who administers a tournament,
 		// so the creator's admin row goes in with the tournament. The transaction
 		// is gorm's: tournamentRepository.CreateTournament's one Create call
@@ -216,6 +223,15 @@ func (s *tournamentService) ListTournaments(
 	term := strings.TrimSpace(input.Query)
 	limit, offset := page(input.Limit, input.Offset)
 
+	var createdBy uuid.UUID
+	if input.Mine {
+		caller, ok := session.UserIDFrom(ctx)
+		if !ok {
+			return nil, errs.HumaError(errs.Public("sign in to see your tournaments", errs.ErrForbidden))
+		}
+		createdBy = caller
+	}
+
 	tournaments, total, err := s.repo.ListTournaments(ctx, TournamentListFilter{
 		Status:     input.Status,
 		Term:       term,
@@ -224,6 +240,7 @@ func (s *tournamentService) ListTournaments(
 		Visibility: input.Visibility,
 		Club:       strings.TrimSpace(input.Club),
 		Country:    input.Country,
+		CreatedBy:  createdBy,
 		Limit:      limit,
 		Offset:     offset,
 	})
@@ -330,8 +347,22 @@ func tournamentUpdateFrom(body TournamentUpdateBody) (TournamentUpdate, error) {
 	}
 	update.Country = body.Country
 
+	if body.Venue != nil {
+		venue := strings.TrimSpace(*body.Venue)
+		update.Venue = &venue
+	}
+
+	if body.SanctioningAuthority != nil {
+		if !body.SanctioningAuthority.IsValid() {
+			return update, errs.Public(
+				fmt.Sprintf("unknown sanctioning_authority %q", *body.SanctioningAuthority), errs.ErrInvalidInput)
+		}
+		update.SanctioningAuthority = body.SanctioningAuthority
+	}
+
 	if update.Name == nil && update.Visibility == nil && update.StartTime == nil &&
-		update.City == nil && update.Country == nil {
+		update.City == nil && update.Country == nil && update.Venue == nil &&
+		update.SanctioningAuthority == nil {
 		return update, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
 	}
 

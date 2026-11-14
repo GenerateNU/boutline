@@ -950,3 +950,124 @@ func TestCallerRoleEndpoint(t *testing.T) {
 		})
 	}
 }
+
+func TestVenueAndAuthorityEndpoints(t *testing.T) {
+	t.Parallel()
+
+	stored := seeded("stored", tournament.TournamentStatusPending)
+	stored.Venue = ptr("Old Gym")
+	path := "/api/v1/tournaments/" + stored.ID.String()
+
+	tests := []struct {
+		name       string
+		method     string
+		path       string
+		body       map[string]any
+		wantStatus int
+		wantFields map[string]any
+	}{
+		{
+			name:       "create echoes venue and authority",
+			method:     http.MethodPost,
+			path:       "/api/v1/tournaments",
+			body:       map[string]any{"name": "n", "venue": " Main Hall ", "sanctioning_authority": "usa_fencing"},
+			wantStatus: http.StatusCreated,
+			wantFields: map[string]any{"venue": "Main Hall", "sanctioning_authority": "usa_fencing"},
+		},
+		{
+			name:       "create without them returns nulls",
+			method:     http.MethodPost,
+			path:       "/api/v1/tournaments",
+			body:       map[string]any{"name": "n"},
+			wantStatus: http.StatusCreated,
+			wantFields: map[string]any{"venue": nil, "sanctioning_authority": nil},
+		},
+		{
+			name:       "create rejects an authority outside the enum",
+			method:     http.MethodPost,
+			path:       "/api/v1/tournaments",
+			body:       map[string]any{"name": "n", "sanctioning_authority": "nope"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "create rejects an overlong venue",
+			method:     http.MethodPost,
+			path:       "/api/v1/tournaments",
+			body:       map[string]any{"name": "n", "venue": strings.Repeat("x", 121)},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "patch sets the authority and keeps the venue",
+			method:     http.MethodPatch,
+			path:       path,
+			body:       map[string]any{"sanctioning_authority": "fie"},
+			wantStatus: http.StatusOK,
+			wantFields: map[string]any{"venue": "Old Gym", "sanctioning_authority": "fie"},
+		},
+		{
+			name:       "patch with an empty venue clears it",
+			method:     http.MethodPatch,
+			path:       path,
+			body:       map[string]any{"venue": ""},
+			wantStatus: http.StatusOK,
+			wantFields: map[string]any{"venue": nil},
+		},
+		{
+			name:       "patch rejects an authority outside the enum",
+			method:     http.MethodPatch,
+			path:       path,
+			body:       map[string]any{"sanctioning_authority": "nope"},
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := newTestAPI(t, stored).DoCtx(CallerAdmin.Context(t.Context()), tt.method, tt.path, tt.body)
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+
+			body := decodeBody(t, resp.Body.Bytes())
+			for field, want := range tt.wantFields {
+				assert.Equal(t, want, body[field])
+			}
+		})
+	}
+}
+
+func TestListEndpointMine(t *testing.T) {
+	t.Parallel()
+
+	own := seeded("own", tournament.TournamentStatusPending)
+	own.CreatedBy = TestAdminID
+	theirs := seeded("theirs", tournament.TournamentStatusPending)
+
+	tests := []struct {
+		name       string
+		caller     Caller
+		query      string
+		wantStatus int
+		wantTotal  float64
+	}{
+		{name: "signed in gets only their own", caller: CallerAdmin, query: "?mine=true", wantStatus: http.StatusOK, wantTotal: 1},
+		{name: "mine=false lists everything", caller: CallerAdmin, query: "?mine=false", wantStatus: http.StatusOK, wantTotal: 2},
+		{name: "anonymous without mine lists everything", caller: CallerAnonymous, query: "", wantStatus: http.StatusOK, wantTotal: 2},
+		{name: "anonymous with mine is forbidden", caller: CallerAnonymous, query: "?mine=true", wantStatus: http.StatusForbidden},
+		{name: "rejects a non-boolean mine", caller: CallerAdmin, query: "?mine=maybe", wantStatus: http.StatusUnprocessableEntity},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := newTestAPI(t, own, theirs).GetCtx(tt.caller.Context(t.Context()), "/api/v1/tournaments"+tt.query)
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+			if tt.wantStatus == http.StatusOK {
+				assert.InDelta(t, tt.wantTotal, decodeBody(t, resp.Body.Bytes())["total"], 0)
+			}
+		})
+	}
+}
