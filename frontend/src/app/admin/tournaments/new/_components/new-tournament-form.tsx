@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/primitives/button";
+import { ImportDropzone } from "@/components/primitives/import-dropzone";
 import { useToast } from "@/components/primitives/toast";
-import { ImportDropzone } from "@/features/tournament/components/import-dropzone";
 import { parseCompetitorImport } from "@/lib/competitor-import/parse-competitor-import";
 import { pluralize } from "@/lib/pluralize";
 import { errorMessage } from "@/utils/error-message";

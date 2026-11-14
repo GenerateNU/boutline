@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 
-import { ImportDropzone } from "@/features/tournament/components/import-dropzone";
+import { ImportDropzone } from "@/components/primitives/import-dropzone";
 
 const CSV = { "text/csv": [".csv"] };
 

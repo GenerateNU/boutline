@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "cn";
 import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
 import { Accept } from "react-dropzone";
 
@@ -14,11 +15,20 @@ interface ImportDropzoneProps {
   onFile?: (file: File) => void;
   // Extra actions under the hint, such as a link to a sample file.
   children?: React.ReactNode;
+  className?: string;
 }
 
-function ImportDropzone({ accept, title = "Already have file?", hint, onFile, children }: ImportDropzoneProps) {
+// A dropzone with a title and an Upload button, for importing one file.
+function ImportDropzone({
+  accept,
+  title = "Already have file?",
+  hint,
+  onFile,
+  children,
+  className,
+}: ImportDropzoneProps) {
   return (
-    <Dropzone accept={accept} onFile={onFile} className="gap-3 px-6 py-8">
+    <Dropzone accept={accept} onFile={onFile} className={cn("gap-3 px-6 py-8", className)}>
       {(open) => (
         <>
           <CloudUploadOutlined aria-hidden className="size-8 text-neutral-secondary" />
@@ -27,7 +37,7 @@ function ImportDropzone({ accept, title = "Already have file?", hint, onFile, ch
             Upload
           </Button>
           {hint || children ? (
-            <div className="flex flex-col items-center">
+            <div data-slot="import-dropzone-footer" className="flex flex-col items-center">
               {hint ? <p className="text-xs text-neutral-secondary">{hint}</p> : null}
               {children}
             </div>
