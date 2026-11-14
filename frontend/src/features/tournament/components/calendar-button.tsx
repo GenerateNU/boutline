@@ -18,9 +18,9 @@ function CalendarButton() {
   const [month, setMonth] = useState<Date>();
 
   function openCalendar() {
-    const selected = parseDateParam(searchParams.get("date"));
+    const selected = parseDateParam(searchParams.get("date")) ?? today;
     setDraft(selected);
-    setMonth(selected ?? today);
+    setMonth(selected);
     setOpen(true);
   }
 
@@ -39,6 +39,7 @@ function CalendarButton() {
       <Modal open={open} onOpenChange={setOpen} title="Calendar">
         <Calendar
           mode="single"
+          required
           today={today}
           month={month}
           onMonthChange={setMonth}
@@ -49,7 +50,9 @@ function CalendarButton() {
           type="button"
           className="w-full rounded-lg"
           onClick={() => {
-            setDate(draft);
+            if (draft) {
+              setDate(draft);
+            }
             setOpen(false);
           }}
         >

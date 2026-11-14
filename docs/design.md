@@ -468,8 +468,11 @@ from the venue floor.
   shimmering card placeholders) shows until the list arrives.
 - **Search:** a plain GET form that works without JS; with JS it updates `?q=`
   after a 300 ms debounce.
-- **Dates:** five day tabs in a dark row under the global nav, with paging and a
-  day toggle. The strip opens with the selected day (else today) leftmost.
+- **Dates:** five day tabs in a dark row under the global nav, with paging. A
+  day is always selected: tapping the selected day keeps it, and a missing or
+  invalid `?date=` falls back to today. The server uses today in `?tz=` (else
+  UTC), then the strip rewrites the URL to the browser's own today and zone. The
+  strip opens with the selected day leftmost.
   Dragging the row locks to the previous, current or next five days: past a
   quarter of its width it turns the page, otherwise it springs back. Turning a
   page, by drag or chevron, selects its first day; tapping a day selects it
