@@ -463,6 +463,12 @@ func (s *tournamentService) UpdateTournamentUserRole(
 			fmt.Sprintf("unknown role %q", input.Body.Role), errs.ErrInvalidInput))
 	}
 
+	if input.Body.Role != tournamentuser.TournamentUserRoleAdmin {
+		if err := s.keepCreatorAdmin(ctx, tournamentID, userID); err != nil {
+			return nil, errs.HumaError(fmt.Errorf("update tournament user role: %w", err))
+		}
+	}
+
 	if err := s.membershipRepo.UpdateTournamentUserRole(ctx, tournamentID, userID, input.Body.Role); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("update tournament user role: %w", err))
 	}
@@ -488,11 +494,30 @@ func (s *tournamentService) RemoveTournamentUser(
 		return nil, errs.HumaError(fmt.Errorf("remove tournament user: %w", err))
 	}
 
+	if err := s.keepCreatorAdmin(ctx, tournamentID, userID); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("remove tournament user: %w", err))
+	}
+
 	if err := s.membershipRepo.DeleteTournamentUser(ctx, tournamentID, userID); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("remove tournament user: %w", err))
 	}
 
 	return nil, nil
+}
+
+// keepCreatorAdmin refuses to demote or remove the tournament's creator. Every
+// tournament's creator is made an admin on create, so this also means a
+// tournament can never be left without an admin.
+func (s *tournamentService) keepCreatorAdmin(ctx context.Context, tournamentID, userID uuid.UUID) error {
+	tournament, err := s.repo.GetTournamentByID(ctx, tournamentID)
+	if err != nil {
+		return fmt.Errorf("get tournament: %w", err)
+	}
+	if tournament.CreatedBy == userID {
+		return errs.Public("the tournament's creator must stay an admin", errs.ErrConflict)
+	}
+
+	return nil
 }
 
 func parseMembershipIDs(rawTournamentID, rawUserID string) (uuid.UUID, uuid.UUID, error) {

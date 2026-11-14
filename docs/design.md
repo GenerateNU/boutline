@@ -667,9 +667,8 @@ logged-in user reseat another tournament's pools.
 
 ### 7.2 Role checks
 
-**Status:** Partial. Issue: #4. The role helper runs on every mutating route, the
-creator is made an admin, and only a bout's assigned referee runs it; the
-last-admin guard is planned.
+**Status:** Built. Issue: #4. Tournaments created before their creator was made
+an admin still need that row backfilled, which is its own ticket.
 
 - **Built:** `tournamentuser.RequireRole(ctx, memberships, tournamentID, role)`
   runs on every mutating route and returns 403 unless the caller holds the role in
@@ -677,15 +676,16 @@ last-admin guard is planned.
   scoring writes need `referee`. Every other write needs `admin`, except creating
   a tournament, which any signed-in user can do.
 - **Built:** creating a tournament writes its `created_by` user into
-  `tournament_users` as `admin` in the same transaction. `tournament_users` is the
-  only record of who administers a tournament; `created_by` is never read for
-  authorization.
+  `tournament_users` as `admin` in the same transaction. `tournament_users` alone
+  decides who may act; `created_by` is read only to keep the creator an admin.
 - **Built:** `bout.RequireAssignedReferee(ctx, memberships, bout)` guards bout
-  start and end and every scoring write. The caller needs
-  the `referee` role and must be the bout's `referee_id`: 403 otherwise, and 409
-  while the bout has no referee. An admin passes the role check but still
-  referees only the bouts they are assigned to.
-- Guard against removing or demoting the last admin.
+  start and end and every scoring write. The caller needs the `referee` role and
+  must be the bout's `referee_id`: 403 otherwise, and 409 while the bout has no
+  referee. An admin passes the role check but still referees only the bouts they
+  are assigned to.
+- **Built:** the creator stays an admin. Changing their role to `referee` or
+  removing them is refused with 409. Every tournament's creator is made an admin
+  on create, so no tournament can be left without an admin.
 
 ### 7.3 Visibility
 
