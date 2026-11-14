@@ -28,7 +28,7 @@ export default async function AdminEventPage({
         )}
       </Section>
 
-      {poolStage?.status === "ended" && <DirectEliminationSection eventId={eventId} />}
+      {poolStage?.status === "ended" && <DirectEliminationSection tournamentId={tournamentId} eventId={eventId} />}
     </div>
   );
 }

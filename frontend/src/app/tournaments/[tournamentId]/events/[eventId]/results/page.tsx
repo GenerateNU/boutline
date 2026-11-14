@@ -19,7 +19,10 @@ export default async function ResultsTab({ params }: ResultsTabProps) {
   ]);
   // The backend refuses non-admins anyway; this only hides a button they can't use.
   const endPoolStage = role === "admin" && poolStage?.status === "active" && (
-    <EndPoolStageButton poolStageId={poolStage.id} />
+    <EndPoolStageButton
+      poolStageId={poolStage.id}
+      redirectTo={`/admin/tournaments/${tournamentId}/events/${eventId}`}
+    />
   );
 
   return (

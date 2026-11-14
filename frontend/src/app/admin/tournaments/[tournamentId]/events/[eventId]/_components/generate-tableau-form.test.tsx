@@ -5,9 +5,10 @@ import { apiRequest } from "@/services/api-request";
 
 import { GenerateTableauForm } from "./generate-tableau-form";
 
-const refresh = jest.fn();
+const push = jest.fn();
+const TABLEAU_HREF = "/tournaments/t-1/events/e-1/tableau";
 
-jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+jest.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 jest.mock("../../../../../../../services/api-request", () => ({ apiRequest: jest.fn() }));
 
 const apiRequestMock = jest.mocked(apiRequest);
@@ -15,43 +16,43 @@ const apiRequestMock = jest.mocked(apiRequest);
 function submit(percent?: string) {
   render(
     <Toaster>
-      <GenerateTableauForm directEliminationId="de 1" />
+      <GenerateTableauForm directEliminationId="de 1" tableauHref={TABLEAU_HREF} />
     </Toaster>,
   );
   if (percent) {
-    fireEvent.change(screen.getByLabelText("Advance %"), { target: { value: percent } });
+    fireEvent.change(screen.getByLabelText(/Advance %/), { target: { value: percent } });
   }
   fireEvent.click(screen.getByRole("button", { name: "Generate tableau" }));
 }
 
 describe("GenerateTableauForm", () => {
   beforeEach(() => {
-    refresh.mockClear();
+    push.mockClear();
     apiRequestMock.mockReset();
   });
 
   const cases = [
     {
-      name: "confirms and refreshes on success",
+      name: "confirms and goes to the tableau on success",
       result: () => Promise.resolve({}),
       message: "Tableau drawn",
-      refreshes: 1,
+      pushes: [[TABLEAU_HREF]],
     },
     {
-      name: "shows the backend error and does not refresh on failure",
+      name: "shows the backend error and stays put on failure",
       result: () => Promise.reject(new Error("at least 2 fencers must advance to draw a tableau")),
       message: "at least 2 fencers must advance to draw a tableau",
-      refreshes: 0,
+      pushes: [],
     },
   ];
 
-  it.each(cases)("$name", async ({ result, message, refreshes }) => {
+  it.each(cases)("$name", async ({ result, message, pushes }) => {
     apiRequestMock.mockImplementation(result);
 
     submit();
 
     expect(await screen.findByText(message)).toBeInTheDocument();
-    expect(refresh).toHaveBeenCalledTimes(refreshes);
+    expect(push.mock.calls).toEqual(pushes);
   });
 
   it("defaults to 100 percent", async () => {
