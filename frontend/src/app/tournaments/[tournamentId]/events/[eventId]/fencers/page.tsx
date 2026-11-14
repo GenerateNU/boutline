@@ -31,6 +31,11 @@ export default async function EventFencersTab({
   });
 
   const hasFilters = Boolean(team || rating || gender);
+  const activeFilters = [
+    { param: "team", name: "Club", value: team },
+    { param: "rating", name: "Rating", value: rating && optionLabel(RATING_OPTIONS, rating) },
+    { param: "gender", name: "Gender", value: gender && optionLabel(GENDER_OPTIONS, gender) },
+  ];
 
   return (
     <Section title="Fencers">
@@ -44,13 +49,7 @@ export default async function EventFencersTab({
         <FencerFilterSheet tournamentId={tournamentId} />
       </div>
 
-      <ActiveFilterChips
-        filters={[
-          { param: "team", name: "Club", value: team },
-          { param: "rating", name: "Rating", value: rating && optionLabel(RATING_OPTIONS, rating) },
-          { param: "gender", name: "Gender", value: gender && optionLabel(GENDER_OPTIONS, gender) },
-        ]}
-      />
+      <ActiveFilterChips filters={activeFilters} />
 
       {data.length === 0 ? (
         <p className="text-sm text-muted-foreground">

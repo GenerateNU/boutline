@@ -39,4 +39,24 @@ describe("ActiveFilterChips", () => {
 
     expect(replace).toHaveBeenLastCalledWith(expected, { scroll: false });
   });
+
+  // useSearchParams stays on the pre-navigation snapshot until the replace
+  // commits, so the second dismissal has to build on the first.
+  it("keeps the first dismissal when a second lands before it commits", () => {
+    render(
+      <ActiveFilterChips
+        filters={[
+          { param: "status", name: "Status", value: "In Progress" },
+          { param: "club", name: "Club", value: "Salle Nord" },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove Status: In Progress" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove Club: Salle Nord" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/tournaments?country=FR&q=open", {
+      scroll: false,
+    });
+  });
 });
