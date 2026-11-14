@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { SegmentedButton, SegmentedButtonItem } from "@/components/primitives/segmented-button";
+import { PoolTable } from "@/features/pool/components/pool-table";
 
 import { boutsTable } from "../_services/pool-table-data";
 import { poolTitle } from "../_services/pool-title";
@@ -14,7 +15,6 @@ import type { PoolView } from "../_types/pool-table";
 import { PoolPinButton } from "./pool-pin-button";
 import { PoolStandingsTable } from "./pool-standings-table";
 import { PoolStatusBadge } from "./pool-status-badge";
-import { PoolTable } from "./pool-table";
 
 interface PoolCardProps {
   pool: PoolBoard;

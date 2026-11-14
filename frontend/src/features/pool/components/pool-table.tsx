@@ -1,6 +1,6 @@
 import { cn } from "cn";
 
-import type { PoolTableCell, PoolTableData } from "../_types/pool-table";
+import type { PoolTableCell, PoolTableData } from "@/features/pool/types/pool-table";
 
 interface PoolTableProps {
   caption: string;

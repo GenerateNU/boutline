@@ -462,7 +462,12 @@ from the venue floor.
   underline spans the whole tab.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
-- **`/`**: redirects to `/tournaments`.
+- **`/`**: the landing page. A `blue-dark` hero with a "Live fencing results"
+  eyebrow, the "Every bout. Every score. Live." headline, and two buttons: Find a
+  tournament (`/tournaments`) and Run your tournament (`/admin`). Below them sit an
+  Ongoing Events card, then a "Built for the strip, not the spreadsheet." section
+  with a sample `PoolTable`. Only the two buttons are interactive. The events and
+  the pool are placeholder data.
 - **404** (`app/not-found.tsx`): unmatched URLs and `notFound()` calls show the
   logo, "Page not found" and a Back to home button that links to `/`.
 
