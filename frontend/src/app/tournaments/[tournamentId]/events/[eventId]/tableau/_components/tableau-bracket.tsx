@@ -25,13 +25,19 @@ function TableauBracket({
   query,
   boutBasePath,
 }: TableauBracketProps) {
+  // The scroll container, used to read and set the horizontal scroll position.
   const scrollerRef = useRef<HTMLDivElement>(null);
+  // Each round's column element by round id, to measure where it sits.
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasMounted = useRef(false);
+  // Debounce timer: fires once scrolling has stopped.
   const settleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // True while a scroll was started by picking a round button, so the settle
+  // handler doesn't treat it as the user swiping and overwrite the pick.
   const scrollingToButtonPick = useRef(false);
   const firstRoundId = rounds[0]?.id;
 
+  // Round picked in the button group (or by a swipe): scroll to its column by the left edge.
   useEffect(() => {
     // The first round is already in view on mount; any other selected round needs scrolling to.
     if (!hasMounted.current) {
@@ -45,9 +51,11 @@ function TableauBracket({
     if (!scroller || !column) {
       return;
     }
+    // Distance from scroller's left edge to the column; positive means the column is to the right.
     const offset =
       column.getBoundingClientRect().left -
       scroller.getBoundingClientRect().left;
+    // The last rounds can't reach the left edge (nothing left to scroll), so skip the scroll.
     const roomRight =
       scroller.scrollWidth - scroller.clientWidth - scroller.scrollLeft;
     const canMove =
@@ -62,11 +70,15 @@ function TableauBracket({
     });
   }, [focusedRoundId, firstRoundId]);
 
+  // Clear any pending settle timer on unmount.
   useEffect(() => () => clearTimeout(settleTimer.current), []);
 
+  // Swiping the bracket updates the selected round button. Wait until scrolling
+  // settles so we don't set state on every scroll event.
   function handleScroll() {
     clearTimeout(settleTimer.current);
     settleTimer.current = setTimeout(() => {
+      // The scroll came from a button pick; the selection is already right.
       if (scrollingToButtonPick.current) {
         scrollingToButtonPick.current = false;
         return;
@@ -78,11 +90,14 @@ function TableauBracket({
     }, SCROLL_SETTLE_MS);
   }
 
+  // Which round the user has scrolled to: the column closest to the left edge.
   function snappedRoundId(): string | undefined {
     const scroller = scrollerRef.current;
     if (!scroller) {
       return undefined;
     }
+    // At the far right the final round(s) can't reach the left edge, so pick the
+    // last round explicitly instead of the nearest column.
     if (
       scroller.scrollLeft + scroller.clientWidth >=
       scroller.scrollWidth - 1
@@ -108,6 +123,8 @@ function TableauBracket({
 
   return (
     <div className="h-full">
+      {/* Scrolls both ways. Top padding keeps the first cards clear of the round
+          buttons, which float over it; snap-x lines columns up on swipe. */}
       <div
         ref={scrollerRef}
         onScroll={handleScroll}
