@@ -9,10 +9,6 @@ import { TextField } from "@/components/primitives/text-field";
 import { signup } from "@/features/auth/services/auth-actions";
 
 const MAX_PASSWORD_BYTES = 72;
-const passwordRequirements = [
-  "At least 1 character",
-  `At most ${MAX_PASSWORD_BYTES} bytes (accented and non-Latin characters take 2 to 4)`,
-];
 
 interface SignupFormProps {
   redirectTo: string;
@@ -51,16 +47,28 @@ function SignupForm({ redirectTo, loginHref }: SignupFormProps) {
   }
 
   return (
-    <>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-        <TextField label="First name" name="firstName" autoComplete="given-name" required />
-        <TextField label="Last name" name="lastName" autoComplete="family-name" required />
+    <form onSubmit={handleSubmit} className="flex w-full flex-col items-center gap-5">
+      <div className="flex w-full flex-col gap-5">
         <TextField
-          label="New Email"
+          label="First Name"
+          name="firstName"
+          autoComplete="given-name"
+          placeholder="Enter first name"
+          required
+        />
+        <TextField
+          label="Last Name"
+          name="lastName"
+          autoComplete="family-name"
+          placeholder="Enter last name"
+          required
+        />
+        <TextField
+          label="Email"
           name="email"
           type="email"
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder="Enter new email"
           required
         />
         <TextField
@@ -68,41 +76,33 @@ function SignupForm({ redirectTo, loginHref }: SignupFormProps) {
           name="password"
           type="password"
           autoComplete="new-password"
+          placeholder="Enter new password"
           required
         />
-        <div className="flex flex-col gap-2">
-          <TextField
-            label="Confirm password"
-            name="confirmPassword"
-            type="password"
-            autoComplete="new-password"
-            required
-          />
-          <div className="px-3 text-sm">
-            <p>Password Requirements:</p>
-            <ul className="list-disc pl-6">
-              {passwordRequirements.map((rule) => (
-                <li key={rule}>{rule}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-        <Button type="submit" className="mx-auto rounded-none px-8" disabled={pending}>
-          Register Account
-        </Button>
-      </form>
-      <p className="text-center">
-        Have an account?{" "}
-        <Link href={loginHref} className="underline">
-          Login here
+        <TextField
+          label="Confirm Password"
+          name="confirmPassword"
+          type="password"
+          autoComplete="new-password"
+          placeholder="Enter confirmed password"
+          required
+        />
+      </div>
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <Button type="submit" className="mt-2.5 min-w-24.5 rounded-lg" disabled={pending}>
+        Register
+      </Button>
+      <p className="text-xs text-obsidian">
+        Have an account? Log in{" "}
+        <Link href={loginHref} className="text-mint hover:underline">
+          here
         </Link>
       </p>
-    </>
+    </form>
   );
 }
 

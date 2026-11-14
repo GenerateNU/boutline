@@ -1062,3 +1062,227 @@ func TestRemoveTournamentUser(t *testing.T) {
 		assert.Equal(t, "user_id must be a valid uuid", detail)
 	})
 }
+
+func TestTournamentLocation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		stored      tournament.Tournament
+		body        tournament.TournamentUpdateBody
+		wantCity    *string
+		wantCountry *string
+	}{
+		{
+			name:        "sets both fields and trims the city",
+			stored:      seeded("before", tournament.TournamentStatusPending),
+			body:        tournament.TournamentUpdateBody{City: ptr("  Boston "), Country: ptr("US")},
+			wantCity:    ptr("Boston"),
+			wantCountry: ptr("US"),
+		},
+		{
+			name:        "an empty city clears it and leaves the country",
+			stored:      withLocation(seeded("before", tournament.TournamentStatusPending), "Boston", "US"),
+			body:        tournament.TournamentUpdateBody{City: ptr("")},
+			wantCity:    nil,
+			wantCountry: ptr("US"),
+		},
+		{
+			name:        "a blank city clears it",
+			stored:      withLocation(seeded("before", tournament.TournamentStatusPending), "Boston", "US"),
+			body:        tournament.TournamentUpdateBody{City: ptr("   ")},
+			wantCity:    nil,
+			wantCountry: ptr("US"),
+		},
+		{
+			name:        "an empty country clears it and leaves the city",
+			stored:      withLocation(seeded("before", tournament.TournamentStatusPending), "Boston", "US"),
+			body:        tournament.TournamentUpdateBody{Country: ptr("")},
+			wantCity:    ptr("Boston"),
+			wantCountry: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakeTournamentRepository(tt.stored)
+			out, err := tournament.NewTournamentService(repo, NewFakeTournamentUserRepository()).UpdateTournamentByID(
+				t.Context(), &tournament.TournamentUpdateInput{ID: tt.stored.ID.String(), Body: tt.body})
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantCity, out.Body.City)
+			assert.Equal(t, tt.wantCountry, out.Body.Country)
+			assert.Equal(t, tt.wantCity, repo.Tournaments[tt.stored.ID].City)
+			assert.Equal(t, tt.wantCountry, repo.Tournaments[tt.stored.ID].Country)
+		})
+	}
+}
+
+func TestCreateTournamentStoresBlankLocationAsNull(t *testing.T) {
+	t.Parallel()
+
+	input := createInput("located", "", uuid.New().String())
+	input.Body.City = "  "
+	input.Body.Country = ""
+
+	out, err := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository()).
+		CreateTournament(t.Context(), input)
+
+	require.NoError(t, err)
+	assert.Nil(t, out.Body.City)
+	assert.Nil(t, out.Body.Country)
+}
+
+func withLocation(row tournament.Tournament, city, country string) tournament.Tournament {
+	row.City = &city
+	row.Country = &country
+
+	return row
+}
+
+func TestListTournamentsByClubAndCountry(t *testing.T) {
+	t.Parallel()
+
+	fall := withLocation(seeded("Fall Open", tournament.TournamentStatusPending), "Boston", "US")
+	winter := withLocation(seeded("Winter Classic", tournament.TournamentStatusPending), "Toronto", "CA")
+	summer := withLocation(seeded("Summer Invitational", tournament.TournamentStatusPending), "Paris", "FR")
+	unplaced := seeded("Unplaced", tournament.TournamentStatusPending)
+
+	tests := []struct {
+		name      string
+		input     *tournament.TournamentListInput
+		wantNames []string
+	}{
+		{
+			name:      "country keeps only that country",
+			input:     &tournament.TournamentListInput{Country: "CA"},
+			wantNames: []string{"Winter Classic"},
+		},
+		{
+			name:      "club matches a competitor's club in that tournament",
+			input:     &tournament.TournamentListInput{Club: "Allez Fencing"},
+			wantNames: []string{"Fall Open"},
+		},
+		{
+			name:      "club is trimmed",
+			input:     &tournament.TournamentListInput{Club: "  Tokyo Fencing Club "},
+			wantNames: []string{"Summer Invitational"},
+		},
+		{
+			name:      "club and country combine",
+			input:     &tournament.TournamentListInput{Club: "Allez Fencing", Country: "CA"},
+			wantNames: []string{},
+		},
+		{
+			name:      "an unknown club matches nothing",
+			input:     &tournament.TournamentListInput{Club: "Nobody"},
+			wantNames: []string{},
+		},
+		{
+			name:      "no filter returns everything including unplaced tournaments",
+			input:     &tournament.TournamentListInput{},
+			wantNames: []string{"Fall Open", "Summer Invitational", "Unplaced", "Winter Classic"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakeTournamentRepository(fall, winter, summer, unplaced)
+			repo.Clubs = map[uuid.UUID][]string{
+				fall.ID:   {"Allez Fencing"},
+				winter.ID: {"Maple Blades"},
+				summer.ID: {"Tokyo Fencing Club"},
+			}
+
+			out, err := tournament.NewTournamentService(repo, NewFakeTournamentUserRepository()).
+				ListTournaments(t.Context(), tt.input)
+
+			require.NoError(t, err)
+			names := make([]string, 0, len(out.Body.Data))
+			for _, row := range out.Body.Data {
+				names = append(names, row.Name)
+			}
+			assert.Equal(t, tt.wantNames, names)
+			assert.Equal(t, int64(len(tt.wantNames)), out.Body.Total)
+		})
+	}
+}
+
+func TestListTournamentCountries(t *testing.T) {
+	t.Parallel()
+
+	located := func(name, country string, visibility tournament.TournamentVisibility) tournament.Tournament {
+		row := withLocation(seeded(name, tournament.TournamentStatusPending), "Anywhere", country)
+		row.Visibility = visibility
+
+		return row
+	}
+	private, public := tournament.TournamentVisibilityPrivate, tournament.TournamentVisibilityPublic
+	empty := ""
+	blankCountry := seeded("blank", tournament.TournamentStatusPending)
+	blankCountry.Country = &empty
+
+	seed := []tournament.Tournament{
+		located("us one", "US", public),
+		located("us two", "US", private),
+		located("fr", "FR", public),
+		located("ca", "CA", private),
+		blankCountry,
+		seeded("unset", tournament.TournamentStatusPending),
+	}
+
+	tests := []struct {
+		name      string
+		input     *tournament.TournamentCountryListInput
+		want      []tournament.TournamentCountryResponse
+		wantTotal int64
+		wantLimit int
+	}{
+		{
+			name:  "groups by code sorted ascending and skips unset countries",
+			input: &tournament.TournamentCountryListInput{Limit: 250},
+			want: []tournament.TournamentCountryResponse{
+				{Code: "CA", TournamentCount: 1},
+				{Code: "FR", TournamentCount: 1},
+				{Code: "US", TournamentCount: 2},
+			},
+			wantTotal: 3,
+			wantLimit: 250,
+		},
+		{
+			name:  "visibility counts only matching tournaments",
+			input: &tournament.TournamentCountryListInput{Visibility: public, Limit: 250},
+			want: []tournament.TournamentCountryResponse{
+				{Code: "FR", TournamentCount: 1},
+				{Code: "US", TournamentCount: 1},
+			},
+			wantTotal: 2,
+			wantLimit: 250,
+		},
+		{
+			name:      "pages through the sorted codes with the unpaged total",
+			input:     &tournament.TournamentCountryListInput{Limit: 1, Offset: 1},
+			want:      []tournament.TournamentCountryResponse{{Code: "FR", TournamentCount: 1}},
+			wantTotal: 3,
+			wantLimit: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			out, err := tournament.NewTournamentService(NewFakeTournamentRepository(seed...), NewFakeTournamentUserRepository()).
+				ListTournamentCountries(t.Context(), tt.input)
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, out.Body.Data)
+			assert.Equal(t, tt.wantTotal, out.Body.Total)
+			assert.Equal(t, tt.wantLimit, out.Body.Limit)
+		})
+	}
+}

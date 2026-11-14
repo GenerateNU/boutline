@@ -57,7 +57,7 @@ function bout(
   };
 }
 
-export const bouts: BoutSummary[] = [
+export const BOUTS: BoutSummary[] = [
   bout(
     "e0000000-0000-4000-8000-000000000001",
     "pool",
@@ -149,5 +149,5 @@ export const bouts: BoutSummary[] = [
 ];
 
 export function findBout(id: string) {
-  return bouts.find((candidate) => candidate.id === id);
+  return BOUTS.find((candidate) => candidate.id === id);
 }

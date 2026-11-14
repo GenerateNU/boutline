@@ -24,7 +24,20 @@ var (
 	TestOtherAdminID = uuid.MustParse("c0000000-0000-4000-8000-000000000004")
 )
 
+// testEventID is the event every seeded competitor belongs to unless a test changes it.
+var testEventID = uuid.MustParse("11111111-1111-1111-1111-111111111111")
+
+// otherTestEventID is a second event of the test tournament, for tests that need competitors in different events.
+var otherTestEventID = uuid.MustParse("22222222-2222-2222-2222-222222222222")
+
 func NewTestService(repo competitor.CompetitorRepository) competitor.CompetitorService {
+	return NewTestServiceWithAthletes(repo, FakeAthleteLinker{})
+}
+
+func NewTestServiceWithAthletes(
+	repo competitor.CompetitorRepository,
+	athletes competitor.AthleteLinker,
+) competitor.CompetitorService {
 	return competitor.NewCompetitorService(repo,
 		FakeEventLookup{
 			testEventID:      {ID: testEventID, TournamentID: TestTournamentID},
@@ -37,7 +50,29 @@ func NewTestService(repo competitor.CompetitorRepository) competitor.CompetitorS
 			{UserID: TestAdminID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleAdmin},
 			{UserID: TestRefereeID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleReferee},
 			{UserID: TestOtherAdminID, TournamentID: uuid.New(), Role: tournamentuser.TournamentUserRoleAdmin},
-		})
+		},
+		athletes)
+}
+
+var _ competitor.AthleteLinker = FakeAthleteLinker{}
+
+type FakeAthleteLinker struct {
+	Err      error  // when set, every upsert fails with it
+	OnUpsert func() // when set, runs inside every upsert, e.g. to land a competing write first
+}
+
+func FakeAthleteID(number string) uuid.UUID {
+	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(number))
+}
+
+func (f FakeAthleteLinker) UpsertAthleteByMemberNumber(_ context.Context, number string) (uuid.UUID, error) {
+	if f.OnUpsert != nil {
+		f.OnUpsert()
+	}
+	if f.Err != nil {
+		return uuid.Nil, f.Err
+	}
+	return FakeAthleteID(number), nil
 }
 
 var _ competitor.CompetitorRepository = (*FakeCompetitorRepository)(nil)
@@ -196,6 +231,42 @@ func (f *FakeCompetitorRepository) ListCompetitorTeams(
 	return matched, total, nil
 }
 
+func (f *FakeCompetitorRepository) ListCompetitorClubs(
+	_ context.Context,
+	filter competitor.CompetitorClubListFilter,
+) ([]competitor.CompetitorTeamCount, int64, error) {
+	if f.Err != nil {
+		return nil, 0, f.Err
+	}
+	term := strings.ToLower(filter.Term)
+	counts := make(map[string]int64)
+	for _, candidate := range f.Competitors {
+		for _, club := range []*string{candidate.PrimaryClub, candidate.SecondaryClub} {
+			if club != nil && *club != "" && strings.Contains(strings.ToLower(*club), term) {
+				counts[*club]++
+			}
+		}
+	}
+
+	matched := make([]competitor.CompetitorTeamCount, 0, len(counts))
+	for club, count := range counts {
+		matched = append(matched, competitor.CompetitorTeamCount{Team: club, Count: count})
+	}
+	slices.SortFunc(matched, func(a, b competitor.CompetitorTeamCount) int {
+		return strings.Compare(a.Team, b.Team)
+	})
+
+	total := int64(len(matched))
+	if filter.Offset >= len(matched) {
+		return []competitor.CompetitorTeamCount{}, total, nil
+	}
+	matched = matched[filter.Offset:]
+	if filter.Limit < len(matched) {
+		matched = matched[:filter.Limit]
+	}
+	return matched, total, nil
+}
+
 func (f *FakeCompetitorRepository) UpdateCompetitorByID(
 	_ context.Context,
 	id uuid.UUID,
@@ -242,6 +313,7 @@ func (f *FakeCompetitorRepository) UpdateCompetitorByID(
 	}
 	if update.MemberNumber != nil {
 		stored.MemberNumber = emptyToNil(*update.MemberNumber)
+		stored.AthleteID = nil
 	}
 	if update.Team != nil {
 		stored.Team = *update.Team
@@ -262,6 +334,24 @@ func (f *FakeCompetitorRepository) DeleteCompetitor(_ context.Context, id uuid.U
 		return fmt.Errorf("delete competitor %s: %w", id, errs.ErrNotFound)
 	}
 	delete(f.Competitors, id)
+	return nil
+}
+
+func (f *FakeCompetitorRepository) SetCompetitorAthlete(
+	_ context.Context,
+	id uuid.UUID,
+	memberNumber string,
+	athleteID uuid.UUID,
+) error {
+	if f.Err != nil {
+		return f.Err
+	}
+	stored, ok := f.Competitors[id]
+	if !ok || stored.MemberNumber == nil || *stored.MemberNumber != memberNumber {
+		return nil
+	}
+	stored.AthleteID = &athleteID
+	f.Competitors[id] = stored
 	return nil
 }
 

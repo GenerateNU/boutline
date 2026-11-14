@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import CheckOutlined from "@mui/icons-material/CheckOutlined";
 
 import { Button } from "@/components/primitives/button";
 
@@ -15,7 +15,7 @@ export function ConfirmButton({ name, confirmed, onConfirm }: ConfirmButtonProps
       onClick={onConfirm}
       className="h-auto min-h-14 w-full min-w-0 touch-manipulation rounded-xl py-3 text-base break-words whitespace-normal"
     >
-      {confirmed && <Check />}
+      {confirmed && <CheckOutlined />}
       {confirmed ? `${name} confirmed` : `Confirm ${name}`}
     </Button>
   );

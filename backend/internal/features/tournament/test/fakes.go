@@ -18,7 +18,8 @@ var _ tournament.TournamentRepository = (*FakeTournamentRepository)(nil)
 
 type FakeTournamentRepository struct {
 	Tournaments map[uuid.UUID]tournament.Tournament
-	Err         error // when set, every method fails with it
+	Clubs       map[uuid.UUID][]string // clubs of each tournament's competitors, for the club filter
+	Err         error                  // when set, every method fails with it
 }
 
 func NewFakeTournamentRepository(seed ...tournament.Tournament) *FakeTournamentRepository {
@@ -101,6 +102,12 @@ func (f *FakeTournamentRepository) ListTournaments(
 				continue
 			}
 		}
+		if filter.Country != "" && (candidate.Country == nil || *candidate.Country != filter.Country) {
+			continue
+		}
+		if filter.Club != "" && !slices.Contains(f.Clubs[candidate.ID], filter.Club) {
+			continue
+		}
 		if !strings.Contains(strings.ToLower(candidate.Name), term) {
 			continue
 		}
@@ -143,10 +150,64 @@ func (f *FakeTournamentRepository) UpdateTournamentByID(
 	if update.StartTime != nil {
 		stored.StartTime = update.StartTime
 	}
+	if update.City != nil {
+		stored.City = nilIfEmpty(*update.City)
+	}
+	if update.Country != nil {
+		stored.Country = nilIfEmpty(*update.Country)
+	}
 
 	f.save(id, stored)
 
 	return nil
+}
+
+func nilIfEmpty(value string) *string {
+	if value == "" {
+		return nil
+	}
+
+	return &value
+}
+
+func (f *FakeTournamentRepository) ListTournamentCountries(
+	_ context.Context,
+	filter tournament.TournamentCountryFilter,
+) ([]tournament.TournamentCountryCount, int64, error) {
+	if f.Err != nil {
+		return nil, 0, f.Err
+	}
+
+	counts := map[string]int64{}
+	for _, candidate := range f.Tournaments {
+		if candidate.Country == nil || *candidate.Country == "" {
+			continue
+		}
+		if filter.Visibility != "" && candidate.Visibility != filter.Visibility {
+			continue
+		}
+		counts[*candidate.Country]++
+	}
+
+	grouped := make([]tournament.TournamentCountryCount, 0, len(counts))
+	for code, count := range counts {
+		grouped = append(grouped, tournament.TournamentCountryCount{Code: code, TournamentCount: count})
+	}
+	slices.SortFunc(grouped, func(a, b tournament.TournamentCountryCount) int {
+		return strings.Compare(a.Code, b.Code)
+	})
+
+	total := int64(len(grouped))
+	if filter.Offset >= len(grouped) {
+		return []tournament.TournamentCountryCount{}, total, nil
+	}
+
+	grouped = grouped[filter.Offset:]
+	if filter.Limit < len(grouped) {
+		grouped = grouped[:filter.Limit]
+	}
+
+	return grouped, total, nil
 }
 
 func (f *FakeTournamentRepository) TransitionTournamentByID(

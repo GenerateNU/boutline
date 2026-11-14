@@ -22,6 +22,7 @@ type TournamentRepository interface {
 	GetTournamentByID(ctx context.Context, id uuid.UUID) (*Tournament, error)
 	GetTournamentByCode(ctx context.Context, code string) (*Tournament, error)
 	ListTournaments(ctx context.Context, filter TournamentListFilter) ([]Tournament, int64, error)
+	ListTournamentCountries(ctx context.Context, filter TournamentCountryFilter) ([]TournamentCountryCount, int64, error)
 	UpdateTournamentByID(ctx context.Context, id uuid.UUID, update TournamentUpdate) error
 	TransitionTournamentByID(ctx context.Context, id uuid.UUID, transition TournamentTransition) error
 }
@@ -30,10 +31,12 @@ type TournamentUpdate struct {
 	Name       *string
 	Visibility *TournamentVisibility
 	StartTime  *time.Time
+	City       *string
+	Country    *string
 }
 
 func (e TournamentUpdate) columns() map[string]any {
-	columns := make(map[string]any, 3)
+	columns := make(map[string]any, 5)
 
 	if e.Name != nil {
 		columns["name"] = *e.Name
@@ -43,6 +46,12 @@ func (e TournamentUpdate) columns() map[string]any {
 	}
 	if e.StartTime != nil {
 		columns["start_time"] = *e.StartTime
+	}
+	if e.City != nil {
+		columns["city"] = nullIfEmpty(*e.City)
+	}
+	if e.Country != nil {
+		columns["country"] = nullIfEmpty(*e.Country)
 	}
 
 	return columns
@@ -73,8 +82,28 @@ type TournamentListFilter struct {
 	StartFrom  time.Time
 	StartTo    time.Time
 	Visibility TournamentVisibility
+	Club       string
+	Country    string
 	Limit      int
 	Offset     int
+}
+
+type TournamentCountryFilter struct {
+	Visibility TournamentVisibility
+	Limit      int
+	Offset     int
+}
+
+type TournamentCountryCount struct {
+	Code            string
+	TournamentCount int64
+}
+
+func nullIfEmpty(value string) any {
+	if value == "" {
+		return nil
+	}
+	return value
 }
 
 type tournamentRepository struct {
@@ -184,6 +213,19 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 	if !filter.StartTo.IsZero() {
 		query = query.Where("start_time < ?", filter.StartTo)
 	}
+	if filter.Country != "" {
+		query = query.Where("country = ?", filter.Country)
+	}
+	if filter.Club != "" {
+		// Raw SQL: importing the competitor package here would be an import cycle.
+		// Joins through events because competitors.tournament_id is nullable.
+		query = query.Where(`EXISTS (
+			SELECT 1 FROM competitors
+			JOIN events ON events.id = competitors.event_id
+			WHERE events.tournament_id = tournaments.id
+			AND (competitors.primary_club = ? OR competitors.secondary_club = ?))`,
+			filter.Club, filter.Club)
+	}
 	query = utils.TrigramMatch(query, tournamentNameTrigramExpr, filter.Term)
 
 	var total int64
@@ -203,4 +245,33 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 	}
 
 	return tournaments, total, nil
+}
+
+func (r *tournamentRepository) ListTournamentCountries(
+	ctx context.Context,
+	filter TournamentCountryFilter,
+) ([]TournamentCountryCount, int64, error) {
+	query := r.db.WithContext(ctx).Model(&Tournament{}).Where("country IS NOT NULL AND country <> ''")
+	if filter.Visibility != "" {
+		query = query.Where("visibility = ?", filter.Visibility)
+	}
+
+	var total int64
+	if err := query.Distinct("country").Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count tournament countries: %w", err)
+	}
+
+	countries := make([]TournamentCountryCount, 0, filter.Limit)
+	err := query.
+		Select("country AS code, COUNT(*) AS tournament_count").
+		Group("country").
+		Order("country ASC").
+		Limit(filter.Limit).
+		Offset(filter.Offset).
+		Scan(&countries).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("select tournament countries: %w", err)
+	}
+
+	return countries, total, nil
 }

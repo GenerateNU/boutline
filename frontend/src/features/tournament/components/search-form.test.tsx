@@ -10,7 +10,7 @@ jest.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-const props = {
+const PROPS = {
   action: "/tournaments",
   label: "Search tournaments",
   placeholder: "e.g. Fall Open 2026",
@@ -28,7 +28,7 @@ describe("SearchForm", () => {
 
   function renderForm(defaultValue: string) {
     return render(
-      <SearchForm {...props} defaultValue={defaultValue} />,
+      <SearchForm {...PROPS} defaultValue={defaultValue} />,
     );
   }
 
@@ -45,14 +45,14 @@ describe("SearchForm", () => {
 
     fireEvent.change(input, { target: { value: typedSince } });
     rerender(
-      <SearchForm {...props} defaultValue="summer" />,
+      <SearchForm {...PROPS} defaultValue="summer" />,
     );
 
     expect(input).toHaveValue(typedSince);
   });
 
   it("shows the sample placeholder", () => {
-    render(<SearchForm {...props} />);
+    render(<SearchForm {...PROPS} />);
 
     expect(screen.getByRole("searchbox")).toHaveAttribute("placeholder", "e.g. Fall Open 2026");
   });
@@ -60,7 +60,7 @@ describe("SearchForm", () => {
   it("follows a search changed from outside the field", () => {
     const { rerender } = renderForm("summer");
 
-    rerender(<SearchForm {...props} defaultValue="fall" />);
+    rerender(<SearchForm {...PROPS} defaultValue="fall" />);
 
     expect(screen.getByRole("searchbox")).toHaveValue("fall");
   });

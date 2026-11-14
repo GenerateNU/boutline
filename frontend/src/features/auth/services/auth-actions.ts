@@ -5,12 +5,12 @@ import { clearSessionToken, setSessionToken } from "@/features/auth/services/ses
 import { problemMessage } from "@/services/api-request";
 
 
-const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
+const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 
 async function authenticate(path: "login" | "signup", body: object): Promise<AuthResult> {
   let response: Response;
   try {
-    response = await fetch(new URL(`/api/v1/auth/${path}`, apiProxyTarget), {
+    response = await fetch(new URL(`/api/v1/auth/${path}`, API_PROXY_TARGET), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

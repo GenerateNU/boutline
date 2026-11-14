@@ -1,6 +1,6 @@
 import type { CompetitorListResult } from "@/types/competitor";
 
-const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
+const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 
 export async function getCompetitors(
   tournamentId: string,
@@ -9,7 +9,7 @@ export async function getCompetitors(
   query?: string,
   team?: string,
 ): Promise<CompetitorListResult> {
-  const url = new URL("/api/v1/competitors", apiProxyTarget);
+  const url = new URL("/api/v1/competitors", API_PROXY_TARGET);
   url.searchParams.set("tournament_id", tournamentId);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("offset", String(offset));

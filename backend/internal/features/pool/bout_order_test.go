@@ -15,8 +15,6 @@ func TestPoolBoutOrder(t *testing.T) {
 		first [2]int
 		last  [2]int
 	}{
-		{2, [2]int{1, 2}, [2]int{1, 2}},
-		{3, [2]int{1, 2}, [2]int{3, 1}},
 		{4, [2]int{1, 4}, [2]int{1, 2}},
 		{5, [2]int{1, 2}, [2]int{4, 2}},
 		{6, [2]int{1, 2}, [2]int{3, 6}},
@@ -53,7 +51,7 @@ func TestPoolBoutOrder(t *testing.T) {
 func TestPoolBoutOrderUnsupportedSize(t *testing.T) {
 	t.Parallel()
 
-	for _, size := range []int{0, 1, 11} {
+	for _, size := range []int{0, 1, 2, 3, 11} {
 		t.Run(fmt.Sprintf("size %d", size), func(t *testing.T) {
 			t.Parallel()
 

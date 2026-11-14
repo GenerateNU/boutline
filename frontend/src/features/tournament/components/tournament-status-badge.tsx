@@ -1,13 +1,13 @@
 import { StatusBadge, type Status } from "@/components/primitives/status-badge";
 import type { TournamentStatus } from "@/features/tournament/types/tournament";
 
-const statusLabels: Record<TournamentStatus, string> = {
+const STATUS_LABELS: Record<TournamentStatus, string> = {
   pending: "Upcoming",
   active: "In Progress",
   ended: "Completed",
 };
 
-const badgeStatus: Record<TournamentStatus, Status> = {
+const BADGE_STATUS: Record<TournamentStatus, Status> = {
   pending: "upcoming",
   active: "in-progress",
   ended: "completed",
@@ -18,7 +18,7 @@ interface TournamentStatusBadgeProps extends React.ComponentProps<"div"> {
 }
 
 function TournamentStatusBadge({ status, ...props }: TournamentStatusBadgeProps) {
-  return <StatusBadge status={badgeStatus[status]} {...props} />;
+  return <StatusBadge status={BADGE_STATUS[status]} {...props} />;
 }
 
-export { TournamentStatusBadge, statusLabels };
+export { TournamentStatusBadge, STATUS_LABELS as statusLabels };

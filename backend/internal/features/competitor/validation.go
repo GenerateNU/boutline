@@ -1,11 +1,22 @@
 package competitor
 
 import (
+	"regexp"
 	"strings"
 	"time"
 
 	"boutline/internal/errs"
 )
+
+var memberNumberPattern = regexp.MustCompile(`^1\d{8}$`)
+
+func parseMemberNumber(raw string) (string, error) {
+	number := strings.TrimSpace(raw)
+	if number != "" && !memberNumberPattern.MatchString(number) {
+		return "", errs.Public("member number must be 9 digits starting with 1", errs.ErrInvalidInput)
+	}
+	return number, nil
+}
 
 func parseRating(raw string) (Rating, error) {
 	rating := Rating(strings.TrimSpace(raw))

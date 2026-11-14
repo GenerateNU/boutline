@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import { Plus } from "lucide-react";
+import AddOutlined from "@mui/icons-material/AddOutlined";
 
 import { Button } from "@/components/primitives/button";
 
@@ -40,7 +40,7 @@ export function ScorePanel({ name, team, score, scoringClosed, /* disabled, */ o
           onClick={onTouch}
           className="h-32 w-full touch-manipulation rounded-xl [&_svg]:size-16"
         >
-          <Plus strokeWidth={3} />
+          <AddOutlined />
         </Button>
       )}
     </div>

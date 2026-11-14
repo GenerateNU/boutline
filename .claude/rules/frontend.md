@@ -32,6 +32,10 @@ state, effects, or browser APIs, and push it down to the leaf that needs it.
 
 - Type the boundaries: props, API responses, route params. No `any`; use `unknown`
   plus a narrowing check.
+- Module-level constants holding a value are SCREAMING_CASE: `PAGE_SIZE`, `STATUS_LABELS`,
+  test fixtures like `TOURNAMENT`. Functions, components, `jest.fn()` doubles, mutable
+  module state, `next/font` loaders, and names Next.js requires (`metadata`, `config`,
+  `proxy`) stay camelCase.
 - Tailwind utilities for styling. Reach for an existing token or a CSS variable in
   `globals.css` before writing an arbitrary value like `w-[437px]`.
 - Run `bun run lint` on what you changed.

@@ -13,10 +13,15 @@
     "test:ci": "jest --ci --coverage --passWithNoTests"
   },
   "dependencies": {
+    "@emotion/cache": "11.14.0",
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
+    "@mui/icons-material": "9.5.0",
+    "@mui/material": "9.5.0",
+    "@mui/material-nextjs": "9.5.0",
     "class-variance-authority": "0.7.1",
     "cn": "0.4.0",
     "date-fns": "4.4.0",
-    "lucide-react": "1.52.0",
     "next": "16.3.4",
     "papaparse": "5.5.3",
     "radix-ui": "1.7.0",

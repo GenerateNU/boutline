@@ -2,6 +2,7 @@ package test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -16,8 +17,13 @@ import (
 
 func newTestAPI(t *testing.T, seed ...competitor.Competitor) humatest.TestAPI {
 	t.Helper()
+	return newTestAPIWithAthletes(t, FakeAthleteLinker{}, seed...)
+}
+
+func newTestAPIWithAthletes(t *testing.T, athletes competitor.AthleteLinker, seed ...competitor.Competitor) humatest.TestAPI {
+	t.Helper()
 	_, api := humatest.New(t)
-	competitor.RegisterCompetitorService(api, NewTestService(NewFakeCompetitorRepository(seed...)))
+	competitor.RegisterCompetitorService(api, NewTestServiceWithAthletes(NewFakeCompetitorRepository(seed...), athletes))
 	return api
 }
 
@@ -298,6 +304,32 @@ func TestListTeamsEndpoint(t *testing.T) {
 	})
 }
 
+func TestListClubsEndpoint(t *testing.T) {
+	t.Parallel()
+	member := seeded("A", "Adams", competitor.RatingU, "")
+	member.PrimaryClub = ptr("NU Fencing")
+	member.SecondaryClub = ptr("Tokyo Fencing Club")
+
+	t.Run("returns the paginated envelope", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, member).Get("/api/v1/clubs?q=nu")
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Equal(t, float64(1), body["total"])
+		assert.Equal(t, float64(20), body["limit"])
+		assert.Equal(t, float64(0), body["offset"])
+		assert.Equal(t,
+			[]any{map[string]any{"name": "NU Fencing", "competitorCount": float64(1)}}, body["data"])
+	})
+
+	t.Run("rejects a limit of zero with a 422", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, member).Get("/api/v1/clubs?limit=0")
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code, "body: %s", resp.Body)
+	})
+}
+
 func TestUpdateEndpoint(t *testing.T) {
 	t.Parallel()
 	stored := seeded("Lee", "Kiefer", competitor.RatingB, "NU Fencing")
@@ -403,5 +435,35 @@ func TestListTournamentTeamsEndpoint(t *testing.T) {
 		t.Parallel()
 		resp := newTestAPI(t, seed...).Get("/api/v1/tournaments/" + uuid.New().String() + "/teams")
 		assert.Equal(t, http.StatusNotFound, resp.Code, "body: %s", resp.Body)
+	})
+}
+
+func TestAthleteLinkingEndpoint(t *testing.T) {
+	t.Parallel()
+	body := createRequest(map[string]any{"memberNumber": "100000123"})
+
+	t.Run("still creates the competitor when the athlete upsert fails", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPIWithAthletes(t, FakeAthleteLinker{Err: errors.New("boom")}).
+			Post("/api/v1/competitors", body)
+		require.Equal(t, http.StatusCreated, resp.Code)
+		fields := decodeBody(t, resp.Body.Bytes())
+		assert.Contains(t, fields, "athleteId")
+		assert.Nil(t, fields["athleteId"])
+	})
+
+	t.Run("links the athlete but hides the member number from anonymous callers", func(t *testing.T) {
+		t.Parallel()
+		api := newTestAPI(t)
+		created := api.Post("/api/v1/competitors", body)
+		require.Equal(t, http.StatusCreated, created.Code)
+		createdFields := decodeBody(t, created.Body.Bytes())
+		assert.Contains(t, createdFields, "memberNumber")
+		assert.Nil(t, createdFields["memberNumber"])
+		assert.Equal(t, FakeAthleteID("100000123").String(), createdFields["athleteId"])
+
+		fetched := api.Get("/api/v1/competitors/" + createdFields["id"].(string))
+		require.Equal(t, http.StatusOK, fetched.Code)
+		assert.Nil(t, decodeBody(t, fetched.Body.Bytes())["memberNumber"])
 	})
 }

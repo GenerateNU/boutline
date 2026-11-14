@@ -10,7 +10,7 @@ function Card({ className, orientation = "vertical", ...props }: CardProps) {
       data-slot="card"
       data-orientation={orientation}
       className={cn(
-        "group/card relative flex gap-4 border border-foreground bg-card p-4 text-card-foreground data-[orientation=horizontal]:items-center data-[orientation=vertical]:flex-col",
+        "group/card relative flex gap-4 rounded-[12px] border border-outline bg-card p-4 shadow-sm text-card-foreground data-[orientation=horizontal]:items-center data-[orientation=vertical]:flex-col",
         className,
       )}
       {...props}

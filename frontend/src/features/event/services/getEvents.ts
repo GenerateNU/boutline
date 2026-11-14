@@ -4,13 +4,13 @@ import type { EventListResult, TournamentEvent } from "@/features/event/types/ev
 // in the browser. Server Components fetch Node-side, where a relative URL
 // throws, so this hits the backend directly instead of going through the /api
 // rewrite in next.config.ts.
-const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
+const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 
 // The backend's maximum page size.
 const EVENT_FETCH_LIMIT = 100;
 
 async function getEventPage(tournamentId: string, offset: number): Promise<EventListResult> {
-  const url = new URL("/api/v1/events", apiProxyTarget);
+  const url = new URL("/api/v1/events", API_PROXY_TARGET);
   url.searchParams.set("tournament_id", tournamentId);
   url.searchParams.set("limit", String(EVENT_FETCH_LIMIT));
   url.searchParams.set("offset", String(offset));

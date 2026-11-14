@@ -1,6 +1,6 @@
 import { TabNav } from "@/components/primitives/tab-nav";
 
-const tabs = [
+const TABS = [
   { label: "Pooling", segment: "pooling" },
   { label: "Fencers", segment: "fencers" },
   { label: "Tableau", segment: "tableau" },
@@ -18,7 +18,7 @@ export default async function EventLayout({
       <TabNav
         label="Event sections"
         basePath={`/tournaments/${tournamentId}/events/${eventId}`}
-        tabs={tabs}
+        tabs={TABS}
       />
       {children}
     </div>

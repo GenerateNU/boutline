@@ -30,7 +30,7 @@ func newPoolStageResponse(stage PoolStage) PoolStageResponse {
 
 type PoolStageCreateBody struct {
 	EventID              string     `json:"event_id" format:"uuid" doc:"Event this pool stage belongs to"`
-	MaxCompetitorPerPool int        `json:"max_competitor_per_pool" minimum:"2" doc:"Largest number of competitors placed in one pool"`
+	MaxCompetitorPerPool int        `json:"max_competitor_per_pool" minimum:"4" doc:"Largest number of competitors placed in one pool"`
 	StartTime            *time.Time `json:"start_time,omitempty" doc:"Scheduled start"`
 }
 
@@ -43,7 +43,7 @@ type PoolStageIDInput struct {
 }
 
 type PoolStageUpdateBody struct {
-	MaxCompetitorPerPool *int       `json:"max_competitor_per_pool,omitempty" minimum:"2" doc:"New largest number of competitors in one pool"`
+	MaxCompetitorPerPool *int       `json:"max_competitor_per_pool,omitempty" minimum:"4" doc:"New largest number of competitors in one pool"`
 	StartTime            *time.Time `json:"start_time,omitempty" doc:"New scheduled start"`
 }
 
@@ -75,4 +75,34 @@ type PoolStageListBody struct {
 
 type PoolStageListOutput struct {
 	Body PoolStageListBody
+}
+
+type PoolStageProposalBody struct {
+	CompetitorIDs []string `json:"competitor_ids" format:"uuid" nullable:"false" minItems:"4" maxItems:"1000" doc:"Competitors to split into pools; each must be entered in the pool stage's event"`
+}
+
+type PoolStageProposalInput struct {
+	ID   string `path:"id" format:"uuid" doc:"Pool stage ID"`
+	Body PoolStageProposalBody
+}
+
+type PoolStageProposedFencer struct {
+	CompetitorID string `json:"competitor_id" format:"uuid"`
+	FirstName    string `json:"first_name"`
+	LastName     string `json:"last_name"`
+	Rating       string `json:"rating" enum:"A,B,C,D,E,U"`
+	Team         string `json:"team"`
+}
+
+type PoolStageProposedPool struct {
+	Number  int                       `json:"number" doc:"Suggested pool number, from 1"`
+	Fencers []PoolStageProposedFencer `json:"fencers" doc:"In seed order"`
+}
+
+type PoolStageProposalResult struct {
+	Pools []PoolStageProposedPool `json:"pools"`
+}
+
+type PoolStageProposalOutput struct {
+	Body PoolStageProposalResult
 }

@@ -3,6 +3,7 @@ package poolstage
 import (
 	"time"
 
+	"boutline/internal/features/competitor"
 	"boutline/internal/features/event"
 
 	"github.com/google/uuid"
@@ -36,7 +37,7 @@ type PoolStage struct {
 	ID                   uuid.UUID       `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	EventID              uuid.UUID       `gorm:"type:uuid;not null;index"`
 	Event                *event.Event    `gorm:"foreignKey:EventID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
-	MaxCompetitorPerPool int             `gorm:"not null;check:chk_pool_stages_max_competitor_per_pool,max_competitor_per_pool >= 2"`
+	MaxCompetitorPerPool int             `gorm:"not null;check:chk_pool_stages_max_competitor_per_pool,max_competitor_per_pool >= 4"`
 	Status               PoolStageStatus `gorm:"type:text;not null;default:upcoming;check:chk_pool_stages_status,status IN ('upcoming','active','ended')"`
 	StartTime            *time.Time
 	StartedAt            *time.Time
@@ -47,4 +48,14 @@ type PoolStage struct {
 
 func (PoolStage) TableName() string {
 	return "pool_stages"
+}
+
+// PoolStageCompetitor is a competitor as a pool proposal needs them.
+type PoolStageCompetitor struct {
+	ID        uuid.UUID
+	EventID   uuid.UUID
+	FirstName string
+	LastName  string
+	Rating    competitor.Rating
+	Team      string
 }

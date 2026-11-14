@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
 import { cn } from "cn";
 
 import { Button } from "@/components/primitives/button";
@@ -21,7 +21,7 @@ function SubTopAppBar({ title, backHref, actions, className }: SubTopAppBarProps
     >
       <Button asChild variant="text" size="icon">
         <Link href={backHref} aria-label="Go back">
-          <ChevronLeft />
+          <ChevronLeftOutlined />
         </Link>
       </Button>
       <h2 className="flex-1 truncate text-lg">{title}</h2>

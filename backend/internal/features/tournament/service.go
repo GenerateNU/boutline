@@ -21,6 +21,8 @@ const (
 	TournamentDefaultPageSize = 20
 	TournamentMaxPageSize     = 100
 
+	TournamentMaxCountryPageSize = 250
+
 	TournamentCodeLength      = 6
 	tournamentCodeAlphabet    = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 	tournamentCodeMaxAttempts = 5
@@ -32,6 +34,7 @@ type TournamentService interface {
 	GetTournamentByID(ctx context.Context, input *TournamentIDInput) (*TournamentOutput, error)
 	GetTournamentByCode(ctx context.Context, input *TournamentCodeInput) (*TournamentOutput, error)
 	ListTournaments(ctx context.Context, input *TournamentListInput) (*TournamentListOutput, error)
+	ListTournamentCountries(ctx context.Context, input *TournamentCountryListInput) (*TournamentCountryListOutput, error)
 	UpdateTournamentByID(ctx context.Context, input *TournamentUpdateInput) (*TournamentOutput, error)
 	StartTournament(ctx context.Context, input *TournamentIDInput) (*TournamentOutput, error)
 	CompleteTournament(ctx context.Context, input *TournamentIDInput) (*TournamentOutput, error)
@@ -85,6 +88,8 @@ func (s *tournamentService) CreateTournament(
 		Status:     TournamentStatusPending,
 		CreatedBy:  createdBy,
 		StartTime:  input.Body.StartTime,
+		City:       optionalText(strings.TrimSpace(input.Body.City)),
+		Country:    optionalText(input.Body.Country),
 	}
 	if err := s.createWithGeneratedCode(ctx, tournament); err != nil {
 		return nil, errs.HumaError(err)
@@ -182,6 +187,8 @@ func (s *tournamentService) ListTournaments(
 		StartFrom:  input.StartFrom,
 		StartTo:    input.StartTo,
 		Visibility: input.Visibility,
+		Club:       strings.TrimSpace(input.Club),
+		Country:    input.Country,
 		Limit:      limit,
 		Offset:     offset,
 	})
@@ -200,6 +207,42 @@ func (s *tournamentService) ListTournaments(
 		Limit:  limit,
 		Offset: offset,
 	}}, nil
+}
+
+func (s *tournamentService) ListTournamentCountries(
+	ctx context.Context,
+	input *TournamentCountryListInput,
+) (*TournamentCountryListOutput, error) {
+	limit := utils.Clamp(input.Limit, 1, TournamentMaxCountryPageSize)
+	offset := max(input.Offset, 0)
+
+	countries, total, err := s.repo.ListTournamentCountries(ctx, TournamentCountryFilter{
+		Visibility: input.Visibility,
+		Limit:      limit,
+		Offset:     offset,
+	})
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("list tournament countries: %w", err))
+	}
+
+	data := make([]TournamentCountryResponse, 0, len(countries))
+	for _, country := range countries {
+		data = append(data, TournamentCountryResponse(country))
+	}
+
+	return &TournamentCountryListOutput{Body: TournamentCountryListBody{
+		Data:   data,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}}, nil
+}
+
+func optionalText(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }
 
 func (s *tournamentService) UpdateTournamentByID(
@@ -242,7 +285,14 @@ func tournamentUpdateFrom(body TournamentUpdateBody) (TournamentUpdate, error) {
 
 	update.StartTime = body.StartTime
 
-	if update.Name == nil && update.Visibility == nil && update.StartTime == nil {
+	if body.City != nil {
+		city := strings.TrimSpace(*body.City)
+		update.City = &city
+	}
+	update.Country = body.Country
+
+	if update.Name == nil && update.Visibility == nil && update.StartTime == nil &&
+		update.City == nil && update.Country == nil {
 		return update, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
 	}
 

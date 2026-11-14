@@ -107,7 +107,7 @@ Member numbers are effectively public. FencingTracker shows them in profile URLs
 
 - `POST /api/v1/competitors` accepts an optional `memberNumber`.
 - `PATCH /api/v1/competitors/{id}` accepts `memberNumber`. Changing it re-runs matching, and clearing it unlinks the competitor.
-- Competitor responses include `athleteId`.
+- Competitor responses include `athleteId`, and `memberNumber` for signed-in callers. Competitor reads are public, so an anonymous caller gets `memberNumber: null` rather than a scrapeable list of names with numbers.
 
 **New** (`backend/internal/features/athlete/`)
 

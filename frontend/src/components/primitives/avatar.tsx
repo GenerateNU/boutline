@@ -2,7 +2,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
-import { User } from "lucide-react";
+import PersonOutlined from "@mui/icons-material/PersonOutlined";
 import { Avatar as AvatarPrimitive } from "radix-ui";
 
 const avatarVariants = cva(
@@ -49,7 +49,7 @@ function AvatarFallback({
       )}
       {...props}
     >
-      {children ?? <User aria-hidden className="size-1/2" />}
+      {children ?? <PersonOutlined aria-hidden className="size-1/2" />}
     </AvatarPrimitive.Fallback>
   );
 }

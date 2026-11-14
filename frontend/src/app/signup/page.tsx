@@ -5,10 +5,10 @@ import { SignupForm } from "./_components/signup-form";
 
 export default async function SignupPage({ searchParams }: PageProps<"/signup">) {
   const { next } = await searchParams;
-  const redirectTo = safeRedirectPath(next, "/admin");
+  const redirectTo = safeRedirectPath(next, "/admin/tournaments");
 
   return (
-    <AuthScreen title="Create Admin Account">
+    <AuthScreen title="Create Admin Account" background={8}>
       <SignupForm
         redirectTo={redirectTo}
         loginHref={next ? `/login?next=${encodeURIComponent(redirectTo)}` : "/login"}

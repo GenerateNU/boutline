@@ -1,5 +1,6 @@
 "use client";
 
+import { Loading } from "@/components/primitives/loading";
 import { Section } from "@/components/primitives/section";
 
 import { useBoutScoring } from "../_hooks/use-bout-scoring";
@@ -35,9 +36,13 @@ export function Scoreboard({ boutId }: ScoreboardProps) {
   if (!matchup || !tally || !phase) {
     return (
       <Section title="Referee view">
-        <p role={error ? "alert" : "status"} className="text-sm text-muted-foreground">
-          {error ?? "Loading bout…"}
-        </p>
+        {error ? (
+          <p role="alert" className="text-sm text-muted-foreground">
+            {error}
+          </p>
+        ) : (
+          <Loading />
+        )}
       </Section>
     );
   }

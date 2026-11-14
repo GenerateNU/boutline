@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { Check } from "lucide-react";
+import CheckOutlined from "@mui/icons-material/CheckOutlined";
 import { Checkbox as CheckboxPrimitive } from "radix-ui";
 
 function Checkbox({
@@ -18,9 +18,8 @@ function Checkbox({
       {...props}
     >
       <CheckboxPrimitive.Indicator className="flex items-center justify-center">
-        <Check
+        <CheckOutlined
           aria-hidden
-          strokeWidth={3}
           className="size-3.5 group-data-[state=indeterminate]/checkbox:hidden"
         />
         <span className="hidden size-2.5 rounded-[1px] bg-foreground group-data-[state=indeterminate]/checkbox:block" />

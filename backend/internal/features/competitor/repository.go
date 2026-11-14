@@ -16,6 +16,15 @@ import (
 const (
 	competitorNameTrigramExpr = "first_name || ' ' || last_name"
 	competitorTeamTrigramExpr = "team"
+	competitorClubTrigramExpr = "club"
+
+	// One row per club a competitor belongs to; a secondary club that repeats
+	// the primary is skipped so that competitor isn't counted twice.
+	competitorClubsSource = "SELECT primary_club AS club FROM competitors " +
+		"WHERE primary_club IS NOT NULL AND primary_club <> '' " +
+		"UNION ALL SELECT secondary_club AS club FROM competitors " +
+		"WHERE secondary_club IS NOT NULL AND secondary_club <> '' " +
+		"AND secondary_club IS DISTINCT FROM primary_club"
 )
 
 type CompetitorRepository interface {
@@ -24,7 +33,15 @@ type CompetitorRepository interface {
 	ListCompetitors(ctx context.Context, filter CompetitorListFilter) ([]Competitor, int64, error)
 	UpdateCompetitorByID(ctx context.Context, id uuid.UUID, update CompetitorUpdate) error
 	DeleteCompetitor(ctx context.Context, id uuid.UUID) error
+	SetCompetitorAthlete(ctx context.Context, id uuid.UUID, memberNumber string, athleteID uuid.UUID) error
 	ListCompetitorTeams(ctx context.Context, filter CompetitorTeamListFilter) ([]CompetitorTeamCount, int64, error)
+	ListCompetitorClubs(ctx context.Context, filter CompetitorClubListFilter) ([]CompetitorTeamCount, int64, error)
+}
+
+type CompetitorClubListFilter struct {
+	Term   string
+	Limit  int
+	Offset int
 }
 
 type CompetitorTeamListFilter struct {
@@ -107,6 +124,7 @@ func (u CompetitorUpdate) columns() map[string]any {
 	}
 	if u.MemberNumber != nil {
 		columns["member_number"] = nullIfEmpty(*u.MemberNumber)
+		columns["athlete_id"] = nil
 	}
 	if u.Team != nil {
 		columns["team"] = *u.Team
@@ -153,6 +171,23 @@ func (r *competitorRepository) UpdateCompetitorByID(
 	}
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("update competitor %s: %w", id, errs.ErrNotFound)
+	}
+	return nil
+}
+
+// SetCompetitorAthlete links only while the competitor still has memberNumber, so a link resolved
+// from a number a newer update has replaced updates no rows.
+func (r *competitorRepository) SetCompetitorAthlete(
+	ctx context.Context,
+	id uuid.UUID,
+	memberNumber string,
+	athleteID uuid.UUID,
+) error {
+	err := r.db.WithContext(ctx).Model(&Competitor{}).
+		Where("id = ? AND member_number = ?", id, memberNumber).
+		Update("athlete_id", athleteID).Error
+	if err != nil {
+		return fmt.Errorf("set competitor %s athlete: %w", id, err)
 	}
 	return nil
 }
@@ -245,6 +280,40 @@ func (r *competitorRepository) ListCompetitorTeams(
 		return nil, 0, fmt.Errorf("list competitor teams: %w", err)
 	}
 	return teams, total, nil
+}
+
+// ListCompetitorClubs lists distinct clubs across every tournament, counting a
+// competitor once per club they name as primary or secondary.
+func (r *competitorRepository) ListCompetitorClubs(
+	ctx context.Context,
+	filter CompetitorClubListFilter,
+) ([]CompetitorTeamCount, int64, error) {
+	// Built fresh for each query for the same Distinct carry-over reason as
+	// ListCompetitorTeams.
+	clubs := func() *gorm.DB {
+		return utils.TrigramMatch(r.db.WithContext(ctx).Table("(?) AS clubs", r.db.Raw(competitorClubsSource)),
+			competitorClubTrigramExpr, filter.Term)
+	}
+
+	var total int64
+	if err := clubs().Distinct(competitorClubTrigramExpr).Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count competitor club list: %w", err)
+	}
+
+	var found []CompetitorTeamCount
+	findQuery := clubs().
+		Select(competitorClubTrigramExpr + " AS team, COUNT(*) AS count").
+		Group(competitorClubTrigramExpr)
+	findQuery = utils.TrigramOrder(findQuery, competitorClubTrigramExpr, filter.Term,
+		competitorClubTrigramExpr, competitorClubTrigramExpr)
+	err := findQuery.
+		Limit(filter.Limit).
+		Offset(filter.Offset).
+		Find(&found).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("list competitor clubs: %w", err)
+	}
+	return found, total, nil
 }
 
 func (r *competitorRepository) DeleteCompetitor(ctx context.Context, id uuid.UUID) error {

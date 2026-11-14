@@ -1,13 +1,9 @@
 package pool
 
 // Pools of 6 and 7 follow FIE Organisation Rules (Dec 2025) o.69; 4 to 10 follow USA Fencing
-// Rules for Competition o.69; there is no official order for 2 or 3.
+// Rules for Competition o.69. Pools of 2 or 3 are not supported, as neither rulebook allows them.
 func poolBoutOrder(size int) [][2]int {
 	switch size {
-	case 2:
-		return [][2]int{{1, 2}}
-	case 3:
-		return [][2]int{{1, 2}, {2, 3}, {3, 1}}
 	case 4:
 		return [][2]int{{1, 4}, {2, 3}, {1, 3}, {2, 4}, {3, 4}, {1, 2}}
 	case 5:

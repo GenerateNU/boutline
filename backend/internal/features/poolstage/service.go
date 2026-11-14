@@ -18,11 +18,13 @@ const (
 	PoolStageDefaultPageSize = 20
 	PoolStageMaxPageSize     = 100
 
-	minCompetitorsPerPool = 2
-
 	msgOnlyUpcomingCanStart = "only an upcoming pool stage can be started"
 	msgOnlyActiveCanEnd     = "only an active pool stage can be ended"
 )
+
+// MinCompetitorsPerPool is the smallest pool with a standard bout order; neither
+// the FIE nor USA Fencing allows pools of 2 or 3.
+const MinCompetitorsPerPool = 4
 
 // EventLookup is the subset of the EventRepository interface needed here.
 type EventLookup interface {
@@ -37,6 +39,7 @@ type PoolStageService interface {
 	StartPoolStage(ctx context.Context, input *PoolStageIDInput) (*PoolStageOutput, error)
 	EndPoolStage(ctx context.Context, input *PoolStageIDInput) (*PoolStageOutput, error)
 	DeletePoolStageByID(ctx context.Context, input *PoolStageIDInput) (*struct{}, error)
+	ProposePools(ctx context.Context, input *PoolStageProposalInput) (*PoolStageProposalOutput, error)
 }
 
 type poolStageService struct {
@@ -50,7 +53,7 @@ func NewPoolStageService(repo PoolStageRepository, events EventLookup) PoolStage
 
 func errMaxCompetitorPerPoolTooSmall() error {
 	return errs.Public(
-		fmt.Sprintf("max_competitor_per_pool must be at least %d", minCompetitorsPerPool), errs.ErrInvalidInput)
+		fmt.Sprintf("max_competitor_per_pool must be at least %d", MinCompetitorsPerPool), errs.ErrInvalidInput)
 }
 
 func (s *poolStageService) CreatePoolStage(
@@ -61,7 +64,7 @@ func (s *poolStageService) CreatePoolStage(
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
-	if input.Body.MaxCompetitorPerPool < minCompetitorsPerPool {
+	if input.Body.MaxCompetitorPerPool < MinCompetitorsPerPool {
 		return nil, errs.HumaError(errMaxCompetitorPerPoolTooSmall())
 	}
 
@@ -164,7 +167,7 @@ func (s *poolStageService) UpdatePoolStageByID(
 	if body.MaxCompetitorPerPool == nil && body.StartTime == nil {
 		return nil, errs.HumaError(errs.Public("provide at least one field to update", errs.ErrInvalidInput))
 	}
-	if body.MaxCompetitorPerPool != nil && *body.MaxCompetitorPerPool < minCompetitorsPerPool {
+	if body.MaxCompetitorPerPool != nil && *body.MaxCompetitorPerPool < MinCompetitorsPerPool {
 		return nil, errs.HumaError(errMaxCompetitorPerPoolTooSmall())
 	}
 

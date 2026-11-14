@@ -1,34 +1,41 @@
-"use client";
-
-import * as React from "react";
 import { cn } from "cn";
 
-import { NavigationItem } from "@/components/primitives/navigation/navigation-item";
-import { NavItem } from "@/components/primitives/navigation/types";
+import {
+  NavigationItem,
+  type NavigationSurface,
+} from "@/components/primitives/navigation/navigation-item";
 
-interface NavigationBarProps {
-  items: NavItem[];
-  className?: string;
+interface NavigationBarItem {
+  label: string;
+  href: string;
+  active?: boolean;
+  replace?: boolean;
 }
 
-function NavigationBar({ items, className }: NavigationBarProps) {
-  const [selected, setSelected] = React.useState(items[0]?.id);
+interface NavigationBarProps extends React.ComponentProps<"nav"> {
+  items: NavigationBarItem[];
+  surface?: NavigationSurface;
+}
 
+function NavigationBar({ items, surface = "dark", className, ...props }: NavigationBarProps) {
   return (
     <nav
-      aria-label="Main"
+      data-slot="navigation-bar"
       className={cn(
-        "flex w-full items-center justify-around border border-foreground bg-background py-2",
+        "flex",
+        surface === "light" ? "border-b border-outline" : "rounded-xl bg-obsidian",
         className,
       )}
+      {...props}
     >
-      {items.map((item) => (
+      {items.map(({ label, href, active, replace }) => (
         <NavigationItem
-          key={item.id}
-          icon={item.icon}
-          label={item.label}
-          selected={item.id === selected}
-          onClick={() => setSelected(item.id)}
+          key={label}
+          label={label}
+          href={href}
+          active={active}
+          replace={replace}
+          surface={surface}
         />
       ))}
     </nav>
@@ -36,3 +43,4 @@ function NavigationBar({ items, className }: NavigationBarProps) {
 }
 
 export { NavigationBar };
+export type { NavigationBarItem };

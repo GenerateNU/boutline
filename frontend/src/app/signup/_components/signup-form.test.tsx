@@ -11,16 +11,16 @@ jest.mock("../../../features/auth/services/auth-actions", () => ({ signup: jest.
 
 function fillAndSubmit(confirm: string, password = "secret") {
   const values = {
-    "First name": "Ada",
-    "Last name": "Lovelace",
-    "New Email": "ada@example.com",
+    "First Name": "Ada",
+    "Last Name": "Lovelace",
+    Email: "ada@example.com",
     "New Password": password,
-    "Confirm password": confirm,
+    "Confirm Password": confirm,
   };
   for (const [label, value] of Object.entries(values)) {
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
   }
-  fireEvent.click(screen.getByRole("button", { name: "Register Account" }));
+  fireEvent.click(screen.getByRole("button", { name: "Register" }));
 }
 
 describe("SignupForm", () => {

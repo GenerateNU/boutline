@@ -1,4 +1,4 @@
-import { Menu } from "lucide-react";
+import MenuOutlined from "@mui/icons-material/MenuOutlined";
 import { cn } from "cn";
 
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
@@ -19,7 +19,7 @@ function ProfileTopAppBar({ title, className }: ProfileTopAppBarProps) {
     >
       <div className="flex justify-start">
         <Button variant="text" size="icon" aria-label="Open menu">
-          <Menu />
+          <MenuOutlined />
         </Button>
       </div>
       <h1 className="truncate text-lg">{title}</h1>

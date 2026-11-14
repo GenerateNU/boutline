@@ -1,28 +1,20 @@
 import { apiRequest } from "@/services/api-request";
-import { PinnedIds } from "@/features/pinning/types/pinning";
 import { ListResponse } from "@/types/list-response";
 import { Competitor } from "@/types/competitor";
-import { Bout } from "@/types/bout";
 
-interface PinnedItems {
-  fencers: Competitor[];
-  bouts: Bout[];
+function fencerName({ firstName, lastName }: Competitor) {
+  return `${firstName} ${lastName}`;
 }
 
-function fetchByIds<T>(path: string, ids: string[]): Promise<T[]> {
+// One request is enough: usePinnedItems caps pins at PINNED_MAX_IDS, the most
+// ids the backend accepts.
+async function fetchPinnedFencers(ids: string[]): Promise<Competitor[]> {
   if (ids.length === 0) {
-    return Promise.resolve([]);
+    return [];
   }
   const params = new URLSearchParams({ ids: ids.join(","), limit: String(ids.length) });
-  return apiRequest<ListResponse<T>>(`${path}?${params.toString()}`).then((response) => response.data);
+  const { data } = await apiRequest<ListResponse<Competitor>>(`/competitors?${params}`);
+  return data.sort((a, b) => fencerName(a).localeCompare(fencerName(b), undefined, { sensitivity: "base" }));
 }
 
-async function fetchPinnedItems(pinned: PinnedIds): Promise<PinnedItems> {
-  const [fencers, bouts] = await Promise.all([
-    fetchByIds<Competitor>("/competitors", pinned.fencerIds),
-    fetchByIds<Bout>("/bouts", pinned.boutIds),
-  ]);
-  return { fencers, bouts };
-}
-
-export { fetchPinnedItems };
+export { fetchPinnedFencers };

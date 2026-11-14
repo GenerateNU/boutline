@@ -1,36 +1,64 @@
 import { cn } from "cn";
+import Link from "next/link";
 
-import { Button } from "@/components/primitives/button";
+type NavigationSurface = "dark" | "light";
 
-interface NavigationItemProps extends React.ComponentProps<"button"> {
-  icon: React.ReactNode;
-  label?: string; // leave out for an icon-only item, and pass aria-label instead
-  selected?: boolean;
+const SURFACES = {
+  dark: {
+    item: "h-12 items-center rounded-xl px-4",
+    active: "text-white",
+    idle: "text-neutral-muted hover:text-white",
+    label: "relative h-full",
+    indicator: "bottom-2 h-0.75",
+  },
+  light: {
+    item: "h-10 px-1 pt-2.5 whitespace-nowrap",
+    active: "font-semibold text-obsidian",
+    idle: "font-medium text-neutral-secondary hover:text-obsidian",
+    label: "h-5",
+    indicator: "bottom-0 h-0.5",
+  },
+};
+
+interface NavigationItemProps extends Omit<React.ComponentProps<typeof Link>, "children"> {
+  label: string;
+  active?: boolean;
+  surface?: NavigationSurface;
 }
 
 function NavigationItem({
-  icon,
   label,
-  selected = false,
+  active = false,
+  surface = "dark",
   className,
   ...props
 }: NavigationItemProps) {
+  const styles = SURFACES[surface];
+
   return (
-    <Button
-      type="button"
-      variant="text"
-      aria-current={selected ? "page" : undefined}
+    <Link
+      data-slot="navigation-item"
+      aria-current={active ? "page" : undefined}
       className={cn(
-        "size-16 flex-col gap-1 border px-0 text-xs font-normal [&_svg]:size-5",
-        selected ? "border-foreground" : "border-transparent",
+        "relative flex flex-1 justify-center font-manrope text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+        styles.item,
+        active ? styles.active : styles.idle,
         className,
       )}
       {...props}
     >
-      {icon}
-      {label && <p>{label}</p>}
-    </Button>
+      <span className={cn("flex items-center", styles.label)}>
+        {label}
+        <span
+          aria-hidden
+          className={cn("absolute inset-x-0 rounded-t-sm bg-accent-green", styles.indicator, {
+            hidden: !active,
+          })}
+        />
+      </span>
+    </Link>
   );
 }
 
 export { NavigationItem };
+export type { NavigationSurface };
