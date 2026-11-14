@@ -64,6 +64,7 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
         <TableauBracket
           rounds={tableau.rounds}
           focusedRoundId={selectedRoundId}
+          onFocusedRoundChange={setSelectedRoundId}
           query={query}
           boutBasePath={boutBasePath}
         />
