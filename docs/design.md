@@ -442,7 +442,8 @@ from the venue floor.
   sidebar's top left closes it.
 - **`/settings`**: Profile, Accessibility and Language, then Privacy Policy and
   Help, in two cards. None has a page yet, so the rows are labels only.
-- **Tabs** (tournament and event pages): each tab has its own URL, but switching
+- **Tabs** (tournament and event pages): a full-width obsidian row directly under
+  the global nav, like the tournaments date strip. Each tab has its own URL, but switching
   tabs replaces the history entry, so the browser's Back button leaves the page
   rather than stepping back through tabs. The exception is the active tab clicked
   from a page nested under it (an event's Events tab), which adds an entry.
