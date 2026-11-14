@@ -148,7 +148,7 @@ how to test it.
   through the real app: routing, OpenAPI security and the auth middleware, plus
   DB-backed login, search and list-filter tests. Those skip without Postgres;
   `REQUIRE_DB=1` makes them fail instead, as CI does.
-- **Frontend:** Jest with Testing Library, 64 test files. They cover the proxy,
+- **Frontend:** Jest with Testing Library, 74 test files. They cover the proxy,
   `apiRequest`, the API services, auth actions, the search and filter components,
   pagination, pinning and the referee screen. No browser end-to-end tests yet.
 
@@ -219,10 +219,11 @@ is deleted.
 
 | Method | Path | |
 | --- | --- | --- |
-| POST | `/tournaments/{id}/users` | add `{user_id, role}`; 409 if already a member |
-| GET | `/tournaments/{id}/users` | list |
+| POST | `/tournaments/{id}/users` | add `{user_id, role}`; 409 if already a member, naming the role they hold (a person has one role per tournament; an admin can still referee a pool they're assigned to) |
+| GET | `/tournaments/{id}/users?role&q&limit&offset` | list; each member carries first and last name, `occupied` (running a started pool or an active bout here) and `pool_number` (that pool, else their next unfinished one; null if none). `q` is a fuzzy name search |
 | PATCH | `/tournaments/{id}/users/{user_id}` | change role |
 | DELETE | `/tournaments/{id}/users/{user_id}` | remove |
+| GET | `/tournaments/{id}/role` | the caller's role, `{"role": "admin" \| "referee" \| null}`; null when they're signed out, aren't on the staff, or the tournament is unknown. A public read: the token is used when sent |
 
 ### 2.4 Events
 
@@ -326,7 +327,8 @@ timed, on a strip.
 | POST | `/bouts` | tournament must be active; the pool must belong to the same tournament; a pool bout copies the pool's referee, strip and number and takes its next `slot`, under the pool stage lock (§11.2), until pool create makes pool bouts |
 | GET | `/bouts?tournament_id&pool_id&status&ids` | newest first |
 | GET | `/bouts/{id}` | |
-| PATCH | `/bouts/{id}` | only while `upcoming`; `pool_id` can't change |
+| PATCH | `/bouts/{id}` | admin only; only while `upcoming`; `pool_id` can't change |
+| POST | `/bouts/{id}/claim` | sets `referee_id` to the caller; needs the referee role (an admin passes); only while `upcoming` and unassigned or already the caller's, 409 otherwise |
 | POST | `/bouts/{id}/start` | tournament active, referee assigned, `upcoming → active` |
 | POST | `/bouts/{id}/end` | `active → ended` |
 | DELETE | `/bouts/{id}` | only while `upcoming` or `ended` (narrowed in §8.3) |
@@ -360,7 +362,7 @@ fencers don't need one.
 
 - `users`: `id`, `email` (unique, lowercased, validated with `net/mail`),
   `password` (bcrypt, 1–72 bytes, never returned), `first_name`, `last_name`.
-- `GET /users?q=` (fuzzy full-name search) and `GET /users/{id}` require a login.
+- `GET /users?q=` (fuzzy full-name search, also an email prefix) and `GET /users/{id}` require a login.
 - `PATCH /users/{id}` changes names only.
 - `DELETE /users/{id}` is a 409 if the user created a tournament, referees a bout
   or pool, or recorded a touch; memberships cascade.
@@ -423,13 +425,16 @@ different roles in different tournaments.
   lifetime, so page scripts never see it.
 - `src/proxy.ts` moves the cookie into the `Authorization` header on `/api/*`. It
   redirects `/admin/*` and `/…/referee` to `/login?next=…` when there is no cookie.
+- A server component that calls the backend itself (the dashboard's role lookup)
+  sends the cookie's token as `Authorization: Bearer`, the same as the `/api` proxy.
 
 ---
 
 ## 4. Browsing tournaments
 
-**Status:** Partial. The tournament screens are wired to the real API. The event
-tabs for pools, tableau and results are placeholders until chapters 11–13.
+**Status:** Partial. The tournament screens are wired to the real API, and so is the
+event's Pools tab (§11.6). The tableau and results tabs run on placeholder data until
+chapters 12–13.
 
 **What it is:** the public face of Boutline. Anyone can find a tournament by name
 or date, open a private one by its code, and look through its events, fencers and
@@ -447,7 +452,7 @@ from the venue floor.
   sidebar's top left closes it.
 - **`/settings`**: Profile, Accessibility and Language, then Privacy Policy and
   Help, in two cards. None has a page yet, so the rows are labels only.
-- **Tabs** (tournament and event pages): a full-width obsidian row directly under
+- **Tabs** (tournament and event pages, and the admin tournament dashboard, §4.6): a full-width obsidian row directly under
   the global nav, like the tournaments date strip. Each tab has its own URL, but switching
   tabs replaces the history entry, so the browser's Back button leaves the page
   rather than stepping back through tabs. The exception is the active tab clicked
@@ -486,6 +491,8 @@ from the venue floor.
   sets `?club=`; Country offers only countries that have tournaments, from
   `GET /countries`, and sets `?country=` to the code. Suggestions appear only while
   typing, in a dropdown under the search bar, and picked values show as removable filter tags at the top of the sheet.
+  Club accepts either a picked suggestion or typed text committed with Enter; Country
+  is a local, `includes()`-filtered list and stays pick-only.
   Sections follow the Figma order: Country, Club, Distance, Tournament Status.
 - A "Create tournament" card links to the creation form when the viewer has a
   session cookie.
@@ -521,11 +528,13 @@ Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers. These
 replace the tournament's tabs rather than stacking under them.
 
 - **Fencers** (Completed): search, pagination, and a filter sheet with Fencer (sets
-  `?q=`) and Club (sets `?team=`) searches, each picked from a dropdown of matches. It lists every fencer in the tournament, since
+  `?q=`) and Club (sets `?team=`) searches, each accepting either a picked suggestion
+  from the dropdown or typed text committed with Enter. It lists every fencer in the tournament, since
   competitors don't belong to an event yet (§8.4). Rows link to a fencer page,
   which is placeholder text.
-- **Pooling** and **Tableau** (Placeholder): a bout list from a hardcoded fixture,
-  the same for every event. Replaced in §11.6 and §12.5.
+- **Pooling** (Partial): see §11.6 for its current state.
+- **Tableau** (Placeholder): a bout list from a hardcoded fixture, the same for every
+  event. Replaced in §12.5.
 - **Results** (Placeholder): static text. Replaced in §13.3.
 - **Bout page** (`…/bout/[boutId]`, Placeholder): two score tiles, a "Referee
   view" button and a touch log, from the fixture. Only its referee link reaches
@@ -539,9 +548,34 @@ Where login and signup land by default, behind the login gate. A solid-outlined
 "Create tournament" card linking to the creation form (§10.6), then "Manage
 Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) over
 the tournaments the caller created (`mine=true`), paginated. Cards show the created
-date instead of the location. Organizers see `pending` as "Scheduled" with the blue
-badge; public screens keep "Upcoming". `/admin` redirects here until the console
-(§10.7) exists.
+date instead of the location and link to the tournament's dashboard (§4.6), which
+only that tournament's admins can open; public `/tournaments` cards still link to
+the public page. Organizers see `pending` as "Scheduled" with the blue badge; public
+screens keep "Upcoming". `/admin` redirects here until the console (§10.7) exists.
+
+### 4.6 Tournament dashboard (`/admin/tournaments/[id]`)
+
+**Status:** Partial.
+
+The organizer's page for one tournament, visible only to its admins. The page asks
+`GET /tournaments/{id}/role` (§2.3); anyone who isn't an admin, referees included,
+gets a 404. Signed-out visitors are redirected to login by the proxy (§3.3).
+
+Header, top to bottom: a "< All tournaments" link back to `/admin/tournaments`; a
+small gray "Tournament Management Dashboard" with the status badge on the right
+(Completed, In Progress or Scheduled); the uppercase tournament name; and the date
+range (the events' range, as on the Overview in §4.3) with a calendar icon and the
+location with a pin icon, each omitted when empty.
+
+Tabs: Fencers (the index page) · Referees · Events · Settings.
+
+- **Referees:** a searchable, paginated roster of the tournament's referees, from
+  `GET /tournaments/{id}/users?role=referee`. "Add Referees" opens a dialog that
+  searches users by name or email and adds one as referee, optionally to one of the
+  tournament's pools, then closes. Each row shows Occupied or Available and the
+  referee's pool (§10.3), and its Remove asks for confirmation first.
+- **Fencers**, **Events** and **Settings** (Planned): empty until a ticket defines
+  what they show.
 
 ---
 
@@ -561,7 +595,7 @@ so it is built to survive double taps, slow networks and failed requests.
 
 | Phase | When | Referee sees |
 | --- | --- | --- |
-| `not-started` | bout `upcoming` | "Start match" |
+| `not-started` | bout `upcoming` | "Start match" (claims the bout for the signed-in referee if none is assigned) |
 | `scoring` | active, no winner | a large "Touch {name}" button per fencer, Undo, a match-point banner when a side is one touch away (both sides can be) |
 | `confirming` | a side reached `points_to_win` | "{winner} wins A–B", one confirm button per fencer, Undo |
 | `over` | bout `ended` | the winner banner; no controls |
@@ -587,14 +621,14 @@ so it is built to survive double taps, slow networks and failed requests.
   and history from the server, which wins.
 - **History.** A newest-first log of time, "Touch {name}", running score
   (fencer 1 – fencer 2), with revoked touches kept and labelled "Revoked".
-- Start assigns a referee if none is set, then starts the bout.
+- Start claims an unassigned bout via `POST /bouts/{id}/claim`, then starts it.
 
 ### 5.3 Temporary bypass
 
 **Status:** Open until §7.1 and §7.2.
 
 The page sits behind the login gate, but it still sends a fixed seeded user
-(`FALLBACK_SCORER_ID`, Alex Morgan) as scorer and referee instead of the logged-in
+(`FALLBACK_SCORER_ID`, Alex Morgan) as scorer instead of the logged-in
 user. The real referee checks are commented out with TODOs. **Any logged-in user
 can score any bout.**
 
@@ -685,8 +719,8 @@ an admin still need that row backfilled, which is its own ticket.
 
 - **Built:** `tournamentuser.RequireRole(ctx, memberships, tournamentID, role)`
   runs on every mutating route and returns 403 unless the caller holds the role in
-  that tournament. An admin passes a referee check. Bout start and end and the
-  scoring writes need `referee`. Every other write needs `admin`, except creating
+  that tournament. An admin passes a referee check. Bout claim, start and end and
+  the scoring writes need `referee`. Every other write needs `admin`, except creating
   a tournament, which any signed-in user can do.
 - **Built:** creating a tournament records the signed-in caller as its
   `created_by`, which the request body can't set, and writes them into
@@ -697,6 +731,10 @@ an admin still need that row backfilled, which is its own ticket.
   must be the bout's `referee_id`: 403 otherwise, and 409 while the bout has no
   referee. An admin passes the role check but still referees only the bouts they
   are assigned to.
+- **Built:** `claimBout` (`POST /bouts/{id}/claim`) uses `RequireRole(referee)` and
+  takes `referee_id` from `session.UserIDFrom`, never from the body. "Unassigned or
+  already the caller's" is part of the UPDATE's WHERE, so two racing referees can't
+  both win. Setting `referee_id` through `PATCH /bouts/{id}` stays admin-only.
 - **Built:** the creator stays an admin. Changing their role to `referee` or
   removing them is refused with 409. Every tournament's creator is made an admin
   on create, so no tournament can be left without an admin.
@@ -975,8 +1013,16 @@ Fencing, adding staff, and checking fencers in on the day.
 
 ### 10.3 Staff
 
-**Status:** Planned. Issues: #16, #20.
+**Status:** Partial. Issues: #16, #20. The Referees tab is on the tournament
+dashboard (§4.6) and shown only to the tournament's admins, who hold the role that
+adding, removing and assigning pools need (§7.2). The rest is planned.
 
+- Add Referees can also pick a pool, from every event's pools labelled "Pool 1 ·
+  {event}" (one `/pool-sheets?event_id=` request per event); the referee is then
+  set on that pool with `PATCH /pools/{id}` (§11.2), even if they were already on
+  the staff.
+- Each row shows Occupied or Available and the referee's current pool (§2.3).
+- Not built: the creation-flow step.
 - The creation form's free-text "Admins" field (comma-separated emails) resolves
   emails to users and adds them as admins.
 - A Staff screen under the tournament for admins.
@@ -1071,7 +1117,8 @@ are placed into pools.
 Planned as a hub for the organizer's tools; until it exists, `/admin` redirects to
 the admin home (§4.5). The admin home already lists the caller's tournaments with
 `GET /tournaments?mine=true`; it moves to `GET /users/{me}/tournaments` when that
-endpoint exists.
+endpoint exists. The tournament dashboard (§4.6) is the console's per-tournament
+page.
 
 On the day, the admin checks fencers in, starts the tournament, generates pools
 (which creates bouts, so it needs the tournament `active`), assigns referees, and
@@ -1251,14 +1298,26 @@ results, stored on the DE entry (§12.1).
 
 ### 11.6 Pooling tab and pool screen
 
-**Status:** Planned. Issue: #127.
+**Status:** Partial. Issue: #127. Each part below is built to the hi-fi design and
+reads the pool sheets API unless marked Planned. Tests build the pools they need
+with `buildPool` (`pooling/_fixtures/build-pool.ts`).
 
-The Pooling tab lists the event's pools with their fencers, referee, strip and
-progress, each linking to a pool screen. The pool screen shows the classic grid
-(fencer × fencer, `V5` / `D3` cells) plus the summary columns from §11.3, and the
-pool's bouts in order. Today the tab is the shared fixture (§4.4). A branch
-(`claude/boutline-frontend-setup-e6b230`) has a draft pool list, pool page and
-filter sheet.
+- **Pool list:** the event's pools from `GET /api/v1/pool-sheets?event_id=…`, with
+  "No pools yet." when there are none. A "Search pools" field sits above a card per
+  pool, always open. A card
+  has a Bouts | Standings toggle that shows the V/D grid or the standings table (# ·
+  Fencer · V · V/M · TS · TR · Ind, by place, names as "Last, First"), and a View
+  pool link. Pool pins are not built yet (§6.3).
+- **Filter sheet** (Planned): a filter button beside the search opens Fencer and
+  Club search, Pool Status and Pool Number chips, and Sort by Pool Number, Start
+  time or Strip, with Clear All and Show pools.
+- **Pool page** (Planned): a back button to the list, the status pill and fencer count, and
+  the V/D grid (`V5` / `D3` cells). Below it sits the standings table. Tapping a
+  bout cell outlines it in navy and swaps the standings for "Showing the bout you
+  tapped" and a bout card: Bout N of M, "Pool bout", an All bouts link, winner and
+  loser rows with V/D tiles and scores, Status / Pool / Strip, and links to both
+  fencers.
+- Club short codes and fencer country are not shown yet, since the data has neither.
 
 ---
 
@@ -1639,8 +1698,9 @@ Network code must survive retries and races:
 
 ## Appendix C. Visual language
 
-The UI is a **lofi** pass: monochrome, outlined, light mode only. Polish comes later
-through the tokens, so components use tokens, never raw colors.
+The hi-fi pass is underway: a navy brand, a palette of tokens, and status colors,
+light mode only. Screens move over one at a time, and the rest still look like the
+earlier outlined set. Components use tokens, never raw colors.
 
 ### C.1 Layout
 - Mobile-first, one column:
@@ -1660,15 +1720,16 @@ through the tokens, so components use tokens, never raw colors.
 | `selected` (blue) | only a chosen state: filled button, toggle on, active tab |
 | `destructive` | errors and destructive actions; hi-fi destructive actions (Button `destructive` variant) use `red-dark` |
 | `border`, `input`, `ring` | hairlines, field borders, focus rings |
+| `brand` | alias of the hi-fi navy `blue` (#21358b), kept for existing uses |
+| `green` (#32944b) | the V tile on the pool bout card |
 
-No Tailwind palette colors. The tournament status badge breaks this today
-(`bg-amber-600`, `bg-emerald-600`); status colors become tokens next time it is
-touched.
+No Tailwind palette colors. Status pills (tournament, pool and event status) go
+through the `StatusBadge` primitive, which maps a status to one of the status pairs.
 
 ### C.3 Type
 Geist Sans; Geist Mono for aligned numbers. Hi-fi screens (global nav, tournament
-browser, filter sheet) use Manrope (`font-manrope`), and the BOUTLINE wordmark uses
-Special Gothic Expanded One (`font-wordmark`). Body and controls `text-sm`, metadata
+browser, filter sheet, Pools tab) use Manrope (`font-manrope`), and the BOUTLINE
+wordmark uses Special Gothic Expanded One (`font-wordmark`). Body and controls `text-sm`, metadata
 `text-xs text-muted-foreground`, at most `font-medium`. Sizes from `text-2xl` up are
 reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 
@@ -1677,6 +1738,8 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   use `rounded-md`; pills (tab nav, icon buttons, avatars) use `rounded-full`. 1px
   `border-foreground`, no shadows, except floating surfaces (select menu, dropdown,
   date field popover, upload dialog, modal, filter sheet, toast) which use `shadow-md`.
+- Hi-fi pool cards are white with a `border-outline` border, `rounded-[12px]` and
+  `shadow-sm`; pool grid cells and their header pills use a 4px radius.
 - Focus `focus-visible:ring-2 ring-ring`; hover `bg-muted`; disabled `opacity-50`.
 - Icons are Material's Outlined set from `@mui/icons-material`, imported by path
   (`@mui/icons-material/SearchOutlined`), at `size-4`, `aria-hidden` when
@@ -1726,7 +1789,7 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 
 ## Appendix D. Open questions
 
-- Hi-fi design: brand color, dark mode, and whether `selected` stays blue.
+- Hi-fi design: dark mode, and whether `selected` stays blue.
 - Desktop layouts for the organizer console, which may outgrow 440px.
 - Team events (relay scoring to 45) are in the form but have no model.
 - Do spectators need accounts (to follow fencers across devices) or stay

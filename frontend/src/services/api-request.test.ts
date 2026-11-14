@@ -1,4 +1,4 @@
-import { ApiRequestError, apiRequest } from "./api-request";
+import { ApiError, apiRequest } from "./api-request";
 
 function respondWith(status: number, body: unknown) {
   global.fetch = jest.fn(async () => ({
@@ -27,9 +27,8 @@ describe("apiRequest", () => {
     await expect(apiRequest("/events/e1")).rejects.toMatchObject({
       status: 404,
       message: "not found",
-      name: "ApiRequestError",
     });
-    await expect(apiRequest("/events/e1")).rejects.toBeInstanceOf(ApiRequestError);
+    await expect(apiRequest("/events/e1")).rejects.toBeInstanceOf(ApiError);
   });
 
   it.each([
@@ -62,6 +61,7 @@ describe("apiRequest", () => {
     respondWith(status, body);
 
     await expect(apiRequest("/anything")).rejects.toThrow(message);
+    await expect(apiRequest("/anything")).rejects.toMatchObject({ status });
   });
 
   it.each<{ name: string; headers: HeadersInit | undefined; expected: Record<string, string> }>([

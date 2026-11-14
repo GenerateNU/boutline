@@ -70,6 +70,12 @@ func TestTournamentListFiltersAgainstRealDatabase(t *testing.T) {
 			absentNames: []string{"Fall Open 2026", "Winter Classic 2026"},
 		},
 		{
+			name:        "a partial lowercase club matches by containment",
+			query:       map[string]string{"club": "allez"},
+			wantNames:   []string{"Fall Open 2026"},
+			absentNames: []string{"Winter Classic 2026", "Summer Invitational 2026"},
+		},
+		{
 			name:        "country keeps only that country",
 			query:       map[string]string{"country": "CA"},
 			wantNames:   []string{"Winter Classic 2026"},

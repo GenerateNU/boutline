@@ -22,7 +22,7 @@ describe("LogoutDialog", () => {
     sessionStorage.setItem("pinned-fencers", "[]");
     render(<LogoutDialog />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Account" }));
+    fireEvent.click(screen.getByRole("button", { name: "Log out" }));
     fireEvent.click(screen.getByRole("button", { name: button }));
 
     if (loggedOut) {

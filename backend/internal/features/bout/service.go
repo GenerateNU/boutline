@@ -9,6 +9,7 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
+	"boutline/internal/session"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -38,6 +39,7 @@ type BoutService interface {
 	GetBoutByID(ctx context.Context, input *BoutIDInput) (*BoutOutput, error)
 	ListBouts(ctx context.Context, input *BoutListInput) (*BoutListOutput, error)
 	UpdateBoutByID(ctx context.Context, input *BoutUpdateInput) (*BoutOutput, error)
+	ClaimBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error)
 	StartBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error)
 	EndBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error)
 	DeleteBoutByID(ctx context.Context, input *BoutIDInput) (*struct{}, error)
@@ -297,6 +299,10 @@ func (s *boutService) requireAdmin(ctx context.Context, bout *Bout) error {
 	return tournamentuser.RequireRole(ctx, s.memberships, bout.TournamentID, tournamentuser.TournamentUserRoleAdmin)
 }
 
+func (s *boutService) requireReferee(ctx context.Context, bout *Bout) error {
+	return tournamentuser.RequireRole(ctx, s.memberships, bout.TournamentID, tournamentuser.TournamentUserRoleReferee)
+}
+
 func (s *boutService) requireAssignedReferee(ctx context.Context, bout *Bout) error {
 	return tournamentuser.RequireAssignedReferee(ctx, s.memberships, bout.TournamentID, bout.RefereeID)
 }
@@ -382,6 +388,22 @@ func (s *boutService) validateCompetitorPair(ctx context.Context, id uuid.UUID, 
 	}
 
 	return nil
+}
+
+func (s *boutService) ClaimBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error) {
+	id, err := utils.ParseUUID(input.ID, "id")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	if _, err := s.loadAuthorized(ctx, id, s.requireReferee); err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	caller, _ := session.UserIDFrom(ctx) // RequireRole already refused a missing caller
+	err = s.repo.ClaimBoutByID(ctx, id, caller)
+
+	return s.afterUpdate(ctx, id, err, "only an upcoming bout with no other referee can be claimed")
 }
 
 func (s *boutService) StartBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error) {

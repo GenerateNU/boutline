@@ -58,6 +58,15 @@ func RegisterTournamentService(api huma.API, service TournamentService) {
 	}, service.GetTournamentByID)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "getCallerTournamentRole",
+		Method:      http.MethodGet,
+		Path:        tournamentBasePath + "/{id}/role",
+		Summary:     "Get the caller's role in a tournament",
+		Description: "role is null when the caller is signed out or not on the tournament's staff.",
+		Tags:        []string{"Tournaments"},
+	}, service.GetCallerTournamentRole)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "getTournamentByCode",
 		Method:      http.MethodGet,
 		Path:        tournamentBasePath + "/code/{code}",

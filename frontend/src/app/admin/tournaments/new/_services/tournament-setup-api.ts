@@ -1,4 +1,4 @@
-import { ApiRequestError, apiRequest } from "@/services/api-request";
+import { ApiError, apiRequest } from "@/services/api-request";
 
 import {
   CompetitorRequest,
@@ -18,7 +18,7 @@ async function remove(path: string) {
   try {
     await apiRequest<void>(path, { method: "DELETE" });
   } catch (error) {
-    if (!(error instanceof ApiRequestError && error.status === 404)) {
+    if (!(error instanceof ApiError && error.status === 404)) {
       throw error;
     }
   }

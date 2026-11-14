@@ -14,13 +14,12 @@ export function problemMessage(body: unknown, status: number) {
   return reasons.length > 0 ? `${detail} (${reasons.join("; ")})` : detail;
 }
 
-export class ApiRequestError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
     super(message);
-    this.name = "ApiRequestError";
-    this.status = status;
   }
 }
 
@@ -41,7 +40,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     // No JSON body (e.g. a proxy error page); problemMessage falls back to the status.
   }
   if (!response.ok) {
-    throw new ApiRequestError(problemMessage(body, response.status), response.status);
+    throw new ApiError(problemMessage(body, response.status), response.status);
   }
   return body as T;
 }
