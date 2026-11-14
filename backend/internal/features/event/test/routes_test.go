@@ -296,7 +296,7 @@ func TestCreateEndpointAttributes(t *testing.T) {
 		{name: "defaults omitted attributes to null and false", wantStatus: http.StatusCreated, wantFields: nulls},
 		{name: "rejects an unknown type", extra: map[string]any{"type": "relay"}, wantStatus: http.StatusUnprocessableEntity},
 		{name: "rejects an unknown weapon", extra: map[string]any{"weapon": "saber"}, wantStatus: http.StatusUnprocessableEntity},
-		{name: "rejects an unknown gender", extra: map[string]any{"gender": "other"}, wantStatus: http.StatusUnprocessableEntity},
+		{name: "rejects an unknown gender", extra: map[string]any{"gender": "mixed"}, wantStatus: http.StatusUnprocessableEntity},
 		{name: "rejects an unknown age category", extra: map[string]any{"age_category": "u9"}, wantStatus: http.StatusUnprocessableEntity},
 		{name: "rejects an unknown rating limit", extra: map[string]any{"rating_limit": "a_and_under"}, wantStatus: http.StatusUnprocessableEntity},
 		{name: "rejects a non-boolean qualifier", extra: map[string]any{"qualifier": "yes"}, wantStatus: http.StatusUnprocessableEntity},
