@@ -9,7 +9,7 @@ const YAN: Competitor = {
   tournamentId: "t1",
   firstName: "Yan",
   lastName: "Wang",
-  rating: "A26",
+  rating: "A",
   ratingYear: 26,
   team: "Boston Blade Club",
 };
@@ -24,6 +24,22 @@ describe("FencerCard", () => {
     expect(screen.getByText("Yan Wang")).toBeInTheDocument();
     expect(screen.getByText("A26")).toBeInTheDocument();
     expect(screen.getByText(wantClub, { exact: false })).toBeInTheDocument();
+  });
+
+  it.each([
+    { rating: "A", ratingYear: 26, want: "A26" },
+    { rating: "U", ratingYear: null, want: "U" },
+  ])("shows the rating badge $want", ({ rating, ratingYear, want }) => {
+    render(<FencerCard competitor={{ ...YAN, rating, ratingYear }} />);
+
+    expect(screen.getByText(want)).toBeInTheDocument();
+  });
+
+  it("shows a chevron instead of a pin button when pinning is off", () => {
+    render(<FencerCard competitor={YAN} />);
+
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByRole("link")).toBeInTheDocument();
   });
 
   it.each([

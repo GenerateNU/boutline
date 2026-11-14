@@ -1,18 +1,19 @@
 "use client";
 
-import FilterAltOutlined from "@mui/icons-material/FilterAltOutlined";
 import { useState } from "react";
 
 import { Chip } from "@/components/primitives/chip";
-import { ChipGroup, ChipGroupItem } from "@/components/primitives/chip-group";
+import { ChipGroup, ChipGroupItem, ChipGroupOptions } from "@/components/primitives/chip-group";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
 import { SelectField } from "@/components/primitives/select-field";
+import { Text } from "@/components/primitives/text";
 import {
   GENDER_OPTIONS,
   RATING_OPTIONS,
   optionLabel,
 } from "@/features/competitor/lib/fencer-filters";
+import { AGE_OPTIONS, WEAPON_OPTIONS } from "@/features/event/lib/event-filters";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { useFilterSearch } from "@/lib/hooks/use-filter-search";
 import { apiRequest } from "@/services/api-request";
@@ -52,7 +53,6 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         setOpen(next);
       }}
       triggerLabel="Filter fencers"
-      triggerIcon={<FilterAltOutlined className="size-5! text-brand" />}
       description="Narrow the fencer list"
       submitLabel="Show Fencers"
       onReset={() => {
@@ -94,6 +94,8 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         </div>
       )}
 
+      <Text variant="caption">Greyed-out filters are coming soon.</Text>
+
       <FilterSearchField
         label="Club"
         value={clubField.query}
@@ -107,6 +109,13 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         maxLength={120}
         noun="clubs"
       />
+
+      {/* Weapon and age live on events, which the fencer list can't filter by yet. */}
+      <ChipGroup label="Weapon" disabled>
+        <ChipGroupOptions options={WEAPON_OPTIONS} />
+      </ChipGroup>
+
+      <SelectField label="Age Category" placeholder="Select age" options={AGE_OPTIONS} disabled />
 
       <SelectField
         label="Rating"

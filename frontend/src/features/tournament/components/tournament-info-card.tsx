@@ -2,34 +2,25 @@ import CalendarTodayOutlined from "@mui/icons-material/CalendarTodayOutlined";
 import LocationOnOutlined from "@mui/icons-material/LocationOnOutlined";
 import PersonOutlined from "@mui/icons-material/PersonOutlined";
 
-import { Card, CardDescription, CardTitle } from "@/components/primitives/card";
+import { Card } from "@/components/primitives/card";
+import { Label } from "@/components/primitives/label";
+import { Text } from "@/components/primitives/text";
 
 interface TournamentInfoCardProps {
   name: string;
-  dates?: string | null;
+  dates: string | null;
+  location: string | null;
 }
 
-function TournamentInfoCard({ name, dates }: TournamentInfoCardProps) {
-  const infoRows = [
-    { icon: CalendarTodayOutlined, text: dates },
-    { icon: LocationOnOutlined, text: "Location - TBC" },
-    { icon: PersonOutlined, text: "Organizer Contact - TBC" },
-  ];
-
+function TournamentInfoCard({ name, dates, location }: TournamentInfoCardProps) {
   return (
-    <Card className="gap-2.5">
-      <CardTitle role="heading" aria-level={1} className="text-xl text-obsidian uppercase">
+    <Card className="gap-2">
+      <Text as="h1" variant="title" className="uppercase">
         {name}
-      </CardTitle>
-      {infoRows.map(
-        ({ icon: Icon, text }) =>
-          text && (
-            <CardDescription key={text} className="flex items-center gap-2 text-sm text-obsidian">
-              <Icon aria-hidden className="size-4 shrink-0 text-neutral-secondary" />
-              {text}
-            </CardDescription>
-          ),
-      )}
+      </Text>
+      <Label icon={<CalendarTodayOutlined aria-hidden />}>{dates ?? "Dates TBC"}</Label>
+      <Label icon={<LocationOnOutlined aria-hidden />}>{location ?? "Location TBC"}</Label>
+      <Label icon={<PersonOutlined aria-hidden />}>Organizer contact TBC</Label>
     </Card>
   );
 }

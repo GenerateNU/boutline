@@ -1,10 +1,8 @@
 import type { TournamentEvent } from "@/features/event/types/event";
 import {
-  dayWindow,
   eventDay,
   eventDays,
   eventsWithStatus,
-  formatDayLabel,
   formatEventDateRange,
   formatTimeLabel,
   scheduleForDay,
@@ -47,19 +45,6 @@ describe("selectEventDay", () => {
     { name: "no days", days: [], requested: "2026-10-05", today: "2026-10-05", want: null },
   ])("$name", ({ days, requested, today, want }) => {
     expect(selectEventDay(days, requested, today)).toBe(want);
-  });
-});
-
-describe("dayWindow", () => {
-  const days = ["d1", "d2", "d3", "d4", "d5", "d6", "d7"];
-
-  it.each([
-    { name: "selected at the start", days, selected: "d1", size: 5, want: ["d1", "d2", "d3", "d4", "d5"] },
-    { name: "selected in the middle", days, selected: "d4", size: 5, want: ["d2", "d3", "d4", "d5", "d6"] },
-    { name: "selected at the end", days, selected: "d7", size: 5, want: ["d3", "d4", "d5", "d6", "d7"] },
-    { name: "fewer days than the window", days: ["d1", "d2"], selected: "d2", size: 5, want: ["d1", "d2"] },
-  ])("$name", ({ days, selected, size, want }) => {
-    expect(dayWindow(days, selected, size)).toEqual(want);
   });
 });
 
@@ -167,15 +152,6 @@ describe("scheduleForDay", () => {
 
 const normalize = (label: string) => label.replace(/\s/g, " ");
 
-describe("formatDayLabel", () => {
-  it.each([
-    { name: "a single-digit day", day: "2026-10-05", want: "Oct 5" },
-    { name: "a double-digit day", day: "2026-12-25", want: "Dec 25" },
-  ])("$name", ({ day, want }) => {
-    expect(normalize(formatDayLabel(day))).toBe(want);
-  });
-});
-
 describe("formatEventDateRange", () => {
   it.each([
     {
@@ -258,10 +234,10 @@ describe("eventsWithStatus", () => {
 
 describe("formatTimeLabel", () => {
   it.each([
-    { name: "morning", startTime: "2026-10-05T09:00:00Z", want: "9:00 AM UTC" },
-    { name: "half hour", startTime: "2026-10-05T09:30:00Z", want: "9:30 AM UTC" },
-    { name: "afternoon", startTime: "2026-10-05T15:05:00Z", want: "3:05 PM UTC" },
-    { name: "an offset input shown in UTC", startTime: "2026-10-05T09:00:00-04:00", want: "1:00 PM UTC" },
+    { name: "morning", startTime: "2026-10-05T09:00:00Z", want: "9:00 AM" },
+    { name: "half hour", startTime: "2026-10-05T09:30:00Z", want: "9:30 AM" },
+    { name: "afternoon", startTime: "2026-10-05T15:05:00Z", want: "3:05 PM" },
+    { name: "an offset input shown in UTC", startTime: "2026-10-05T09:00:00-04:00", want: "1:00 PM" },
   ])("$name", ({ startTime, want }) => {
     expect(normalize(formatTimeLabel(startTime))).toBe(want);
   });

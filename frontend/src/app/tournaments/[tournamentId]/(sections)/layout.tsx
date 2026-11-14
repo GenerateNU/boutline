@@ -21,7 +21,7 @@ export default async function TournamentSectionsLayout({
         basePath={`/tournaments/${tournamentId}`}
         tabs={TABS}
       />
-      <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 pt-10 pb-20">
+      <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 pt-10 pb-20 font-manrope">
         {children}
       </div>
     </>

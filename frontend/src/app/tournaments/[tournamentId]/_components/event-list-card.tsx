@@ -1,4 +1,5 @@
-import { Card, CardTitle } from "@/components/primitives/card";
+import { Card } from "@/components/primitives/card";
+import { Text } from "@/components/primitives/text";
 import type { TournamentEvent } from "@/features/event/types/event";
 
 import { EventRow } from "./event-row";
@@ -12,11 +13,13 @@ interface EventListCardProps {
 function EventListCard({ title, events, emptyMessage }: EventListCardProps) {
   return (
     <Card className="gap-1 rounded-lg px-1 py-3">
-      <CardTitle role="heading" aria-level={2} className="px-3.5 text-xl text-obsidian">
+      <Text as="h2" variant="title" className="px-3.5">
         {title}
-      </CardTitle>
+      </Text>
       {events.length === 0 ? (
-        <p className="px-3.5 text-sm text-neutral-secondary">{emptyMessage}</p>
+        <Text variant="muted" className="px-3.5">
+          {emptyMessage}
+        </Text>
       ) : (
         <ul>
           {events.map((event) => (

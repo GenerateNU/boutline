@@ -21,11 +21,14 @@ export default async function OverviewTab({
   }
 
   const dates = formatEventDateRange(events, tournament.start_time);
+  const location = [tournament.venue, tournament.city, tournament.country]
+    .filter(Boolean)
+    .join(", ");
   const ended = tournament.status === "ended";
 
   return (
     <div className="flex flex-col gap-4">
-      <TournamentInfoCard name={tournament.name} dates={dates} />
+      <TournamentInfoCard name={tournament.name} dates={dates} location={location || null} />
       <EventListCard
         title="Ongoing Events"
         events={eventsWithStatus(events, "active")}
