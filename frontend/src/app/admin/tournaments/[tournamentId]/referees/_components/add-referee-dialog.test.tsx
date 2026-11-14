@@ -33,7 +33,15 @@ const USERS = {
   offset: 0,
 };
 
-const POOLS = { data: [{ id: "p-2", number: 2 }], total: 1, limit: 100, offset: 0 };
+const POOLS = {
+  data: [
+    { id: "p-1", number: 1, status: "active" },
+    { id: "p-2", number: 2, status: "upcoming" },
+  ],
+  total: 2,
+  limit: 100,
+  offset: 0,
+};
 
 const EVENTS = [{ id: "e-1", name: "Mixed Épée" }] as TournamentEvent[];
 
@@ -178,5 +186,15 @@ describe("AddRefereeDialog", () => {
     await submit();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(error.message);
+  });
+
+  it("offers only pools that haven't started", async () => {
+    mockApi();
+    renderDialog();
+
+    await waitFor(() =>
+      expect(document.querySelector('select[name="pool"] option[value="p-2"]')).not.toBeNull(),
+    );
+    expect(document.querySelector('select[name="pool"] option[value="p-1"]')).toBeNull();
   });
 });

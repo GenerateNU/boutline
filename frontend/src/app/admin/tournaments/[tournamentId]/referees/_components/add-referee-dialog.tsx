@@ -29,6 +29,7 @@ interface UserSuggestion {
 interface PoolSheet {
   id: string;
   number: number;
+  status: "upcoming" | "active" | "ended";
 }
 
 interface TournamentPool extends PoolSheet {
@@ -59,7 +60,10 @@ function poolPlaceholder(pools: TournamentPool[] | null) {
 async function fetchEventPools({ id, name }: TournamentEvent): Promise<TournamentPool[]> {
   const query = new URLSearchParams({ event_id: id, limit: String(POOL_LIMIT) });
   const result = await apiRequest<ListResponse<PoolSheet>>(`/pool-sheets?${query}`);
-  return result.data.map(({ id: poolId, number }) => ({ id: poolId, number, eventName: name }));
+  // A pool that has started can't change referee, so only upcoming ones are offered.
+  return result.data
+    .filter((pool) => pool.status === "upcoming")
+    .map((pool) => ({ ...pool, eventName: name }));
 }
 
 async function fetchTournamentPools(events: TournamentEvent[]) {
