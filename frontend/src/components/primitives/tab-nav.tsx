@@ -22,10 +22,12 @@ function TabNav({ label, basePath, tabs }: TabNavProps) {
   const root = basePath.replace(/\/+$/, "");
 
   return (
-    <div className="bg-obsidian shadow-md">
+    // From lg up the row sits inside the global navbar, right of its blade and clear of the
+    // logout button. That needs no positioned ancestor between <body> and this nav.
+    <div className="bg-obsidian shadow-md lg:absolute lg:top-0 lg:right-16 lg:left-100 lg:h-17 lg:shadow-none">
       <NavigationBar
         aria-label={label}
-        className="mx-auto max-w-mobile rounded-none"
+        className="mx-auto max-w-mobile rounded-none lg:h-full lg:max-w-none lg:*:h-full"
         items={tabs.map(({ label, segment }) => {
           const href = segment ? `${root}/${segment}` : basePath;
           const active = segment === activeSegment;

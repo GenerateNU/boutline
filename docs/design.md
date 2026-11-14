@@ -449,14 +449,17 @@ from the venue floor.
   BOUTLINE wordmark. The menu slides a light sidebar in from the left (no motion
   with reduced motion on) with Admin Login, Search Tournaments, Find Private
   Tournament, and Settings; the current route's item is highlighted. An X at the
-  sidebar's top left closes it.
+  sidebar's top left closes it. From `lg` (laptops) the bar is taller, with a
+  larger plate and wordmark.
 - **`/settings`**: Profile, Accessibility and Language, then Privacy Policy and
   Help, in two cards. None has a page yet, so the rows are labels only.
 - **Tabs** (tournament and event pages, and the admin tournament dashboard, §4.6): a full-width obsidian row directly under
   the global nav, like the tournaments date strip. Each tab has its own URL, but switching
   tabs replaces the history entry, so the browser's Back button leaves the page
   rather than stepping back through tabs. The exception is the active tab clicked
-  from a page nested under it (an event's Events tab), which adds an entry.
+  from a page nested under it (an event's Events tab), which adds an entry. From
+  `lg` the tab row moves up into the global nav, right of the plate, and the active
+  tab's green underline spans the whole tab.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
 - **`/`**: redirects to `/tournaments`.
@@ -1762,7 +1765,7 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and `navigation-item`.
   `global-nav` renders `navbar` as its header. `navigation-bar` is the obsidian row of
   `navigation-item` tabs, and `tab-nav` renders it with the active tab taken from the
-  route. The logo takes its tone from the text colour (`text-white` or `text-blue`).
+  route; from `lg` it sits inside `navbar` rather than below it. The logo takes its tone from the text colour (`text-white` or `text-blue`).
 - Fetched content shows `Loading` until it arrives: a route's `loading.tsx` sits
   under its tab bar, and client fetches render it in place of their first result.
   `/tournaments` shows a `Skeleton` layout of the page instead (§4.2). `Skeleton`
