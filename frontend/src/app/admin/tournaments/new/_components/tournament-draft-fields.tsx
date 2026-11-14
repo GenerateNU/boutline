@@ -34,6 +34,7 @@ function TournamentDraftFields({ draft, onField, onSave }: TournamentDraftFields
     <>
       <TextField
         label="Name of tournament"
+        placeholder="Northeastern Open"
         value={draft.name}
         aria-invalid={invalid.has("name")}
         onChange={(change) => onField("name", change.target.value)}
@@ -49,6 +50,7 @@ function TournamentDraftFields({ draft, onField, onSave }: TournamentDraftFields
       />
       <TextField
         label="Venue"
+        placeholder="Cabot Center"
         value={draft.venue}
         aria-invalid={invalid.has("venue")}
         onChange={(change) => onField("venue", change.target.value)}

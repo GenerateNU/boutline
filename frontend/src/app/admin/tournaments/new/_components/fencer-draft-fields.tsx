@@ -23,12 +23,14 @@ function FencerDraftFields({ fencer, onChange }: FencerDraftFieldsProps) {
     <div className="grid grid-cols-2 gap-x-3 gap-y-4">
       <TextField
         label="First name"
+        placeholder="Maria"
         value={fencer.firstName}
         onChange={(change) => onChange({ firstName: change.target.value })}
         required
       />
       <TextField
         label="Last name"
+        placeholder="Alvarez"
         value={fencer.lastName}
         onChange={(change) => onChange({ lastName: change.target.value })}
         required
@@ -49,18 +51,21 @@ function FencerDraftFields({ fencer, onChange }: FencerDraftFieldsProps) {
       />
       <TextField
         label="Division"
+        placeholder="New England"
         value={fencer.division}
         onChange={(change) => onChange({ division: change.target.value })}
         required
       />
       <TextField
         label="Country"
+        placeholder="USA"
         value={fencer.country}
         onChange={(change) => onChange({ country: change.target.value })}
       />
       <TextField
         label="Club"
         className="col-span-2"
+        placeholder="Boston Fencing Club"
         value={fencer.club}
         onChange={(change) => onChange({ club: change.target.value })}
       />
@@ -68,6 +73,7 @@ function FencerDraftFields({ fencer, onChange }: FencerDraftFieldsProps) {
         label="Member #"
         className="col-span-2"
         inputMode="numeric"
+        placeholder="100234501"
         value={fencer.memberNumber}
         onChange={(change) => onChange({ memberNumber: change.target.value })}
       />

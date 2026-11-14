@@ -13,7 +13,7 @@ import { EventFencerList } from "./event-fencer-list";
 
 interface EventDraftCardProps {
   event: EventDraft;
-  number: number;
+  title: string;
   expanded: boolean;
   tournamentSaved: boolean;
   onExpandedChange: (expanded: boolean) => void;
@@ -26,7 +26,7 @@ interface EventDraftCardProps {
 
 function EventDraftCard({
   event,
-  number,
+  title,
   expanded,
   tournamentSaved,
   onExpandedChange,
@@ -36,7 +36,6 @@ function EventDraftCard({
   onChangeFencer,
   onRemoveFencer,
 }: EventDraftCardProps) {
-  const title = `Event ${number}`;
   const fencerList = (
     <EventFencerList
       fencers={event.fencers}
@@ -46,7 +45,7 @@ function EventDraftCard({
       onRemove={onRemoveFencer}
     />
   );
-  const subtitle = [event.name.trim() || "Untitled", `${event.fencers.length} ${pluralize(event.fencers.length, "fencer")}`].join(" · ");
+  const fencerCount = `${event.fencers.length} ${pluralize(event.fencers.length, "fencer")}`;
 
   return (
     <Card role="group" aria-label={title} className="gap-0 shadow-none">
@@ -55,9 +54,9 @@ function EventDraftCard({
           <h3 className="flex min-w-0 flex-1">
             <CollapsibleTrigger className="group/trigger -m-2 flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md p-2 text-left outline-none focus-visible:ring-3 focus-visible:ring-blue-lighter">
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-base font-semibold text-obsidian">{title}</span>
+                <span className="truncate text-base font-semibold text-obsidian">{title}</span>
                 {/* Shown open or closed, so the header doesn't change height mid-animation. */}
-                <span className="truncate text-xs text-neutral-secondary">{subtitle}</span>
+                <span className="truncate text-xs text-neutral-secondary">{fencerCount}</span>
               </span>
               <ExpandMoreOutlined
                 aria-hidden

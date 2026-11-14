@@ -985,9 +985,11 @@ are placed into pools.
 **Status:** Partial. Issues: #136, #252.
 
 - **Built (UI only):** one page holds the tournament fields (§10.1), a CSV
-  dropzone (§10.4), and one card per event ("Event 1", "Event 2", …) with the
-  event name and the attributes in §8.5. Cards can be added and removed, keeping
-  at least one.
+  dropzone (§10.4), and one card per event, titled by its event name ("Event 2"
+  until it has one), with the attributes in §8.5. Cards can be added and removed,
+  keeping at least one. Text fields carry example placeholders. From `lg` up the
+  page is two columns: upload, tournament and submit on the left, events on the
+  right; phones keep one column in that order with events before submit.
 - **Import:** the CSV's valid rows are sorted into cards by their Event column. A
   card with a matching name (ignoring case) gets those fencers in place of its own,
   so a second upload doesn't double them. Other events fill a blank card that has no
@@ -1003,7 +1005,7 @@ are placed into pools.
   event is being edited, fencers can be edited, removed, or added by hand.
 - **Collapsing:** event cards and fencer lists use Radix Collapsible, animating
   height and opacity (`animate-collapsible-down`/`-up`, off with reduced motion).
-  A collapsed card shows its title, event name and fencer count. Collapsed fields
+  A card's header shows its title and fencer count, open or closed. Collapsed fields
   escape the browser's required check, so submit reopens any unsaved card that is
   missing fields or has incomplete fencers, and names it.
 - **Draft:** the whole form, events and fencers included, is kept in

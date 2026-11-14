@@ -16,7 +16,6 @@ function EventDraftSummary({ event, onEdit }: EventDraftSummaryProps) {
   return (
     <div className="flex items-start gap-3">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="truncate text-sm font-medium text-obsidian">{event.name}</p>
         <p className="text-xs text-neutral-secondary">{details}</p>
         <p className="text-xs text-neutral-secondary">
           {formatShortDate(event.date)} at {event.time}

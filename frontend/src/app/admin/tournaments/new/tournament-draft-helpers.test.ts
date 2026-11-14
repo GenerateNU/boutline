@@ -1,6 +1,7 @@
 import { CompetitorImportRow, CompetitorImportStatus } from "@/types/competitor-import";
 
 import {
+  eventTitle,
   formatRating,
   importFencers,
   missingEventFields,
@@ -110,6 +111,15 @@ describe("missingEventFields", () => {
     },
   ])("$name", ({ patch, want }) => {
     expect(missingEventFields({ ...newEventDraft(), ...patch })).toEqual(want);
+  });
+});
+
+describe("eventTitle", () => {
+  it.each([
+    { name: "Y14 Foil", want: "Y14 Foil" },
+    { name: "  ", want: "Event 3" },
+  ])("calls a card named \"$name\" $want", ({ name, want }) => {
+    expect(eventTitle(newEventDraft(name), 2)).toBe(want);
   });
 });
 

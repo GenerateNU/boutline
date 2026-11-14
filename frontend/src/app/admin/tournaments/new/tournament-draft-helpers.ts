@@ -63,6 +63,11 @@ export function newEventDraft(name = "", fencers: FencerDraft[] = []): EventDraf
   };
 }
 
+// A card is called by its event's name, or by its position until it has one.
+export function eventTitle(event: EventDraft, index: number) {
+  return event.name.trim() || `Event ${index + 1}`;
+}
+
 const REQUIRED_EVENT_FIELDS = [
   "name",
   "type",

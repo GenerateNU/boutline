@@ -75,11 +75,11 @@ describe("NewTournamentForm", () => {
 
     expect(screen.getByRole("textbox", { name: "Name of tournament" })).toHaveValue("Northeastern Open");
     expect(screen.getByRole("combobox", { name: "Authority" })).toHaveTextContent("FIE");
-    const first = screen.getByRole("group", { name: "Event 1" });
+    const first = screen.getByRole("group", { name: "Y14 Foil" });
     expect(within(first).getByRole("textbox", { name: "Event name" })).toHaveValue("Y14 Foil");
     fireEvent.click(within(first).getByRole("button", { name: "1 fencer" }));
     expect(within(first).getByRole("group", { name: "Alvarez, Maria" })).toHaveTextContent("Boston Fencing Club · C24");
-    expect(screen.getByRole("group", { name: "Event 2" })).toHaveTextContent("No fencers yet");
+    expect(screen.getByRole("group", { name: "Div II Epee" })).toHaveTextContent("No fencers yet");
   });
 
   it("ignores a draft left by the old two-step form, which had no events", () => {
@@ -108,22 +108,21 @@ describe("NewTournamentForm", () => {
     });
 
     expect(await screen.findByRole("status")).toHaveTextContent("Added 5 fencers.");
-    const womensFoil = screen.getByRole("group", { name: "Event 1" });
-    expect(within(womensFoil).getByRole("textbox", { name: "Event name" })).toHaveValue("Y14 Women's Foil");
-    expect(womensFoil).toHaveTextContent("4 fencers");
-    expect(screen.getByRole("group", { name: "Event 2" })).toHaveTextContent("1 fencer");
+    expect(screen.getByRole("group", { name: "Y14 Women's Foil" })).toHaveTextContent("4 fencers");
+    expect(screen.getByRole("group", { name: "Div II Men's Epee" })).toHaveTextContent("1 fencer");
+    expect(screen.queryByRole("group", { name: "Event 1" })).not.toBeInTheDocument();
   });
 
   it("collapses a card to its name and fencer count, and expands it again", () => {
     saveDraft([newEventDraft("Y14 Foil", [newFencerDraft(MARIA)])]);
     render(<NewTournamentForm />);
-    const card = screen.getByRole("group", { name: "Event 1" });
+    const card = screen.getByRole("group", { name: "Y14 Foil" });
     const toggle = within(card).getByRole("button", { expanded: true });
 
     fireEvent.click(toggle);
 
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(toggle).toHaveTextContent("Y14 Foil · 1 fencer");
+    expect(toggle).toHaveTextContent("Y14 Foil1 fencer");
     expect(within(card).queryByRole("textbox")).not.toBeInTheDocument();
 
     fireEvent.click(toggle);
@@ -146,19 +145,19 @@ describe("NewTournamentForm", () => {
       }),
     );
     render(<NewTournamentForm />);
-    const second = screen.getByRole("group", { name: "Event 2" });
+    const second = screen.getByRole("group", { name: "Div II Epee" });
     fireEvent.click(within(second).getByRole("button", { expanded: true }));
 
     fireEvent.submit(screen.getByRole("button", { name: "Create tournament" }).closest("form")!);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Finish Event 2 before creating the tournament.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Finish Div II Epee before creating the tournament.");
     expect(within(second).getByRole("textbox", { name: "Event name" })).toHaveValue("Div II Epee");
   });
 
   it("won't save an event with empty fields, and marks them", () => {
     saveDraft([{ ...newEventDraft(), ...FILLED_EVENT, weapon: "" }]);
     render(<NewTournamentForm />);
-    const card = screen.getByRole("group", { name: "Event 1" });
+    const card = screen.getByRole("group", { name: "Y14 Foil" });
 
     fireEvent.click(within(card).getByRole("button", { name: "Save event" }));
 
@@ -170,7 +169,7 @@ describe("NewTournamentForm", () => {
   it("collapses a saved event to a summary, and reopens it with Edit", () => {
     saveDraft([{ ...newEventDraft(), ...FILLED_EVENT }]);
     render(<NewTournamentForm />);
-    const card = screen.getByRole("group", { name: "Event 1" });
+    const card = screen.getByRole("group", { name: "Y14 Foil" });
 
     fireEvent.click(within(card).getByRole("button", { name: "Save event" }));
 
@@ -187,7 +186,7 @@ describe("NewTournamentForm", () => {
     saveDraft([{ ...newEventDraft(), ...FILLED_EVENT }], { ...SAVED_TOURNAMENT, venue: "", saved: false });
     render(<NewTournamentForm />);
     const tournament = screen.getByRole("group", { name: "Tournament details" });
-    const saveEvent = within(screen.getByRole("group", { name: "Event 1" })).getByRole("button", { name: "Save event" });
+    const saveEvent = within(screen.getByRole("group", { name: "Y14 Foil" })).getByRole("button", { name: "Save event" });
     expect(saveEvent).toBeDisabled();
 
     fireEvent.click(within(tournament).getByRole("button", { name: "Save tournament" }));
@@ -203,7 +202,7 @@ describe("NewTournamentForm", () => {
   it("won't save an event while a fencer is missing details", () => {
     saveDraft([{ ...newEventDraft(), ...FILLED_EVENT, fencers: [newFencerDraft(MARIA)] }]);
     render(<NewTournamentForm />);
-    const card = screen.getByRole("group", { name: "Event 1" });
+    const card = screen.getByRole("group", { name: "Y14 Foil" });
 
     fireEvent.click(within(card).getByRole("button", { name: "Save event" }));
 
@@ -215,7 +214,7 @@ describe("NewTournamentForm", () => {
   it("edits, removes and adds fencers by hand", () => {
     saveDraft([newEventDraft("Y14 Foil", [newFencerDraft(MARIA)])]);
     render(<NewTournamentForm />);
-    const card = screen.getByRole("group", { name: "Event 1" });
+    const card = screen.getByRole("group", { name: "Y14 Foil" });
     fireEvent.click(within(card).getByRole("button", { name: "1 fencer" }));
 
     fireEvent.click(within(card).getByRole("button", { name: "Edit Alvarez, Maria" }));
