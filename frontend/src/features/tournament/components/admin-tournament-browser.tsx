@@ -1,4 +1,5 @@
 import { Pagination } from "@/components/primitives/pagination";
+import { getSessionToken } from "@/features/auth/services/session";
 import { CreateTournamentCard } from "@/features/tournament/components/create-tournament-card";
 import { StatusTabs } from "@/features/tournament/components/status-tabs";
 import { TournamentCard } from "@/features/tournament/components/tournament-card";
@@ -16,10 +17,12 @@ interface AdminTournamentBrowserProps {
 
 async function AdminTournamentBrowser({ query }: AdminTournamentBrowserProps) {
   const { offset, status } = parseTournamentFilters(query);
+  const token = await getSessionToken();
   const { data, total, limit } = await getTournaments(
     TOURNAMENT_PAGE_SIZE,
     offset,
-    { status },
+    { status, mine: true },
+    token,
   );
 
   return (

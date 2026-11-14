@@ -11,6 +11,8 @@ export interface Tournament {
   start_time: string | null;
   city: string | null;
   country: string | null;
+  venue: string | null;
+  sanctioning_authority: string | null;
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
@@ -25,6 +27,7 @@ export interface TournamentListFilters {
   timeZone?: string;
   club?: string;
   country?: string;
+  mine?: boolean;
 }
 
 export interface TournamentListResult {
