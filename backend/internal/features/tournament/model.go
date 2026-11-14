@@ -29,22 +29,40 @@ const (
 	TournamentVisibilityPublic  TournamentVisibility = "public"
 )
 
+type TournamentSanctioningAuthority string
+
+const (
+	TournamentSanctioningAuthorityAskFred    TournamentSanctioningAuthority = "askfred"
+	TournamentSanctioningAuthorityUSAFencing TournamentSanctioningAuthority = "usa_fencing"
+	TournamentSanctioningAuthorityFIE        TournamentSanctioningAuthority = "fie"
+	TournamentSanctioningAuthorityOther      TournamentSanctioningAuthority = "other"
+)
+
+func (a TournamentSanctioningAuthority) IsValid() bool {
+	return a == TournamentSanctioningAuthorityAskFred ||
+		a == TournamentSanctioningAuthorityUSAFencing ||
+		a == TournamentSanctioningAuthorityFIE ||
+		a == TournamentSanctioningAuthorityOther
+}
+
 // Deletion is left out on purpose, and it is under consideration. If we
 // choose to implement it, deleted_at is a cheap migration.
 type Tournament struct {
-	ID          uuid.UUID            `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	Name        string               `gorm:"type:text;not null"`
-	Visibility  TournamentVisibility `gorm:"type:text;not null;check:chk_tournaments_visibility,visibility IN ('private','public')"`
-	Code        string               `gorm:"type:text;not null;uniqueIndex:idx_tournaments_code"`
-	Status      TournamentStatus     `gorm:"type:text;not null;index;default:pending;check:chk_tournaments_status,status IN ('pending','active','ended')"`
-	CreatedBy   uuid.UUID            `gorm:"type:uuid;not null;index"`
-	City        *string              `gorm:"type:text"`
-	Country     *string              `gorm:"type:text;index"`
-	StartTime   *time.Time
-	StartedAt   *time.Time
-	CompletedAt *time.Time
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID                   uuid.UUID                       `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	Name                 string                          `gorm:"type:text;not null"`
+	Visibility           TournamentVisibility            `gorm:"type:text;not null;check:chk_tournaments_visibility,visibility IN ('private','public')"`
+	Code                 string                          `gorm:"type:text;not null;uniqueIndex:idx_tournaments_code"`
+	Status               TournamentStatus                `gorm:"type:text;not null;index;default:pending;check:chk_tournaments_status,status IN ('pending','active','ended')"`
+	CreatedBy            uuid.UUID                       `gorm:"type:uuid;not null;index"`
+	City                 *string                         `gorm:"type:text"`
+	Country              *string                         `gorm:"type:text;index"`
+	Venue                *string                         `gorm:"type:text"`
+	SanctioningAuthority *TournamentSanctioningAuthority `gorm:"type:text;check:chk_tournaments_sanctioning_authority,sanctioning_authority IN ('askfred','usa_fencing','fie','other')"`
+	StartTime            *time.Time
+	StartedAt            *time.Time
+	CompletedAt          *time.Time
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 
 	Memberships []tournamentuser.TournamentUser `gorm:"foreignKey:TournamentID;references:ID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 }

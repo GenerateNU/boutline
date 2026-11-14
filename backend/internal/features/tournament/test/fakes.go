@@ -152,6 +152,9 @@ func (f *FakeTournamentRepository) ListTournaments(
 		if filter.Country != "" && (candidate.Country == nil || *candidate.Country != filter.Country) {
 			continue
 		}
+		if filter.CreatedBy != uuid.Nil && candidate.CreatedBy != filter.CreatedBy {
+			continue
+		}
 		if filter.Club != "" && !slices.Contains(f.Clubs[candidate.ID], filter.Club) {
 			continue
 		}
@@ -202,6 +205,12 @@ func (f *FakeTournamentRepository) UpdateTournamentByID(
 	}
 	if update.Country != nil {
 		stored.Country = nilIfEmpty(*update.Country)
+	}
+	if update.Venue != nil {
+		stored.Venue = nilIfEmpty(*update.Venue)
+	}
+	if update.SanctioningAuthority != nil {
+		stored.SanctioningAuthority = update.SanctioningAuthority
 	}
 
 	f.save(id, stored)
