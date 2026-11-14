@@ -428,12 +428,19 @@ func TestLifecycleEndpointsRequireAnAdmin(t *testing.T) {
 	}
 }
 
+// newMembershipTestAPI also seeds each membership's tournament, created by
+// TestAdminID, so TestAdminID is the creator the guard keeps an admin.
 func newMembershipTestAPI(t *testing.T, seed ...tournamentuser.TournamentUser) humatest.TestAPI {
 	t.Helper()
 
+	tournaments := make([]tournament.Tournament, 0, len(seed))
+	for _, membership := range seed {
+		tournaments = append(tournaments, tournamentCreatedBy(membership.TournamentID, TestAdminID))
+	}
+
 	_, api := humatest.New(t)
 	tournament.RegisterTournamentService(api,
-		tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository(seed...)))
+		tournament.NewTournamentService(NewFakeTournamentRepository(tournaments...), NewFakeTournamentUserRepository(seed...)))
 
 	return api
 }
@@ -599,6 +606,13 @@ func TestUpdateTournamentUserRoleEndpoint(t *testing.T) {
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
+			name:       "refuses to demote the creator",
+			userPath:   TestAdminID.String(),
+			body:       map[string]any{"role": "referee"},
+			wantStatus: http.StatusConflict,
+			wantFields: map[string]any{"detail": "the tournament's creator must stay an admin"},
+		},
+		{
 			name:       "reports a non-member as not found",
 			userPath:   uuid.New().String(),
 			body:       map[string]any{"role": "admin"},
@@ -676,6 +690,9 @@ func TestRemoveTournamentUserEndpoint(t *testing.T) {
 		denied := api.DeleteCtx(caller.Context(t.Context()), path)
 		require.Equal(t, http.StatusForbidden, denied.Code, "%s: %s", who, denied.Body)
 	}
+
+	creatorPath := "/api/v1/tournaments/" + tournamentID.String() + "/users/" + TestAdminID.String()
+	assert.Equal(t, http.StatusConflict, api.DeleteCtx(admin, creatorPath).Code, "the creator stays a member")
 
 	list := decodeBody(t, api.Get("/api/v1/tournaments/"+tournamentID.String()+"/users").Body.Bytes())
 	assert.EqualValues(t, 3, list["total"])
