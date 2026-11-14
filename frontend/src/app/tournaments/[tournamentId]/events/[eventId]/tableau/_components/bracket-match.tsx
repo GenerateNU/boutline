@@ -12,7 +12,12 @@ interface BracketMatchProps {
   matched?: boolean; // true when it matches a non-empty search
 }
 
-function BracketMatch({ bout, href, dimmed = false, matched = false }: BracketMatchProps) {
+function BracketMatch({
+  bout,
+  href,
+  dimmed = false,
+  matched = false,
+}: BracketMatchProps) {
   const live = bout.status === "active";
   const [topTone, bottomTone] = pillTones(bout);
   const muted = bout.status === "upcoming";
@@ -25,13 +30,26 @@ function BracketMatch({ bout, href, dimmed = false, matched = false }: BracketMa
         matched && "h-27 border-2 border-blue-vivid",
         !matched && live && "h-26.75 border-[1.5px] border-accent-green",
         !matched && !live && "h-26.5 border border-outline",
-        {"relative after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-obsidian/20": dimmed}
+        {
+          "relative after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-obsidian/20":
+            dimmed,
+        },
       )}
     >
       {live && <span className="sr-only">Live</span>}
       <div className="flex h-full flex-col divide-y divide-outline">
-        <BracketFencerRow fencer={bout.top} score={bout.topScore} pillTone={topTone} muted={muted} />
-        <BracketFencerRow fencer={bout.bottom} score={bout.bottomScore} pillTone={bottomTone} muted={muted} />
+        <BracketFencerRow
+          fencer={bout.top}
+          score={bout.topScore}
+          pillTone={topTone}
+          muted={muted}
+        />
+        <BracketFencerRow
+          fencer={bout.bottom}
+          score={bout.bottomScore}
+          pillTone={bottomTone}
+          muted={muted}
+        />
       </div>
     </Link>
   );

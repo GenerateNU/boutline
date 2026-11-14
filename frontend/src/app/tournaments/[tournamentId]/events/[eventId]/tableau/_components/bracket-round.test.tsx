@@ -22,14 +22,20 @@ const bout = (number: number): TableauBout => ({
 const round = (size: number, bouts: TableauBout[]): TableauRound => ({
   id: String(size),
   size,
-  name: "Quarter-finals",
-  boutName: "Quarter-final",
+  name: "Table of 8",
+  boutName: "Table of 8",
   bouts,
 });
 
 function renderRound(testRound: TableauRound) {
   render(
-    <BracketRound round={testRound} isLast={false} query="" boutBasePath="/bout" ref={null} />,
+    <BracketRound
+      round={testRound}
+      isLast={false}
+      query=""
+      boutBasePath="/bout"
+      ref={null}
+    />,
   );
 }
 
@@ -37,12 +43,16 @@ describe("BracketRound", () => {
   it("puts a lone bout in the slot matching its number, after placeholders", () => {
     renderRound(round(8, [bout(4)]));
 
-    const placeholders = screen.getAllByRole("group", { name: "Bout to be announced" });
+    const placeholders = screen.getAllByRole("group", {
+      name: "Bout to be announced",
+    });
     const link = screen.getByRole("link");
 
     expect(placeholders).toHaveLength(3);
     expect(link).toHaveAttribute("href", "/bout/b-4");
-    expect(placeholders[2].compareDocumentPosition(link)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(placeholders[2].compareDocumentPosition(link)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
   });
 
   it("shows the first bout when two share a number", () => {
@@ -54,6 +64,8 @@ describe("BracketRound", () => {
   it("renders a placeholder for every slot of a round with no bouts", () => {
     renderRound(round(8, []));
 
-    expect(screen.getAllByRole("group", { name: "Bout to be announced" })).toHaveLength(4);
+    expect(
+      screen.getAllByRole("group", { name: "Bout to be announced" }),
+    ).toHaveLength(4);
   });
 });

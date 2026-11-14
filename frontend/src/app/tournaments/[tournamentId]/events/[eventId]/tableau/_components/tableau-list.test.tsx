@@ -3,12 +3,22 @@ import { render, screen } from "@testing-library/react";
 import type { TableauBout, TableauRound } from "../../_types/tableau";
 import { TableauList } from "./tableau-list";
 
-const bout = (number: number, firstName: string, lastName: string): TableauBout => ({
+const bout = (
+  number: number,
+  firstName: string,
+  lastName: string,
+): TableauBout => ({
   id: `b-${number}`,
   number,
   status: "upcoming",
   top: { id: `t-${number}`, firstName, lastName, club: "", seed: 1 },
-  bottom: { id: `u-${number}`, firstName: "Kenji", lastName: "Tanaka", club: "", seed: 8 },
+  bottom: {
+    id: `u-${number}`,
+    firstName: "Kenji",
+    lastName: "Tanaka",
+    club: "",
+    seed: 8,
+  },
 });
 
 const ROUNDS: TableauRound[] = [
@@ -24,7 +34,12 @@ const ROUNDS: TableauRound[] = [
 
 function renderList(selectedRoundId: string, query = "") {
   render(
-    <TableauList rounds={ROUNDS} selectedRoundId={selectedRoundId} query={query} boutBasePath="/bout" />,
+    <TableauList
+      rounds={ROUNDS}
+      selectedRoundId={selectedRoundId}
+      query={query}
+      boutBasePath="/bout"
+    />,
   );
 }
 
@@ -32,10 +47,9 @@ describe("TableauList", () => {
   it("lists the selected round's bouts with the bout they feed into", () => {
     renderList("4");
 
-    expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
-      "/bout/b-1",
-      "/bout/b-2",
-    ]);
+    expect(
+      screen.getAllByRole("link").map((link) => link.getAttribute("href")),
+    ).toEqual(["/bout/b-1", "/bout/b-2"]);
     expect(screen.getAllByText(/Winner/).map((el) => el.textContent)).toEqual([
       "Winner  Final",
       "Winner  Final",
@@ -50,8 +64,18 @@ describe("TableauList", () => {
   });
 
   it.each([
-    { name: "a round with no bouts", roundId: "2", query: "", want: "No bouts in this round yet." },
-    { name: "a search nothing matches", roundId: "4", query: "zzz", want: "No bouts match your search." },
+    {
+      name: "a round with no bouts",
+      roundId: "2",
+      query: "",
+      want: "No bouts in this round yet.",
+    },
+    {
+      name: "a search nothing matches",
+      roundId: "4",
+      query: "zzz",
+      want: "No bouts match your search.",
+    },
   ])("explains $name", ({ roundId, query, want }) => {
     renderList(roundId, query);
 

@@ -31,14 +31,25 @@ function BoutCard({ bout, title, nextLabel, href }: BoutCardProps) {
         {title}
       </p>
       <div className="flex h-13 border-b border-outline">
-        <BracketFencerRow fencer={bout.top} score={bout.topScore} pillTone={topTone} muted={muted} />
+        <BracketFencerRow
+          fencer={bout.top}
+          score={bout.topScore}
+          pillTone={topTone}
+          muted={muted}
+        />
       </div>
       <div className={cn("flex h-13", nextLabel && "border-b border-outline")}>
-        <BracketFencerRow fencer={bout.bottom} score={bout.bottomScore} pillTone={bottomTone} muted={muted} />
+        <BracketFencerRow
+          fencer={bout.bottom}
+          score={bout.bottomScore}
+          pillTone={bottomTone}
+          muted={muted}
+        />
       </div>
       {nextLabel && (
         <p className="flex h-8 items-center gap-1 text-xs text-neutral-secondary">
-          Winner <ArrowForwardOutlined aria-hidden className="size-3" /> {nextLabel}
+          Winner <ArrowForwardOutlined aria-hidden className="size-3" />{" "}
+          {nextLabel}
         </p>
       )}
     </Link>

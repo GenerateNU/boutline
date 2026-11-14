@@ -37,7 +37,10 @@ function BracketGroup({ slots, query, boutBasePath }: BracketGroupProps) {
             className="absolute top-1/4 -right-3.5 h-1/2 w-3.5 border-y border-r border-neutral-secondary"
           />
           {/* line from the middle of ⊐ to the next round */}
-          <div aria-hidden className="absolute top-1/2 -right-11.5 w-8 border-t border-neutral-secondary" />
+          <div
+            aria-hidden
+            className="absolute top-1/2 -right-11.5 w-8 border-t border-neutral-secondary"
+          />
         </>
       )}
     </div>

@@ -3,9 +3,19 @@ import { render, screen } from "@testing-library/react";
 import type { TableauBout } from "../../_types/tableau";
 import { BoutCard } from "./bout-card";
 
-const fencer = (id: string, firstName: string) => ({ id, firstName, lastName: "Fencer", club: "Club", seed: 1 });
+const fencer = (id: string, firstName: string) => ({
+  id,
+  firstName,
+  lastName: "Fencer",
+  club: "Club",
+  seed: 1,
+});
 
-const bout = (status: TableauBout["status"], topScore?: number, bottomScore?: number): TableauBout => ({
+const bout = (
+  status: TableauBout["status"],
+  topScore?: number,
+  bottomScore?: number,
+): TableauBout => ({
   id: "b-1",
   number: 1,
   status,
@@ -16,7 +26,14 @@ const bout = (status: TableauBout["status"], topScore?: number, bottomScore?: nu
 });
 
 function renderCard(testBout: TableauBout, nextLabel?: string) {
-  render(<BoutCard bout={testBout} title="Bout 1" nextLabel={nextLabel} href="/bout/b-1" />);
+  render(
+    <BoutCard
+      bout={testBout}
+      title="Bout 1"
+      nextLabel={nextLabel}
+      href="/bout/b-1"
+    />,
+  );
 }
 
 describe("BoutCard", () => {

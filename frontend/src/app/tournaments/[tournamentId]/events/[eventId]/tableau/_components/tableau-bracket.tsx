@@ -45,14 +45,21 @@ function TableauBracket({
     if (!scroller || !column) {
       return;
     }
-    const offset = column.getBoundingClientRect().left - scroller.getBoundingClientRect().left;
-    const roomRight = scroller.scrollWidth - scroller.clientWidth - scroller.scrollLeft;
-    const canMove = offset > 1 ? roomRight > 1 : offset < -1 && scroller.scrollLeft > 1;
+    const offset =
+      column.getBoundingClientRect().left -
+      scroller.getBoundingClientRect().left;
+    const roomRight =
+      scroller.scrollWidth - scroller.clientWidth - scroller.scrollLeft;
+    const canMove =
+      offset > 1 ? roomRight > 1 : offset < -1 && scroller.scrollLeft > 1;
     if (!canMove) {
       return;
     }
     scrollingToButtonPick.current = true;
-    scroller.scrollTo({ left: scroller.scrollLeft + offset, behavior: "smooth" });
+    scroller.scrollTo({
+      left: scroller.scrollLeft + offset,
+      behavior: "smooth",
+    });
   }, [focusedRoundId, firstRoundId]);
 
   useEffect(() => () => clearTimeout(settleTimer.current), []);
@@ -76,7 +83,10 @@ function TableauBracket({
     if (!scroller) {
       return undefined;
     }
-    if (scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 1) {
+    if (
+      scroller.scrollLeft + scroller.clientWidth >=
+      scroller.scrollWidth - 1
+    ) {
       return rounds[rounds.length - 1]?.id;
     }
     const scrollerLeft = scroller.getBoundingClientRect().left;
@@ -86,7 +96,9 @@ function TableauBracket({
       if (!column) {
         continue;
       }
-      const distance = Math.abs(column.getBoundingClientRect().left - scrollerLeft);
+      const distance = Math.abs(
+        column.getBoundingClientRect().left - scrollerLeft,
+      );
       if (!nearest || distance < nearest.distance) {
         nearest = { id: round.id, distance };
       }
@@ -95,24 +107,26 @@ function TableauBracket({
   }
 
   return (
-    <div
-      ref={scrollerRef}
-      onScroll={handleScroll}
-      className="snap-x snap-mandatory overflow-x-auto pb-2"
-    >
-      <div className="flex gap-11.5">
-        {rounds.map((round, roundIndex) => (
-          <BracketRound
-            key={round.id}
-            ref={(element) => {
-              columnRefs.current[round.id] = element;
-            }}
-            round={round}
-            isLast={roundIndex === rounds.length - 1}
-            query={query}
-            boutBasePath={boutBasePath}
-          />
-        ))}
+    <div className="h-full">
+      <div
+        ref={scrollerRef}
+        onScroll={handleScroll}
+        className="h-full snap-x snap-mandatory overflow-auto pt-16 pb-6"
+      >
+        <div className="flex w-max gap-11.5">
+          {rounds.map((round, roundIndex) => (
+            <BracketRound
+              key={round.id}
+              ref={(element) => {
+                columnRefs.current[round.id] = element;
+              }}
+              round={round}
+              isLast={roundIndex === rounds.length - 1}
+              query={query}
+              boutBasePath={boutBasePath}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

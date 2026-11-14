@@ -9,8 +9,14 @@ interface TableauListItemProps {
   boutBasePath: string;
 }
 
-function TableauListItem({ bout, round, nextRound, boutBasePath }: TableauListItemProps) {
-  const nextLabel = nextRound && boutTitle(nextRound, Math.ceil(bout.number / 2));
+function TableauListItem({
+  bout,
+  round,
+  nextRound,
+  boutBasePath,
+}: TableauListItemProps) {
+  const nextLabel =
+    nextRound && boutTitle(nextRound, Math.ceil(bout.number / 2));
   return (
     <li>
       <BoutCard
@@ -30,7 +36,12 @@ interface TableauListProps {
   boutBasePath: string;
 }
 
-function TableauList({ rounds, selectedRoundId, query, boutBasePath }: TableauListProps) {
+function TableauList({
+  rounds,
+  selectedRoundId,
+  query,
+  boutBasePath,
+}: TableauListProps) {
   const roundIndex = Math.max(
     rounds.findIndex((round) => round.id === selectedRoundId),
     0,
@@ -40,10 +51,18 @@ function TableauList({ rounds, selectedRoundId, query, boutBasePath }: TableauLi
   const bouts = round.bouts.filter((bout) => matchesQuery(bout, query));
 
   if (round.bouts.length === 0) {
-    return <p className="py-8 text-center text-muted-foreground">No bouts in this round yet.</p>;
+    return (
+      <p className="py-8 text-center text-muted-foreground">
+        No bouts in this round yet.
+      </p>
+    );
   }
   if (bouts.length === 0) {
-    return <p className="py-8 text-center text-muted-foreground">No bouts match your search.</p>;
+    return (
+      <p className="py-8 text-center text-muted-foreground">
+        No bouts match your search.
+      </p>
+    );
   }
 
   return (
