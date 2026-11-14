@@ -23,6 +23,7 @@ export interface PoolFencer {
 
 export interface PoolBout {
   id: string;
+  slot: number;
   status: BoutStatus;
   competitor_1_id: string;
   competitor_2_id: string;
@@ -33,15 +34,23 @@ export interface PoolBout {
   start_time: string | null;
 }
 
+// One pool as GET /api/v1/pool-sheets returns it.
 export interface PoolBoard {
   id: string;
   pool_stage_id: string;
   number: number;
-  strip: string; // "Strip 3"
+  strip: string | null; // "Strip 3"
   status: PoolStatus;
   start_time: string | null;
   started_at: string | null;
   completed_at: string | null;
   fencers: PoolFencer[];
   bouts: PoolBout[];
+}
+
+export interface PoolBoardList {
+  data: PoolBoard[];
+  total: number;
+  limit: number;
+  offset: number;
 }

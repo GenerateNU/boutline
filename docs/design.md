@@ -429,8 +429,9 @@ different roles in different tournaments.
 
 ## 4. Browsing tournaments
 
-**Status:** Partial. The tournament screens are wired to the real API. The event
-tabs for pools, tableau and results run on placeholder data until chapters 11–13.
+**Status:** Partial. The tournament screens are wired to the real API, and so is the
+event's Pools tab (§11.6). The tableau and results tabs run on placeholder data until
+chapters 12–13.
 
 **What it is:** the public face of Boutline. Anyone can find a tournament by name
 or date, open a private one by its code, and look through its events, fencers and
@@ -1244,11 +1245,13 @@ results, stored on the DE entry (§12.1).
 
 ### 11.6 Pooling tab and pool screen
 
-**Status:** Partial. Issue: #127. Each part below is built to the hi-fi design on
-placeholder data (`pooling/_services/pools.ts`) unless marked Planned. Wiring them
-to the API (§11.3) remains.
+**Status:** Partial. Issue: #127. Each part below is built to the hi-fi design and
+reads the pool sheets API unless marked Planned. Tests use the fixture pools in
+`pooling/_fixtures/pool-boards.ts`.
 
-- **Pool list:** a "Search pools" field above a card per pool, always open. A card
+- **Pool list:** the event's pools from `GET /api/v1/pool-sheets?event_id=…`, with
+  "No pools yet." when there are none. A "Search pools" field sits above a card per
+  pool, always open. A card
   has a Bouts | Standings toggle that shows the V/D grid or the standings table (# ·
   Fencer · V · V/M · TS · TR · Ind, by place, names as "Last, First"), and a View
   pool link. Pool pins are not built yet (§6.3).

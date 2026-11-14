@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 
-import { poolBoards } from "../_services/pools";
+import { poolBoards } from "../_fixtures/pool-boards";
 
 import { PoolStandingsTable } from "./pool-standings-table";
 

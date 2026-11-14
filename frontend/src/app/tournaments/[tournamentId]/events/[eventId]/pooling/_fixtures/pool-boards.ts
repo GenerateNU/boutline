@@ -41,6 +41,7 @@ function bout(
   const winner = score1 > score2 ? first : second;
   return {
     id: `pool-${pool}-bout-${number}`,
+    slot: number,
     status,
     competitor_1_id: first.competitor_id,
     competitor_2_id: second.competitor_id,
