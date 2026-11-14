@@ -456,7 +456,10 @@ from the venue floor.
   the global nav, like the tournaments date strip. Each tab has its own URL, but switching
   tabs replaces the history entry, so the browser's Back button leaves the page
   rather than stepping back through tabs. The exception is the active tab clicked
-  from a page nested under it (an event's Events tab), which adds an entry.
+  from a page nested under it (an event's Events tab), which adds an entry. From
+  `lg` the tab row moves up into the global nav, right of the plate, with each tab
+  as wide as its label rather than spread evenly, and the active tab's green
+  underline spans the whole tab.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
 - **`/`**: redirects to `/tournaments`.
@@ -1792,7 +1795,7 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and `navigation-item`.
   `global-nav` renders `navbar` as its header. `navigation-bar` is the obsidian row of
   `navigation-item` tabs, and `tab-nav` renders it with the active tab taken from the
-  route. The logo takes its tone from the text colour (`text-white` or `text-blue`).
+  route; from `lg` it sits inside `navbar` rather than below it. The logo takes its tone from the text colour (`text-white` or `text-blue`).
 - Fetched content shows `Loading` until it arrives: a route's `loading.tsx` sits
   under its tab bar, and client fetches render it in place of their first result.
   `/tournaments` shows a `Skeleton` layout of the page instead (§4.2). `Skeleton`
