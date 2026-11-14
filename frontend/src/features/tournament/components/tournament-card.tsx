@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle } from "@/components/primitives/card";
 import { TournamentStatusBadge } from "@/features/tournament/components/tournament-status-badge";
 import { formatShortDate } from "@/features/tournament/lib/format-short-date";
-import { tournamentLocation } from "@/features/tournament/lib/tournament-location";
 import type { Tournament } from "@/features/tournament/types/tournament";
 
 interface TournamentCardProps {
@@ -14,7 +13,7 @@ interface TournamentCardProps {
 }
 
 function TournamentCard({ tournament, admin }: TournamentCardProps) {
-  const location = tournamentLocation(tournament);
+  const location = [tournament.city, tournament.country].filter(Boolean).join(", ");
   const Icon = admin ? CalendarTodayOutlined : LocationOnOutlined;
   const meta = admin ? `Created ${formatShortDate(tournament.created_at)}` : location;
 

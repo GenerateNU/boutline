@@ -3,7 +3,6 @@ import LocationOnOutlined from "@mui/icons-material/LocationOnOutlined";
 
 import { BackButton } from "@/components/primitives/back-button";
 import { TournamentStatusBadge } from "@/features/tournament/components/tournament-status-badge";
-import { tournamentLocation } from "@/features/tournament/lib/tournament-location";
 import type { Tournament } from "@/features/tournament/types/tournament";
 
 interface DashboardHeaderProps {
@@ -12,7 +11,7 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ tournament, dates }: DashboardHeaderProps) {
-  const location = tournamentLocation(tournament);
+  const location = [tournament.city, tournament.country].filter(Boolean).join(", ");
 
   return (
     <header className="mx-auto flex w-full max-w-mobile flex-col gap-2 px-4 pt-4 pb-6 font-manrope">

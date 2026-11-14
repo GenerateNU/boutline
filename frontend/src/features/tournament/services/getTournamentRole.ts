@@ -1,4 +1,4 @@
-import { sessionAuthHeaders } from "@/features/auth/services/session";
+import { getSessionToken } from "@/features/auth/services/session";
 import type {
   TournamentRole,
   TournamentRoleResponse,
@@ -11,8 +11,8 @@ import type {
 const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 
 export async function getTournamentRole(tournamentId: string): Promise<TournamentRole | null> {
-  const headers = await sessionAuthHeaders();
-  if (!headers.Authorization) {
+  const token = await getSessionToken();
+  if (!token) {
     return null;
   }
 
@@ -22,7 +22,11 @@ export async function getTournamentRole(tournamentId: string): Promise<Tournamen
   );
 
   // The backend treats an expired token as signed out, so that comes back as null too.
-  const response = await fetch(url, { cache: "no-store", headers });
+  const response = await fetch(url, {
+    cache: "no-store",
+    // The /api proxy does this for browser calls; a server fetch sends the cookie's token itself.
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!response.ok) {
     throw new Error(`get tournament role: ${response.status}`);
   }

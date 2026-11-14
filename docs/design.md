@@ -419,9 +419,8 @@ different roles in different tournaments.
   lifetime, so page scripts never see it.
 - `src/proxy.ts` moves the cookie into the `Authorization` header on `/api/*`. It
   redirects `/admin/*` and `/…/referee` to `/login?next=…` when there is no cookie.
-- Server components that call the backend themselves (the dashboard's role lookup)
-  use `sessionAuthHeaders()`, which sends the cookie's token as
-  `Authorization: Bearer`, the same as the `/api` proxy.
+- A server component that calls the backend itself (the dashboard's role lookup)
+  sends the cookie's token as `Authorization: Bearer`, the same as the `/api` proxy.
 
 ---
 

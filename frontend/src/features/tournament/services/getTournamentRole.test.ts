@@ -1,17 +1,17 @@
-import { sessionAuthHeaders } from "@/features/auth/services/session";
+import { getSessionToken } from "@/features/auth/services/session";
 import { getTournamentRole } from "@/features/tournament/services/getTournamentRole";
 
 // next/jest rewrites the @/ alias in imports but not in jest.mock paths.
-jest.mock("../../auth/services/session", () => ({ sessionAuthHeaders: jest.fn() }));
+jest.mock("../../auth/services/session", () => ({ getSessionToken: jest.fn() }));
 
-const sessionAuthHeadersMock = jest.mocked(sessionAuthHeaders);
+const getSessionTokenMock = jest.mocked(getSessionToken);
 
 describe("getTournamentRole", () => {
   const fetchMock = jest.fn();
 
   beforeEach(() => {
     global.fetch = fetchMock;
-    sessionAuthHeadersMock.mockResolvedValue({ Authorization: "Bearer tok" });
+    getSessionTokenMock.mockResolvedValue("tok");
   });
 
   afterEach(() => {
@@ -36,7 +36,7 @@ describe("getTournamentRole", () => {
   });
 
   it("resolves null without fetching when there is no session token", async () => {
-    sessionAuthHeadersMock.mockResolvedValue({});
+    getSessionTokenMock.mockResolvedValue(undefined);
 
     await expect(getTournamentRole("t1")).resolves.toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
