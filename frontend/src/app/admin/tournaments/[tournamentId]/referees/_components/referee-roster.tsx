@@ -28,9 +28,11 @@ interface RefereeRosterProps {
   tournamentId: string;
   referees: RefereeResponse[];
   events: TournamentEvent[];
+  // Admins add and remove; referees see the same roster read-only.
+  canManage: boolean;
 }
 
-function RefereeRoster({ tournamentId, referees, events }: RefereeRosterProps) {
+function RefereeRoster({ tournamentId, referees, events, canManage }: RefereeRosterProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
@@ -62,25 +64,33 @@ function RefereeRoster({ tournamentId, referees, events }: RefereeRosterProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Button ref={addButton} className="self-start" onClick={() => setAddOpen(true)}>
-        Add Referees
-      </Button>
+      {canManage && (
+        <Button ref={addButton} className="self-start" onClick={() => setAddOpen(true)}>
+          Add Referees
+        </Button>
+      )}
       {rows.length === 0 ? (
         <p className="text-sm text-neutral-secondary">No referees yet.</p>
       ) : (
         <RefereeCard
           referees={rows}
           // Remove only asks first; confirmRemove does the delete.
-          onRemove={(id) => setRefereeToRemove(rows.find((row) => row.id === id) ?? null)}
+          onRemove={
+            canManage
+              ? (id) => setRefereeToRemove(rows.find((row) => row.id === id) ?? null)
+              : undefined
+          }
         />
       )}
-      <AddRefereeDialog
-        tournamentId={tournamentId}
-        events={events}
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        returnFocusTo={addButton}
-      />
+      {canManage && (
+        <AddRefereeDialog
+          tournamentId={tournamentId}
+          events={events}
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          returnFocusTo={addButton}
+        />
+      )}
       <Modal
         open={refereeToRemove !== null}
         onOpenChange={(open) => !open && setRefereeToRemove(null)}

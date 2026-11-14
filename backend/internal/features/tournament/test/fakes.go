@@ -152,7 +152,8 @@ func (f *FakeTournamentRepository) ListTournaments(
 		if filter.Country != "" && (candidate.Country == nil || *candidate.Country != filter.Country) {
 			continue
 		}
-		if filter.CreatedBy != uuid.Nil && candidate.CreatedBy != filter.CreatedBy {
+		if filter.AssociatedUserID != uuid.Nil && candidate.CreatedBy != filter.AssociatedUserID &&
+			!f.hasMember(candidate.ID, filter.AssociatedUserID) {
 			continue
 		}
 		if filter.Club != "" && !clubsContain(f.Clubs[candidate.ID], filter.Club) {
@@ -179,6 +180,14 @@ func (f *FakeTournamentRepository) ListTournaments(
 	}
 
 	return matched, total, nil
+}
+
+func (f *FakeTournamentRepository) hasMember(tournamentID, userID uuid.UUID) bool {
+	if f.Members == nil {
+		return false
+	}
+	_, ok := f.Members.Memberships[keyOf(tournamentID, userID)]
+	return ok
 }
 
 // clubsContain approximates trigram word similarity with a case-insensitive
@@ -392,6 +401,25 @@ func (f *FakeTournamentUserRepository) GetTournamentUser(
 	}
 
 	return &found, nil
+}
+
+func (f *FakeTournamentUserRepository) ListRolesByUser(
+	_ context.Context,
+	userID uuid.UUID,
+	tournamentIDs []uuid.UUID,
+) (map[uuid.UUID]tournamentuser.TournamentUserRole, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	roles := map[uuid.UUID]tournamentuser.TournamentUserRole{}
+	for _, tournamentID := range tournamentIDs {
+		if membership, ok := f.Memberships[keyOf(tournamentID, userID)]; ok {
+			roles[tournamentID] = membership.Role
+		}
+	}
+
+	return roles, nil
 }
 
 func (f *FakeTournamentUserRepository) ListMembersByTournament(

@@ -7,21 +7,22 @@ import (
 )
 
 type TournamentResponse struct {
-	ID                   string                          `json:"id" format:"uuid"`
-	Name                 string                          `json:"name"`
-	Visibility           TournamentVisibility            `json:"visibility" enum:"private,public"`
-	Code                 string                          `json:"code" doc:"Join code, always uppercase"`
-	Status               TournamentStatus                `json:"status" enum:"pending,active,ended"`
-	CreatedBy            string                          `json:"created_by" format:"uuid"`
-	City                 *string                         `json:"city" doc:"Where the tournament is held, if set"`
-	Country              *string                         `json:"country" doc:"ISO 3166-1 alpha-2 code, uppercase; null when unset"`
-	Venue                *string                         `json:"venue" doc:"Venue name, if set"`
-	SanctioningAuthority *TournamentSanctioningAuthority `json:"sanctioning_authority" enum:"askfred,usa_fencing,fie,other" doc:"Body that sanctions the tournament; null when unset"`
-	StartTime            *time.Time                      `json:"start_time" doc:"Scheduled start, if one was set"`
-	StartedAt            *time.Time                      `json:"started_at" doc:"When the tournament actually went active"`
-	CompletedAt          *time.Time                      `json:"completed_at"`
-	CreatedAt            time.Time                       `json:"created_at"`
-	UpdatedAt            time.Time                       `json:"updated_at"`
+	ID                   string                             `json:"id" format:"uuid"`
+	Name                 string                             `json:"name"`
+	Visibility           TournamentVisibility               `json:"visibility" enum:"private,public"`
+	Code                 string                             `json:"code" doc:"Join code, always uppercase"`
+	Status               TournamentStatus                   `json:"status" enum:"pending,active,ended"`
+	CreatedBy            string                             `json:"created_by" format:"uuid"`
+	City                 *string                            `json:"city" doc:"Where the tournament is held, if set"`
+	Country              *string                            `json:"country" doc:"ISO 3166-1 alpha-2 code, uppercase; null when unset"`
+	Venue                *string                            `json:"venue" doc:"Venue name, if set"`
+	SanctioningAuthority *TournamentSanctioningAuthority    `json:"sanctioning_authority" enum:"askfred,usa_fencing,fie,other" doc:"Body that sanctions the tournament; null when unset"`
+	StartTime            *time.Time                         `json:"start_time" doc:"Scheduled start, if one was set"`
+	StartedAt            *time.Time                         `json:"started_at" doc:"When the tournament actually went active"`
+	CompletedAt          *time.Time                         `json:"completed_at"`
+	CreatedAt            time.Time                          `json:"created_at"`
+	UpdatedAt            time.Time                          `json:"updated_at"`
+	Role                 *tournamentuser.TournamentUserRole `json:"role" enum:"referee,admin" doc:"The signed-in caller's role in this tournament. Only the list sets it; null when signed out or not staff."`
 }
 
 func NewTournamentResponse(tournament Tournament) TournamentResponse {
@@ -100,7 +101,7 @@ type TournamentListInput struct {
 	Visibility TournamentVisibility `query:"visibility" enum:"public,private" doc:"Filter by visibility; omit for all"`
 	Club       string               `query:"club" maxLength:"120" doc:"Only tournaments with a competitor whose primary or secondary club contains this text; omit to return every tournament"`
 	Country    string               `query:"country" pattern:"^[A-Z]{2}$" doc:"Only tournaments in this country (exact ISO 3166-1 alpha-2 code)"`
-	Mine       bool                 `query:"mine" doc:"Only tournaments the signed-in caller created; requires a signed-in caller"`
+	Mine       bool                 `query:"mine" doc:"Only tournaments the signed-in caller created or is staff in (admin or referee); requires a signed-in caller"`
 }
 
 type TournamentCountryListInput struct {

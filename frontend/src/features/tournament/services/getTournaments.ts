@@ -12,7 +12,7 @@ const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000"
 export async function getTournaments(
   limit: number,
   offset: number,
-  { query, status, visibility, date, timeZone, club, country, createdByMe }: TournamentListFilters = {},
+  { query, status, visibility, date, timeZone, club, country, mine }: TournamentListFilters = {},
   token?: string,
 ): Promise<TournamentListResult> {
   const url = new URL("/api/v1/tournaments", API_PROXY_TARGET);
@@ -33,7 +33,7 @@ export async function getTournaments(
   if (country) {
     url.searchParams.set("country", country);
   }
-  if (createdByMe) {
+  if (mine) {
     url.searchParams.set("mine", "true");
   }
   if (date) {
@@ -42,6 +42,8 @@ export async function getTournaments(
     url.searchParams.set("start_to", to.toISOString());
   }
 
+  // This fetch skips the proxy that normally adds the session header, so the
+  // caller passes the token when it wants mine or the roles.
   const response = await fetch(url, {
     cache: "no-store",
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,

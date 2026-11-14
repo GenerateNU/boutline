@@ -197,7 +197,7 @@ for sharing it privately.
 | Method | Path | Notes |
 | --- | --- | --- |
 | POST | `/tournaments` | create; the code is server-generated |
-| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&mine&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly). `mine=true` keeps only tournaments the caller created; it needs a signed-in caller (anonymous gets 403) |
+| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&mine&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly). `mine=true` keeps only tournaments the caller created or holds a `tournament_users` row in; it needs a signed-in caller (anonymous gets 403). For a signed-in caller each row carries their `role` (`admin`, `referee`, or null) |
 | GET | `/tournaments/{id}` | |
 | GET | `/tournaments/code/{code}` | open by code |
 | PATCH | `/tournaments/{id}` | name, visibility, start_time, city, country, venue, sanctioning_authority (an empty string clears city, country or venue); 409 once ended |
@@ -548,9 +548,13 @@ replace the tournament's tabs rather than stacking under them.
 Where login and signup land by default, behind the login gate. A solid-outlined
 "Create tournament" card linking to the creation form (§10.6), then "Manage
 Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) over
-the tournaments the caller created (`mine=true`), paginated. Cards show the created
-date instead of the location and link to the tournament's dashboard (§4.6), which
-only that tournament's admins can open; public `/tournaments` cards still link to
+the tournaments the caller created or is staff in (`GET /tournaments?mine=true`,
+which matches `created_by` or any `tournament_users` row, admin or referee; the
+`created_by` match keeps tournaments made before creators got an admin row),
+paginated. Cards show the created date instead of the location, then a thin
+vertical divider and the caller's role as plain text ("Admin" or "Referee", from
+the list's `role` field), and link to the tournament's dashboard (§4.6), which
+only that tournament's staff can open; public `/tournaments` cards still link to
 the public page. Organizers see `pending` as "Scheduled" with the blue badge; public
 screens keep "Upcoming". `/admin` redirects here until the console (§10.7) exists.
 
@@ -558,9 +562,11 @@ screens keep "Upcoming". `/admin` redirects here until the console (§10.7) exis
 
 **Status:** Partial.
 
-The organizer's page for one tournament, visible only to its admins. The page asks
-`GET /tournaments/{id}/role` (§2.3); anyone who isn't an admin, referees included,
-gets a 404. Signed-out visitors are redirected to login by the proxy (§3.3).
+The staff page for one tournament, visible to its admins and referees. The page
+asks `GET /tournaments/{id}/role` (§2.3); anyone without a role gets a 404.
+Referees see the same tabs read-only: the controls that change the tournament
+are hidden, and the backend refuses those writes anyway. Signed-out visitors are
+redirected to login by the proxy (§3.3).
 
 Header, top to bottom: a "< All tournaments" link back to `/admin/tournaments`; a
 small gray "Tournament Management Dashboard" with the status badge on the right
@@ -574,7 +580,8 @@ Tabs: Fencers (the index page) · Referees · Events · Settings.
   `GET /tournaments/{id}/users?role=referee`. "Add Referees" opens a dialog that
   searches users by name or email and adds one as referee, optionally to one of the
   tournament's pools, then closes. Each row shows Occupied or Available and the
-  referee's pool (§10.3), and its Remove asks for confirmation first.
+  referee's pool (§10.3), and its Remove asks for confirmation first. Add Referees
+  and Remove are admin-only.
 - **Fencers**, **Events** and **Settings** (Planned): empty until a ticket defines
   what they show.
 

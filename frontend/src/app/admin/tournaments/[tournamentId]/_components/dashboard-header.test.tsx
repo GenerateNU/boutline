@@ -20,6 +20,7 @@ const TOURNAMENT: Tournament = {
   completed_at: null,
   created_at: "2026-10-06T12:00:00Z",
   updated_at: "2026-10-06T12:00:00Z",
+  role: null,
 };
 
 describe("DashboardHeader", () => {

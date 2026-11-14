@@ -2,6 +2,7 @@ import { Pagination } from "@/components/primitives/pagination";
 import { getEvents } from "@/features/event/services/getEvents";
 import { getReferees } from "@/features/referee/services/getReferees";
 import { SearchForm } from "@/features/tournament/components/search-form";
+import { getTournamentRole } from "@/features/tournament/services/getTournamentRole";
 import { readOffsetParam, readStringParam } from "@/lib/search-params";
 
 import { RefereeRoster } from "./_components/referee-roster";
@@ -18,9 +19,10 @@ export default async function RefereesTab({
   const offset = readOffsetParam(query);
   const basePath = `/admin/tournaments/${tournamentId}/referees`;
 
-  const [{ data, total, limit }, events] = await Promise.all([
+  const [{ data, total, limit }, events, role] = await Promise.all([
     getReferees(tournamentId, PAGE_SIZE, offset, search),
     getEvents(tournamentId),
+    getTournamentRole(tournamentId),
   ]);
 
   return (
@@ -31,7 +33,12 @@ export default async function RefereesTab({
         placeholder="e.g. Yan Wang"
         defaultValue={search}
       />
-      <RefereeRoster tournamentId={tournamentId} referees={data} events={events} />
+      <RefereeRoster
+        tournamentId={tournamentId}
+        referees={data}
+        events={events}
+        canManage={role === "admin"}
+      />
       <Pagination
         total={total}
         limit={limit}

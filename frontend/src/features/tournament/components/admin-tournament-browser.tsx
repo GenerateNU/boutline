@@ -21,7 +21,7 @@ async function AdminTournamentBrowser({ query }: AdminTournamentBrowserProps) {
   const { data, total, limit } = await getTournaments(
     TOURNAMENT_PAGE_SIZE,
     offset,
-    { status, createdByMe: true },
+    { status, mine: true },
     token,
   );
 

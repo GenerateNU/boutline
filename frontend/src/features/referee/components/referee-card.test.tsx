@@ -17,7 +17,7 @@ describe("RefereeCard", () => {
     },
     { name: "no referees", referees: [], rows: [] },
   ])("renders $name", ({ referees, rows }) => {
-    render(<RefereeCard referees={referees} />);
+    render(<RefereeCard referees={referees} onRemove={() => {}} />);
 
     expect(screen.getByText("Referees:")).toBeInTheDocument();
     const items = screen.queryAllByRole("listitem");
@@ -28,5 +28,12 @@ describe("RefereeCard", () => {
         within(items[i]).getByRole("button", { name: `Remove ${row[0]}` }),
       ).toBeInTheDocument();
     });
+  });
+
+  it("leaves out Remove without onRemove", () => {
+    render(<RefereeCard referees={[{ id: "1", name: "Yan Wang", occupied: true }]} />);
+
+    expect(screen.getByText("Yan Wang")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
