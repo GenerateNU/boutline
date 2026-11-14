@@ -1550,6 +1550,9 @@ func TestListTournamentsMine(t *testing.T) {
 	administered := seeded("administered", tournament.TournamentStatusPending)
 	refereed := seeded("refereed", tournament.TournamentStatusActive)
 	theirs := seeded("theirs", tournament.TournamentStatusPending)
+	// Created before creators got an admin row, so only created_by ties it to the caller.
+	legacy := seeded("legacy", tournament.TournamentStatusPending)
+	legacy.CreatedBy = TestAdminID
 	memberships := []tournamentuser.TournamentUser{
 		seededMembership(administered.ID, TestAdminID, tournamentuser.TournamentUserRoleAdmin),
 		seededMembership(refereed.ID, TestAdminID, tournamentuser.TournamentUserRoleReferee),
@@ -1566,11 +1569,11 @@ func TestListTournamentsMine(t *testing.T) {
 		wantCode  int
 	}{
 		{
-			name:      "mine lists every tournament the caller is staff in, with their role",
+			name:      "mine lists what the caller is staff in or created, with their role",
 			caller:    CallerAdmin,
 			input:     &tournament.TournamentListInput{Mine: true},
-			wantNames: []string{"administered", "refereed"},
-			wantRoles: []string{"admin", "referee"},
+			wantNames: []string{"administered", "legacy", "refereed"},
+			wantRoles: []string{"admin", "", "referee"},
 		},
 		{
 			name:      "another user sees only theirs",
@@ -1590,15 +1593,15 @@ func TestListTournamentsMine(t *testing.T) {
 			name:      "without mine everything is listed, with a role only where the caller has one",
 			caller:    CallerAdmin,
 			input:     &tournament.TournamentListInput{},
-			wantNames: []string{"administered", "refereed", "theirs"},
-			wantRoles: []string{"admin", "referee", ""},
+			wantNames: []string{"administered", "legacy", "refereed", "theirs"},
+			wantRoles: []string{"admin", "", "referee", ""},
 		},
 		{
 			name:      "anonymous without mine lists with no roles",
 			caller:    CallerAnonymous,
 			input:     &tournament.TournamentListInput{},
-			wantNames: []string{"administered", "refereed", "theirs"},
-			wantRoles: []string{"", "", ""},
+			wantNames: []string{"administered", "legacy", "refereed", "theirs"},
+			wantRoles: []string{"", "", "", ""},
 		},
 		{
 			name:     "anonymous with mine is forbidden",
@@ -1613,7 +1616,7 @@ func TestListTournamentsMine(t *testing.T) {
 			t.Parallel()
 
 			members := NewFakeTournamentUserRepository(memberships...)
-			repo := NewFakeTournamentRepository(administered, refereed, theirs)
+			repo := NewFakeTournamentRepository(administered, refereed, theirs, legacy)
 			repo.Members = members
 			service := tournament.NewTournamentService(repo, members)
 

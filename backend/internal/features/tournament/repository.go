@@ -85,16 +85,16 @@ func (t TournamentTransition) columns() map[string]any {
 }
 
 type TournamentListFilter struct {
-	Status     TournamentStatus
-	Term       string
-	StartFrom  time.Time
-	StartTo    time.Time
-	Visibility TournamentVisibility
-	Club       string
-	Country    string
-	MemberID   uuid.UUID
-	Limit      int
-	Offset     int
+	Status           TournamentStatus
+	Term             string
+	StartFrom        time.Time
+	StartTo          time.Time
+	Visibility       TournamentVisibility
+	Club             string
+	Country          string
+	AssociatedUserID uuid.UUID
+	Limit            int
+	Offset           int
 }
 
 type TournamentCountryFilter struct {
@@ -228,11 +228,13 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 	if filter.Country != "" {
 		query = query.Where("country = ?", filter.Country)
 	}
-	if filter.MemberID != uuid.Nil {
-		query = query.Where(`EXISTS (
+	if filter.AssociatedUserID != uuid.Nil {
+		// created_by as well as membership, because tournaments made before the
+		// creator got an admin row on create have no tournament_users row for them.
+		query = query.Where(`(created_by = ? OR EXISTS (
 			SELECT 1 FROM tournament_users
 			WHERE tournament_users.tournament_id = tournaments.id AND tournament_users.user_id = ?
-		)`, filter.MemberID)
+		))`, filter.AssociatedUserID, filter.AssociatedUserID)
 	}
 	if filter.Club != "" {
 		// Raw SQL: importing the competitor package here would be an import cycle.

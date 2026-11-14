@@ -197,7 +197,7 @@ for sharing it privately.
 | Method | Path | Notes |
 | --- | --- | --- |
 | POST | `/tournaments` | create; the code is server-generated |
-| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&mine&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly). `mine=true` keeps only tournaments the caller created; it needs a signed-in caller (anonymous gets 403) |
+| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&mine&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly). `mine=true` keeps only tournaments the caller created or holds a `tournament_users` row in; it needs a signed-in caller (anonymous gets 403). For a signed-in caller each row carries their `role` (`admin`, `referee`, or null) |
 | GET | `/tournaments/{id}` | |
 | GET | `/tournaments/code/{code}` | open by code |
 | PATCH | `/tournaments/{id}` | name, visibility, start_time, city, country, venue, sanctioning_authority (an empty string clears city, country or venue); 409 once ended |
@@ -539,8 +539,10 @@ replace the tournament's tabs rather than stacking under them.
 Where login and signup land by default, behind the login gate. A solid-outlined
 "Create tournament" card linking to the creation form (§10.6), then "Manage
 Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) over
-the tournaments the caller is staff in (`GET /tournaments?mine=true`, which matches
-any `tournament_users` row, admin or referee), paginated. Cards show the created
+the tournaments the caller created or is staff in (`GET /tournaments?mine=true`,
+which matches `created_by` or any `tournament_users` row, admin or referee; the
+`created_by` match keeps tournaments made before creators got an admin row),
+paginated. Cards show the created
 date instead of the location, then a thin vertical divider and the caller's role
 as plain text ("Admin" or "Referee", from the list's `role` field). Organizers see
 `pending` as "Scheduled" with the blue badge; public screens keep "Upcoming".

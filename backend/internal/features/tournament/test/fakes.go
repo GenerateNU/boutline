@@ -152,7 +152,8 @@ func (f *FakeTournamentRepository) ListTournaments(
 		if filter.Country != "" && (candidate.Country == nil || *candidate.Country != filter.Country) {
 			continue
 		}
-		if filter.MemberID != uuid.Nil && !f.hasMember(candidate.ID, filter.MemberID) {
+		if filter.AssociatedUserID != uuid.Nil && candidate.CreatedBy != filter.AssociatedUserID &&
+			!f.hasMember(candidate.ID, filter.AssociatedUserID) {
 			continue
 		}
 		if filter.Club != "" && !slices.Contains(f.Clubs[candidate.ID], filter.Club) {

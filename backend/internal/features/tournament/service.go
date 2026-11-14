@@ -200,22 +200,22 @@ func (s *tournamentService) ListTournaments(
 	if input.Mine && !signedIn {
 		return nil, errs.HumaError(errs.Public("sign in to see your tournaments", errs.ErrForbidden))
 	}
-	var memberID uuid.UUID
+	var associatedUserID uuid.UUID
 	if input.Mine {
-		memberID = caller
+		associatedUserID = caller
 	}
 
 	tournaments, total, err := s.repo.ListTournaments(ctx, TournamentListFilter{
-		Status:     input.Status,
-		Term:       term,
-		StartFrom:  input.StartFrom,
-		StartTo:    input.StartTo,
-		Visibility: input.Visibility,
-		Club:       strings.TrimSpace(input.Club),
-		Country:    input.Country,
-		MemberID:   memberID,
-		Limit:      limit,
-		Offset:     offset,
+		Status:           input.Status,
+		Term:             term,
+		StartFrom:        input.StartFrom,
+		StartTo:          input.StartTo,
+		Visibility:       input.Visibility,
+		Club:             strings.TrimSpace(input.Club),
+		Country:          input.Country,
+		AssociatedUserID: associatedUserID,
+		Limit:            limit,
+		Offset:           offset,
 	})
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list tournaments: %w", err))

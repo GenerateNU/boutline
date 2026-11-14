@@ -93,7 +93,7 @@ type TournamentListInput struct {
 	Visibility TournamentVisibility `query:"visibility" enum:"public,private" doc:"Filter by visibility; omit for all"`
 	Club       string               `query:"club" maxLength:"120" doc:"Only tournaments with a competitor whose primary or secondary club is exactly this"`
 	Country    string               `query:"country" pattern:"^[A-Z]{2}$" doc:"Only tournaments in this country (exact ISO 3166-1 alpha-2 code)"`
-	Mine       bool                 `query:"mine" doc:"Only tournaments where the signed-in caller is staff (admin or referee); requires a signed-in caller"`
+	Mine       bool                 `query:"mine" doc:"Only tournaments the signed-in caller created or is staff in (admin or referee); requires a signed-in caller"`
 }
 
 type TournamentCountryListInput struct {
