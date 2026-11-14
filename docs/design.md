@@ -1682,9 +1682,8 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   use `rounded-md`; pills (tab nav, icon buttons, avatars) use `rounded-full`. 1px
   `border-foreground`, no shadows, except floating surfaces (select menu, dropdown,
   date field popover, upload dialog, modal, filter sheet, toast) which use `shadow-md`.
-- Hi-fi pool cards and the pool search field are white with a `border-outline`
-  border, `rounded-[12px]` and `shadow-sm`; pool grid cells and their header pills
-  use a 4px radius.
+- Hi-fi pool cards are white with a `border-outline` border, `rounded-[12px]` and
+  `shadow-sm`; pool grid cells and their header pills use a 4px radius.
 - Focus `focus-visible:ring-2 ring-ring`; hover `bg-muted`; disabled `opacity-50`.
 - Icons are Material's Outlined set from `@mui/icons-material`, imported by path
   (`@mui/icons-material/SearchOutlined`), at `size-4`, `aria-hidden` when
