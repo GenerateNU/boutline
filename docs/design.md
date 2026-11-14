@@ -1573,6 +1573,8 @@ through the tokens, so components use tokens, never raw colors.
 - Spacing: `gap-1`/`gap-2` inside a control, `gap-3`/`gap-4` between items in a list
   or section, `gap-10` between page sections.
 - Group content with `Section`, whose title is a small uppercase muted label.
+- The page scrollbar is hidden everywhere (`scrollbar-width: none` on `html`); pages
+  still scroll. Scrollable areas inside a page keep their scrollbars.
 
 ### C.2 Color tokens (`src/app/globals.css`)
 | Token | Use |

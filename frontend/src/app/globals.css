@@ -167,7 +167,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Pages still scroll; only the viewport scrollbar is hidden, as on a phone. */
   html {
     @apply font-sans;
+    scrollbar-width: none;
   }
 }
