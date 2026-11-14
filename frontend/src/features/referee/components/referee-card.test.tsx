@@ -14,16 +14,9 @@ describe("RefereeCard", () => {
         ["Yan Wang", "Occupied", "Pool 1"],
         ["Ana Diaz", "Available"],
       ],
-      absent: [],
     },
-    {
-      name: "a referee without an occupied status",
-      referees: [{ id: "3", name: "Sam Lee" }],
-      rows: [["Sam Lee"]],
-      absent: ["Occupied", "Available"],
-    },
-    { name: "no referees", referees: [], rows: [], absent: [] },
-  ])("renders $name", ({ referees, rows, absent }) => {
+    { name: "no referees", referees: [], rows: [] },
+  ])("renders $name", ({ referees, rows }) => {
     render(<RefereeCard referees={referees} />);
 
     expect(screen.getByText("Referees:")).toBeInTheDocument();
@@ -35,6 +28,5 @@ describe("RefereeCard", () => {
         within(items[i]).getByRole("button", { name: `Remove ${row[0]}` }),
       ).toBeInTheDocument();
     });
-    absent.forEach((text) => expect(screen.queryByText(text)).not.toBeInTheDocument());
   });
 });

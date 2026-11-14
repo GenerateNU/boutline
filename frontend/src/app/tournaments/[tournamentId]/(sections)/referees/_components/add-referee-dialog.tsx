@@ -26,9 +26,13 @@ interface UserSuggestion {
   name: string;
 }
 
-interface EventPool {
+interface PoolSheet {
   id: string;
   number: number;
+}
+
+interface TournamentPool extends PoolSheet {
+  eventName: string;
 }
 
 function toSuggestion({ id, firstName, lastName, email }: AuthUser): UserSuggestion {
@@ -36,23 +40,42 @@ function toSuggestion({ id, firstName, lastName, email }: AuthUser): UserSuggest
   return { value: id, label: `${name} · ${email}`, name };
 }
 
-function toEventOption({ id, name }: TournamentEvent): SelectOption {
-  return { value: id, label: name };
+// Pool numbers repeat across events, so each label names its event.
+function poolLabel({ number, eventName }: TournamentPool) {
+  return `Pool ${number} · ${eventName}`;
 }
 
-function toPoolOption({ id, number }: EventPool): SelectOption {
-  return { value: id, label: `Pool ${number}` };
+function toPoolOption(pool: TournamentPool): SelectOption {
+  return { value: pool.id, label: poolLabel(pool) };
 }
 
-async function addReferee(tournamentId: string, userId: string, assigningPool: boolean) {
+function poolPlaceholder(pools: TournamentPool[] | null) {
+  if (pools === null) {
+    return "Loading pools…";
+  }
+  return pools.length === 0 ? "No pools yet" : "Optional";
+}
+
+async function fetchEventPools({ id, name }: TournamentEvent): Promise<TournamentPool[]> {
+  const query = new URLSearchParams({ event_id: id, limit: String(POOL_LIMIT) });
+  const result = await apiRequest<ListResponse<PoolSheet>>(`/pool-sheets?${query}`);
+  return result.data.map(({ id: poolId, number }) => ({ id: poolId, number, eventName: name }));
+}
+
+async function fetchTournamentPools(events: TournamentEvent[]) {
+  const poolsByEvent = await Promise.all(events.map(fetchEventPools));
+  return poolsByEvent.flat();
+}
+
+// allowExisting: when a pool is being assigned, someone already on the staff is fine.
+async function addToStaff(tournamentId: string, userId: string, allowExisting: boolean) {
   try {
     await apiRequest(`/tournaments/${encodeURIComponent(tournamentId)}/users`, {
       method: "POST",
       body: JSON.stringify({ user_id: userId, role: "referee" }),
     });
   } catch (err) {
-    // Someone already on the staff can still be given a pool.
-    if (!(assigningPool && err instanceof ApiError && err.status === 409)) {
+    if (!(allowExisting && err instanceof ApiError && err.status === 409)) {
       throw err;
     }
   }
@@ -69,77 +92,72 @@ interface AddRefereeDialogProps {
 function AddRefereeDialog({ tournamentId, events, open, onOpenChange, returnFocusTo }: AddRefereeDialogProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [picked, setPicked] = useState<UserSuggestion | null>(null);
-  const [eventId, setEventId] = useState("");
-  const [pools, setPools] = useState<EventPool[]>([]);
+  const [pickedUser, setPickedUser] = useState<UserSuggestion | null>(null);
+  // null while the pools are loading.
+  const [pools, setPools] = useState<TournamentPool[] | null>(null);
   const [poolId, setPoolId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const search = useSearchSuggestions(async (term) => {
+  const userSearch = useSearchSuggestions(async (term) => {
     const query = new URLSearchParams({ q: term, limit: String(SUGGESTION_LIMIT) });
     const result = await apiRequest<ListResponse<AuthUser>>(`/users?${query}`);
     return result.data.map(toSuggestion);
   });
 
   useEffect(() => {
-    if (!eventId) {
+    if (!open) {
       return;
     }
     let ignore = false;
-    const query = new URLSearchParams({ event_id: eventId, limit: String(POOL_LIMIT) });
-    apiRequest<ListResponse<EventPool>>(`/pool-sheets?${query}`)
-      .then((result) => {
+    fetchTournamentPools(events)
+      .then((found) => {
         if (!ignore) {
-          setPools(result.data);
+          setPools(found);
         }
       })
       .catch((err) => {
         if (!ignore) {
+          setPools([]);
           setError(errorMessage(err));
         }
       });
     return () => {
       ignore = true;
     };
-  }, [eventId]);
-
-  function chooseEvent(id: string) {
-    setEventId(id);
-    setPools([]);
-    setPoolId("");
-  }
+  }, [open, events]);
 
   function handleOpenChange(next: boolean) {
-    setPicked(null);
-    chooseEvent("");
+    setPickedUser(null);
+    setPools(null);
+    setPoolId("");
     setError(null);
-    search.clear();
+    userSearch.clear();
     onOpenChange(next);
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!picked) {
+    if (!pickedUser) {
       return;
     }
     setError(null);
-    const pool = pools.find(({ id }) => id === poolId);
+    const selectedPool = pools?.find(({ id }) => id === poolId);
 
     startTransition(async () => {
       try {
-        await addReferee(tournamentId, picked.value, Boolean(pool));
-        if (pool) {
-          await apiRequest(`/pools/${encodeURIComponent(pool.id)}`, {
+        await addToStaff(tournamentId, pickedUser.value, Boolean(selectedPool));
+        if (selectedPool) {
+          await apiRequest(`/pools/${encodeURIComponent(selectedPool.id)}`, {
             method: "PATCH",
-            body: JSON.stringify({ referee_id: picked.value }),
+            body: JSON.stringify({ referee_id: pickedUser.value }),
           });
         }
         router.refresh();
         toast({
-          description: pool
-            ? `Added ${picked.name} as the referee for Pool ${pool.number}`
-            : `Added ${picked.name} as a referee`,
+          description: selectedPool
+            ? `Added ${pickedUser.name} as the referee for ${poolLabel(selectedPool)}`
+            : `Added ${pickedUser.name} as a referee`,
         });
         handleOpenChange(false);
       } catch (err) {
@@ -161,45 +179,36 @@ function AddRefereeDialog({ tournamentId, events, open, onOpenChange, returnFocu
       }}
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {picked && (
+        {pickedUser && (
           <div className="flex flex-wrap gap-2">
-            <Chip onDismiss={() => setPicked(null)} dismissLabel={`Remove ${picked.name}`}>
-              {picked.label}
+            <Chip onDismiss={() => setPickedUser(null)} dismissLabel={`Remove ${pickedUser.name}`}>
+              {pickedUser.label}
             </Chip>
           </div>
         )}
         <FilterSearchField
           label="Referee"
           placeholder="Search by name or email"
-          value={search.query}
-          onChange={(event) => search.change(event.target.value)}
-          suggestions={search.suggestions}
-          failed={search.failed}
-          loading={search.loading}
-          selected={picked?.value ?? ""}
+          value={userSearch.query}
+          onChange={(event) => userSearch.change(event.target.value)}
+          suggestions={userSearch.suggestions}
+          failed={userSearch.failed}
+          loading={userSearch.loading}
+          selected={pickedUser?.value ?? ""}
           onPick={(id) => {
-            setPicked(search.suggestions?.find(({ value }) => value === id) ?? null);
-            search.clear();
+            setPickedUser(userSearch.suggestions?.find(({ value }) => value === id) ?? null);
+            userSearch.clear();
           }}
           noun="users"
         />
         <SelectField
-          label="Event"
-          name="event"
-          placeholder="Optional"
-          options={events.map(toEventOption)}
-          value={eventId}
-          onValueChange={chooseEvent}
-          disabled={events.length === 0}
-        />
-        <SelectField
           label="Pool"
           name="pool"
-          placeholder={eventId && pools.length === 0 ? "No pools yet" : "e.g. Pool 1"}
-          options={pools.map(toPoolOption)}
+          placeholder={poolPlaceholder(pools)}
+          options={(pools ?? []).map(toPoolOption)}
           value={poolId}
           onValueChange={setPoolId}
-          disabled={pools.length === 0}
+          disabled={!pools?.length}
         />
         {error && (
           <p role="alert" className="text-sm text-red-dark">
@@ -207,7 +216,7 @@ function AddRefereeDialog({ tournamentId, events, open, onOpenChange, returnFocu
           </p>
         )}
         <ModalFooter className="grid-cols-1">
-          <Button type="submit" disabled={!picked || pending}>
+          <Button type="submit" disabled={!pickedUser || pending}>
             Add Referee
           </Button>
         </ModalFooter>

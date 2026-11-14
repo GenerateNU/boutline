@@ -4,6 +4,7 @@ import { getSessionToken } from "@/features/auth/services/session";
 const TABS = [
   { label: "Overview", segment: null },
   { label: "Fencers", segment: "fencers" },
+  { label: "Referees", segment: "referees", signedInOnly: true },
   { label: "Clubs", segment: "clubs" },
   { label: "Events", segment: "events" },
 ];
@@ -15,9 +16,7 @@ export default async function TournamentSectionsLayout({
 }: LayoutProps<"/tournaments/[tournamentId]">) {
   const { tournamentId } = await params;
   const sessionToken = await getSessionToken();
-  const tabs = sessionToken
-    ? [...TABS.slice(0, 2), { label: "Referees", segment: "referees" }, ...TABS.slice(2)]
-    : TABS;
+  const tabs = TABS.filter(({ signedInOnly }) => sessionToken || !signedInOnly);
 
   return (
     <div className="flex flex-col gap-10">

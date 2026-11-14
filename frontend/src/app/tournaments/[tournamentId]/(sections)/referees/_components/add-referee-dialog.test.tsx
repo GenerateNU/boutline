@@ -80,12 +80,12 @@ function mockApi(staffError?: Error) {
   });
 }
 
-function renderDialog() {
+function renderDialog(events = EVENTS) {
   render(
     <Toaster>
       <AddRefereeDialog
         tournamentId="t-1"
-        events={EVENTS}
+        events={events}
         open
         onOpenChange={onOpenChange}
         returnFocusTo={{ current: null }}
@@ -99,6 +99,22 @@ describe("AddRefereeDialog", () => {
     refresh.mockClear();
     onOpenChange.mockClear();
     apiRequestMock.mockReset();
+  });
+
+  it.each([
+    { name: "while the pools load", events: EVENTS, poolsPending: true, text: "Loading pools…", disabled: true },
+    { name: "with no pools", events: [], poolsPending: false, text: "No pools yet", disabled: true },
+    { name: "once the pools arrive", events: EVENTS, poolsPending: false, text: "Optional", disabled: false },
+  ])("shows the Pool field $name", async ({ events, poolsPending, text, disabled }) => {
+    mockApi();
+    if (poolsPending) {
+      apiRequestMock.mockImplementation(() => new Promise(() => {}));
+    }
+    renderDialog(events);
+
+    const pool = screen.getByRole("combobox", { name: "Pool" });
+    await waitFor(() => expect(pool).toHaveTextContent(text));
+    expect(pool).toHaveProperty("disabled", disabled);
   });
 
   it("keeps Add Referee disabled until a user is picked", async () => {
@@ -138,13 +154,12 @@ describe("AddRefereeDialog", () => {
     mockApi(staffError);
     renderDialog();
     await pickUser();
-    await choose("event", "e-1");
     await choose("pool", "p-2");
 
     await submit();
 
     expect(
-      await screen.findByText("Added Ana Diaz as the referee for Pool 2"),
+      await screen.findByText("Added Ana Diaz as the referee for Pool 2 · Mixed Épée"),
     ).toBeInTheDocument();
     expect(apiRequestMock).toHaveBeenLastCalledWith(
       "/pools/p-2",

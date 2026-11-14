@@ -504,8 +504,8 @@ Tabs: Overview · Fencers · Referees (signed in only) · Clubs · Events.
   last one. The strip's calendar button is disabled.
 - **Referees:** a searchable, paginated roster of the tournament's referees, from
   `GET /tournaments/{id}/users?role=referee`. "Add Referees" opens a dialog that
-  searches users by name or email and adds one as referee, optionally to one of an
-  event's pools, then closes. Each row's Remove asks for confirmation first.
+  searches users by name or email and adds one as referee, optionally to one of the
+  tournament's pools, then closes. Each row's Remove asks for confirmation first.
 
 ### 4.4 Event page (`/tournaments/[id]/events/[eventId]`)
 
@@ -955,7 +955,8 @@ Fencing, adding staff, and checking fencers in on the day.
 **Status:** Partial. Issues: #16, #20. The Referees tab (§4.3) is built and shown to
 any signed-in user until role checks (§7.2) land. The rest is planned.
 
-- Add Referees can also pick an event and one of its pools; the referee is then
+- Add Referees can also pick a pool, from every event's pools labelled "Pool 1 ·
+  {event}" (one `/pool-sheets?event_id=` request per event); the referee is then
   set on that pool with `PATCH /pools/{id}` (§11.2), even if they were already on
   the staff.
 - Each row shows Occupied or Available and the referee's current pool (§2.3).
