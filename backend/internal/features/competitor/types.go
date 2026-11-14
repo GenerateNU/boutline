@@ -25,12 +25,6 @@ type CompetitorResponse struct {
 }
 
 func newCompetitorResponse(competitor Competitor, showMemberNumber bool) CompetitorResponse {
-	// Not every competitor is entered in a tournament yet, so the column is
-	// nullable and an untagged competitor reports an empty id.
-	tournamentID := ""
-	if competitor.TournamentID != nil {
-		tournamentID = competitor.TournamentID.String()
-	}
 	var athleteID *string
 	if competitor.AthleteID != nil {
 		id := competitor.AthleteID.String()
@@ -43,7 +37,7 @@ func newCompetitorResponse(competitor Competitor, showMemberNumber bool) Competi
 	return CompetitorResponse{
 		ID:            competitor.ID.String(),
 		EventID:       competitor.EventID.String(),
-		TournamentID:  tournamentID,
+		TournamentID:  competitor.TournamentID.String(),
 		FirstName:     competitor.FirstName,
 		LastName:      competitor.LastName,
 		Gender:        string(competitor.Gender),
