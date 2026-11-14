@@ -24,9 +24,12 @@ func newTestAPI(t *testing.T, seed ...tournament.Tournament) humatest.TestAPI {
 		staff = append(staff, Staff(row.ID)...)
 	}
 
+	members := NewFakeTournamentUserRepository(staff...)
+	repo := NewFakeTournamentRepository(seed...)
+	repo.Members = members
+
 	_, api := humatest.New(t)
-	tournament.RegisterTournamentService(api,
-		tournament.NewTournamentService(NewFakeTournamentRepository(seed...), NewFakeTournamentUserRepository(staff...)))
+	tournament.RegisterTournamentService(api, tournament.NewTournamentService(repo, members))
 
 	return api
 }
@@ -96,7 +99,8 @@ func TestCreateEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t).Post("/api/v1/tournaments", tt.body)
+			api := newTestAPI(t)
+			resp := api.Post("/api/v1/tournaments", tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 
@@ -110,6 +114,19 @@ func TestCreateEndpoint(t *testing.T) {
 				require.True(t, ok, "code missing from response")
 				assert.Len(t, code, tournament.TournamentCodeLength)
 				assert.Equal(t, strings.ToUpper(code), code)
+			}
+
+			if resp.Code == http.StatusCreated {
+				id, ok := body["id"].(string)
+				require.True(t, ok, "id missing from response")
+				staff := decodeBody(t, api.Get("/api/v1/tournaments/"+id+"/users").Body.Bytes())
+				rows, ok := staff["data"].([]any)
+				require.True(t, ok, "data missing from response")
+				require.Len(t, rows, 1, "the creator should be the only member")
+				member, ok := rows[0].(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, creator, member["user_id"])
+				assert.Equal(t, "admin", member["role"])
 			}
 		})
 	}

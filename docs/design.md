@@ -619,15 +619,18 @@ logged-in user reseat another tournament's pools.
 
 ### 7.2 Role checks
 
-**Status:** Partial. Issue: #4. The role helper runs on every mutating route; the
-rest of this section is planned.
+**Status:** Partial. Issue: #4. The role helper runs on every mutating route and
+the creator is made an admin; the rest of this section is planned.
 
 - **Built:** `tournamentuser.RequireRole(ctx, memberships, tournamentID, role)`
   runs on every mutating route and returns 403 unless the caller holds the role in
   that tournament. An admin passes a referee check. Bout start and end and the
   scoring writes need `referee`. Every other write needs `admin`, except creating
   a tournament, which any signed-in user can do.
-- The creator becomes an `admin` member automatically on create (today they don't).
+- **Built:** creating a tournament writes its `created_by` user into
+  `tournament_users` as `admin` in the same transaction. `tournament_users` is the
+  only record of who administers a tournament; `created_by` is never read for
+  authorization.
 - Starting, scoring and ending a bout requires the `referee` role and being the
   bout's assigned referee (open question in §D).
 - Guard against removing or demoting the last admin.

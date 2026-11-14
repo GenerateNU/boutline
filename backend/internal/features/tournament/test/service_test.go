@@ -104,8 +104,10 @@ func TestCreateTournament(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			members := NewFakeTournamentUserRepository()
 			repo := NewFakeTournamentRepository()
-			out, err := tournament.NewTournamentService(repo, NewFakeTournamentUserRepository()).CreateTournament(t.Context(), tt.input)
+			repo.Members = members
+			out, err := tournament.NewTournamentService(repo, members).CreateTournament(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -113,6 +115,7 @@ func TestCreateTournament(t *testing.T) {
 				assert.Equal(t, tt.wantDetail, detail)
 				assert.Nil(t, out)
 				assert.Empty(t, repo.Tournaments)
+				assert.Empty(t, members.Memberships)
 
 				return
 			}
@@ -123,6 +126,11 @@ func TestCreateTournament(t *testing.T) {
 			assert.Equal(t, tournament.TournamentStatusPending, out.Body.Status)
 			assert.Nil(t, out.Body.CompletedAt)
 			assert.Len(t, repo.Tournaments, 1)
+
+			assert.Len(t, members.Memberships, 1, "the creator should be the only member")
+			creatorMembership, err := members.GetTournamentUser(t.Context(), uuid.MustParse(out.Body.ID), uuid.MustParse(creator))
+			require.NoError(t, err)
+			assert.Equal(t, tournamentuser.TournamentUserRoleAdmin, creatorMembership.Role)
 		})
 	}
 }
