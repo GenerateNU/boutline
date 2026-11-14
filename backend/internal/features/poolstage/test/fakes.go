@@ -9,11 +9,55 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/event"
 	"boutline/internal/features/poolstage"
+	"boutline/internal/features/tournamentuser"
+	tournamentusertest "boutline/internal/features/tournamentuser/test"
+	"boutline/internal/session"
 
 	"github.com/google/uuid"
 )
 
 var _ poolstage.PoolStageRepository = (*FakePoolStageRepository)(nil)
+
+var (
+	TestTournamentID = uuid.New()
+	TestAdminID      = uuid.New()
+	TestRefereeID    = uuid.New()
+	testStrangerID   = uuid.New()
+)
+
+// Caller is who a request runs as; the zero value is the tournament admin.
+type Caller int
+
+const (
+	CallerAdmin Caller = iota
+	CallerReferee
+	CallerNonMember
+	CallerNone
+)
+
+func (c Caller) Context(ctx context.Context) context.Context {
+	switch c {
+	case CallerReferee:
+		return session.WithUserID(ctx, TestRefereeID)
+	case CallerNonMember:
+		return session.WithUserID(ctx, testStrangerID)
+	case CallerNone:
+		return ctx
+	default:
+		return session.WithUserID(ctx, TestAdminID)
+	}
+}
+
+func NewTestMemberships() *tournamentusertest.FakeMembershipLookup {
+	return tournamentusertest.NewFakeMembershipLookup(
+		tournamentuser.TournamentUser{
+			TournamentID: TestTournamentID, UserID: TestAdminID, Role: tournamentuser.TournamentUserRoleAdmin,
+		},
+		tournamentuser.TournamentUser{
+			TournamentID: TestTournamentID, UserID: TestRefereeID, Role: tournamentuser.TournamentUserRoleReferee,
+		},
+	)
+}
 
 // PoolCount is a stage's pool tally; a stage with no entry has no pools.
 type PoolCount struct{ Total, Open int64 }
@@ -23,7 +67,9 @@ type FakePoolStageRepository struct {
 	WithBouts   map[uuid.UUID]bool // stages whose pools have bouts, so a delete is refused
 	PoolCounts  map[uuid.UUID]PoolCount
 	Competitors map[uuid.UUID]poolstage.PoolStageCompetitor // competitors a proposal can read
-	Err         error                                       // when set, every method fails with it
+	// TournamentID is the tournament every stored stage's event belongs to.
+	TournamentID uuid.UUID
+	Err          error // when set, every method fails with it
 }
 
 func NewFakePoolStageRepository(seed ...poolstage.PoolStage) *FakePoolStageRepository {
@@ -37,6 +83,8 @@ func NewFakePoolStageRepository(seed ...poolstage.PoolStage) *FakePoolStageRepos
 		WithBouts:   map[uuid.UUID]bool{},
 		PoolCounts:  map[uuid.UUID]PoolCount{},
 		Competitors: map[uuid.UUID]poolstage.PoolStageCompetitor{},
+
+		TournamentID: TestTournamentID,
 	}
 }
 
@@ -64,6 +112,18 @@ func (f *FakePoolStageRepository) GetPoolStageByID(_ context.Context, id uuid.UU
 	}
 
 	return &found, nil
+}
+
+func (f *FakePoolStageRepository) GetPoolStageTournamentID(_ context.Context, id uuid.UUID) (uuid.UUID, error) {
+	if f.Err != nil {
+		return uuid.Nil, f.Err
+	}
+
+	if _, ok := f.PoolStages[id]; !ok {
+		return uuid.Nil, fmt.Errorf("select pool stage %s tournament: %w", id, errs.ErrNotFound)
+	}
+
+	return f.TournamentID, nil
 }
 
 func (f *FakePoolStageRepository) ListPoolStages(

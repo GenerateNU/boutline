@@ -10,16 +10,56 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
+	"boutline/internal/session"
 
 	"github.com/google/uuid"
 )
+
+var (
+	TestAdminID    = uuid.New()
+	TestRefereeID  = uuid.New()
+	TestStrangerID = uuid.New()
+)
+
+// Caller is who a request runs as. The zero value is the admin, so a test that
+// does not care about authorization still passes the role check.
+type Caller int
+
+const (
+	CallerAdmin Caller = iota
+	CallerReferee
+	CallerStranger
+	CallerAnonymous
+)
+
+func (c Caller) Context(ctx context.Context) context.Context {
+	switch c {
+	case CallerReferee:
+		return session.WithUserID(ctx, TestRefereeID)
+	case CallerStranger:
+		return session.WithUserID(ctx, TestStrangerID)
+	case CallerAnonymous:
+		return ctx
+	default:
+		return session.WithUserID(ctx, TestAdminID)
+	}
+}
+
+// Staff is the admin and the referee of a tournament, to seed the membership fake with.
+func Staff(tournamentID uuid.UUID) []tournamentuser.TournamentUser {
+	return []tournamentuser.TournamentUser{
+		{TournamentID: tournamentID, UserID: TestAdminID, Role: tournamentuser.TournamentUserRoleAdmin},
+		{TournamentID: tournamentID, UserID: TestRefereeID, Role: tournamentuser.TournamentUserRoleReferee},
+	}
+}
 
 var _ tournament.TournamentRepository = (*FakeTournamentRepository)(nil)
 
 type FakeTournamentRepository struct {
 	Tournaments map[uuid.UUID]tournament.Tournament
-	Clubs       map[uuid.UUID][]string // clubs of each tournament's competitors, for the club filter
-	Err         error                  // when set, every method fails with it
+	Clubs       map[uuid.UUID][]string        // clubs of each tournament's competitors, for the club filter
+	Members     *FakeTournamentUserRepository // when set, a create writes its memberships here, as the real one does
+	Err         error                         // when set, every method fails with it
 }
 
 func NewFakeTournamentRepository(seed ...tournament.Tournament) *FakeTournamentRepository {
@@ -45,6 +85,13 @@ func (f *FakeTournamentRepository) CreateTournament(_ context.Context, toCreate 
 	toCreate.ID = uuid.New()
 	toCreate.CreatedAt = time.Now()
 	toCreate.UpdatedAt = toCreate.CreatedAt
+	for i := range toCreate.Memberships {
+		membership := &toCreate.Memberships[i]
+		membership.TournamentID = toCreate.ID
+		if f.Members != nil {
+			f.Members.Memberships[keyOf(membership.TournamentID, membership.UserID)] = *membership
+		}
+	}
 	f.Tournaments[toCreate.ID] = *toCreate
 
 	return nil

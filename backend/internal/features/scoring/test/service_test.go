@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/bout"
 	"boutline/internal/features/scoring"
+	"boutline/internal/session"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -28,6 +30,19 @@ func apiError(t *testing.T, err error) (int, string) {
 
 func ptr[T any](v T) *T { return &v }
 
+const notAssignedDetail = "only the bout's assigned referee can start, score or end it"
+
+// callerCtx runs as caller; uuid.Nil means no signed-in caller.
+func callerCtx(t *testing.T, caller uuid.UUID) context.Context {
+	t.Helper()
+
+	if caller == uuid.Nil {
+		return t.Context()
+	}
+
+	return session.WithUserID(t.Context(), caller)
+}
+
 func createInput(createdBy, competitorID, BoutID string, points int) *scoring.ScoringCreateInput {
 	return &scoring.ScoringCreateInput{
 		Body: scoring.ScoringCreateBody{
@@ -44,36 +59,65 @@ func TestCreateScoring(t *testing.T) {
 
 	creator := uuid.New().String()
 	competitor := uuid.New().String()
-	match := uuid.New().String()
+	match := TestBoutID.String()
 
 	tests := []struct {
 		name       string
+		caller     uuid.UUID // uuid.Nil means no caller
 		input      *scoring.ScoringCreateInput
 		wantPoints int
 		wantCode   int
 	}{
 		{
 			name:       "stores the score with the given points",
+			caller:     TestRefereeID,
 			input:      createInput(creator, competitor, match, 2),
 			wantPoints: 2,
 		},
 		{
 			name:       "keeps a single point",
+			caller:     TestRefereeID,
 			input:      createInput(creator, competitor, match, 1),
 			wantPoints: 1,
 		},
 		{
+			name:     "refuses an admin who is not the bout's referee",
+			caller:   TestAdminID,
+			input:    createInput(creator, competitor, match, 1),
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "refuses a request with no caller",
+			input:    createInput(creator, competitor, match, 1),
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "refuses a caller outside the tournament",
+			caller:   TestOutsiderID,
+			input:    createInput(creator, competitor, match, 1),
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "reports an unknown bout as not found",
+			caller:   TestRefereeID,
+			input:    createInput(creator, competitor, uuid.NewString(), 1),
+			wantCode: http.StatusNotFound,
+		},
+		{
 			name:     "rejects a created_by that is not a uuid",
+			caller:   TestRefereeID,
 			input:    createInput("not-a-uuid", competitor, match, 1),
 			wantCode: http.StatusBadRequest,
 		},
 		{
 			name:     "rejects a competitor_id that is not a uuid",
+			caller:   TestRefereeID,
 			input:    createInput(creator, "not-a-uuid", match, 1),
 			wantCode: http.StatusBadRequest,
 		},
 		{
 			name:     "rejects a bout_id that is not a uuid",
+			caller:   TestRefereeID,
 			input:    createInput(creator, competitor, "not-a-uuid", 1),
 			wantCode: http.StatusBadRequest,
 		},
@@ -84,7 +128,8 @@ func TestCreateScoring(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakeScoringRepository()
-			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).CreateScoring(t.Context(), tt.input)
+			out, err := scoring.NewScoringService(repo, NewTestBouts(), NewTestMemberships()).
+				CreateScoring(callerCtx(t, tt.caller), tt.input)
 
 			if tt.wantCode != 0 {
 				code, _ := apiError(t, err)
@@ -112,12 +157,13 @@ func TestCreateScoringAssignsDistinctIDs(t *testing.T) {
 
 	creator := uuid.New().String()
 	competitor := uuid.New().String()
-	match := uuid.New().String()
-	service := scoring.NewScoringService(NewFakeScoringRepository(), NewFakeBoutLookup())
+	match := TestBoutID.String()
+	service := scoring.NewScoringService(NewFakeScoringRepository(), NewTestBouts(), NewTestMemberships())
+	ctx := callerCtx(t, TestRefereeID)
 
-	first, err := service.CreateScoring(t.Context(), createInput(creator, competitor, match, 1))
+	first, err := service.CreateScoring(ctx, createInput(creator, competitor, match, 1))
 	require.NoError(t, err)
-	second, err := service.CreateScoring(t.Context(), createInput(creator, competitor, match, 1))
+	second, err := service.CreateScoring(ctx, createInput(creator, competitor, match, 1))
 	require.NoError(t, err)
 
 	assert.NotEqual(t, first.Body.ID, second.Body.ID)
@@ -130,8 +176,9 @@ func TestCreateScoringRejectsAnUnknownReference(t *testing.T) {
 	repo.Err = fmt.Errorf("create scoring: %w",
 		errs.Public("bout_id must reference an existing match", errs.ErrInvalidInput))
 
-	_, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).CreateScoring(t.Context(),
-		createInput(uuid.New().String(), uuid.New().String(), uuid.New().String(), 1))
+	_, err := scoring.NewScoringService(repo, NewTestBouts(), NewTestMemberships()).CreateScoring(
+		callerCtx(t, TestRefereeID),
+		createInput(uuid.New().String(), uuid.New().String(), TestBoutID.String(), 1))
 
 	code, detail := apiError(t, err)
 	assert.Equal(t, http.StatusBadRequest, code)
@@ -142,7 +189,7 @@ func TestGetScoringByID(t *testing.T) {
 	t.Parallel()
 
 	stored := seeded(1, uuid.New())
-	service := scoring.NewScoringService(NewFakeScoringRepository(stored), NewFakeBoutLookup())
+	service := scoring.NewScoringService(NewFakeScoringRepository(stored), NewFakeBoutLookup(), NewTestMemberships())
 
 	t.Run("returns the stored score", func(t *testing.T) {
 		t.Parallel()
@@ -240,7 +287,7 @@ func TestListScoring(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := scoring.NewScoringService(NewFakeScoringRepository(seed...), NewFakeBoutLookup()).
+			out, err := scoring.NewScoringService(NewFakeScoringRepository(seed...), NewFakeBoutLookup(), NewTestMemberships()).
 				ListScoring(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
@@ -281,6 +328,7 @@ func TestUpdateScoringByID(t *testing.T) {
 
 	tests := []struct {
 		name           string
+		caller         uuid.UUID // uuid.Nil means no caller
 		seedRevoked    bool
 		body           scoring.ScoringUpdateBody
 		useUnknownID   bool
@@ -291,17 +339,20 @@ func TestUpdateScoringByID(t *testing.T) {
 	}{
 		{
 			name:       "changes the points without touching the competitor",
+			caller:     TestRefereeID,
 			body:       scoring.ScoringUpdateBody{Points: ptr(3)},
 			wantPoints: 3,
 		},
 		{
 			name:           "reassigns the competitor without touching the points",
+			caller:         TestRefereeID,
 			body:           scoring.ScoringUpdateBody{CompetitorID: ptr(newCompetitor)},
 			wantPoints:     1,
 			wantCompetitor: newCompetitor,
 		},
 		{
-			name: "changes both fields at once",
+			name:   "changes both fields at once",
+			caller: TestRefereeID,
 			body: scoring.ScoringUpdateBody{
 				Points:       ptr(2),
 				CompetitorID: ptr(newCompetitor),
@@ -311,18 +362,21 @@ func TestUpdateScoringByID(t *testing.T) {
 		},
 		{
 			name:       "refuses a patch that would change nothing",
+			caller:     TestRefereeID,
 			body:       scoring.ScoringUpdateBody{},
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "no fields to update",
 		},
 		{
 			name:       "rejects a competitor_id that is not a uuid",
+			caller:     TestRefereeID,
 			body:       scoring.ScoringUpdateBody{CompetitorID: ptr("not-a-uuid")},
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "",
 		},
 		{
 			name:        "refuses to edit a revoked score",
+			caller:      TestRefereeID,
 			seedRevoked: true,
 			body:        scoring.ScoringUpdateBody{Points: ptr(2)},
 			wantCode:    http.StatusConflict,
@@ -330,9 +384,28 @@ func TestUpdateScoringByID(t *testing.T) {
 		},
 		{
 			name:         "reports an unknown id as not found",
+			caller:       TestRefereeID,
 			body:         scoring.ScoringUpdateBody{Points: ptr(2)},
 			useUnknownID: true,
 			wantCode:     http.StatusNotFound,
+		},
+		{
+			name:       "refuses an admin who is not the bout's referee",
+			caller:     TestAdminID,
+			body:       scoring.ScoringUpdateBody{Points: ptr(3)},
+			wantCode:   http.StatusForbidden,
+			wantDetail: notAssignedDetail,
+		},
+		{
+			name:     "refuses a request with no caller",
+			body:     scoring.ScoringUpdateBody{Points: ptr(3)},
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "refuses a caller outside the tournament",
+			caller:   TestOutsiderID,
+			body:     scoring.ScoringUpdateBody{Points: ptr(3)},
+			wantCode: http.StatusForbidden,
 		},
 	}
 
@@ -340,7 +413,7 @@ func TestUpdateScoringByID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			stored := seeded(1, uuid.New())
+			stored := seeded(1, TestBoutID)
 			if tt.seedRevoked {
 				stored = seededRevoked(1, stored.BoutID)
 			}
@@ -351,8 +424,8 @@ func TestUpdateScoringByID(t *testing.T) {
 				id = 999
 			}
 
-			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).UpdateScoringByID(t.Context(),
-				&scoring.ScoringUpdateInput{ID: id, Body: tt.body})
+			out, err := scoring.NewScoringService(repo, NewTestBouts(), NewTestMemberships()).
+				UpdateScoringByID(callerCtx(t, tt.caller), &scoring.ScoringUpdateInput{ID: id, Body: tt.body})
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -391,25 +464,32 @@ func TestRevokeScoring(t *testing.T) {
 
 	tests := []struct {
 		name         string
+		caller       uuid.UUID // uuid.Nil means no caller
 		seedRevoked  bool
 		revokedBy    string
 		useUnknownID bool
 		wantCode     int
 	}{
-		{name: "marks the score as revoked", revokedBy: referee},
+		{name: "marks the score as revoked", caller: TestRefereeID, revokedBy: referee},
+		{name: "refuses an admin who is not the bout's referee", caller: TestAdminID, revokedBy: referee, wantCode: http.StatusForbidden},
+		{name: "refuses a request with no caller", revokedBy: referee, wantCode: http.StatusForbidden},
+		{name: "refuses a caller outside the tournament", caller: TestOutsiderID, revokedBy: referee, wantCode: http.StatusForbidden},
 		{
 			name:        "refuses a score that is already revoked",
+			caller:      TestRefereeID,
 			seedRevoked: true,
 			revokedBy:   referee,
 			wantCode:    http.StatusConflict,
 		},
 		{
 			name:      "rejects a revoked_by that is not a uuid",
+			caller:    TestRefereeID,
 			revokedBy: "not-a-uuid",
 			wantCode:  http.StatusBadRequest,
 		},
 		{
 			name:         "reports an unknown id as not found",
+			caller:       TestRefereeID,
 			revokedBy:    referee,
 			useUnknownID: true,
 			wantCode:     http.StatusNotFound,
@@ -420,7 +500,7 @@ func TestRevokeScoring(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			stored := seeded(1, uuid.New())
+			stored := seeded(1, TestBoutID)
 			if tt.seedRevoked {
 				stored = seededRevoked(1, stored.BoutID)
 			}
@@ -431,7 +511,7 @@ func TestRevokeScoring(t *testing.T) {
 				id = 999
 			}
 
-			out, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).RevokeScoring(t.Context(),
+			out, err := scoring.NewScoringService(repo, NewTestBouts(), NewTestMemberships()).RevokeScoring(callerCtx(t, tt.caller),
 				&scoring.ScoringRevokeInput{
 					ID:   id,
 					Body: scoring.ScoringRevokeBody{RevokedBy: tt.revokedBy},
@@ -465,10 +545,10 @@ func TestRevokeScoring(t *testing.T) {
 func TestRevokedScoreDropsOutOfTheLiveList(t *testing.T) {
 	t.Parallel()
 
-	match := uuid.New()
-	service := scoring.NewScoringService(NewFakeScoringRepository(seeded(1, match)), NewFakeBoutLookup())
+	match := TestBoutID
+	service := scoring.NewScoringService(NewFakeScoringRepository(seeded(1, match)), NewTestBouts(), NewTestMemberships())
 
-	_, err := service.RevokeScoring(t.Context(), &scoring.ScoringRevokeInput{
+	_, err := service.RevokeScoring(callerCtx(t, TestRefereeID), &scoring.ScoringRevokeInput{
 		ID:   1,
 		Body: scoring.ScoringRevokeBody{RevokedBy: uuid.New().String()},
 	})
@@ -491,7 +571,7 @@ func TestRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo := NewFakeScoringRepository()
 	repo.Err = errors.New("connection refused")
 
-	_, err := scoring.NewScoringService(repo, NewFakeBoutLookup()).
+	_, err := scoring.NewScoringService(repo, NewFakeBoutLookup(), NewTestMemberships()).
 		ListScoring(t.Context(), &scoring.ScoringListInput{BoutID: uuid.New().String()})
 
 	code, detail := apiError(t, err)
@@ -615,7 +695,7 @@ func TestGetScoringHistory(t *testing.T) {
 			bouts := NewFakeBoutLookup(match, lateSaved, emptyMatch)
 			bouts.Err = tt.lookupErr
 
-			out, err := scoring.NewScoringService(repo, bouts).
+			out, err := scoring.NewScoringService(repo, bouts, NewTestMemberships()).
 				GetScoringHistory(t.Context(), &scoring.ScoringHistoryInput{BoutID: tt.boutID})
 
 			if tt.wantCode != 0 {

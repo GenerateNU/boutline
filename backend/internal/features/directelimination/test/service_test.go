@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/directelimination"
+	"boutline/internal/session"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -25,6 +27,17 @@ func directEliminationAPIError(t *testing.T, err error) (int, string) {
 	return model.Status, model.Detail
 }
 
+// ctxAs returns a context for the caller, or an anonymous one for uuid.Nil.
+func ctxAs(t *testing.T, caller uuid.UUID) context.Context {
+	t.Helper()
+
+	if caller == uuid.Nil {
+		return t.Context()
+	}
+
+	return session.WithUserID(t.Context(), caller)
+}
+
 func idInput(id string) *directelimination.DirectEliminationIDInput {
 	return &directelimination.DirectEliminationIDInput{ID: id}
 }
@@ -35,11 +48,11 @@ func TestCreateDirectElimination(t *testing.T) {
 	t.Run("creates an upcoming round with no timestamps", func(t *testing.T) {
 		t.Parallel()
 
-		eventID := uuid.New().String()
+		eventID := TestEventID.String()
 		repo := NewFakeDirectEliminationRepository()
 
-		out, err := directelimination.NewDirectEliminationService(repo).
-			CreateDirectElimination(t.Context(), &directelimination.DirectEliminationCreateInput{
+		out, err := NewTestService(repo).
+			CreateDirectElimination(ctxAs(t, TestAdminID), &directelimination.DirectEliminationCreateInput{
 				Body: directelimination.DirectEliminationCreateBody{EventID: eventID},
 			})
 
@@ -56,8 +69,8 @@ func TestCreateDirectElimination(t *testing.T) {
 
 		repo := NewFakeDirectEliminationRepository()
 
-		out, err := directelimination.NewDirectEliminationService(repo).
-			CreateDirectElimination(t.Context(), &directelimination.DirectEliminationCreateInput{
+		out, err := NewTestService(repo).
+			CreateDirectElimination(ctxAs(t, TestAdminID), &directelimination.DirectEliminationCreateInput{
 				Body: directelimination.DirectEliminationCreateBody{EventID: "not-a-uuid"},
 			})
 
@@ -75,22 +88,68 @@ func TestCreateDirectElimination(t *testing.T) {
 		repo.Err = fmt.Errorf("create direct elimination: %w",
 			errs.Public("event_id must reference an existing event", errs.ErrInvalidInput))
 
-		_, err := directelimination.NewDirectEliminationService(repo).
-			CreateDirectElimination(t.Context(), &directelimination.DirectEliminationCreateInput{
-				Body: directelimination.DirectEliminationCreateBody{EventID: uuid.New().String()},
+		_, err := NewTestService(repo).
+			CreateDirectElimination(ctxAs(t, TestAdminID), &directelimination.DirectEliminationCreateInput{
+				Body: directelimination.DirectEliminationCreateBody{EventID: TestEventID.String()},
 			})
 
 		code, detail := directEliminationAPIError(t, err)
 		assert.Equal(t, http.StatusBadRequest, code)
 		assert.Equal(t, "event_id must reference an existing event", detail)
 	})
+
+	t.Run("reports an event that does not exist as not found", func(t *testing.T) {
+		t.Parallel()
+
+		repo := NewFakeDirectEliminationRepository()
+
+		_, err := NewTestService(repo).
+			CreateDirectElimination(ctxAs(t, TestAdminID), &directelimination.DirectEliminationCreateInput{
+				Body: directelimination.DirectEliminationCreateBody{EventID: uuid.New().String()},
+			})
+
+		code, _ := directEliminationAPIError(t, err)
+		assert.Equal(t, http.StatusNotFound, code)
+		assert.Empty(t, repo.DirectEliminations)
+	})
+}
+
+func TestCreateDirectEliminationRequiresAdmin(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		caller uuid.UUID
+	}{
+		{name: "refuses an anonymous caller"},
+		{name: "refuses a caller who is not in the tournament", caller: TestOutsiderID},
+		{name: "refuses a referee", caller: TestRefereeID},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakeDirectEliminationRepository()
+
+			out, err := NewTestService(repo).
+				CreateDirectElimination(ctxAs(t, tt.caller), &directelimination.DirectEliminationCreateInput{
+					Body: directelimination.DirectEliminationCreateBody{EventID: TestEventID.String()},
+				})
+
+			code, _ := directEliminationAPIError(t, err)
+			assert.Equal(t, http.StatusForbidden, code)
+			assert.Nil(t, out)
+			assert.Empty(t, repo.DirectEliminations)
+		})
+	}
 }
 
 func TestGetDirectEliminationByID(t *testing.T) {
 	t.Parallel()
 
 	stored := seededDirectElimination(uuid.New(), directelimination.DirectEliminationStatusUpcoming)
-	service := directelimination.NewDirectEliminationService(NewFakeDirectEliminationRepository(stored))
+	service := NewTestService(NewFakeDirectEliminationRepository(stored))
 
 	t.Run("returns the stored round", func(t *testing.T) {
 		t.Parallel()
@@ -205,7 +264,7 @@ func TestListDirectElimination(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := directelimination.NewDirectEliminationService(NewFakeDirectEliminationRepository(seed...)).
+			out, err := NewTestService(NewFakeDirectEliminationRepository(seed...)).
 				ListDirectElimination(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
@@ -234,12 +293,15 @@ func TestListDirectElimination(t *testing.T) {
 func TestUpdateDirectEliminationByID(t *testing.T) {
 	t.Parallel()
 
-	newEvent := uuid.New()
+	newEvent := TestSecondEventID
 	newEventString := newEvent.String()
+	foreignEventString := OtherEventID.String()
+	missingEventString := uuid.New().String()
 	badEvent := "not-a-uuid"
 
 	tests := []struct {
 		name         string
+		caller       uuid.UUID
 		seedStatus   directelimination.DirectEliminationStatus
 		body         directelimination.DirectEliminationUpdateBody
 		useUnknownID bool
@@ -248,16 +310,19 @@ func TestUpdateDirectEliminationByID(t *testing.T) {
 	}{
 		{
 			name:       "moves an upcoming round to another event",
+			caller:     TestAdminID,
 			seedStatus: directelimination.DirectEliminationStatusUpcoming,
 			body:       directelimination.DirectEliminationUpdateBody{EventID: &newEventString},
 		},
 		{
 			name:       "still allows an edit while active",
+			caller:     TestAdminID,
 			seedStatus: directelimination.DirectEliminationStatusActive,
 			body:       directelimination.DirectEliminationUpdateBody{EventID: &newEventString},
 		},
 		{
 			name:       "refuses a patch that would change nothing",
+			caller:     TestAdminID,
 			seedStatus: directelimination.DirectEliminationStatusUpcoming,
 			body:       directelimination.DirectEliminationUpdateBody{},
 			wantCode:   http.StatusBadRequest,
@@ -272,6 +337,7 @@ func TestUpdateDirectEliminationByID(t *testing.T) {
 		},
 		{
 			name:       "refuses to edit a round that has ended",
+			caller:     TestAdminID,
 			seedStatus: directelimination.DirectEliminationStatusEnded,
 			body:       directelimination.DirectEliminationUpdateBody{EventID: &newEventString},
 			wantCode:   http.StatusConflict,
@@ -279,10 +345,45 @@ func TestUpdateDirectEliminationByID(t *testing.T) {
 		},
 		{
 			name:         "reports an unknown id as not found",
+			caller:       TestAdminID,
 			seedStatus:   directelimination.DirectEliminationStatusUpcoming,
 			body:         directelimination.DirectEliminationUpdateBody{EventID: &newEventString},
 			useUnknownID: true,
 			wantCode:     http.StatusNotFound,
+		},
+		{
+			name:       "reports the target event not existing as not found",
+			caller:     TestAdminID,
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
+			body:       directelimination.DirectEliminationUpdateBody{EventID: &missingEventString},
+			wantCode:   http.StatusNotFound,
+		},
+		{
+			name:       "refuses to move a round into a tournament the caller does not administer",
+			caller:     TestAdminID,
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
+			body:       directelimination.DirectEliminationUpdateBody{EventID: &foreignEventString},
+			wantCode:   http.StatusForbidden,
+		},
+		{
+			name:       "refuses an anonymous caller",
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
+			body:       directelimination.DirectEliminationUpdateBody{EventID: &newEventString},
+			wantCode:   http.StatusForbidden,
+		},
+		{
+			name:       "refuses a caller who is not in the tournament",
+			caller:     TestOutsiderID,
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
+			body:       directelimination.DirectEliminationUpdateBody{EventID: &newEventString},
+			wantCode:   http.StatusForbidden,
+		},
+		{
+			name:       "refuses a referee",
+			caller:     TestRefereeID,
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
+			body:       directelimination.DirectEliminationUpdateBody{EventID: &newEventString},
+			wantCode:   http.StatusForbidden,
 		},
 	}
 
@@ -290,7 +391,7 @@ func TestUpdateDirectEliminationByID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			stored := seededDirectElimination(uuid.New(), tt.seedStatus)
+			stored := seededDirectElimination(TestEventID, tt.seedStatus)
 			repo := NewFakeDirectEliminationRepository(stored)
 
 			id := stored.ID.String()
@@ -298,8 +399,8 @@ func TestUpdateDirectEliminationByID(t *testing.T) {
 				id = uuid.New().String()
 			}
 
-			out, err := directelimination.NewDirectEliminationService(repo).
-				UpdateDirectEliminationByID(t.Context(), &directelimination.DirectEliminationUpdateInput{
+			out, err := NewTestService(repo).
+				UpdateDirectEliminationByID(ctxAs(t, tt.caller), &directelimination.DirectEliminationUpdateInput{
 					ID:   id,
 					Body: tt.body,
 				})
@@ -330,16 +431,16 @@ func TestDeleteDirectEliminationByID(t *testing.T) {
 	t.Run("removes the round", func(t *testing.T) {
 		t.Parallel()
 
-		stored := seededDirectElimination(uuid.New(), directelimination.DirectEliminationStatusUpcoming)
+		stored := seededDirectElimination(TestEventID, directelimination.DirectEliminationStatusUpcoming)
 		repo := NewFakeDirectEliminationRepository(stored)
-		service := directelimination.NewDirectEliminationService(repo)
+		service := NewTestService(repo)
 
-		_, err := service.DeleteDirectEliminationByID(t.Context(), idInput(stored.ID.String()))
+		_, err := service.DeleteDirectEliminationByID(ctxAs(t, TestAdminID), idInput(stored.ID.String()))
 
 		require.NoError(t, err)
 		assert.Empty(t, repo.DirectEliminations)
 
-		_, err = service.DeleteDirectEliminationByID(t.Context(), idInput(stored.ID.String()))
+		_, err = service.DeleteDirectEliminationByID(ctxAs(t, TestAdminID), idInput(stored.ID.String()))
 		code, _ := directEliminationAPIError(t, err)
 		assert.Equal(t, http.StatusNotFound, code)
 	})
@@ -347,8 +448,8 @@ func TestDeleteDirectEliminationByID(t *testing.T) {
 	t.Run("reports an unknown id as not found", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := directelimination.NewDirectEliminationService(NewFakeDirectEliminationRepository()).
-			DeleteDirectEliminationByID(t.Context(), idInput(uuid.New().String()))
+		_, err := NewTestService(NewFakeDirectEliminationRepository()).
+			DeleteDirectEliminationByID(ctxAs(t, TestAdminID), idInput(uuid.New().String()))
 
 		code, _ := directEliminationAPIError(t, err)
 		assert.Equal(t, http.StatusNotFound, code)
@@ -357,12 +458,41 @@ func TestDeleteDirectEliminationByID(t *testing.T) {
 	t.Run("rejects an id that is not a uuid", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := directelimination.NewDirectEliminationService(NewFakeDirectEliminationRepository()).
-			DeleteDirectEliminationByID(t.Context(), idInput("not-a-uuid"))
+		_, err := NewTestService(NewFakeDirectEliminationRepository()).
+			DeleteDirectEliminationByID(ctxAs(t, TestAdminID), idInput("not-a-uuid"))
 
 		code, _ := directEliminationAPIError(t, err)
 		assert.Equal(t, http.StatusBadRequest, code)
 	})
+}
+
+func TestDeleteDirectEliminationRequiresAdmin(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		caller uuid.UUID
+	}{
+		{name: "refuses an anonymous caller"},
+		{name: "refuses a caller who is not in the tournament", caller: TestOutsiderID},
+		{name: "refuses a referee", caller: TestRefereeID},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			stored := seededDirectElimination(TestEventID, directelimination.DirectEliminationStatusUpcoming)
+			repo := NewFakeDirectEliminationRepository(stored)
+
+			_, err := NewTestService(repo).
+				DeleteDirectEliminationByID(ctxAs(t, tt.caller), idInput(stored.ID.String()))
+
+			code, _ := directEliminationAPIError(t, err)
+			assert.Equal(t, http.StatusForbidden, code)
+			assert.Equal(t, stored, repo.DirectEliminations[stored.ID])
+		})
+	}
 }
 
 func TestStartDirectElimination(t *testing.T) {
@@ -370,29 +500,50 @@ func TestStartDirectElimination(t *testing.T) {
 
 	tests := []struct {
 		name         string
+		caller       uuid.UUID
 		seedStatus   directelimination.DirectEliminationStatus
 		useUnknownID bool
 		wantCode     int
 		wantDetail   string
 	}{
-		{name: "moves an upcoming round to active", seedStatus: directelimination.DirectEliminationStatusUpcoming},
+		{name: "moves an upcoming round to active", caller: TestAdminID, seedStatus: directelimination.DirectEliminationStatusUpcoming},
 		{
 			name:       "refuses a round that has already started",
+			caller:     TestAdminID,
 			seedStatus: directelimination.DirectEliminationStatusActive,
 			wantCode:   http.StatusConflict,
 			wantDetail: "only an upcoming direct elimination round can be started",
 		},
 		{
 			name:       "refuses a round that has ended",
+			caller:     TestAdminID,
 			seedStatus: directelimination.DirectEliminationStatusEnded,
 			wantCode:   http.StatusConflict,
 			wantDetail: "only an upcoming direct elimination round can be started",
 		},
 		{
 			name:         "reports an unknown id as not found",
+			caller:       TestAdminID,
 			seedStatus:   directelimination.DirectEliminationStatusUpcoming,
 			useUnknownID: true,
 			wantCode:     http.StatusNotFound,
+		},
+		{
+			name:       "refuses an anonymous caller",
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
+			wantCode:   http.StatusForbidden,
+		},
+		{
+			name:       "refuses a caller who is not in the tournament",
+			caller:     TestOutsiderID,
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
+			wantCode:   http.StatusForbidden,
+		},
+		{
+			name:       "refuses a referee",
+			caller:     TestRefereeID,
+			seedStatus: directelimination.DirectEliminationStatusUpcoming,
+			wantCode:   http.StatusForbidden,
 		},
 	}
 
@@ -400,7 +551,7 @@ func TestStartDirectElimination(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			stored := seededDirectElimination(uuid.New(), tt.seedStatus)
+			stored := seededDirectElimination(TestEventID, tt.seedStatus)
 			repo := NewFakeDirectEliminationRepository(stored)
 
 			id := stored.ID.String()
@@ -408,8 +559,8 @@ func TestStartDirectElimination(t *testing.T) {
 				id = uuid.New().String()
 			}
 
-			out, err := directelimination.NewDirectEliminationService(repo).
-				StartDirectElimination(t.Context(), idInput(id))
+			out, err := NewTestService(repo).
+				StartDirectElimination(ctxAs(t, tt.caller), idInput(id))
 
 			if tt.wantCode != 0 {
 				code, detail := directEliminationAPIError(t, err)
@@ -442,29 +593,50 @@ func TestCompleteDirectElimination(t *testing.T) {
 
 	tests := []struct {
 		name         string
+		caller       uuid.UUID
 		seedStatus   directelimination.DirectEliminationStatus
 		useUnknownID bool
 		wantCode     int
 		wantDetail   string
 	}{
-		{name: "moves an active round to ended", seedStatus: directelimination.DirectEliminationStatusActive},
+		{name: "moves an active round to ended", caller: TestAdminID, seedStatus: directelimination.DirectEliminationStatusActive},
 		{
 			name:       "refuses a round that has not started",
+			caller:     TestAdminID,
 			seedStatus: directelimination.DirectEliminationStatusUpcoming,
 			wantCode:   http.StatusConflict,
 			wantDetail: "only an active direct elimination round can be completed",
 		},
 		{
 			name:       "refuses a round that has already ended",
+			caller:     TestAdminID,
 			seedStatus: directelimination.DirectEliminationStatusEnded,
 			wantCode:   http.StatusConflict,
 			wantDetail: "only an active direct elimination round can be completed",
 		},
 		{
 			name:         "reports an unknown id as not found",
+			caller:       TestAdminID,
 			seedStatus:   directelimination.DirectEliminationStatusActive,
 			useUnknownID: true,
 			wantCode:     http.StatusNotFound,
+		},
+		{
+			name:       "refuses an anonymous caller",
+			seedStatus: directelimination.DirectEliminationStatusActive,
+			wantCode:   http.StatusForbidden,
+		},
+		{
+			name:       "refuses a caller who is not in the tournament",
+			caller:     TestOutsiderID,
+			seedStatus: directelimination.DirectEliminationStatusActive,
+			wantCode:   http.StatusForbidden,
+		},
+		{
+			name:       "refuses a referee",
+			caller:     TestRefereeID,
+			seedStatus: directelimination.DirectEliminationStatusActive,
+			wantCode:   http.StatusForbidden,
 		},
 	}
 
@@ -472,7 +644,7 @@ func TestCompleteDirectElimination(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			stored := seededDirectElimination(uuid.New(), tt.seedStatus)
+			stored := seededDirectElimination(TestEventID, tt.seedStatus)
 			if tt.seedStatus != directelimination.DirectEliminationStatusUpcoming {
 				stored.StartedAt = &startedAt
 			}
@@ -483,8 +655,8 @@ func TestCompleteDirectElimination(t *testing.T) {
 				id = uuid.New().String()
 			}
 
-			out, err := directelimination.NewDirectEliminationService(repo).
-				CompleteDirectElimination(t.Context(), idInput(id))
+			out, err := NewTestService(repo).
+				CompleteDirectElimination(ctxAs(t, tt.caller), idInput(id))
 
 			if tt.wantCode != 0 {
 				code, detail := directEliminationAPIError(t, err)
@@ -518,7 +690,7 @@ func TestDirectEliminationRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo := NewFakeDirectEliminationRepository()
 	repo.Err = errors.New("connection refused")
 
-	_, err := directelimination.NewDirectEliminationService(repo).
+	_, err := NewTestService(repo).
 		ListDirectElimination(t.Context(), &directelimination.DirectEliminationListInput{})
 
 	code, detail := directEliminationAPIError(t, err)

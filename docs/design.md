@@ -252,9 +252,8 @@ are not a table of their own; a club is the set of distinct `team` values.
 - `GET /competitors?q&tournament_id&rating&team&ids`: fuzzy name search,
   alphabetical when there is no `q`, exact `team` match.
 - `GET /competitors/{id}`, and `PATCH /competitors/{id}` (an empty `team` clears it).
-- `DELETE /competitors/{id}`: 403 unless the caller created the row, created the
-  tournament, or is its admin; 409 once the competitor has fenced a bout. This is
-  the only route that checks the caller today.
+- `DELETE /competitors/{id}`: tournament admins only (§7.2); 409 once the
+  competitor has fenced a bout.
 - `GET /tournaments/{id}/teams?q`: the tournament's clubs with a fencer count each,
   fuzzy-searchable, leaving out fencers with no club.
 - `GET /clubs?q&limit&offset`: every club across all tournaments, built from
@@ -380,7 +379,7 @@ gate. Reading stays public.
 | --- | --- | --- |
 | Spectator / fencer | public, no account needed | browse tournaments, events, pools, tableau, results, live scores |
 | Account holder | global | create tournaments, be added as staff |
-| Tournament **admin** | one tournament | edit it, run its lifecycle, manage events, competitors, staff, pools, brackets |
+| Tournament **admin** | one tournament | edit it, run its lifecycle, manage events, competitors, staff, pools, brackets; referee a bout only when assigned to it |
 | Tournament **referee** | one tournament | start, score and end bouts they are assigned to |
 
 Roles are per tournament. There is no global superuser, and a user can hold
@@ -398,7 +397,7 @@ different roles in different tournaments.
 - The auth middleware makes reads public and every other method require
   `Authorization: Bearer <token>`. An operation can override this; `GET /users`
   and `GET /users/{id}` require a token. Handlers read the verified ID with
-  `user.UserIDFrom`.
+  `session.UserIDFrom`.
 - `JWT_SECRET` must be at least 32 bytes. A built-in dev secret is allowed only
   when `APP_ENVIRONMENT=dev`.
 
@@ -668,14 +667,25 @@ logged-in user reseat another tournament's pools.
 
 ### 7.2 Role checks
 
-**Status:** Planned. Issue: #4.
+**Status:** Built. Issue: #4. Tournaments created before their creator was made
+an admin still need that row backfilled, which is its own ticket.
 
-- An authorization helper, `requireRole(tournamentID, admin|referee)`, runs on every
-  mutating route. Today only competitor delete checks the caller.
-- The creator becomes an `admin` member automatically on create (today they don't).
-- Starting, scoring and ending a bout requires the `referee` role and being the
-  bout's assigned referee (open question in §D).
-- Guard against removing or demoting the last admin.
+- **Built:** `tournamentuser.RequireRole(ctx, memberships, tournamentID, role)`
+  runs on every mutating route and returns 403 unless the caller holds the role in
+  that tournament. An admin passes a referee check. Bout start and end and the
+  scoring writes need `referee`. Every other write needs `admin`, except creating
+  a tournament, which any signed-in user can do.
+- **Built:** creating a tournament writes its `created_by` user into
+  `tournament_users` as `admin` in the same transaction. `tournament_users` alone
+  decides who may act; `created_by` is read only to keep the creator an admin.
+- **Built:** `bout.RequireAssignedReferee(ctx, memberships, bout)` guards bout
+  start and end and every scoring write. The caller needs the `referee` role and
+  must be the bout's `referee_id`: 403 otherwise, and 409 while the bout has no
+  referee. An admin passes the role check but still referees only the bouts they
+  are assigned to.
+- **Built:** the creator stays an admin. Changing their role to `referee` or
+  removing them is refused with 409. Every tournament's creator is made an admin
+  on create, so no tournament can be left without an admin.
 
 ### 7.3 Visibility
 
@@ -1656,8 +1666,6 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - Épée double touch at one touch from the end (4–4, 14–14): annul it, or allow
   5–5? The current rules give a bout no winner in that case, so the scoring
   rules and the `confirming` phase have to pick one.
-- May a tournament admin referee and score bouts, or only users with the
-  `referee` role?
 - What happens when a referee has to step away from a pool mid-way? Reassigning
   the pool's referee moves its upcoming bouts to the new one (§11.1), but an
   active bout keeps its referee, and only the assigned referee can score it

@@ -8,6 +8,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -46,10 +47,16 @@ type boutService struct {
 	repo        BoutRepository
 	tournaments TournamentLookup
 	pools       PoolLookup
+	memberships tournamentuser.MembershipLookup
 }
 
-func NewBoutService(repo BoutRepository, tournaments TournamentLookup, pools PoolLookup) BoutService {
-	return &boutService{repo: repo, tournaments: tournaments, pools: pools}
+func NewBoutService(
+	repo BoutRepository,
+	tournaments TournamentLookup,
+	pools PoolLookup,
+	memberships tournamentuser.MembershipLookup,
+) BoutService {
+	return &boutService{repo: repo, tournaments: tournaments, pools: pools, memberships: memberships}
 }
 
 func (s *boutService) CreateBout(ctx context.Context, input *BoutCreateInput) (*BoutOutput, error) {
@@ -92,6 +99,9 @@ func (s *boutService) CreateBout(ctx context.Context, input *BoutCreateInput) (*
 	if tourney.Status != tournament.TournamentStatusActive {
 		return nil, errs.HumaError(errs.Public(
 			"bouts can only be created in an active tournament", errs.ErrConflict))
+	}
+	if err := tournamentuser.RequireRole(ctx, s.memberships, tournamentID, tournamentuser.TournamentUserRoleAdmin); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("create bout: %w", err))
 	}
 	if err := s.validatePool(ctx, poolID, tournamentID); err != nil {
 		return nil, errs.HumaError(err)
@@ -256,9 +266,31 @@ func (s *boutService) UpdateBoutByID(ctx context.Context, input *BoutUpdateInput
 		return nil, errs.HumaError(err)
 	}
 
+	if _, err := s.loadAuthorized(ctx, id, requireBoutAdmin); err != nil {
+		return nil, errs.HumaError(err)
+	}
+
 	err = s.repo.UpdateBoutByID(ctx, id, update)
 
 	return s.afterUpdate(ctx, id, err, "only an upcoming bout can be edited")
+}
+
+// loadAuthorized keeps a missing bout a 404 for every caller, then lets
+// authorize refuse the caller.
+func (s *boutService) loadAuthorized(
+	ctx context.Context,
+	id uuid.UUID,
+	authorize func(context.Context, tournamentuser.MembershipLookup, *Bout) error,
+) (*Bout, error) {
+	bout, err := s.repo.GetBoutByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get bout: %w", err)
+	}
+	if err := authorize(ctx, s.memberships, bout); err != nil {
+		return nil, fmt.Errorf("authorize bout: %w", err)
+	}
+
+	return bout, nil
 }
 
 func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body BoutUpdateBody) (BoutUpdate, error) {
@@ -350,9 +382,9 @@ func (s *boutService) StartBout(ctx context.Context, input *BoutIDInput) (*BoutO
 		return nil, errs.HumaError(err)
 	}
 
-	bout, err := s.repo.GetBoutByID(ctx, id)
+	bout, err := s.loadAuthorized(ctx, id, RequireAssignedReferee)
 	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("get bout: %w", err))
+		return nil, errs.HumaError(err)
 	}
 
 	tourney, err := s.tournaments.GetTournamentByID(ctx, bout.TournamentID)
@@ -362,10 +394,6 @@ func (s *boutService) StartBout(ctx context.Context, input *BoutIDInput) (*BoutO
 	if tourney.Status != tournament.TournamentStatusActive {
 		return nil, errs.HumaError(errs.Public(
 			"bouts can only be started in an active tournament", errs.ErrConflict))
-	}
-	if bout.RefereeID == nil {
-		return nil, errs.HumaError(errs.Public(
-			"a referee must be assigned before the bout can start", errs.ErrConflict))
 	}
 
 	now := time.Now().UTC()
@@ -384,6 +412,10 @@ func (s *boutService) EndBout(ctx context.Context, input *BoutIDInput) (*BoutOut
 		return nil, errs.HumaError(err)
 	}
 
+	if _, err := s.loadAuthorized(ctx, id, RequireAssignedReferee); err != nil {
+		return nil, errs.HumaError(err)
+	}
+
 	completedAt := time.Now().UTC()
 	err = s.repo.TransitionBoutByID(ctx, id, BoutTransition{
 		To:          BoutStatusEnded,
@@ -397,6 +429,10 @@ func (s *boutService) EndBout(ctx context.Context, input *BoutIDInput) (*BoutOut
 func (s *boutService) DeleteBoutByID(ctx context.Context, input *BoutIDInput) (*struct{}, error) {
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	if _, err := s.loadAuthorized(ctx, id, requireBoutAdmin); err != nil {
 		return nil, errs.HumaError(err)
 	}
 

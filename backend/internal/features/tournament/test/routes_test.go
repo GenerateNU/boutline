@@ -19,9 +19,17 @@ import (
 func newTestAPI(t *testing.T, seed ...tournament.Tournament) humatest.TestAPI {
 	t.Helper()
 
+	var staff []tournamentuser.TournamentUser
+	for _, row := range seed {
+		staff = append(staff, Staff(row.ID)...)
+	}
+
+	members := NewFakeTournamentUserRepository(staff...)
+	repo := NewFakeTournamentRepository(seed...)
+	repo.Members = members
+
 	_, api := humatest.New(t)
-	tournament.RegisterTournamentService(api,
-		tournament.NewTournamentService(NewFakeTournamentRepository(seed...), NewFakeTournamentUserRepository()))
+	tournament.RegisterTournamentService(api, tournament.NewTournamentService(repo, members))
 
 	return api
 }
@@ -91,7 +99,8 @@ func TestCreateEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t).Post("/api/v1/tournaments", tt.body)
+			api := newTestAPI(t)
+			resp := api.Post("/api/v1/tournaments", tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 
@@ -105,6 +114,19 @@ func TestCreateEndpoint(t *testing.T) {
 				require.True(t, ok, "code missing from response")
 				assert.Len(t, code, tournament.TournamentCodeLength)
 				assert.Equal(t, strings.ToUpper(code), code)
+			}
+
+			if resp.Code == http.StatusCreated {
+				id, ok := body["id"].(string)
+				require.True(t, ok, "id missing from response")
+				staff := decodeBody(t, api.Get("/api/v1/tournaments/"+id+"/users").Body.Bytes())
+				rows, ok := staff["data"].([]any)
+				require.True(t, ok, "data missing from response")
+				require.Len(t, rows, 1, "the creator should be the only member")
+				member, ok := rows[0].(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, creator, member["user_id"])
+				assert.Equal(t, "admin", member["role"])
 			}
 		})
 	}
@@ -261,6 +283,7 @@ func TestUpdateEndpoint(t *testing.T) {
 		name       string
 		path       string
 		body       map[string]any
+		caller     Caller
 		wantStatus int
 		wantFields map[string]any
 	}{
@@ -285,10 +308,35 @@ func TestUpdateEndpoint(t *testing.T) {
 			wantFields: map[string]any{"detail": "provide at least one field to update"},
 		},
 		{
-			name:       "reports an unknown id as not found",
+			name:       "refuses an unknown id, since nobody holds a role in it",
 			path:       uuid.New().String(),
 			body:       map[string]any{"name": "after"},
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": "this requires the admin role in the tournament"},
+		},
+		{
+			name:       "refuses a caller who is not signed in",
+			path:       stored.ID.String(),
+			body:       map[string]any{"name": "after"},
+			caller:     CallerAnonymous,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": "this requires the admin role in the tournament"},
+		},
+		{
+			name:       "refuses a user who is not a member",
+			path:       stored.ID.String(),
+			body:       map[string]any{"name": "after"},
+			caller:     CallerStranger,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": "this requires the admin role in the tournament"},
+		},
+		{
+			name:       "refuses a referee",
+			path:       stored.ID.String(),
+			body:       map[string]any{"name": "after"},
+			caller:     CallerReferee,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": "this requires the admin role in the tournament"},
 		},
 	}
 
@@ -296,13 +344,19 @@ func TestUpdateEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t, stored).Patch("/api/v1/tournaments/"+tt.path, tt.body)
+			api := newTestAPI(t, stored)
+			resp := api.PatchCtx(tt.caller.Context(t.Context()), "/api/v1/tournaments/"+tt.path, tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 
 			body := decodeBody(t, resp.Body.Bytes())
 			for field, want := range tt.wantFields {
 				assert.Equal(t, want, body[field])
+			}
+
+			if tt.wantStatus == http.StatusForbidden {
+				got := decodeBody(t, api.Get("/api/v1/tournaments/"+stored.ID.String()).Body.Bytes())
+				assert.Equal(t, "before", got["name"])
 			}
 		})
 	}
@@ -314,35 +368,79 @@ func TestLifecycleEndpoints(t *testing.T) {
 	stored := seeded("bracket", tournament.TournamentStatusPending)
 	api := newTestAPI(t, stored)
 	base := "/api/v1/tournaments/" + stored.ID.String()
+	admin := CallerAdmin.Context(t.Context())
 
-	started := api.Post(base + "/start")
+	started := api.PostCtx(admin, base+"/start")
 	require.Equal(t, http.StatusOK, started.Code, "body: %s", started.Body)
 	assert.Equal(t, "active", decodeBody(t, started.Body.Bytes())["status"])
 
-	assert.Equal(t, http.StatusConflict, api.Post(base+"/start").Code)
+	assert.Equal(t, http.StatusConflict, api.PostCtx(admin, base+"/start").Code)
 
-	completed := api.Post(base + "/complete")
+	completed := api.PostCtx(admin, base+"/complete")
 	require.Equal(t, http.StatusOK, completed.Code, "body: %s", completed.Body)
 
 	completedBody := decodeBody(t, completed.Body.Bytes())
 	assert.Equal(t, "ended", completedBody["status"])
 	assert.NotNil(t, completedBody["completed_at"])
 
-	assert.Equal(t, http.StatusConflict, api.Post(base+"/complete").Code)
-	assert.Equal(t, http.StatusConflict, api.Post(base+"/start").Code)
+	assert.Equal(t, http.StatusConflict, api.PostCtx(admin, base+"/complete").Code)
+	assert.Equal(t, http.StatusConflict, api.PostCtx(admin, base+"/start").Code)
 
-	edit := api.Patch(base, map[string]any{"name": "too late"})
+	edit := api.PatchCtx(admin, base, map[string]any{"name": "too late"})
 	require.Equal(t, http.StatusConflict, edit.Code, "body: %s", edit.Body)
 	assert.Equal(t, "tournament has ended and can no longer be edited",
 		decodeBody(t, edit.Body.Bytes())["detail"])
 }
 
+func TestLifecycleEndpointsRequireAnAdmin(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		action     string
+		seedStatus tournament.TournamentStatus
+	}{
+		{name: "start", action: "start", seedStatus: tournament.TournamentStatusPending},
+		{name: "complete", action: "complete", seedStatus: tournament.TournamentStatusActive},
+	}
+	callers := map[string]Caller{
+		"no caller":  CallerAnonymous,
+		"non-member": CallerStranger,
+		"referee":    CallerReferee,
+	}
+
+	for _, tt := range tests {
+		for who, caller := range callers {
+			t.Run(tt.name+" refuses "+who, func(t *testing.T) {
+				t.Parallel()
+
+				stored := seeded("bracket", tt.seedStatus)
+				api := newTestAPI(t, stored)
+				path := "/api/v1/tournaments/" + stored.ID.String()
+
+				resp := api.PostCtx(caller.Context(t.Context()), path+"/"+tt.action)
+
+				require.Equal(t, http.StatusForbidden, resp.Code, "body: %s", resp.Body)
+				got := decodeBody(t, api.Get(path).Body.Bytes())
+				assert.Equal(t, string(tt.seedStatus), got["status"])
+			})
+		}
+	}
+}
+
+// newMembershipTestAPI also seeds each membership's tournament, created by
+// TestAdminID, so TestAdminID is the creator the guard keeps an admin.
 func newMembershipTestAPI(t *testing.T, seed ...tournamentuser.TournamentUser) humatest.TestAPI {
 	t.Helper()
 
+	tournaments := make([]tournament.Tournament, 0, len(seed))
+	for _, membership := range seed {
+		tournaments = append(tournaments, tournamentCreatedBy(membership.TournamentID, TestAdminID))
+	}
+
 	_, api := humatest.New(t)
 	tournament.RegisterTournamentService(api,
-		tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository(seed...)))
+		tournament.NewTournamentService(NewFakeTournamentRepository(tournaments...), NewFakeTournamentUserRepository(seed...)))
 
 	return api
 }
@@ -357,6 +455,7 @@ func TestAddTournamentUserEndpoint(t *testing.T) {
 		name       string
 		path       string
 		body       map[string]any
+		caller     Caller
 		wantStatus int
 		wantFields map[string]any
 	}{
@@ -398,20 +497,50 @@ func TestAddTournamentUserEndpoint(t *testing.T) {
 			body:       map[string]any{"user_id": member.String(), "role": "admin"},
 			wantStatus: http.StatusConflict,
 		},
+		{
+			name:       "refuses a caller who is not signed in",
+			path:       tournamentID.String(),
+			body:       map[string]any{"user_id": uuid.New().String(), "role": "referee"},
+			caller:     CallerAnonymous,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": "this requires the admin role in the tournament"},
+		},
+		{
+			name:       "refuses a user who is not a member",
+			path:       tournamentID.String(),
+			body:       map[string]any{"user_id": uuid.New().String(), "role": "referee"},
+			caller:     CallerStranger,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": "this requires the admin role in the tournament"},
+		},
+		{
+			name:       "refuses a referee",
+			path:       tournamentID.String(),
+			body:       map[string]any{"user_id": uuid.New().String(), "role": "referee"},
+			caller:     CallerReferee,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": "this requires the admin role in the tournament"},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			api := newMembershipTestAPI(t, seededMembership(tournamentID, member, tournamentuser.TournamentUserRoleReferee))
-			resp := api.Post("/api/v1/tournaments/"+tt.path+"/users", tt.body)
+			api := newMembershipTestAPI(t, append(Staff(tournamentID),
+				seededMembership(tournamentID, member, tournamentuser.TournamentUserRoleReferee))...)
+			resp := api.PostCtx(tt.caller.Context(t.Context()), "/api/v1/tournaments/"+tt.path+"/users", tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 
 			body := decodeBody(t, resp.Body.Bytes())
 			for field, want := range tt.wantFields {
 				assert.Equal(t, want, body[field])
+			}
+
+			if tt.wantStatus == http.StatusForbidden {
+				list := decodeBody(t, api.Get("/api/v1/tournaments/"+tt.path+"/users").Body.Bytes())
+				assert.EqualValues(t, 3, list["total"])
 			}
 		})
 	}
@@ -459,6 +588,7 @@ func TestUpdateTournamentUserRoleEndpoint(t *testing.T) {
 		name       string
 		userPath   string
 		body       map[string]any
+		caller     Caller
 		wantStatus int
 		wantFields map[string]any
 	}{
@@ -476,10 +606,41 @@ func TestUpdateTournamentUserRoleEndpoint(t *testing.T) {
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
+			name:       "refuses to demote the creator",
+			userPath:   TestAdminID.String(),
+			body:       map[string]any{"role": "referee"},
+			wantStatus: http.StatusConflict,
+			wantFields: map[string]any{"detail": "the tournament's creator must stay an admin"},
+		},
+		{
 			name:       "reports a non-member as not found",
 			userPath:   uuid.New().String(),
 			body:       map[string]any{"role": "admin"},
 			wantStatus: http.StatusNotFound,
+		},
+		{
+			name:       "refuses a caller who is not signed in",
+			userPath:   member.String(),
+			body:       map[string]any{"role": "admin"},
+			caller:     CallerAnonymous,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": "this requires the admin role in the tournament"},
+		},
+		{
+			name:       "refuses a user who is not a member",
+			userPath:   member.String(),
+			body:       map[string]any{"role": "admin"},
+			caller:     CallerStranger,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": "this requires the admin role in the tournament"},
+		},
+		{
+			name:       "refuses a referee",
+			userPath:   member.String(),
+			body:       map[string]any{"role": "admin"},
+			caller:     CallerReferee,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": "this requires the admin role in the tournament"},
 		},
 	}
 
@@ -487,14 +648,25 @@ func TestUpdateTournamentUserRoleEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			api := newMembershipTestAPI(t, seededMembership(tournamentID, member, tournamentuser.TournamentUserRoleReferee))
-			resp := api.Patch("/api/v1/tournaments/"+tournamentID.String()+"/users/"+tt.userPath, tt.body)
+			api := newMembershipTestAPI(t, append(Staff(tournamentID),
+				seededMembership(tournamentID, member, tournamentuser.TournamentUserRoleReferee))...)
+			resp := api.PatchCtx(tt.caller.Context(t.Context()),
+				"/api/v1/tournaments/"+tournamentID.String()+"/users/"+tt.userPath, tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 
 			body := decodeBody(t, resp.Body.Bytes())
 			for field, want := range tt.wantFields {
 				assert.Equal(t, want, body[field])
+			}
+
+			if tt.wantStatus == http.StatusForbidden {
+				list := decodeBody(t, api.Get("/api/v1/tournaments/"+tournamentID.String()+"/users").Body.Bytes())
+				for _, row := range list["data"].([]any) {
+					if row.(map[string]any)["user_id"] == member.String() {
+						assert.Equal(t, "referee", row.(map[string]any)["role"])
+					}
+				}
 			}
 		})
 	}
@@ -505,14 +677,31 @@ func TestRemoveTournamentUserEndpoint(t *testing.T) {
 
 	tournamentID := uuid.New()
 	member := uuid.New()
-	api := newMembershipTestAPI(t, seededMembership(tournamentID, member, tournamentuser.TournamentUserRoleReferee))
+	api := newMembershipTestAPI(t, append(Staff(tournamentID),
+		seededMembership(tournamentID, member, tournamentuser.TournamentUserRoleReferee))...)
 	path := "/api/v1/tournaments/" + tournamentID.String() + "/users/" + member.String()
+	admin := CallerAdmin.Context(t.Context())
 
-	removed := api.Delete(path)
+	for who, caller := range map[string]Caller{
+		"no caller":  CallerAnonymous,
+		"non-member": CallerStranger,
+		"referee":    CallerReferee,
+	} {
+		denied := api.DeleteCtx(caller.Context(t.Context()), path)
+		require.Equal(t, http.StatusForbidden, denied.Code, "%s: %s", who, denied.Body)
+	}
+
+	creatorPath := "/api/v1/tournaments/" + tournamentID.String() + "/users/" + TestAdminID.String()
+	assert.Equal(t, http.StatusConflict, api.DeleteCtx(admin, creatorPath).Code, "the creator stays a member")
+
+	list := decodeBody(t, api.Get("/api/v1/tournaments/"+tournamentID.String()+"/users").Body.Bytes())
+	assert.EqualValues(t, 3, list["total"])
+
+	removed := api.DeleteCtx(admin, path)
 	require.Equal(t, http.StatusNoContent, removed.Code, "body: %s", removed.Body)
 	assert.Empty(t, removed.Body.Bytes())
 
-	assert.Equal(t, http.StatusNotFound, api.Delete(path).Code)
+	assert.Equal(t, http.StatusNotFound, api.DeleteCtx(admin, path).Code)
 }
 
 func TestLocationEndpoints(t *testing.T) {
@@ -589,7 +778,7 @@ func TestLocationEndpoints(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t, located).Do(tt.method, tt.path, tt.body)
+			resp := newTestAPI(t, located).DoCtx(CallerAdmin.Context(t.Context()), tt.method, tt.path, tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 

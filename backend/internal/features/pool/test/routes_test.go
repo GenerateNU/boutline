@@ -3,6 +3,7 @@ package test
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"boutline/internal/features/pool"
@@ -18,7 +19,7 @@ func newTestAPI(t *testing.T, repo *FakePoolRepository, stages *FakePoolStageLoo
 	t.Helper()
 
 	_, api := humatest.New(t)
-	pool.RegisterPoolService(api, pool.NewPoolService(repo, stages, NewFakeTournamentMembershipLookup()))
+	pool.RegisterPoolService(api, pool.NewPoolService(repo, stages, NewTestMemberships()))
 
 	return api
 }
@@ -39,7 +40,7 @@ func TestCreateEndpoint(t *testing.T) {
 		t.Parallel()
 
 		f := newCreateFixture()
-		resp := newTestAPI(t, f.repo, f.lookup).Post("/api/v1/pools", map[string]any{
+		resp := newTestAPI(t, f.repo, f.lookup).PostCtx(CallerAdmin.Context(t.Context()), "/api/v1/pools", map[string]any{
 			"pools": []any{map[string]any{
 				"pool_stage_id": f.stage.ID.String(),
 				"number":        2,
@@ -83,7 +84,7 @@ func TestCreateEndpoint(t *testing.T) {
 		t.Parallel()
 
 		f := newCreateFixture()
-		resp := newTestAPI(t, f.repo, f.lookup).Post("/api/v1/pools", map[string]any{
+		resp := newTestAPI(t, f.repo, f.lookup).PostCtx(CallerAdmin.Context(t.Context()), "/api/v1/pools", map[string]any{
 			"pools": []any{map[string]any{
 				"pool_stage_id": f.stage.ID.String(),
 				"number":        1,
@@ -217,7 +218,7 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 		t.Parallel()
 
 		resp := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup()).
-			Patch("/api/v1/pools/"+stored.ID.String(), map[string]any{
+			PatchCtx(CallerAdmin.Context(t.Context()), "/api/v1/pools/"+stored.ID.String(), map[string]any{
 				"referee_id": referee,
 				"number":     4,
 				"strip":      "Strip 2",
@@ -258,12 +259,12 @@ func TestDeleteEndpoint(t *testing.T) {
 	api := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup())
 	base := "/api/v1/pools/" + stored.ID.String()
 
-	deleted := api.Delete(base)
+	deleted := api.DeleteCtx(CallerAdmin.Context(t.Context()), base)
 	require.Equal(t, http.StatusNoContent, deleted.Code, "body: %s", deleted.Body)
 	assert.Empty(t, deleted.Body.String())
 
 	assert.Equal(t, http.StatusNotFound, api.Get(base).Code)
-	assert.Equal(t, http.StatusNotFound, api.Delete(base).Code)
+	assert.Equal(t, http.StatusNotFound, api.DeleteCtx(CallerAdmin.Context(t.Context()), base).Code)
 }
 func TestLifecycleEndpoints(t *testing.T) {
 	t.Parallel()
@@ -275,15 +276,74 @@ func TestLifecycleEndpoints(t *testing.T) {
 	api := newTestAPI(t, NewFakePoolRepository(stored), NewFakePoolStageLookup(stage))
 	base := "/api/v1/pools/" + stored.ID.String()
 
-	started := api.Post(base + "/start")
+	admin := CallerAdmin.Context(t.Context())
+
+	started := api.PostCtx(admin, base+"/start")
 	require.Equal(t, http.StatusOK, started.Code, "body: %s", started.Body)
 	startedBody := decodeBody(t, started.Body.Bytes())
 	assert.NotNil(t, startedBody["started_at"])
 	assert.Nil(t, startedBody["completed_at"])
 
-	ended := api.Post(base + "/end")
+	ended := api.PostCtx(admin, base+"/end")
 	require.Equal(t, http.StatusOK, ended.Code, "body: %s", ended.Body)
 	endedBody := decodeBody(t, ended.Body.Bytes())
 	assert.Equal(t, startedBody["started_at"], endedBody["started_at"])
 	assert.NotNil(t, endedBody["completed_at"])
+}
+
+func TestMutatingEndpointsRequireAdmin(t *testing.T) {
+	t.Parallel()
+
+	stage := seededPoolStage()
+	stage.Status = poolstage.PoolStageStatusActive
+	stored := seededPool(stage.ID)
+	stored.Number = 1
+	stored.RefereeID = ptr(uuid.New())
+	base := "/api/v1/pools/" + stored.ID.String()
+
+	routes := []struct {
+		name   string
+		method string
+		path   string
+		body   map[string]any
+	}{
+		{"create", http.MethodPost, "/api/v1/pools", map[string]any{"pools": []any{map[string]any{
+			"pool_stage_id": stage.ID.String(), "number": 2, "fencers": fencerIDs(1, 2, 3, 4),
+		}}}},
+		{"update", http.MethodPatch, base, map[string]any{"number": 9}},
+		{"re-seat", http.MethodPatch, base, map[string]any{"fencers": fencerIDs(1, 2, 3, 4)}},
+		{"start", http.MethodPost, base + "/start", nil},
+		{"end", http.MethodPost, base + "/end", nil},
+		{"delete", http.MethodDelete, base, nil},
+	}
+	callers := []struct {
+		name   string
+		caller Caller
+	}{
+		{"not signed in", CallerNone},
+		{"outside the tournament", CallerStranger},
+		{"a referee", CallerReferee},
+	}
+
+	for _, route := range routes {
+		for _, c := range callers {
+			t.Run(route.name+" refuses "+c.name, func(t *testing.T) {
+				t.Parallel()
+
+				repo := NewFakePoolRepository(stored)
+				api := newTestAPI(t, repo, NewFakePoolStageLookup(stage))
+				ctx := c.caller.Context(t.Context())
+
+				var resp *httptest.ResponseRecorder
+				if route.body != nil {
+					resp = api.DoCtx(ctx, route.method, route.path, route.body)
+				} else {
+					resp = api.DoCtx(ctx, route.method, route.path)
+				}
+
+				require.Equal(t, http.StatusForbidden, resp.Code, "body: %s", resp.Body)
+				assert.Equal(t, map[uuid.UUID]pool.Pool{stored.ID: stored}, repo.Pools)
+			})
+		}
+	}
 }

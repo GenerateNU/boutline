@@ -55,7 +55,7 @@ func (f *proposalFixture) enter(n int, eventID uuid.UUID, rating competitor.Rati
 func (f *proposalFixture) propose(t *testing.T, ids ...string) (*poolstage.PoolStageProposalOutput, error) {
 	t.Helper()
 
-	return poolstage.NewPoolStageService(f.repo, NewFakeEventLookup(f.event)).ProposePools(t.Context(),
+	return poolstage.NewPoolStageService(f.repo, NewFakeEventLookup(f.event), NewTestMemberships()).ProposePools(t.Context(),
 		&poolstage.PoolStageProposalInput{ID: f.stage.ID.String(), Body: poolstage.PoolStageProposalBody{CompetitorIDs: ids}})
 }
 

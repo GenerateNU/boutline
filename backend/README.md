@@ -171,8 +171,23 @@ operation:
   a read (`listUsers`, `getUserByID`, which return emails), and an empty
   `[]map[string][]string{}` opens a write (`signup`, `login`).
 
-A handler behind a token reads the caller with `user.UserIDFrom(ctx)`. Nothing
-checks ownership yet, so any signed-in user can change any resource.
+A handler behind a token reads the caller with `session.UserIDFrom(ctx)`.
+`internal/session` imports no feature, so any feature can read the caller without
+an import cycle.
+
+Every write that belongs to a tournament calls
+`tournamentuser.RequireRole(ctx, memberships, tournamentID, role)` once it knows
+the tournament. It returns 403 unless the caller holds that role there, and an
+admin passes a referee check. Bout start and end and the scoring writes need
+`referee`, and every other write needs `admin`. Creating a tournament is the only
+write any signed-in user can make, and it writes the creator into
+`tournament_users` as the tournament's first admin. The creator can't be demoted
+or removed (409), so a tournament always keeps an admin.
+
+Bout start and end and the scoring writes go through
+`bout.RequireAssignedReferee` instead, which also requires the caller to be the
+bout's `referee_id`. An admin passes its role check but referees only the bouts
+they are assigned to.
 
 ## Layout
 
@@ -187,6 +202,7 @@ internal/database/           the gorm/postgres pool
 internal/features/           one folder per feature, one file per layer
 internal/server/app.go       builds the Fiber app, the Huma API, and the wiring
 internal/server/middlewares/ cross-cutting concerns
+internal/session/            the verified caller on the request context
 internal/server/routers/     mounts each feature with one call
 internal/utils/              shared helpers: the validator, uuid parsing, clamp
 internal/errs/               the error vocabulary, Fiber's ErrorHandler, HumaError

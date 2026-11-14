@@ -90,6 +90,13 @@ func (s *tournamentService) CreateTournament(
 		StartTime:  input.Body.StartTime,
 		City:       optionalText(strings.TrimSpace(input.Body.City)),
 		Country:    optionalText(input.Body.Country),
+		// tournament_users is the only record of who administers a tournament,
+		// so the creator's admin row goes in with the tournament. The transaction
+		// is gorm's: tournamentRepository.CreateTournament's one Create call
+		// inserts both rows and rolls both back on failure.
+		Memberships: []tournamentuser.TournamentUser{
+			{UserID: createdBy, Role: tournamentuser.TournamentUserRoleAdmin},
+		},
 	}
 	if err := s.createWithGeneratedCode(ctx, tournament); err != nil {
 		return nil, errs.HumaError(err)
@@ -259,6 +266,10 @@ func (s *tournamentService) UpdateTournamentByID(
 		return nil, errs.HumaError(err)
 	}
 
+	if err := tournamentuser.RequireRole(ctx, s.membershipRepo, id, tournamentuser.TournamentUserRoleAdmin); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("update tournament: %w", err))
+	}
+
 	err = s.repo.UpdateTournamentByID(ctx, id, update)
 
 	return s.afterUpdate(ctx, id, err, "tournament has ended and can no longer be edited")
@@ -308,6 +319,10 @@ func (s *tournamentService) StartTournament(
 		return nil, errs.HumaError(err)
 	}
 
+	if err := tournamentuser.RequireRole(ctx, s.membershipRepo, id, tournamentuser.TournamentUserRoleAdmin); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("start tournament: %w", err))
+	}
+
 	startedAt := time.Now().UTC()
 
 	err = s.repo.TransitionTournamentByID(ctx, id, TournamentTransition{
@@ -326,6 +341,10 @@ func (s *tournamentService) CompleteTournament(
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+
+	if err := tournamentuser.RequireRole(ctx, s.membershipRepo, id, tournamentuser.TournamentUserRoleAdmin); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("complete tournament: %w", err))
 	}
 
 	completedAt := time.Now().UTC()
@@ -369,6 +388,10 @@ func (s *tournamentService) AddTournamentUser(
 	tournamentID, userID, err := parseMembershipIDs(input.TournamentID, input.Body.UserID)
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+
+	if err := tournamentuser.RequireRole(ctx, s.membershipRepo, tournamentID, tournamentuser.TournamentUserRoleAdmin); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("add tournament user: %w", err))
 	}
 
 	if !input.Body.Role.IsValid() {
@@ -431,9 +454,19 @@ func (s *tournamentService) UpdateTournamentUserRole(
 		return nil, errs.HumaError(err)
 	}
 
+	if err := tournamentuser.RequireRole(ctx, s.membershipRepo, tournamentID, tournamentuser.TournamentUserRoleAdmin); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("update tournament user role: %w", err))
+	}
+
 	if !input.Body.Role.IsValid() {
 		return nil, errs.HumaError(errs.Public(
 			fmt.Sprintf("unknown role %q", input.Body.Role), errs.ErrInvalidInput))
+	}
+
+	if input.Body.Role != tournamentuser.TournamentUserRoleAdmin {
+		if err := s.keepCreatorAdmin(ctx, tournamentID, userID); err != nil {
+			return nil, errs.HumaError(fmt.Errorf("update tournament user role: %w", err))
+		}
 	}
 
 	if err := s.membershipRepo.UpdateTournamentUserRole(ctx, tournamentID, userID, input.Body.Role); err != nil {
@@ -457,11 +490,34 @@ func (s *tournamentService) RemoveTournamentUser(
 		return nil, errs.HumaError(err)
 	}
 
+	if err := tournamentuser.RequireRole(ctx, s.membershipRepo, tournamentID, tournamentuser.TournamentUserRoleAdmin); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("remove tournament user: %w", err))
+	}
+
+	if err := s.keepCreatorAdmin(ctx, tournamentID, userID); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("remove tournament user: %w", err))
+	}
+
 	if err := s.membershipRepo.DeleteTournamentUser(ctx, tournamentID, userID); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("remove tournament user: %w", err))
 	}
 
 	return nil, nil
+}
+
+// keepCreatorAdmin refuses to demote or remove the tournament's creator. Every
+// tournament's creator is made an admin on create, so this also means a
+// tournament can never be left without an admin.
+func (s *tournamentService) keepCreatorAdmin(ctx context.Context, tournamentID, userID uuid.UUID) error {
+	tournament, err := s.repo.GetTournamentByID(ctx, tournamentID)
+	if err != nil {
+		return fmt.Errorf("get tournament: %w", err)
+	}
+	if tournament.CreatedBy == userID {
+		return errs.Public("the tournament's creator must stay an admin", errs.ErrConflict)
+	}
+
+	return nil
 }
 
 func parseMembershipIDs(rawTournamentID, rawUserID string) (uuid.UUID, uuid.UUID, error) {
