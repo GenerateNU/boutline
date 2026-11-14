@@ -539,9 +539,8 @@ replace the tournament's tabs rather than stacking under them.
   "Rating: Unrated", "Gender: Female") under the search bar and at the top of the
   sheet. Weapon and Age Category appear in the Figma but are deferred to the
   tournament-level Fencers tab, since `competitors` carries neither column (both live
-  on `events`). It lists every fencer in the tournament, since competitors don't
-  belong to an event yet (§8.4). Rows link to a fencer page, which is placeholder
-  text.
+  on `events`). It lists the event's own competitors (§8.4). Rows link to a fencer
+  page, which is placeholder text.
 - **Pooling** (Partial): see §11.6 for its current state.
 - **Tableau** (Placeholder): a bout list from a hardcoded fixture, the same for every
   event. Replaced in §12.5.
@@ -829,7 +828,8 @@ the tournament and bout `end` state.
 
 ### 8.4 One competitor per event
 
-**Status:** Planned. Issue: #77.
+**Status:** Partial. Every column below is built except `seed` and
+`checked_in_at`. Issue: #77.
 
 - A competitor row belongs to exactly one event (`event_id`, required). A person
   fencing foil and épée has two rows, one per event. Because ratings are per
@@ -839,7 +839,8 @@ the tournament and bout `end` state.
   `secondary_club` (both nullable), `division` (home state), `member_number`
   (optional, unique within an event; its authority comes from the tournament),
   `rating_year` (e.g. 24 in `C24`), `seed`, `checked_in_at`. `team` is deprecated
-  in favour of `primary_club`.
+  in favour of `primary_club`, and still the one the Clubs tab and the club
+  filter read.
 - `tournament_id` stays on the row, so tournament-wide lists don't need a join.
 - Club names are free text, so "NYAC" and "New York AC" count as two clubs. Club
   separation (§11.2) and the Clubs tab compare a normalised key (case, whitespace
