@@ -83,6 +83,38 @@
   --animate-drawer-out: drawer-out 200ms ease-in;
   --animate-fade-in: fade-in 250ms ease-out;
   --animate-fade-out: fade-out 200ms ease-in;
+  --animate-collapsible-down: collapsible-down 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-collapsible-up: collapsible-up 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-pop-in: pop-in 180ms cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-pop-out: pop-out 120ms ease-in;
+  --animate-sheet-in: sheet-in 250ms cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-sheet-out: sheet-out 200ms ease-in;
+  --animate-shimmer: shimmer 1.5s ease-in-out infinite;
+
+  /* `scale` and `translate` are their own properties, so these don't clobber
+     Tailwind's -translate-*-1/2 centring the way a `transform` keyframe would. */
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+  @keyframes pop-out {
+    to {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+  @keyframes sheet-in {
+    from {
+      translate: 0 100%;
+    }
+  }
+  @keyframes sheet-out {
+    to {
+      translate: 0 100%;
+    }
+  }
 
   @keyframes drawer-in {
     from {
@@ -101,6 +133,33 @@
   }
   @keyframes fade-out {
     to {
+      opacity: 0;
+    }
+  }
+  @keyframes shimmer {
+    to {
+      translate: 100% 0;
+    }
+  }
+  /* Radix measures the content and exposes its height for these. Fading as it
+     grows keeps a tall card from looking like it's being uncovered by an edge. */
+  @keyframes collapsible-down {
+    from {
+      height: 0;
+      opacity: 0;
+    }
+    to {
+      height: var(--radix-collapsible-content-height);
+      opacity: 1;
+    }
+  }
+  @keyframes collapsible-up {
+    from {
+      height: var(--radix-collapsible-content-height);
+      opacity: 1;
+    }
+    to {
+      height: 0;
       opacity: 0;
     }
   }
@@ -130,7 +189,7 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --brand: oklch(0.274 0.097 269.29);
+  --brand: var(--blue);
   --chip: oklch(0.885 0 0);
   --radius: 0.625rem;
   --blue: #21358b;
@@ -173,7 +232,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Pages still scroll; only the viewport scrollbar is hidden, as on a phone. */
   html {
     @apply font-sans;
+    scrollbar-width: none;
   }
 }

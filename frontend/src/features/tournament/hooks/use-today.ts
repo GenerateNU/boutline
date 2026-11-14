@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 import { formatDateParam, parseDateParam } from "@/features/tournament/lib/date-param";
 
@@ -12,7 +12,8 @@ function useToday(): Date | undefined {
     () => formatDateParam(new Date()),
     () => undefined,
   );
-  return parseDateParam(today);
+  // Same Date until the day changes, so effects can depend on it.
+  return useMemo(() => parseDateParam(today), [today]);
 }
 
 export { useToday };

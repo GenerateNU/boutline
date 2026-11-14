@@ -13,9 +13,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// tournamentNameTrigramExpr must match the expression indexed by
+// tournamentNameSearchColumns must match the expression indexed by
 // idx_tournaments_name_trgm exactly, or the search falls back to a sequential scan.
-const tournamentNameTrigramExpr = "name"
+var tournamentNameSearchColumns = []string{"name"}
 
 type TournamentRepository interface {
 	CreateTournament(ctx context.Context, tournament *Tournament) error
@@ -28,15 +28,17 @@ type TournamentRepository interface {
 }
 
 type TournamentUpdate struct {
-	Name       *string
-	Visibility *TournamentVisibility
-	StartTime  *time.Time
-	City       *string
-	Country    *string
+	Name                 *string
+	Visibility           *TournamentVisibility
+	StartTime            *time.Time
+	City                 *string
+	Country              *string
+	Venue                *string
+	SanctioningAuthority *TournamentSanctioningAuthority
 }
 
 func (e TournamentUpdate) columns() map[string]any {
-	columns := make(map[string]any, 5)
+	columns := make(map[string]any, 7)
 
 	if e.Name != nil {
 		columns["name"] = *e.Name
@@ -52,6 +54,12 @@ func (e TournamentUpdate) columns() map[string]any {
 	}
 	if e.Country != nil {
 		columns["country"] = nullIfEmpty(*e.Country)
+	}
+	if e.Venue != nil {
+		columns["venue"] = nullIfEmpty(*e.Venue)
+	}
+	if e.SanctioningAuthority != nil {
+		columns["sanctioning_authority"] = *e.SanctioningAuthority
 	}
 
 	return columns
@@ -77,15 +85,16 @@ func (t TournamentTransition) columns() map[string]any {
 }
 
 type TournamentListFilter struct {
-	Status     TournamentStatus
-	Term       string
-	StartFrom  time.Time
-	StartTo    time.Time
-	Visibility TournamentVisibility
-	Club       string
-	Country    string
-	Limit      int
-	Offset     int
+	Status           TournamentStatus
+	Term             string
+	StartFrom        time.Time
+	StartTo          time.Time
+	Visibility       TournamentVisibility
+	Club             string
+	Country          string
+	AssociatedUserID uuid.UUID
+	Limit            int
+	Offset           int
 }
 
 type TournamentCountryFilter struct {
@@ -114,6 +123,9 @@ func NewTournamentRepository(db *gorm.DB) TournamentRepository {
 	return &tournamentRepository{db: db}
 }
 
+// CreateTournament inserts the tournament's Memberships too, through gorm's
+// has-many save. Both inserts share the transaction gorm opens around every
+// Create, which exists only while SkipDefaultTransaction stays off.
 func (r *tournamentRepository) CreateTournament(ctx context.Context, tournament *Tournament) error {
 	if err := r.db.WithContext(ctx).Create(tournament).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -216,24 +228,33 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 	if filter.Country != "" {
 		query = query.Where("country = ?", filter.Country)
 	}
+	if filter.AssociatedUserID != uuid.Nil {
+		// created_by as well as membership, because tournaments made before the
+		// creator got an admin row on create have no tournament_users row for them.
+		query = query.Where(`(created_by = ? OR EXISTS (
+			SELECT 1 FROM tournament_users
+			WHERE tournament_users.tournament_id = tournaments.id AND tournament_users.user_id = ?
+		))`, filter.AssociatedUserID, filter.AssociatedUserID)
+	}
 	if filter.Club != "" {
 		// Raw SQL: importing the competitor package here would be an import cycle.
 		// Joins through events because competitors.tournament_id is nullable.
-		query = query.Where(`EXISTS (
+		clubFragment, clubArgs := utils.SubstringPredicate(
+			[]string{"competitors.primary_club", "competitors.secondary_club"}, filter.Club)
+		query = query.Where(fmt.Sprintf(`EXISTS (
 			SELECT 1 FROM competitors
 			JOIN events ON events.id = competitors.event_id
 			WHERE events.tournament_id = tournaments.id
-			AND (competitors.primary_club = ? OR competitors.secondary_club = ?))`,
-			filter.Club, filter.Club)
+			AND %s)`, clubFragment), clubArgs...)
 	}
-	query = utils.TrigramMatch(query, tournamentNameTrigramExpr, filter.Term)
+	query = utils.TrigramMatch(query, tournamentNameSearchColumns, filter.Term)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count tournaments: %w", err)
 	}
 
-	query = utils.TrigramOrder(query, tournamentNameTrigramExpr, filter.Term, "created_at DESC", "id")
+	query = utils.TrigramOrder(query, tournamentNameSearchColumns, filter.Term, "created_at DESC", "id")
 
 	tournaments := make([]Tournament, 0, filter.Limit)
 	err := query.

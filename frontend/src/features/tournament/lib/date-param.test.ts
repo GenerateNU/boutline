@@ -1,4 +1,8 @@
-import { formatDateParam, parseDateParam } from "@/features/tournament/lib/date-param";
+import {
+  formatDateParam,
+  parseDateParam,
+  todayDateParam,
+} from "@/features/tournament/lib/date-param";
 
 describe("parseDateParam", () => {
   it.each([
@@ -10,5 +14,17 @@ describe("parseDateParam", () => {
   ])("returns $want for $name", ({ value, want }) => {
     const date = parseDateParam(value);
     expect(date && formatDateParam(date)).toBe(want);
+  });
+});
+
+describe("todayDateParam", () => {
+  const NOW = new Date("2026-11-15T03:00:00Z");
+
+  it.each([
+    { name: "no time zone", timeZone: undefined, want: "2026-11-15" },
+    { name: "a zone behind UTC", timeZone: "America/New_York", want: "2026-11-14" },
+    { name: "an unknown zone", timeZone: "Not/AZone", want: "2026-11-15" },
+  ])("returns $want for $name", ({ timeZone, want }) => {
+    expect(todayDateParam(timeZone, NOW)).toBe(want);
   });
 });

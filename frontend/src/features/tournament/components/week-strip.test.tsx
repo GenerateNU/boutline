@@ -1,13 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { format } from "date-fns";
 
 import { WeekStrip } from "@/features/tournament/components/week-strip";
 
 const replace = jest.fn();
+let mockSearch = "date=2026-11-11";
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ replace }),
   usePathname: () => "/tournaments",
-  useSearchParams: () => new URLSearchParams("date=2026-11-11"),
+  useSearchParams: () => new URLSearchParams(mockSearch),
 }));
 
 // Five days fill 300px, so each day is 60px wide.
@@ -51,6 +53,7 @@ describe("WeekStrip", () => {
 
   beforeEach(() => {
     replace.mockClear();
+    mockSearch = "date=2026-11-11";
   });
 
   const current = ["Nov 11", "Nov 12", "Nov 13", "Nov 14", "Nov 15"];
@@ -114,5 +117,33 @@ describe("WeekStrip", () => {
 
     expect(replace).toHaveBeenCalledTimes(1);
     expect(replace).toHaveBeenCalledWith(expect.stringContaining("date=2026-11-16"), { scroll: false });
+  });
+
+  it("keeps the selected day when it's tapped again", () => {
+    renderStrip();
+
+    fireEvent.click(screen.getByRole("button", { name: "Nov 11" }));
+
+    expect(screen.getByRole("button", { name: "Nov 11" })).toHaveAttribute("aria-pressed", "true");
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: "missing", search: "" },
+    { name: "invalid", search: "date=2026-02-31" },
+  ])("selects today when the date is $name", ({ search }) => {
+    mockSearch = search;
+    const today = new Date();
+
+    render(<WeekStrip />);
+
+    expect(screen.getByRole("button", { name: format(today, "MMM d") })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(replace).toHaveBeenCalledWith(
+      expect.stringContaining(`date=${format(today, "yyyy-MM-dd")}`),
+      { scroll: false },
+    );
   });
 });

@@ -100,7 +100,7 @@ func (f *FakeUserRepository) ListUsers(
 	matched := make([]user.User, 0, len(f.Users))
 	for _, candidate := range f.Users {
 		name := strings.ToLower(candidate.FirstName + " " + candidate.LastName)
-		if strings.Contains(name, term) {
+		if strings.Contains(name, term) || strings.HasPrefix(candidate.Email, term) {
 			matched = append(matched, candidate)
 		}
 	}

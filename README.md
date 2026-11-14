@@ -228,6 +228,12 @@ erDiagram
       timestamptz completed_at
       timestamptz created_at
       timestamptz updated_at
+      text type
+      text weapon
+      text gender
+      text age_category
+      text rating_limit
+      boolean qualifier
     }
     events }o--o| tournaments : fk_events_tournament
     pool_stages {
@@ -293,6 +299,8 @@ erDiagram
       timestamptz updated_at
       text city
       text country
+      text venue
+      text sanctioning_authority
     }
     tournaments }o--o| users : fk_users_created_tournaments
     users {

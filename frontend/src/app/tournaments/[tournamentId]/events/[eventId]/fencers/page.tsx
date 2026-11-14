@@ -1,12 +1,17 @@
+import { ActiveFilterChips } from "@/components/primitives/active-filter-chips";
 import { Pagination } from "@/components/primitives/pagination";
 import { Section } from "@/components/primitives/section";
 import { FencerCard } from "@/features/competitor/components/fencer-card";
 import { FencerFilterSheet } from "@/features/competitor/components/fencer-filter-sheet";
+import {
+  FENCER_PAGE_SIZE,
+  GENDER_OPTIONS,
+  optionLabel,
+  parseFencerFilters,
+  RATING_OPTIONS,
+} from "@/features/competitor/lib/fencer-filters";
 import { getCompetitors } from "@/features/competitor/services/getCompetitors";
 import { SearchForm } from "@/features/tournament/components/search-form";
-import { readOffsetParam, readStringParam } from "@/lib/search-params";
-
-const PAGE_SIZE = 20;
 
 export default async function EventFencersTab({
   params,
@@ -14,26 +19,26 @@ export default async function EventFencersTab({
 }: PageProps<"/tournaments/[tournamentId]/events/[eventId]/fencers">) {
   const [{ tournamentId, eventId }, query] = await Promise.all([params, searchParams]);
 
-  const search = readStringParam(query, "q");
-  const team = readStringParam(query, "team") || undefined;
-  const offset = readOffsetParam(query);
+  const { offset, search, team, rating, gender } = parseFencerFilters(query);
   const basePath = `/tournaments/${tournamentId}/events/${eventId}/fencers`;
 
-  // The backend has no event roster yet, so this lists the whole tournament.
-  const { data, total, limit } = await getCompetitors(
-    tournamentId,
-    PAGE_SIZE,
-    offset,
-    search,
+  const { data, total, limit } = await getCompetitors(tournamentId, FENCER_PAGE_SIZE, offset, {
+    eventId,
+    query: search,
     team,
-  );
+    rating,
+    gender,
+  });
+
+  const hasFilters = Boolean(team || rating || gender);
+  const activeFilters = [
+    { param: "team", name: "Club", value: team },
+    { param: "rating", name: "Rating", value: rating && optionLabel(RATING_OPTIONS, rating) },
+    { param: "gender", name: "Gender", value: gender && optionLabel(GENDER_OPTIONS, gender) },
+  ];
 
   return (
     <Section title="Fencers">
-      <p className="text-sm text-muted-foreground">
-        Showing every fencer in this tournament — event entries aren&apos;t tracked yet.
-      </p>
-
       <div className="flex items-center gap-2">
         <SearchForm
           action={basePath}
@@ -44,15 +49,15 @@ export default async function EventFencersTab({
         <FencerFilterSheet tournamentId={tournamentId} />
       </div>
 
-      {team ? <p className="text-sm text-muted-foreground">Club: {team}</p> : null}
+      <ActiveFilterChips filters={activeFilters} />
 
       {data.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           {search
             ? `No fencers match “${search}”.`
-            : team
-              ? "No fencers found for this club."
-              : "No fencers have entered this tournament yet."}
+            : hasFilters
+              ? "No fencers match these filters."
+              : "No fencers have entered this event yet."}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -69,7 +74,7 @@ export default async function EventFencersTab({
         limit={limit}
         offset={offset}
         basePath={basePath}
-        params={{ q: search || undefined, team }}
+        params={{ q: search || undefined, team, rating, gender }}
       />
     </Section>
   );

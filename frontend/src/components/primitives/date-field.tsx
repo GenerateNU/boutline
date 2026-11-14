@@ -70,7 +70,7 @@ function DateField({
           <Popover.Content
             align="start"
             sideOffset={4}
-            className="z-50 rounded-lg shadow-md outline-none"
+            className="z-50 origin-(--radix-popover-content-transform-origin) rounded-lg shadow-md outline-none motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out"
           >
             <Calendar
               mode="single"

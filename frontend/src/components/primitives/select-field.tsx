@@ -3,9 +3,19 @@ import { useId } from "react";
 
 import { Select, SelectItem } from "@/components/primitives/select";
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
 interface SelectFieldProps extends Omit<React.ComponentProps<typeof Select>, "children"> {
   label: React.ReactNode;
-  options: string[];
+  // A plain string is both the value and the label.
+  options: (string | SelectOption)[];
+}
+
+function toOption(option: string | SelectOption): SelectOption {
+  return typeof option === "string" ? { value: option, label: option } : option;
 }
 
 function SelectField({ className, id, label, options, ...props }: SelectFieldProps) {
@@ -16,11 +26,16 @@ function SelectField({ className, id, label, options, ...props }: SelectFieldPro
     <div data-slot="select-field" className={cn("group flex flex-col gap-1", className)}>
       <label htmlFor={selectId} className="text-xs font-medium text-neutral-secondary group-has-disabled:text-neutral-muted">
         {label}
+        {props.required ? <span aria-hidden className="text-red-dark"> *</span> : null}
       </label>
-      <Select id={selectId} {...props}>
-        {options.map((option) => (
-          <SelectItem key={option} value={option}>
-            {option}
+      <Select
+        id={selectId}
+        className="group-has-[select:user-invalid]:border-2 group-has-[select:user-invalid]:border-red-dark group-has-[select:user-invalid]:px-2.75"
+        {...props}
+      >
+        {options.map(toOption).map(({ value, label: optionLabel }) => (
+          <SelectItem key={value} value={value}>
+            {optionLabel}
           </SelectItem>
         ))}
       </Select>
@@ -29,3 +44,4 @@ function SelectField({ className, id, label, options, ...props }: SelectFieldPro
 }
 
 export { SelectField };
+export type { SelectOption };

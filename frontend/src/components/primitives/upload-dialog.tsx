@@ -109,10 +109,10 @@ function UploadDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-obsidian/40" />
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40 motion-safe:data-[state=open]:animate-fade-in motion-safe:data-[state=closed]:animate-fade-out" />
         <Dialog.Content
           data-slot="upload-dialog"
-          className="fixed top-1/2 left-1/2 flex max-h-dvh w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-5 overflow-y-auto rounded-2xl bg-background p-6 font-satoshi">
+          className="fixed top-1/2 left-1/2 z-50 flex max-h-dvh w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-5 overflow-y-auto rounded-2xl bg-background p-6 font-satoshi motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out">
           <div className="flex items-start gap-3 border-b border-outline pb-4">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-outline">
               <CloudUploadOutlined aria-hidden className="size-5 text-obsidian" />

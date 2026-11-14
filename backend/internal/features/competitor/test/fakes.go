@@ -12,6 +12,7 @@ import (
 	"boutline/internal/features/event"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
+	tournamentusertest "boutline/internal/features/tournamentuser/test"
 
 	"github.com/google/uuid"
 )
@@ -46,11 +47,17 @@ func NewTestServiceWithAthletes(
 		FakeTournamentLookup{
 			TestTournamentID: {ID: TestTournamentID, CreatedBy: TestCreatorID},
 		},
-		FakeTournamentMembershipLookup{
-			{UserID: TestAdminID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleAdmin},
-			{UserID: TestRefereeID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleReferee},
-			{UserID: TestOtherAdminID, TournamentID: uuid.New(), Role: tournamentuser.TournamentUserRoleAdmin},
-		},
+		tournamentusertest.NewFakeMembershipLookup(
+			tournamentuser.TournamentUser{
+				UserID: TestAdminID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleAdmin,
+			},
+			tournamentuser.TournamentUser{
+				UserID: TestRefereeID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleReferee,
+			},
+			tournamentuser.TournamentUser{
+				UserID: TestOtherAdminID, TournamentID: uuid.New(), Role: tournamentuser.TournamentUserRoleAdmin,
+			},
+		),
 		athletes)
 }
 
@@ -150,14 +157,16 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 		if filter.EventID != nil && candidate.EventID != *filter.EventID {
 			continue
 		}
-		if filter.TournamentID != nil &&
-			(candidate.TournamentID == nil || *candidate.TournamentID != *filter.TournamentID) {
+		if filter.TournamentID != nil && candidate.TournamentID != *filter.TournamentID {
 			continue
 		}
 		if filter.Rating != nil && candidate.Rating != *filter.Rating {
 			continue
 		}
-		if filter.Team != nil && candidate.Team != *filter.Team {
+		if filter.Gender != nil && candidate.Gender != *filter.Gender {
+			continue
+		}
+		if filter.Team != nil && !strings.Contains(strings.ToLower(candidate.Team), strings.ToLower(*filter.Team)) {
 			continue
 		}
 		if len(filter.IDs) > 0 && !slices.Contains(filter.IDs, candidate.ID) {
@@ -197,8 +206,7 @@ func (f *FakeCompetitorRepository) ListCompetitorTeams(
 	term := strings.ToLower(filter.Term)
 	counts := make(map[string]int64)
 	for _, candidate := range f.Competitors {
-		if filter.TournamentID != nil &&
-			(candidate.TournamentID == nil || *candidate.TournamentID != *filter.TournamentID) {
+		if filter.TournamentID != nil && candidate.TournamentID != *filter.TournamentID {
 			continue
 		}
 		if candidate.Team == "" {
@@ -380,22 +388,6 @@ func (f FakeTournamentLookup) GetTournamentByID(
 		return nil, fmt.Errorf("select tournament %s: %w", id, errs.ErrNotFound)
 	}
 	return &found, nil
-}
-
-var _ competitor.TournamentMembershipLookup = FakeTournamentMembershipLookup(nil)
-
-type FakeTournamentMembershipLookup []tournamentuser.TournamentUser
-
-func (f FakeTournamentMembershipLookup) GetTournamentUser(
-	_ context.Context,
-	tournamentID, userID uuid.UUID,
-) (*tournamentuser.TournamentUser, error) {
-	for _, member := range f {
-		if member.TournamentID == tournamentID && member.UserID == userID {
-			return &member, nil
-		}
-	}
-	return nil, fmt.Errorf("select tournament user %s/%s: %w", tournamentID, userID, errs.ErrNotFound)
 }
 
 // emptyToNil mirrors real repository; stores NULL for a cleared field.

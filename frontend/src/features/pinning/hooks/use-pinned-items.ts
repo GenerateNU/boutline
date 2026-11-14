@@ -1,17 +1,24 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useSessionStorage } from "@/lib/hooks/use-session-storage";
 import { PINNED_MAX_IDS, PINNED_STORAGE_KEY, PinnedIds } from "@/features/pinning/types/pinning";
 
-const INITIAL_PINNED_IDS: PinnedIds = { fencerIds: [], boutIds: [] };
+const NO_IDS: string[] = [];
+const INITIAL_PINNED_IDS: PinnedIds = { fencerIds: NO_IDS, boutIds: NO_IDS, poolIds: NO_IDS };
 
-function isPinnedIds(value: unknown): value is PinnedIds {
+// Pins saved before pools could be pinned have no poolIds; they keep their fencers and bouts.
+function toPinnedIds(value: unknown): PinnedIds {
   if (typeof value !== "object" || value === null) {
-    return false;
+    return INITIAL_PINNED_IDS;
   }
-  const { fencerIds, boutIds } = value as Record<string, unknown>;
-  return Array.isArray(fencerIds) && Array.isArray(boutIds);
+  const { fencerIds, boutIds, poolIds } = value as Record<string, unknown>;
+  if (!Array.isArray(fencerIds) || !Array.isArray(boutIds)) {
+    return INITIAL_PINNED_IDS;
+  }
+  return Array.isArray(poolIds)
+    ? (value as PinnedIds)
+    : { fencerIds, boutIds, poolIds: NO_IDS };
 }
 
 function pin(ids: string[], id: string): string[] {
@@ -29,7 +36,7 @@ function unpin(ids: string[], id: string): string[] {
 // exist in the database). Something to address once the pinning frontend is more clarified.
 function usePinnedItems() {
   const [stored, setPinned] = useSessionStorage<unknown>(PINNED_STORAGE_KEY, INITIAL_PINNED_IDS);
-  const pinned = isPinnedIds(stored) ? stored : INITIAL_PINNED_IDS;
+  const pinned = useMemo(() => toPinnedIds(stored), [stored]);
 
   const pinFencer = useCallback(
     (id: string) => setPinned({ ...pinned, fencerIds: pin(pinned.fencerIds, id) }),
@@ -47,8 +54,16 @@ function usePinnedItems() {
     (id: string) => setPinned({ ...pinned, boutIds: unpin(pinned.boutIds, id) }),
     [pinned, setPinned],
   );
+  const pinPool = useCallback(
+    (id: string) => setPinned({ ...pinned, poolIds: pin(pinned.poolIds, id) }),
+    [pinned, setPinned],
+  );
+  const unpinPool = useCallback(
+    (id: string) => setPinned({ ...pinned, poolIds: unpin(pinned.poolIds, id) }),
+    [pinned, setPinned],
+  );
 
-  return { pinned, pinFencer, unpinFencer, pinBout, unpinBout };
+  return { pinned, pinFencer, unpinFencer, pinBout, unpinBout, pinPool, unpinPool };
 }
 
 export { usePinnedItems };

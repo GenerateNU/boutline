@@ -4,7 +4,7 @@ import { addDays, format, isSameDay } from "date-fns";
 import { cn } from "cn";
 import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
 import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { useDayDrag } from "@/features/tournament/hooks/use-day-drag";
@@ -18,7 +18,7 @@ interface DayButtonProps {
   day: Date;
   selected: Date | undefined;
   offScreen: boolean;
-  onSelect: (day: Date | undefined) => void;
+  onSelect: (day: Date) => void;
 }
 
 function DayButton({ day, selected, offScreen, onSelect }: DayButtonProps) {
@@ -31,7 +31,7 @@ function DayButton({ day, selected, offScreen, onSelect }: DayButtonProps) {
       aria-pressed={isSelected}
       aria-hidden={offScreen || undefined}
       tabIndex={offScreen ? -1 : undefined}
-      onClick={() => onSelect(isSelected ? undefined : day)}
+      onClick={() => onSelect(day)}
       className={cn(
         "h-auto min-w-0 flex-1 flex-col rounded-none px-1 pt-2.5 font-medium text-neutral-muted hover:bg-transparent after:h-0.5 after:w-full after:rounded-t-xs",
         isSelected && "font-semibold text-white after:bg-accent-green",
@@ -44,11 +44,21 @@ function DayButton({ day, selected, offScreen, onSelect }: DayButtonProps) {
 
 function WeekStrip() {
   const { searchParams, setDate } = useTournamentFilters();
-  const selected = parseDateParam(searchParams.get("date"));
+  const dateParam = searchParams.get("date");
   const today = useToday();
+  const selected = parseDateParam(dateParam) ?? today;
   const [pagedStart, setPagedStart] = useState<Date>();
-  const anchor = selected ?? today;
-  const start = pagedStart ?? anchor;
+  const start = pagedStart ?? selected;
+
+  // The server falls back to today in ?tz= (else UTC) when the URL has no valid date. Once
+  // the browser knows its own today, write that into the URL so the list matches
+  // the local day the strip shows.
+  const selectToday = useEffectEvent((day: Date) => setDate(day));
+  useEffect(() => {
+    if (today && !parseDateParam(dateParam)) {
+      selectToday(today);
+    }
+  }, [dateParam, today]);
 
   // One page of days either side of the visible one, revealed while dragging.
   const days = start
@@ -66,7 +76,11 @@ function WeekStrip() {
 
   const { rowRef, rowStyle, trackHandlers } = useDayDrag(VISIBLE_DAYS, page);
 
-  function select(day: Date | undefined) {
+  // Tapping the selected day again keeps it selected rather than clearing it.
+  function select(day: Date) {
+    if (selected && isSameDay(day, selected)) {
+      return;
+    }
     setPagedStart(start);
     setDate(day);
   }

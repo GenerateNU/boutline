@@ -389,6 +389,7 @@ func TestListUsersWithQuery(t *testing.T) {
 	seed := []user.User{
 		seeded("ada@example.com", "Ada", "Lovelace"),
 		seeded("grace@example.com", "Grace", "Hopper"),
+		seeded("xyz.ref@example.com", "Bo", "Li"),
 	}
 
 	tests := []struct {
@@ -400,6 +401,27 @@ func TestListUsersWithQuery(t *testing.T) {
 		wantOffset int
 	}{
 		{
+			name:       "matches an email prefix that is not in the name",
+			input:      &user.UserListInput{Query: "xyz.r"},
+			wantEmails: []string{"xyz.ref@example.com"},
+			wantTotal:  1,
+			wantLimit:  user.UserDefaultPageSize,
+		},
+		{
+			name:       "an uppercase term matches an email prefix",
+			input:      &user.UserListInput{Query: "XYZ.REF@"},
+			wantEmails: []string{"xyz.ref@example.com"},
+			wantTotal:  1,
+			wantLimit:  user.UserDefaultPageSize,
+		},
+		{
+			name:       "a term matching neither name nor email gives an empty page",
+			input:      &user.UserListInput{Query: "zzzz"},
+			wantEmails: []string{},
+			wantTotal:  0,
+			wantLimit:  user.UserDefaultPageSize,
+		},
+		{
 			name:       "matches on first and last name",
 			input:      &user.UserListInput{Query: "lovelace"},
 			wantEmails: []string{"ada@example.com"},
@@ -409,8 +431,8 @@ func TestListUsersWithQuery(t *testing.T) {
 		{
 			name:       "a blank term matches every user",
 			input:      &user.UserListInput{Query: "   "},
-			wantEmails: []string{"ada@example.com", "grace@example.com"},
-			wantTotal:  2,
+			wantEmails: []string{"ada@example.com", "grace@example.com", "xyz.ref@example.com"},
+			wantTotal:  3,
 			wantLimit:  user.UserDefaultPageSize,
 		},
 		{

@@ -45,6 +45,14 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			wantContain: "Lee",
 		},
 		{
+			name:        "users list matches an email prefix",
+			route:       "/api/v1/users",
+			query:       map[string]string{"q": "casey.nguyen@"}, // seeded: Casey Nguyen
+			wantStatus:  http.StatusOK,
+			wantField:   "lastName",
+			wantContain: "Nguyen",
+		},
+		{
 			name:        "competitors list tolerates a typo in q",
 			route:       "/api/v1/competitors",
 			query:       map[string]string{"q": "Hana Satoo"}, // seeded: Hana Sato
@@ -91,6 +99,14 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			wantStatus:  http.StatusOK,
 			wantField:   "name",
 			wantContain: "Fall Open 2026",
+		},
+		{
+			name:        "competitors list matches a single-character q against the last name",
+			route:       "/api/v1/competitors",
+			query:       map[string]string{"q": "w", "tournament_id": fallOpen2026}, // seeded: Noah Williams; pins the fix for anchoring the LIKE pattern to the full concatenated name, which could never match a surname
+			wantStatus:  http.StatusOK,
+			wantField:   "lastName",
+			wantContain: "Williams",
 		},
 	}
 
