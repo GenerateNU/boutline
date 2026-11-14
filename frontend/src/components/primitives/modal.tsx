@@ -10,7 +10,7 @@ interface ModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  description: string;
+  description?: string;
   onCloseAutoFocus?: (event: Event) => void;
   children: React.ReactNode;
 }
@@ -26,19 +26,22 @@ function Modal({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40" />
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40 motion-safe:data-[state=open]:animate-fade-in motion-safe:data-[state=closed]:animate-fade-out" />
         <Dialog.Content
           data-slot="modal"
           onCloseAutoFocus={onCloseAutoFocus}
-          className="fixed inset-x-2 top-1/2 z-50 mx-auto flex max-w-86.25 -translate-y-1/2 flex-col gap-5 rounded-3xl bg-background p-5 pt-6 font-manrope shadow-lg"
+          {...(!description && { "aria-describedby": undefined })}
+          className="fixed inset-x-2 top-1/2 z-50 mx-auto flex max-w-86.25 -translate-y-1/2 flex-col gap-5 rounded-3xl bg-background p-5 pt-6 font-manrope shadow-lg motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out"
         >
           <div className="flex items-center justify-between">
             <Dialog.Title className="text-xl font-semibold text-obsidian">{title}</Dialog.Title>
             <ModalClose />
           </div>
-          <Dialog.Description className="-mt-1 text-sm text-neutral-secondary">
-            {description}
-          </Dialog.Description>
+          {description && (
+            <Dialog.Description className="-mt-1 text-sm text-neutral-secondary">
+              {description}
+            </Dialog.Description>
+          )}
           {children}
         </Dialog.Content>
       </Dialog.Portal>
