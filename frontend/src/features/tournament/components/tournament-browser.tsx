@@ -59,7 +59,7 @@ async function TournamentBrowser({
 
       <div className="flex items-center justify-between px-6 py-1.25">
         <h1 className="text-xl font-semibold text-obsidian">Tournaments</h1>
-        <CalendarButton />
+        <CalendarButton submitLabel="Show Tournaments" />
       </div>
 
       {data.length === 0 && (

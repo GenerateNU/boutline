@@ -146,4 +146,25 @@ describe("WeekStrip", () => {
       { scroll: false },
     );
   });
+
+  it("shows the page's default day when the URL has no date, without rewriting the URL", () => {
+    mockSearch = "q=foil";
+
+    render(<WeekStrip defaultDay="2026-10-06" />);
+
+    expect(screen.getByRole("button", { name: "Oct 6" })).toHaveAttribute("aria-pressed", "true");
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("keeps the other query params when a day is selected", () => {
+    mockSearch = "date=2026-11-11&weapon=foil";
+    renderStrip();
+
+    fireEvent.click(screen.getByRole("button", { name: "Nov 13" }));
+
+    expect(replace).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/tournaments\?date=2026-11-13&weapon=foil/),
+      { scroll: false },
+    );
+  });
 });

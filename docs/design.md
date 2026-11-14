@@ -511,28 +511,46 @@ from the venue floor.
 
 Tabs: Overview · Fencers · Clubs · Events.
 
-- **Overview:** name, the date range (from its events, else `start_time`), and
-  Ongoing and Upcoming event cards. Location and organizer contact read "TBC" until
-  §10.1 adds them. An unknown ID is a 404.
-- **Fencers:** a searchable, paginated list of fencer cards (name, country · club,
-  rating), from `GET /competitors?tournament_id=`, each linking to the fencer's
-  page. The country is a placeholder showing US for everyone.
-- **Clubs:** a searchable, paginated table of clubs and their fencer counts, from
-  `GET /tournaments/{id}/teams`.
-- Fencer cards, club rows and each pool on an event's Pooling tab have a pin
-  button that does nothing yet; the dashboard tickets wire it to pinning (§6.3).
-- **Events:** every event grouped by start time, with an accent-insensitive name
-  search and a day strip that opens on today, the next day with events, or the
-  last one. The strip's calendar button is disabled.
+Hi-fi throughout: text uses the shared `Text` styles (C.3), searches are the hi-fi
+search bar with a clear button. Fencer and club rows keep their pin button, which does nothing until pinning lands (§6.3); event rows end in a chevron.
+
+- **Overview:** the uppercase name, the date range (from its events, else
+  `start_time`) and the location (venue, city, country), then an organizer row,
+  then Ongoing, Upcoming and Completed event cards with times like "9:00 AM" (UTC,
+  no label). Missing values show as placeholders: "Dates TBC", "Location TBC", and
+  "Organizer contact TBC" always, since no contact is stored. An unknown ID is a 404.
+- **Fencers:** the tournament name as the title, then search (suggesting fencer
+  names as you type), the fencer filter sheet (Club, Rating, Gender; see §4.4, plus
+  Weapon and Age Category as disabled "coming soon" placeholders),
+  removable chips, and a paginated list of fencer cards (name, country · club, a
+  rating badge like "A26") from `GET /competitors?tournament_id=&q&team&rating&gender`.
+  The country is a placeholder showing US for everyone.
+- **Clubs:** the tournament name as the title, search suggesting Fencers and Clubs,
+  and a paginated list of clubs from `GET /tournaments/{id}/teams`; each links to
+  the Fencers tab filtered to that club. Its filter sheet's Fencer, Club and Weapon
+  sections are disabled "coming soon" placeholders, since the clubs API only searches
+  by name. Each row's second line
+  reads "US · Location TBC", as the design's "US · Boston, MA": clubs store no
+  location yet.
+- **Events:** "< {name}" back to Overview, search, a filter sheet (Weapon, Age
+  Category, Gender, Event Status, Date, Event Type, all filtered on the page) with
+  `Name: Value` chips, a light week strip whose calendar icon opens an
+  inline month card under it (event days dotted; tapping a day picks it), and the day's events grouped under time headings. A day
+  picked with no events says so. Each event card's second line is its competitor count
+  ("5 competitors"), the total from `GET /competitors?eventId=&limit=1` for each
+  event on the shown day.
 
 ### 4.4 Event page (`/tournaments/[id]/events/[eventId]`)
 
 **Status:** Partial.
 
-Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers. These
-replace the tournament's tabs rather than stacking under them.
+Tabs: Pools · Tableau · Fencers · Results (routes `pooling`, `tableau`, `fencers`,
+`results`). The page opens on Fencers. These replace the tournament's tabs rather
+than stacking under them, and a "< {tournament name}" link above the content leads
+back to the tournament.
 
-- **Fencers** (Completed): search, pagination, and a filter sheet with Club (sets
+- **Fencers** (Completed): a "Fencers" heading over the same list as the
+  tournament's Fencers tab (both use `FencerBrowser`): search, pagination, and a filter sheet with Club (sets
   `?team=`, a search accepting either a picked suggestion from the dropdown or typed
   text committed with Enter), Rating (a select, sets `?rating=`, A–E plus U shown as
   "Unrated"), and Gender (a row of single-select outline chips, sets `?gender=`, F/M/O
@@ -1765,6 +1783,11 @@ browser, filter sheet, Pools tab) use Manrope (`font-manrope`), and the BOUTLINE
 wordmark uses Special Gothic Expanded One (`font-wordmark`). Body and controls `text-sm`, metadata
 `text-xs text-muted-foreground`, at most `font-medium`. Sizes from `text-2xl` up are
 reserved for scores and bout banners. Referee scores go up to `text-9xl`.
+Page text uses the `Text` primitive (`textVariants` inside other primitives' slots):
+`title` (`text-xl font-semibold`, titles and time headings; uppercase where the
+design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
+`caption` (`text-xs font-medium text-neutral-secondary`, times and metadata) and
+`muted` (`text-sm text-neutral-secondary`, empty states).
 
 ### C.4 Shape and interaction
 - `--radius` 0.625rem, with `rounded-sm`…`rounded-xl` derived from it. List cards
@@ -1786,7 +1809,7 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - Primitives live in `src/components/primitives/`: shadcn-generated, restyled, with
   `cva` variants, `cn`, `data-slot`, and behavior from `radix-ui`.
 - The set includes the global nav, tab nav, section, list, card, chip (the filter
-  tag), label, button, segmented button, search bar, dropdown, text field,
+  tag), chip group, text, label, button, segmented button, search bar, dropdown, text field,
   select, date field, checkbox, radio, toggle, slider, calendar,
   dropzone and upload dialog, modal, filter sheet, pagination, toast, tooltip,
   progress indicators, a loading spinner, and a shimmering skeleton block.

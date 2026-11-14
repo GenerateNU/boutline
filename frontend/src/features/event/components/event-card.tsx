@@ -1,13 +1,14 @@
 import Link from "next/link";
 
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/primitives/card";
+import { Card, CardHeader, CardTitle } from "@/components/primitives/card";
+import { Text, textVariants } from "@/components/primitives/text";
 import { EventStatusBadge } from "@/features/event/components/event-status-badge";
 import type { TournamentEvent } from "@/features/event/types/event";
 import { pluralize } from "@/lib/pluralize";
 
 interface EventCardProps {
   event: TournamentEvent;
-  competitorCount?: number;
+  competitorCount: number;
 }
 
 function EventCard({ event, competitorCount }: EventCardProps) {
@@ -17,15 +18,13 @@ function EventCard({ event, competitorCount }: EventCardProps) {
       className="block rounded-[12px]"
     >
       <Card orientation="horizontal" className="gap-3 transition-colors hover:bg-blue-lightest">
-        <CardHeader className="gap-0.5">
-          <CardTitle className="text-base font-medium text-obsidian uppercase">
+        <CardHeader>
+          <CardTitle className={textVariants({ variant: "subtitle", className: "uppercase" })}>
             {event.name}
           </CardTitle>
-          {competitorCount !== undefined && (
-            <CardDescription className="text-xs text-neutral-secondary">
-              {competitorCount} {pluralize(competitorCount, "competitor")}
-            </CardDescription>
-          )}
+          <Text variant="caption">
+            {competitorCount} {pluralize(competitorCount, "competitor")}
+          </Text>
         </CardHeader>
         <EventStatusBadge status={event.status} />
       </Card>
