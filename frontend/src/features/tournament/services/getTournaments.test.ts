@@ -116,8 +116,8 @@ describe("getTournaments", () => {
 
   it.each([
     {
-      name: "mine and a token",
-      filters: { mine: true },
+      name: "createdByMe and a token",
+      filters: { createdByMe: true },
       token: "abc",
       expected: { mine: "true", authorization: "Bearer abc" },
     },

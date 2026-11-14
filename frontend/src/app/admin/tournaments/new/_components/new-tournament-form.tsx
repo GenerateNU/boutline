@@ -53,12 +53,17 @@ function NewTournamentForm() {
   const { tournamentSaving, savingEvents, removingEvents, errors, saveTournament, saveEvent, removeEventCard, saveUnsaved } =
     useDraftSaving({ draft, setTournamentId, setTournamentSaved, updateEventWith, removeEvent });
   const latestUpload = useRef(0);
+  const isSaving = tournamentSaving || savingEvents.size > 0 || removingEvents.size > 0;
 
   // Parses an uploaded CSV, sorts its fencers into event cards, and toasts what
   // it filled in. A file that finishes parsing after a newer upload started is
   // dropped, so it can't overwrite the newer one. A file that can't be read gets
   // an inline error instead, since a toast would vanish before it's fixed.
   async function handleFile(file: File) {
+    if (isSaving) {
+      setImportError("Wait for the save to finish before importing a file.");
+      return;
+    }
     const upload = ++latestUpload.current;
     try {
       const { rows } = await parseCompetitorImport(file);
@@ -123,6 +128,9 @@ function NewTournamentForm() {
       return;
     }
     setSubmitError(null);
+    // Drops any upload still parsing, so it can't add cards that this save
+    // doesn't send and the clear below then throws away.
+    latestUpload.current++;
     const tournamentId = await saveUnsaved();
     if (!tournamentId) {
       setSaveFailed(true);
@@ -143,10 +151,15 @@ function NewTournamentForm() {
       .map(({ title }) => title);
     return failedTitles.length > 0
       ? `Couldn't save ${failedTitles.join(", ")}. Fix the errors on the cards and try again.`
-      : "Couldn't finish saving. Try again.";
+      : null;
   }
 
-  const isSaving = tournamentSaving || savingEvents.size > 0 || removingEvents.size > 0;
+  async function handleSaveEvent(localId: string) {
+    if (draft.tournamentId) {
+      await saveEvent(localId, draft.tournamentId);
+    }
+  }
+
   const submitMessage = saveFailed ? saveFailureMessage() : submitError;
 
   // One column on phones (upload, tournament, events, submit). On a laptop the
@@ -201,18 +214,14 @@ function NewTournamentForm() {
             errors={errors.events[event.id] ?? []}
             onExpandedChange={(expanded) => setExpanded([event.id], expanded)}
             onChange={(patch) => updateEvent(event.id, patch)}
-            onSave={async () => {
-              if (draft.tournamentId) {
-                await saveEvent(event.id, draft.tournamentId);
-              }
-            }}
+            onSave={() => handleSaveEvent(event.id)}
             onRemove={draft.events.length > 1 ? () => removeEventCard(event.id) : undefined}
             onAddFencer={() => addFencer(event.id)}
             onChangeFencer={(fencerId, patch) => updateFencer(event.id, fencerId, patch)}
             onRemoveFencer={(fencerId) => removeFencer(event.id, fencerId)}
           />
         ))}
-        <Button type="button" variant="outline" className="h-12 rounded-full" onClick={addEvent}>
+        <Button type="button" variant="outline" className="h-12 rounded-full" onClick={addEvent} disabled={isSaving}>
           <AddOutlined aria-hidden />
           Add event
         </Button>

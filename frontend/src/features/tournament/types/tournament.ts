@@ -27,7 +27,9 @@ export interface TournamentListFilters {
   timeZone?: string;
   club?: string;
   country?: string;
-  mine?: boolean;
+  // Only tournaments the caller created. Sent as `mine=true`, which the API
+  // refuses without a session token.
+  createdByMe?: boolean;
 }
 
 export interface TournamentListResult {

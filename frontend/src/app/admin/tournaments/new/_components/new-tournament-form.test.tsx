@@ -373,6 +373,7 @@ describe("NewTournamentForm", () => {
     expect(within(tournament).getByRole("textbox", { name: "Venue" })).toBeDisabled();
     expect(within(tournament).getByRole("combobox", { name: "Authority" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Create tournament" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add event" })).toBeDisabled();
     await act(async () => finish!());
     await within(tournament).findByRole("button", { name: "Edit" });
     expect(requests()).toEqual(["POST /api/v1/tournaments"]);
@@ -454,5 +455,47 @@ describe("NewTournamentForm", () => {
     ));
     expect(mockPush).not.toHaveBeenCalled();
     expect(JSON.parse(sessionStorage.getItem(DRAFT_KEY)!).tournamentId).toBe("t1");
+  });
+
+  it("clears the submit summary once the failed card saves on retry", async () => {
+    let eventFails = true;
+    mockApi((call) =>
+      call.path.endsWith("/events") && eventFails ? { status: 500, body: { detail: "Server exploded" } } : undefined,
+    );
+    saveDraft([{ ...newEventDraft(), ...FILLED_EVENT }]);
+    render(<NewTournamentForm />);
+    fireEvent.click(screen.getByRole("button", { name: "Create tournament" }));
+    await screen.findByText("Couldn't save Y14 Foil. Fix the errors on the cards and try again.");
+
+    eventFails = false;
+    fireEvent.click(screen.getByRole("button", { name: "Save event" }));
+
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
+  it("drops a CSV still parsing when Create tournament is pressed", async () => {
+    let finishParsing: ((text: string) => void) | undefined;
+    const slowCsv = Object.assign(new File([""], "registrations.csv", { type: "text/csv" }), {
+      text: () => new Promise<string>((resolve) => (finishParsing = resolve)),
+    });
+    let finishSaving: (() => void) | undefined;
+    mockApi((call) =>
+      call.path.endsWith("/events")
+        ? new Promise((resolve) => (finishSaving = () => resolve({ status: 200, body: { id: "e1" } })))
+        : undefined,
+    );
+    saveDraft([{ ...newEventDraft(), ...FILLED_EVENT }]);
+    const { container } = render(<NewTournamentForm />);
+
+    fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [slowCsv] } });
+    await waitFor(() => expect(finishParsing).toBeDefined());
+    fireEvent.click(screen.getByRole("button", { name: "Create tournament" }));
+    await waitFor(() => expect(finishSaving).toBeDefined());
+    await act(async () => finishParsing!(EXAMPLE_COMPETITOR_IMPORT));
+
+    expect(screen.queryByText(/Autofilled/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Y14 Women's Foil" })).not.toBeInTheDocument();
+    await act(async () => finishSaving!());
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/tournaments/t1"));
   });
 });

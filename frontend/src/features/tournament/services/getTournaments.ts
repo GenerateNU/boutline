@@ -12,7 +12,7 @@ const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000"
 export async function getTournaments(
   limit: number,
   offset: number,
-  { query, status, visibility, date, timeZone, club, country, mine }: TournamentListFilters = {},
+  { query, status, visibility, date, timeZone, club, country, createdByMe }: TournamentListFilters = {},
   token?: string,
 ): Promise<TournamentListResult> {
   const url = new URL("/api/v1/tournaments", API_PROXY_TARGET);
@@ -33,7 +33,7 @@ export async function getTournaments(
   if (country) {
     url.searchParams.set("country", country);
   }
-  if (mine) {
+  if (createdByMe) {
     url.searchParams.set("mine", "true");
   }
   if (date) {
