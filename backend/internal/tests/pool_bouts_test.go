@@ -200,10 +200,18 @@ func createdID(t *testing.T, body map[string]any) string {
 func send(t *testing.T, app *fiber.App, method testkit.HTTPMethod, route string, body any, wantStatus int) map[string]any {
 	t.Helper()
 
+	return sendAs(t, app, alexMorgan, method, route, body, wantStatus)
+}
+
+func sendAs(
+	t *testing.T, app *fiber.App, caller string, method testkit.HTTPMethod, route string, body any, wantStatus int,
+) map[string]any {
+	t.Helper()
+
 	return testkit.New(t).
 		Request(testkit.Request{
 			App: app, Route: route, Method: method, Body: body,
-			Headers: authHeaders(t, uuid.MustParse(alexMorgan)),
+			Headers: authHeaders(t, uuid.MustParse(caller)),
 		}).
 		AssertStatus(wantStatus).
 		GetBody()

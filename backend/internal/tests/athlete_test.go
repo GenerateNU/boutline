@@ -14,8 +14,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Belongs to the private, pending Winter Classic 2026.
-const openSabreEventID = "c0000000-0000-4000-8000-000000000003"
+const (
+	// Belongs to the private, pending Winter Classic 2026.
+	openSabreEventID = "c0000000-0000-4000-8000-000000000003"
+	// Taylor Kim administers the Winter Classic.
+	taylorKim = "a0000000-0000-4000-8000-000000000004"
+)
+
+// eventAdmin is an admin of the event's tournament, the only kind of caller that
+// may add or remove its competitors.
+func eventAdmin(eventID string) string {
+	if eventID == openSabreEventID {
+		return taylorKim
+	}
+
+	return alexMorgan
+}
 
 func randomMemberNumber() string {
 	return fmt.Sprintf("1%08d", rand.IntN(100_000_000))
@@ -24,13 +38,14 @@ func randomMemberNumber() string {
 func createAthleteCompetitor(t *testing.T, app *fiber.App, eventID, memberNumber, lastName string) map[string]any {
 	t.Helper()
 
-	body := send(t, app, testkit.POST, "/api/v1/competitors", map[string]any{
+	admin := eventAdmin(eventID)
+	body := sendAs(t, app, admin, testkit.POST, "/api/v1/competitors", map[string]any{
 		"eventId": eventID, "firstName": "Ottoline", "lastName": lastName,
 		"gender": "F", "birthdate": "1999-05-17", "division": "Massachusetts",
 		"memberNumber": memberNumber,
 	}, http.StatusCreated)
 	id := createdID(t, body)
-	t.Cleanup(func() { send(t, app, testkit.DELETE, "/api/v1/competitors/"+id, nil, http.StatusNoContent) })
+	t.Cleanup(func() { sendAs(t, app, admin, testkit.DELETE, "/api/v1/competitors/"+id, nil, http.StatusNoContent) })
 
 	return body
 }

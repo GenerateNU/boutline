@@ -25,18 +25,10 @@ type EventLookup interface {
 	GetEventByID(ctx context.Context, id uuid.UUID) (*event.Event, error)
 }
 
-// TournamentMembershipLookup is the subset of the tournament-user repository needed here.
-type TournamentMembershipLookup interface {
-	GetTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) (*tournamentuser.TournamentUser, error)
-}
-
 // AthleteLinker resolves a member number to the athlete it identifies, creating the athlete if needed.
 type AthleteLinker interface {
 	UpsertAthleteByMemberNumber(ctx context.Context, memberNumber string) (uuid.UUID, error)
 }
-
-var errCompetitorDeleteForbidden = errs.Public(
-	"only the competitor's owner or the tournament's creator or admins can delete this competitor", errs.ErrForbidden)
 
 const (
 	CompetitorDefaultPageSize = 20
@@ -59,7 +51,7 @@ type competitorService struct {
 	repo        CompetitorRepository
 	events      EventLookup
 	tournaments TournamentLookup
-	memberships TournamentMembershipLookup
+	memberships tournamentuser.MembershipLookup
 	athletes    AthleteLinker
 }
 
@@ -67,7 +59,7 @@ func NewCompetitorService(
 	repo CompetitorRepository,
 	events EventLookup,
 	tournaments TournamentLookup,
-	memberships TournamentMembershipLookup,
+	memberships tournamentuser.MembershipLookup,
 	athletes AthleteLinker,
 ) CompetitorService {
 	return &competitorService{
@@ -86,6 +78,11 @@ func (s *competitorService) CreateCompetitor(
 	owningEvent, err := s.events.GetEventByID(ctx, competitor.EventID)
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("get event: %w", err))
+	}
+	if err := tournamentuser.RequireRole(
+		ctx, s.memberships, owningEvent.TournamentID, tournamentuser.TournamentUserRoleAdmin,
+	); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("create competitor: %w", err))
 	}
 	competitor.TournamentID = &owningEvent.TournamentID
 	if callerID, ok := session.UserIDFrom(ctx); ok {
@@ -207,6 +204,13 @@ func (s *competitorService) UpdateCompetitorByID(
 	id, err := utils.ParseUUID(input.ID, "competitor id")
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+	stored, err := s.repo.GetCompetitorByID(ctx, id)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get competitor: %w", err))
+	}
+	if err := s.requireTournamentAdmin(ctx, stored); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("update competitor: %w", err))
 	}
 	update, err := competitorUpdateFrom(input.Body)
 	if err != nil {
@@ -369,7 +373,7 @@ func (s *competitorService) DeleteCompetitor(
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("get competitor: %w", err))
 	}
-	if err := s.authorizeCompetitorDelete(ctx, stored); err != nil {
+	if err := s.requireTournamentAdmin(ctx, stored); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("delete competitor: %w", err))
 	}
 	if err := s.repo.DeleteCompetitor(ctx, id); err != nil {
@@ -382,37 +386,13 @@ func (s *competitorService) DeleteCompetitor(
 	return nil, nil
 }
 
-func (s *competitorService) authorizeCompetitorDelete(ctx context.Context, stored *Competitor) error {
-	caller, ok := session.UserIDFrom(ctx)
-	if !ok {
-		return errCompetitorDeleteForbidden
+// requireTournamentAdmin checks a competitor with no tournament against uuid.Nil, which no one is a member of.
+func (s *competitorService) requireTournamentAdmin(ctx context.Context, stored *Competitor) error {
+	var tournamentID uuid.UUID
+	if stored.TournamentID != nil {
+		tournamentID = *stored.TournamentID
 	}
-	if stored.UserID != nil && *stored.UserID == caller {
-		return nil
-	}
-	if stored.TournamentID == nil {
-		return errCompetitorDeleteForbidden
-	}
-
-	owningTournament, err := s.tournaments.GetTournamentByID(ctx, *stored.TournamentID)
-	if err != nil {
-		return fmt.Errorf("get tournament: %w", err)
-	}
-	if owningTournament.CreatedBy == caller {
-		return nil
-	}
-
-	membership, err := s.memberships.GetTournamentUser(ctx, *stored.TournamentID, caller)
-	if err != nil {
-		if errors.Is(err, errs.ErrNotFound) {
-			return errCompetitorDeleteForbidden
-		}
-		return fmt.Errorf("get tournament user: %w", err)
-	}
-	if membership.Role != tournamentuser.TournamentUserRoleAdmin {
-		return errCompetitorDeleteForbidden
-	}
-	return nil
+	return tournamentuser.RequireRole(ctx, s.memberships, tournamentID, tournamentuser.TournamentUserRoleAdmin)
 }
 
 func (s *competitorService) ListTeamsByTournament(

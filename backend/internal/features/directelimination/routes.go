@@ -3,6 +3,8 @@ package directelimination
 import (
 	"net/http"
 
+	"boutline/internal/features/event"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -11,7 +13,11 @@ import (
 const directEliminationBasePath = "/api/v1/direct-eliminations"
 
 func RegisterDirectEliminationRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterDirectEliminationService(api, NewDirectEliminationService(NewDirectEliminationRepository(params.DB)))
+	RegisterDirectEliminationService(api, NewDirectEliminationService(
+		NewDirectEliminationRepository(params.DB),
+		event.NewEventRepository(params.DB),
+		tournamentuser.NewTournamentUserRepository(params.DB),
+	))
 }
 
 func RegisterDirectEliminationService(api huma.API, service DirectEliminationService) {

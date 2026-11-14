@@ -8,6 +8,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/bout"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -34,12 +35,27 @@ type BoutLookup interface {
 }
 
 type scoringService struct {
-	repo  ScoringRepository
-	bouts BoutLookup
+	repo        ScoringRepository
+	bouts       BoutLookup
+	memberships tournamentuser.MembershipLookup
 }
 
-func NewScoringService(repo ScoringRepository, bouts BoutLookup) ScoringService {
-	return &scoringService{repo: repo, bouts: bouts}
+func NewScoringService(
+	repo ScoringRepository,
+	bouts BoutLookup,
+	memberships tournamentuser.MembershipLookup,
+) ScoringService {
+	return &scoringService{repo: repo, bouts: bouts, memberships: memberships}
+}
+
+// requireReferee loads the bout a score belongs to and checks the caller referees its tournament.
+func (s *scoringService) requireReferee(ctx context.Context, boutID uuid.UUID) error {
+	match, err := s.bouts.GetBoutByID(ctx, boutID)
+	if err != nil {
+		return fmt.Errorf("get bout: %w", err)
+	}
+
+	return tournamentuser.RequireRole(ctx, s.memberships, match.TournamentID, tournamentuser.TournamentUserRoleReferee)
 }
 
 func (s *scoringService) CreateScoring(
@@ -57,6 +73,10 @@ func (s *scoringService) CreateScoring(
 	BoutID, err := utils.ParseUUID(input.Body.BoutID, "bout_id")
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+
+	if err := s.requireReferee(ctx, BoutID); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("create scoring: %w", err))
 	}
 
 	scoring := &Scoring{
@@ -133,6 +153,10 @@ func (s *scoringService) UpdateScoringByID(
 		return nil, errs.HumaError(fmt.Errorf("get scoring: %w", err))
 	}
 
+	if err := s.requireReferee(ctx, scoring.BoutID); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("update scoring: %w", err))
+	}
+
 	if scoring.RevokedAt != nil {
 		return nil, errs.HumaError(errs.Public(
 			"score has been revoked and can no longer be edited", errs.ErrConflict))
@@ -173,6 +197,10 @@ func (s *scoringService) RevokeScoring(
 	scoring, err := s.repo.GetScoringByID(ctx, input.ID)
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("get scoring: %w", err))
+	}
+
+	if err := s.requireReferee(ctx, scoring.BoutID); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("revoke scoring: %w", err))
 	}
 
 	if scoring.RevokedAt != nil {

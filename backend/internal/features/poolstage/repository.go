@@ -2,6 +2,7 @@ package poolstage
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -15,6 +16,7 @@ import (
 type PoolStageRepository interface {
 	CreatePoolStage(ctx context.Context, stage *PoolStage) error
 	GetPoolStageByID(ctx context.Context, id uuid.UUID) (*PoolStage, error)
+	GetPoolStageTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	ListPoolStages(ctx context.Context, filter PoolStageListFilter) ([]PoolStage, int64, error)
 	UpdatePoolStageByID(ctx context.Context, id uuid.UUID, update PoolStageUpdate) error
 	TransitionPoolStageByID(ctx context.Context, id uuid.UUID, transition PoolStageTransition) error
@@ -95,6 +97,26 @@ func (r *poolStageRepository) GetPoolStageByID(ctx context.Context, id uuid.UUID
 	}
 
 	return &stage, nil
+}
+
+func (r *poolStageRepository) GetPoolStageTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	var tournamentID uuid.UUID
+
+	err := r.db.WithContext(ctx).
+		Table("pool_stages").
+		Select("events.tournament_id").
+		Joins("JOIN events ON events.id = pool_stages.event_id").
+		Where("pool_stages.id = ?", id).
+		Row().
+		Scan(&tournamentID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return uuid.Nil, fmt.Errorf("select pool stage %s tournament: %w", id, errs.ErrNotFound)
+		}
+		return uuid.Nil, fmt.Errorf("select pool stage %s tournament: %w", id, err)
+	}
+
+	return tournamentID, nil
 }
 
 func (r *poolStageRepository) ListPoolStages(

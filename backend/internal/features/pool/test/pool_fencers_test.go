@@ -12,6 +12,7 @@ import (
 	"boutline/internal/features/poolstage"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
+	tournamentusertest "boutline/internal/features/tournamentuser/test"
 	"boutline/internal/session"
 
 	"github.com/google/uuid"
@@ -25,7 +26,7 @@ import (
 // as admin, an admin of the pools' tournament.
 type reseatFixture struct {
 	*createFixture
-	memberships *FakeTournamentMembershipLookup
+	memberships *tournamentusertest.FakeMembershipLookup
 	admin       uuid.UUID
 	service     pool.PoolService
 	pool1       uuid.UUID
@@ -37,9 +38,10 @@ func newReseatFixture(t *testing.T) *reseatFixture {
 
 	f := &reseatFixture{createFixture: newCreateFixture()}
 	f.updateStage(func(stage *poolstage.PoolStage) { stage.MaxCompetitorPerPool = 6 })
-	f.memberships = NewFakeTournamentMembershipLookup()
 	f.admin = uuid.New()
-	f.memberships.Roles[[2]uuid.UUID{f.tournament, f.admin}] = tournamentuser.TournamentUserRoleAdmin
+	f.memberships = tournamentusertest.NewFakeMembershipLookup(tournamentuser.TournamentUser{
+		TournamentID: f.tournament, UserID: f.admin, Role: tournamentuser.TournamentUserRoleAdmin,
+	})
 	f.service = pool.NewPoolService(f.repo, f.lookup, f.memberships)
 
 	first := f.item(1, 1, 2, 3, 4)
@@ -48,7 +50,7 @@ func newReseatFixture(t *testing.T) *reseatFixture {
 	body := f.body(first, f.item(2, 5, 6, 7, 8, 9))
 	body.PointsToWin, body.TimeLimitSeconds = 15, 540
 
-	out, err := f.service.CreatePools(t.Context(), &pool.PoolCreateInput{Body: body})
+	out, err := f.service.CreatePools(session.WithUserID(t.Context(), f.admin), &pool.PoolCreateInput{Body: body})
 	require.NoError(t, err)
 	f.pool1 = uuid.MustParse(out.Body.Data[0].ID)
 	f.pool2 = uuid.MustParse(out.Body.Data[1].ID)
@@ -284,7 +286,9 @@ func TestReseatPoolRequiresATournamentAdmin(t *testing.T) {
 			name: "a referee of the tournament",
 			caller: func(t *testing.T, f *reseatFixture) context.Context {
 				referee := uuid.New()
-				f.memberships.Roles[[2]uuid.UUID{f.tournament, referee}] = tournamentuser.TournamentUserRoleReferee
+				f.memberships.Memberships = append(f.memberships.Memberships, tournamentuser.TournamentUser{
+					TournamentID: f.tournament, UserID: referee, Role: tournamentuser.TournamentUserRoleReferee,
+				})
 				return session.WithUserID(t.Context(), referee)
 			},
 		},
@@ -292,7 +296,9 @@ func TestReseatPoolRequiresATournamentAdmin(t *testing.T) {
 			name: "an admin of another tournament",
 			caller: func(t *testing.T, f *reseatFixture) context.Context {
 				other := uuid.New()
-				f.memberships.Roles[[2]uuid.UUID{uuid.New(), other}] = tournamentuser.TournamentUserRoleAdmin
+				f.memberships.Memberships = append(f.memberships.Memberships, tournamentuser.TournamentUser{
+					TournamentID: uuid.New(), UserID: other, Role: tournamentuser.TournamentUserRoleAdmin,
+				})
 				return session.WithUserID(t.Context(), other)
 			},
 		},
@@ -322,7 +328,7 @@ func TestReseatPoolRequiresATournamentAdmin(t *testing.T) {
 
 			code, detail := apiError(t, err)
 			assert.Equal(t, http.StatusForbidden, code)
-			assert.Equal(t, "only the tournament's admins can re-seat its pools", detail)
+			assert.Equal(t, "this requires the admin role in the tournament", detail)
 			assert.Nil(t, out)
 			assert.Equal(t, before, f.repo.Bouts)
 		})

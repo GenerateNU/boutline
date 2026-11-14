@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -12,7 +13,11 @@ import (
 const eventBasePath = "/api/v1/events"
 
 func RegisterEventRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterEventService(api, NewEventService(NewEventRepository(params.DB), tournament.NewTournamentRepository(params.DB)))
+	RegisterEventService(api, NewEventService(
+		NewEventRepository(params.DB),
+		tournament.NewTournamentRepository(params.DB),
+		tournamentuser.NewTournamentUserRepository(params.DB),
+	))
 }
 
 func RegisterEventService(api huma.API, service EventService) {

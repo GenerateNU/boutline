@@ -8,6 +8,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/event"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -43,12 +44,26 @@ type PoolStageService interface {
 }
 
 type poolStageService struct {
-	repo   PoolStageRepository
-	events EventLookup
+	repo        PoolStageRepository
+	events      EventLookup
+	memberships tournamentuser.MembershipLookup
 }
 
-func NewPoolStageService(repo PoolStageRepository, events EventLookup) PoolStageService {
-	return &poolStageService{repo: repo, events: events}
+func NewPoolStageService(
+	repo PoolStageRepository,
+	events EventLookup,
+	memberships tournamentuser.MembershipLookup,
+) PoolStageService {
+	return &poolStageService{repo: repo, events: events, memberships: memberships}
+}
+
+func (s *poolStageService) requireStageAdmin(ctx context.Context, id uuid.UUID) error {
+	tournamentID, err := s.repo.GetPoolStageTournamentID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("get pool stage tournament: %w", err)
+	}
+
+	return tournamentuser.RequireRole(ctx, s.memberships, tournamentID, tournamentuser.TournamentUserRoleAdmin)
 }
 
 func errMaxCompetitorPerPoolTooSmall() error {
@@ -68,12 +83,19 @@ func (s *poolStageService) CreatePoolStage(
 		return nil, errs.HumaError(errMaxCompetitorPerPoolTooSmall())
 	}
 
-	if _, err := s.events.GetEventByID(ctx, eventID); err != nil {
+	parent, err := s.events.GetEventByID(ctx, eventID)
+	if err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			return nil, errs.HumaError(errs.Public(
 				"event_id must reference an existing event", errs.ErrInvalidInput))
 		}
 		return nil, errs.HumaError(fmt.Errorf("get event: %w", err))
+	}
+
+	if err := tournamentuser.RequireRole(
+		ctx, s.memberships, parent.TournamentID, tournamentuser.TournamentUserRoleAdmin,
+	); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("create pool stage: %w", err))
 	}
 
 	stage := &PoolStage{
@@ -171,6 +193,10 @@ func (s *poolStageService) UpdatePoolStageByID(
 		return nil, errs.HumaError(errMaxCompetitorPerPoolTooSmall())
 	}
 
+	if err := s.requireStageAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("update pool stage: %w", err))
+	}
+
 	err = s.repo.UpdatePoolStageByID(ctx, id, PoolStageUpdate(body))
 
 	return s.updateResponse(ctx, id, err, "only an upcoming pool stage can be edited")
@@ -183,6 +209,10 @@ func (s *poolStageService) StartPoolStage(
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+
+	if err := s.requireStageAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("start pool stage: %w", err))
 	}
 
 	stage, err := s.repo.GetPoolStageByID(ctx, id)
@@ -219,6 +249,10 @@ func (s *poolStageService) EndPoolStage(
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+
+	if err := s.requireStageAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("end pool stage: %w", err))
 	}
 
 	stage, err := s.repo.GetPoolStageByID(ctx, id)
@@ -275,6 +309,10 @@ func (s *poolStageService) DeletePoolStageByID(ctx context.Context, input *PoolS
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+
+	if err := s.requireStageAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("delete pool stage: %w", err))
 	}
 
 	if err := s.repo.DeletePoolStageByID(ctx, id); err != nil {

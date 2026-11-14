@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -112,7 +113,7 @@ func TestCreateEndpoint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			resp := newTestAPI(t).Post("/api/v1/competitors", tt.body)
+			resp := newTestAPI(t).PostCtx(adminCtx(t), "/api/v1/competitors", tt.body)
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 			body := decodeBody(t, resp.Body.Bytes())
 			for field, want := range tt.wantFields {
@@ -337,7 +338,7 @@ func TestUpdateEndpoint(t *testing.T) {
 
 	t.Run("patches only the fields present in the body", func(t *testing.T) {
 		t.Parallel()
-		resp := newTestAPI(t, stored).Patch("/api/v1/competitors/"+stored.ID.String(), map[string]any{"rating": "A"})
+		resp := newTestAPI(t, stored).PatchCtx(adminCtx(t), "/api/v1/competitors/"+stored.ID.String(), map[string]any{"rating": "A"})
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 		body := decodeBody(t, resp.Body.Bytes())
 		assert.Equal(t, "A", body["rating"])
@@ -347,7 +348,7 @@ func TestUpdateEndpoint(t *testing.T) {
 
 	t.Run("clears the team when an empty string is provided", func(t *testing.T) {
 		t.Parallel()
-		resp := newTestAPI(t, stored).Patch("/api/v1/competitors/"+stored.ID.String(), map[string]any{"team": ""})
+		resp := newTestAPI(t, stored).PatchCtx(adminCtx(t), "/api/v1/competitors/"+stored.ID.String(), map[string]any{"team": ""})
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 		body := decodeBody(t, resp.Body.Bytes())
 		assert.Equal(t, "", body["team"])
@@ -355,7 +356,7 @@ func TestUpdateEndpoint(t *testing.T) {
 
 	t.Run("clears the primary club when an empty string is provided", func(t *testing.T) {
 		t.Parallel()
-		resp := newTestAPI(t, stored).Patch("/api/v1/competitors/"+stored.ID.String(), map[string]any{"primaryClub": ""})
+		resp := newTestAPI(t, stored).PatchCtx(adminCtx(t), "/api/v1/competitors/"+stored.ID.String(), map[string]any{"primaryClub": ""})
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 		body := decodeBody(t, resp.Body.Bytes())
 		assert.Nil(t, body["primaryClub"])
@@ -363,40 +364,80 @@ func TestUpdateEndpoint(t *testing.T) {
 
 	t.Run("rejects a gender outside the enum", func(t *testing.T) {
 		t.Parallel()
-		resp := newTestAPI(t, stored).Patch("/api/v1/competitors/"+stored.ID.String(), map[string]any{"gender": "X"})
+		resp := newTestAPI(t, stored).PatchCtx(adminCtx(t), "/api/v1/competitors/"+stored.ID.String(), map[string]any{"gender": "X"})
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
 
 	t.Run("rejects an empty patch", func(t *testing.T) {
 		t.Parallel()
-		resp := newTestAPI(t, stored).Patch("/api/v1/competitors/"+stored.ID.String(), map[string]any{})
+		resp := newTestAPI(t, stored).PatchCtx(adminCtx(t), "/api/v1/competitors/"+stored.ID.String(), map[string]any{})
 		assert.Equal(t, http.StatusBadRequest, resp.Code)
 	})
 }
 
 func TestDeleteEndpoint(t *testing.T) {
 	t.Parallel()
-	owner := uuid.New()
 	stored := seeded("Lee", "Kiefer", competitor.RatingU, "")
-	stored.UserID = &owner
 
 	t.Run("deletes once and then reports not found", func(t *testing.T) {
 		t.Parallel()
 		api := newTestAPI(t, stored)
 		path := "/api/v1/competitors/" + stored.ID.String()
-		ctx := session.WithUserID(t.Context(), owner)
+		ctx := adminCtx(t)
 		require.Equal(t, http.StatusNoContent, api.DeleteCtx(ctx, path).Code)
 		assert.Equal(t, http.StatusNotFound, api.Get(path).Code)
 		assert.Equal(t, http.StatusNotFound, api.DeleteCtx(ctx, path).Code)
 	})
+}
 
-	t.Run("refuses an unauthenticated delete and keeps the competitor", func(t *testing.T) {
-		t.Parallel()
-		api := newTestAPI(t, stored)
-		path := "/api/v1/competitors/" + stored.ID.String()
-		assert.Equal(t, http.StatusForbidden, api.Delete(path).Code)
-		assert.Equal(t, http.StatusOK, api.Get(path).Code)
-	})
+func TestMutationsRequireAdminEndpoint(t *testing.T) {
+	t.Parallel()
+	stored := seeded("Lee", "Kiefer", competitor.RatingB, "NU Fencing")
+	path := "/api/v1/competitors/" + stored.ID.String()
+
+	callers := []struct {
+		name   string
+		caller *uuid.UUID
+	}{
+		{name: "no caller"},
+		{name: "non-member", caller: ptr(uuid.New())},
+		{name: "referee", caller: ptr(TestRefereeID)},
+	}
+	mutations := []struct {
+		name string
+		send func(api humatest.TestAPI, ctx context.Context) int
+	}{
+		{"create", func(api humatest.TestAPI, ctx context.Context) int {
+			return api.PostCtx(ctx, "/api/v1/competitors", createRequest(nil)).Code
+		}},
+		{"update", func(api humatest.TestAPI, ctx context.Context) int {
+			return api.PatchCtx(ctx, path, map[string]any{"rating": "A"}).Code
+		}},
+		{"delete", func(api humatest.TestAPI, ctx context.Context) int {
+			return api.DeleteCtx(ctx, path).Code
+		}},
+	}
+
+	for _, mutation := range mutations {
+		for _, tc := range callers {
+			t.Run(mutation.name+" refused for "+tc.name, func(t *testing.T) {
+				t.Parallel()
+				api := newTestAPI(t, stored)
+				ctx := t.Context()
+				if tc.caller != nil {
+					ctx = session.WithUserID(ctx, *tc.caller)
+				}
+
+				assert.Equal(t, http.StatusForbidden, mutation.send(api, ctx))
+
+				resp := api.Get(path)
+				require.Equal(t, http.StatusOK, resp.Code)
+				assert.Equal(t, "B", decodeBody(t, resp.Body.Bytes())["rating"])
+				list := api.Get("/api/v1/competitors")
+				assert.EqualValues(t, 1, decodeBody(t, list.Body.Bytes())["total"])
+			})
+		}
+	}
 }
 
 func TestListTournamentTeamsEndpoint(t *testing.T) {
@@ -445,7 +486,7 @@ func TestAthleteLinkingEndpoint(t *testing.T) {
 	t.Run("still creates the competitor when the athlete upsert fails", func(t *testing.T) {
 		t.Parallel()
 		resp := newTestAPIWithAthletes(t, FakeAthleteLinker{Err: errors.New("boom")}).
-			Post("/api/v1/competitors", body)
+			PostCtx(adminCtx(t), "/api/v1/competitors", body)
 		require.Equal(t, http.StatusCreated, resp.Code)
 		fields := decodeBody(t, resp.Body.Bytes())
 		assert.Contains(t, fields, "athleteId")
@@ -455,11 +496,12 @@ func TestAthleteLinkingEndpoint(t *testing.T) {
 	t.Run("links the athlete but hides the member number from anonymous callers", func(t *testing.T) {
 		t.Parallel()
 		api := newTestAPI(t)
-		created := api.Post("/api/v1/competitors", body)
+		// Only an admin can create, and a signed-in caller sees the number; the
+		// anonymous read below is the one that must hide it.
+		created := api.PostCtx(adminCtx(t), "/api/v1/competitors", body)
 		require.Equal(t, http.StatusCreated, created.Code)
 		createdFields := decodeBody(t, created.Body.Bytes())
-		assert.Contains(t, createdFields, "memberNumber")
-		assert.Nil(t, createdFields["memberNumber"])
+		assert.Equal(t, "100000123", createdFields["memberNumber"])
 		assert.Equal(t, FakeAthleteID("100000123").String(), createdFields["athleteId"])
 
 		fetched := api.Get("/api/v1/competitors/" + createdFields["id"].(string))
