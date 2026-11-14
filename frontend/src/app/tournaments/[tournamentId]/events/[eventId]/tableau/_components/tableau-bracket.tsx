@@ -100,7 +100,7 @@ function TableauBracket({
       onScroll={handleScroll}
       className="snap-x snap-mandatory overflow-x-auto pb-2"
     >
-      <div className="flex gap-8">
+      <div className="flex gap-11.5">
         {rounds.map((round, roundIndex) => (
           <BracketRound
             key={round.id}

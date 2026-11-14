@@ -45,6 +45,8 @@
   --color-obsidian: var(--obsidian);
   --color-fencing-white: var(--fencing-white);
   --color-blue-lightest: var(--blue-lightest);
+  --color-blue-soft: var(--blue-soft);
+  --color-blue-vivid: var(--blue-vivid);
   --color-neutral-secondary: var(--neutral-secondary);
   --color-neutral-muted: var(--neutral-muted);
   --color-accent-green: var(--accent-green);
@@ -52,6 +54,7 @@
   --color-amber-dark: var(--amber-dark);
   --color-lavender-light: var(--lavender-light);
   --color-lavender-dark: var(--lavender-dark);
+  --color-green: var(--green);
   --color-green-light: var(--green-light);
   --color-green-dark: var(--green-dark);
   --color-mint-light: var(--mint-light);
@@ -143,6 +146,8 @@
   --obsidian: #010d21;
   --fencing-white: #fafafa;
   --blue-lightest: #f2f6fe;
+  --blue-soft: #dbe3f9;
+  --blue-vivid: #2840a9;
   --neutral-secondary: #586472;
   --neutral-muted: #969da5;
   --accent-green: #00c597;
@@ -150,6 +155,7 @@
   --amber-dark: #764c00;
   --lavender-light: #e9e8f3;
   --lavender-dark: #65647b;
+  --green: #32944b;
   --green-light: #ddf0df;
   --green-dark: #076127;
   --mint-light: #d5f7e1;

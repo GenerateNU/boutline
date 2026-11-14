@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AccountTreeOutlined from "@mui/icons-material/AccountTreeOutlined";
+import CancelOutlined from "@mui/icons-material/CancelOutlined";
 import ListOutlined from "@mui/icons-material/ListOutlined";
 import SearchOutlined from "@mui/icons-material/SearchOutlined";
 
@@ -33,14 +34,26 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
       <div className="flex items-center gap-3">
         <label className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-md border border-foreground px-4">
           <Input
-            type="search"
+            type="text"
             aria-label="Search fencers or clubs"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Enter search text"
             className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 focus-visible:ring-0"
           />
-          <SearchOutlined aria-hidden className="size-5" />
+          {query === "" ? (
+            <SearchOutlined aria-hidden className="size-5" />
+          ) : (
+            <Button
+              variant="text"
+              size="icon"
+              className="size-6 text-neutral-secondary [&_svg]:size-5"
+              aria-label="Clear search"
+              onClick={() => setQuery("")}
+            >
+              <CancelOutlined aria-hidden />
+            </Button>
+          )}
         </label>
         <Button
           variant="outline"

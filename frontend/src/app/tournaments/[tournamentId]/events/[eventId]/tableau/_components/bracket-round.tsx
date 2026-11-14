@@ -33,7 +33,7 @@ function BracketRound({ round, isLast, query, boutBasePath, ref }: BracketRoundP
   const groups = isLast ? slots.map((slot) => [slot]) : pairUp(slots);
 
   return (
-    <div ref={ref} aria-label={round.name} className="flex w-56 shrink-0 snap-start flex-col">
+    <div ref={ref} aria-label={round.name} className="flex w-63.5 shrink-0 snap-start flex-col">
       {groups.map((group, groupIndex) => (
         <BracketGroup key={groupIndex} slots={group} query={query} boutBasePath={boutBasePath} />
       ))}

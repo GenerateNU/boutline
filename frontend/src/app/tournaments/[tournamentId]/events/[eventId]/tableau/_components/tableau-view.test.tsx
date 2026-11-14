@@ -50,12 +50,24 @@ describe("TableauView", () => {
     renderView();
     fireEvent.click(screen.getByRole("button", { name: "Show as list" }));
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search fencers or clubs" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Search fencers or clubs" }), {
       target: { value: "luca" },
     });
 
     expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(screen.getByText("Semi-final 2")).toBeInTheDocument();
+  });
+
+  it("clears the search with the clear button", () => {
+    renderView();
+    const input = screen.getByRole("textbox", { name: "Search fencers or clubs" });
+    expect(screen.queryByRole("button", { name: "Clear search" })).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "luca" } });
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+
+    expect(input).toHaveValue("");
+    expect(screen.queryByRole("button", { name: "Clear search" })).not.toBeInTheDocument();
   });
 
   it("shows the picked round in the list", () => {

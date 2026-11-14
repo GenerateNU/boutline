@@ -12,6 +12,7 @@ interface BracketGroupProps {
 }
 
 function BracketGroup({ slots, query, boutBasePath }: BracketGroupProps) {
+  const searching = query.trim() !== "";
   return (
     <div className="relative flex flex-1 flex-col">
       {slots.map((bout, slotIndex) => (
@@ -21,9 +22,10 @@ function BracketGroup({ slots, query, boutBasePath }: BracketGroupProps) {
               bout={bout}
               href={`${boutBasePath}/${bout.id}`}
               dimmed={!matchesQuery(bout, query)}
+              matched={searching && matchesQuery(bout, query)}
             />
           ) : (
-            <TbaBout dimmed={query.trim() !== ""} />
+            <TbaBout dimmed={searching} />
           )}
         </div>
       ))}
@@ -32,10 +34,10 @@ function BracketGroup({ slots, query, boutBasePath }: BracketGroupProps) {
           {/* ⊐ shape joining the centers of the two bouts */}
           <div
             aria-hidden
-            className="absolute top-1/4 -right-4 h-1/2 w-4 border-y border-r border-foreground"
+            className="absolute top-1/4 -right-3.5 h-1/2 w-3.5 border-y border-r border-neutral-secondary"
           />
           {/* line from the middle of ⊐ to the next round */}
-          <div aria-hidden className="absolute top-1/2 -right-8 w-4 border-t border-foreground" />
+          <div aria-hidden className="absolute top-1/2 -right-11.5 w-8 border-t border-neutral-secondary" />
         </>
       )}
     </div>
