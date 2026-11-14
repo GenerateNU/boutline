@@ -27,6 +27,7 @@ func SetUpRoutes(app *fiber.App, routeParams types.RouteParams) {
 	scoring.RegisterScoringRoutes(routeParams.API, routeParams.ServiceParams)
 	bout.RegisterBoutRoutes(routeParams.API, routeParams.ServiceParams)
 	directelimination.RegisterDirectEliminationRoutes(routeParams.API, routeParams.ServiceParams)
+	directelimination.RegisterDirectEliminationDrawRoutes(routeParams.API, routeParams.ServiceParams)
 	event.RegisterEventRoutes(routeParams.API, routeParams.ServiceParams)
 	tableau.RegisterTableauRoutes(routeParams.API, routeParams.ServiceParams)
 	eventresult.RegisterEventResultRoutes(routeParams.API, routeParams.ServiceParams)
