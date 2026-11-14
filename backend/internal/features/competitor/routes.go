@@ -88,7 +88,7 @@ func RegisterCompetitorService(api huma.API, service CompetitorService) {
 		Method:      http.MethodDelete,
 		Path:        competitorBasePath + "/{id}",
 		Summary:     "Delete a competitor",
-		Description: "Only the competitor's owner or the tournament's creator or admins can delete a competitor. " +
+		Description: "Only the tournament's admins can delete a competitor. " +
 			"A competitor who has fenced a bout cannot be deleted.",
 		Tags:          []string{"Competitors"},
 		DefaultStatus: http.StatusNoContent,

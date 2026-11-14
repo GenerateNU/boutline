@@ -114,6 +114,9 @@ func NewTournamentRepository(db *gorm.DB) TournamentRepository {
 	return &tournamentRepository{db: db}
 }
 
+// CreateTournament inserts the tournament's Memberships too, through gorm's
+// has-many save. Both inserts share the transaction gorm opens around every
+// Create, which exists only while SkipDefaultTransaction stays off.
 func (r *tournamentRepository) CreateTournament(ctx context.Context, tournament *Tournament) error {
 	if err := r.db.WithContext(ctx).Create(tournament).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {

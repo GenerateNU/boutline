@@ -53,7 +53,7 @@ function poolPlaceholder(pools: TournamentPool[] | null) {
   if (pools === null) {
     return "Loading pools…";
   }
-  return pools.length === 0 ? "No pools yet" : "Optional";
+  return pools.length === 0 ? "No pools yet" : "eg. 1,2,3,4...";
 }
 
 async function fetchEventPools({ id, name }: TournamentEvent): Promise<TournamentPool[]> {

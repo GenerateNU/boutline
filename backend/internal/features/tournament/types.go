@@ -43,7 +43,6 @@ func NewTournamentResponse(tournament Tournament) TournamentResponse {
 type TournamentCreateBody struct {
 	Name       string               `json:"name" minLength:"1" maxLength:"120" doc:"Display name for the tournament"`
 	Visibility TournamentVisibility `json:"visibility,omitempty" enum:"private,public" doc:"Defaults to private"`
-	CreatedBy  string               `json:"created_by" format:"uuid" doc:"User creating the tournament"`
 	StartTime  *time.Time           `json:"start_time,omitempty" doc:"Scheduled start"`
 	City       string               `json:"city,omitempty" maxLength:"120"`
 	Country    string               `json:"country,omitempty" pattern:"^[A-Z]{2}$" doc:"ISO 3166-1 alpha-2, uppercase"`

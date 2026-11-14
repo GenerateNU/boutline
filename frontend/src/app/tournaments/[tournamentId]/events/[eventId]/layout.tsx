@@ -14,13 +14,15 @@ export default async function EventLayout({
   const { tournamentId, eventId } = await params;
 
   return (
-    <div className="flex flex-col gap-10">
+    <>
       <TabNav
         label="Event sections"
         basePath={`/tournaments/${tournamentId}/events/${eventId}`}
         tabs={TABS}
       />
-      {children}
-    </div>
+      <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 pt-10 pb-20">
+        {children}
+      </div>
+    </>
   );
 }

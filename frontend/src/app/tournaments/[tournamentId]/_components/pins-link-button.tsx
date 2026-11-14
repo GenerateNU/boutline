@@ -19,12 +19,16 @@ function PinsLinkButton({ tournamentId }: PinsLinkButtonProps) {
   }
 
   return (
-    <PinButton asChild variant="primary" size="sm" className="fixed right-4 bottom-4 z-30">
-      <Link
-        href={`/pinned?tournamentId=${encodeURIComponent(tournamentId)}`}
-        aria-label="View pins"
-      >
+    <PinButton
+      asChild
+      variant="primary"
+      size="sm"
+      className="fixed right-4 bottom-4 z-30 lg:right-8 lg:bottom-8 lg:h-14 lg:w-auto lg:gap-2 lg:px-6 lg:text-base lg:font-semibold"
+    >
+      <Link href={`/pinned?tournamentId=${encodeURIComponent(tournamentId)}`}>
         <PushPinOutlined aria-hidden />
+        {/* Visible on laptops; on phones it stays the link's name for screen readers. */}
+        <span className="sr-only lg:not-sr-only">Pinned</span>
       </Link>
     </PinButton>
   );

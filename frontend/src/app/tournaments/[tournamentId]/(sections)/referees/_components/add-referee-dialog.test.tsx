@@ -104,7 +104,7 @@ describe("AddRefereeDialog", () => {
   it.each([
     { name: "while the pools load", events: EVENTS, poolsPending: true, text: "Loading pools…", disabled: true },
     { name: "with no pools", events: [], poolsPending: false, text: "No pools yet", disabled: true },
-    { name: "once the pools arrive", events: EVENTS, poolsPending: false, text: "Optional", disabled: false },
+    { name: "once the pools arrive", events: EVENTS, poolsPending: false, text: "eg. 1,2,3,4...", disabled: false },
   ])("shows the Pool field $name", async ({ events, poolsPending, text, disabled }) => {
     mockApi();
     if (poolsPending) {

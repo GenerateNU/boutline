@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/event"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -31,12 +33,42 @@ type DirectEliminationService interface {
 	CompleteDirectElimination(ctx context.Context, input *DirectEliminationIDInput) (*DirectEliminationOutput, error)
 }
 
-type directEliminationService struct {
-	repo DirectEliminationRepository
+type EventLookup interface {
+	GetEventByID(ctx context.Context, id uuid.UUID) (*event.Event, error)
 }
 
-func NewDirectEliminationService(repo DirectEliminationRepository) DirectEliminationService {
-	return &directEliminationService{repo: repo}
+type directEliminationService struct {
+	repo        DirectEliminationRepository
+	events      EventLookup
+	memberships tournamentuser.MembershipLookup
+}
+
+func NewDirectEliminationService(
+	repo DirectEliminationRepository,
+	events EventLookup,
+	memberships tournamentuser.MembershipLookup,
+) DirectEliminationService {
+	return &directEliminationService{repo: repo, events: events, memberships: memberships}
+}
+
+// requireEventAdmin is for bodies that name an event: the event must exist and
+// the caller must run its tournament.
+func (s *directEliminationService) requireEventAdmin(ctx context.Context, eventID uuid.UUID) error {
+	ev, err := s.events.GetEventByID(ctx, eventID)
+	if err != nil {
+		return fmt.Errorf("get event: %w", err)
+	}
+
+	return tournamentuser.RequireRole(ctx, s.memberships, ev.TournamentID, tournamentuser.TournamentUserRoleAdmin)
+}
+
+func (s *directEliminationService) requireAdmin(ctx context.Context, id uuid.UUID) error {
+	tournamentID, err := s.repo.GetDirectEliminationTournamentID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	return tournamentuser.RequireRole(ctx, s.memberships, tournamentID, tournamentuser.TournamentUserRoleAdmin)
 }
 
 func (s *directEliminationService) CreateDirectElimination(
@@ -46,6 +78,10 @@ func (s *directEliminationService) CreateDirectElimination(
 	eventID, err := utils.ParseUUID(input.Body.EventID, "event_id")
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+
+	if err := s.requireEventAdmin(ctx, eventID); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("create direct elimination: %w", err))
 	}
 
 	de := &DirectElimination{
@@ -139,6 +175,13 @@ func (s *directEliminationService) UpdateDirectEliminationByID(
 		return nil, errs.HumaError(err)
 	}
 
+	if err := s.requireAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("update direct elimination: %w", err))
+	}
+	if err := s.requireEventAdmin(ctx, *edit.EventID); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("update direct elimination: %w", err))
+	}
+
 	err = s.repo.UpdateDirectEliminationByID(ctx, id, edit)
 
 	return s.afterUpdate(ctx, id, err, "direct elimination round has ended and can no longer be edited")
@@ -171,6 +214,10 @@ func (s *directEliminationService) DeleteDirectEliminationByID(
 		return nil, errs.HumaError(err)
 	}
 
+	if err := s.requireAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("delete direct elimination: %w", err))
+	}
+
 	if err := s.repo.DeleteDirectEliminationByID(ctx, id); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("delete direct elimination: %w", err))
 	}
@@ -185,6 +232,10 @@ func (s *directEliminationService) StartDirectElimination(
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+
+	if err := s.requireAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("start direct elimination: %w", err))
 	}
 
 	startedAt := time.Now().UTC()
@@ -205,6 +256,10 @@ func (s *directEliminationService) CompleteDirectElimination(
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+
+	if err := s.requireAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("complete direct elimination: %w", err))
 	}
 
 	completedAt := time.Now().UTC()
