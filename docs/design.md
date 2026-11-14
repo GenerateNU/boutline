@@ -623,6 +623,7 @@ Pools in that order, under black sentence-case headings.
 - Clubs and Pools show an empty state until clubs and pools can be pinned.
 - Every tournament page except the referee screen has a fixed pin button in the
   bottom-right corner linking to `/pinned?tournamentId=…`, which Back returns to.
+  From `lg` up it grows into a larger pill labelled "Pinned".
 
 Pins are stored for every tournament together, so the page shows only the pins of
 the tournament in `?tournamentId=` (the floating button always passes it), or
