@@ -27,6 +27,16 @@ describe("SelectField", () => {
     expect(screen.getByRole("combobox", { name: "Weapon" })).toHaveTextContent(text);
   });
 
+  it.each([
+    { name: "marks a required field", required: true, marks: 1 },
+    { name: "leaves an optional field unmarked", required: false, marks: 0 },
+  ])("$name", ({ required, marks }) => {
+    renderField({ required });
+
+    expect(screen.getByRole("combobox", { name: "Weapon" })).toBeInTheDocument();
+    expect(screen.queryAllByText("*")).toHaveLength(marks);
+  });
+
   it("shows the chosen option and submits it with the form", () => {
     renderField();
     const trigger = screen.getByRole("combobox", { name: "Weapon" });
