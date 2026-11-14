@@ -69,6 +69,24 @@ function writeValue<T>(key: string, value: T) {
   emit(key);
 }
 
+// Removes every key starting with prefix from storage and from the cache, then
+// tells mounted readers. The cache matters too: a value whose write failed lives
+// only there, so clearing storage alone would leave it readable.
+function removeSessionStorageKeys(prefix: string) {
+  let stored: string[] = [];
+  try {
+    stored = Object.keys(window.sessionStorage);
+  } catch {}
+  const keys = new Set([...stored, ...cache.keys()].filter((key) => key.startsWith(prefix)));
+  for (const key of keys) {
+    try {
+      window.sessionStorage.removeItem(key);
+    } catch {}
+    cache.delete(key);
+    emit(key);
+  }
+}
+
 // useSyncExternalStore (rather than useState+useEffect) keeps the read in the
 // render/snapshot path, avoiding a setState-in-effect cascade and giving a
 // server snapshot for free.
@@ -93,4 +111,4 @@ function useSessionStorage<T>(
   return [value, setStoredValue] as const;
 }
 
-export { useSessionStorage };
+export { removeSessionStorageKeys, useSessionStorage };

@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 
-import { useSessionStorage } from "@/lib/hooks/use-session-storage";
+import { removeSessionStorageKeys, useSessionStorage } from "@/lib/hooks/use-session-storage";
 
 describe("useSessionStorage", () => {
   beforeEach(() => {
@@ -66,6 +66,34 @@ describe("useSessionStorage", () => {
 
     expect(result.current[0]).toBe("updated");
 
+    setItem.mockRestore();
+  });
+
+  it.each([
+    { name: "stored", writeFails: false },
+    { name: "kept only in memory after a failed write", writeFails: true },
+  ])("removes a prefixed value that was $name, and leaves other keys", ({ writeFails }) => {
+    sessionStorage.setItem("pins", "[]");
+    const { result } = renderHook(() => useSessionStorage("account:draft", "empty"));
+    const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      if (writeFails) {
+        throw new Error("quota exceeded");
+      }
+    });
+    if (!writeFails) {
+      setItem.mockRestore();
+    }
+
+    act(() => {
+      result.current[1]("secret");
+    });
+    act(() => {
+      removeSessionStorageKeys("account:");
+    });
+
+    expect(result.current[0]).toBe("empty");
+    expect(sessionStorage.getItem("account:draft")).toBeNull();
+    expect(sessionStorage.getItem("pins")).toBe("[]");
     setItem.mockRestore();
   });
 });
