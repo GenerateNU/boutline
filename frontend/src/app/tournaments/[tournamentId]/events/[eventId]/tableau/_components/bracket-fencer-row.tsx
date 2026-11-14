@@ -2,7 +2,6 @@ import { cn } from "cn";
 
 import type { TableauFencer } from "../../_types/tableau";
 
-type NameTone = "strong" | "muted";
 type PillTone = "winner" | "neutral" | "mint" | "blue";
 
 const PILL_STYLES: Record<PillTone, string> = {
@@ -15,15 +14,14 @@ const PILL_STYLES: Record<PillTone, string> = {
 interface BracketFencerRowProps {
   fencer: TableauFencer;
   score?: number;
-  nameTone: NameTone;
   pillTone: PillTone;
 }
 
-function BracketFencerRow({ fencer, score, nameTone, pillTone }: BracketFencerRowProps) {
+function BracketFencerRow({ fencer, score, pillTone }: BracketFencerRowProps) {
   return (
     <div className="flex flex-1 items-center gap-3">
       <div className="min-w-0 flex-1">
-        <p className={cn("truncate text-sm uppercase", nameTone === "strong" ? "text-obsidian" : "text-neutral-secondary")}>
+        <p className="truncate text-sm text-obsidian uppercase">
           {fencer.firstName} {fencer.lastName}
         </p>
         {fencer.club && <p className="truncate text-xs uppercase text-neutral-secondary">{fencer.club}</p>}
@@ -36,4 +34,4 @@ function BracketFencerRow({ fencer, score, nameTone, pillTone }: BracketFencerRo
 }
 
 export { BracketFencerRow };
-export type { NameTone, PillTone };
+export type { PillTone };

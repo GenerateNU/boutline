@@ -49,7 +49,7 @@ function swipeTo(scroller: HTMLElement, scrollLeft: number, columnLefts: number[
 }
 
 beforeAll(() => {
-  Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.scrollTo = jest.fn();
 });
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => jest.useRealTimers());

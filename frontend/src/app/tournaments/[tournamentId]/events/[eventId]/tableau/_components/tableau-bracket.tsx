@@ -52,7 +52,7 @@ function TableauBracket({
       return;
     }
     scrollingToButtonPick.current = true;
-    column.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+    scroller.scrollTo({ left: scroller.scrollLeft + offset, behavior: "smooth" });
   }, [focusedRoundId, firstRoundId]);
 
   useEffect(() => () => clearTimeout(settleTimer.current), []);

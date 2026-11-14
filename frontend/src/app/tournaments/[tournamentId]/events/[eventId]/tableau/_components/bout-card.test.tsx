@@ -29,12 +29,12 @@ describe("BoutCard", () => {
     expect(screen.getByText(/Winner/).textContent).toBe("Winner  Final");
   });
 
-  it("marks the winner of an ended bout with a green score and grays the loser's name", () => {
+  it("marks only the winner of an ended bout with a green score, keeping both names dark", () => {
     renderCard(bout("ended", 15, 11));
 
     expect(screen.getByText("15")).toHaveClass("bg-green");
     expect(screen.getByText("Maya Fencer")).toHaveClass("text-obsidian");
-    expect(screen.getByText("Kenji Fencer")).toHaveClass("text-neutral-secondary");
+    expect(screen.getByText("Kenji Fencer")).toHaveClass("text-obsidian");
   });
 
   it("gives a live bout a green border and a mint and blue score", () => {

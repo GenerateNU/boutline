@@ -32,17 +32,17 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <label className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-md border border-foreground px-4">
+        <label className="flex h-11.5 min-w-0 flex-1 items-center gap-2 rounded-[12px] border border-outline bg-background px-4 shadow-sm">
           <Input
             type="text"
             aria-label="Search fencers or clubs"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Enter search text"
-            className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 focus-visible:ring-0"
+            className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 placeholder:text-neutral-secondary focus-visible:ring-0"
           />
           {query === "" ? (
-            <SearchOutlined aria-hidden className="size-5" />
+            <SearchOutlined aria-hidden className="size-5 text-neutral-secondary" />
           ) : (
             <Button
               variant="text"
@@ -58,7 +58,7 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
         <Button
           variant="outline"
           size="icon"
-          className="size-12 rounded-md"
+          className="size-11.5 rounded-[12px] border-outline text-neutral-secondary hover:bg-muted"
           aria-label={view === "bracket" ? "Show as list" : "Show as bracket"}
           onClick={() => setView(view === "bracket" ? "list" : "bracket")}
         >

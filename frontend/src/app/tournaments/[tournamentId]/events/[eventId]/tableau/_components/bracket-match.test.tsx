@@ -54,7 +54,7 @@ describe("BracketMatch", () => {
     expect(screen.getByRole("link")).not.toHaveClass("border-accent-green");
   });
 
-  it.each(["active", "upcoming"] as const)("keeps both names dark on a %s bout", (status) => {
+  it.each(["active", "upcoming", "ended"] as const)("keeps both names dark on a %s bout", (status) => {
     renderMatch(bout(status, 1, 2));
 
     expect(screen.getByText("Maya Fencer")).toHaveClass("text-obsidian");

@@ -4,7 +4,7 @@ import { cn } from "cn";
 
 import type { TableauBout } from "../../_types/tableau";
 import { BracketFencerRow } from "./bracket-fencer-row";
-import { rowStyles } from "./bout-row-styles";
+import { pillTones } from "./bout-pill-tones";
 
 interface BoutCardProps {
   bout: TableauBout;
@@ -15,7 +15,7 @@ interface BoutCardProps {
 
 function BoutCard({ bout, title, nextLabel, href }: BoutCardProps) {
   const live = bout.status === "active";
-  const [topStyle, bottomStyle] = rowStyles(bout);
+  const [topTone, bottomTone] = pillTones(bout);
 
   return (
     <Link
@@ -30,10 +30,10 @@ function BoutCard({ bout, title, nextLabel, href }: BoutCardProps) {
         {title}
       </p>
       <div className="flex h-13 border-b border-outline">
-        <BracketFencerRow fencer={bout.top} score={bout.topScore} {...topStyle} />
+        <BracketFencerRow fencer={bout.top} score={bout.topScore} pillTone={topTone} />
       </div>
       <div className={cn("flex h-13", nextLabel && "border-b border-outline")}>
-        <BracketFencerRow fencer={bout.bottom} score={bout.bottomScore} {...bottomStyle} />
+        <BracketFencerRow fencer={bout.bottom} score={bout.bottomScore} pillTone={bottomTone} />
       </div>
       {nextLabel && (
         <p className="flex h-8 items-center gap-1 text-xs text-neutral-secondary">

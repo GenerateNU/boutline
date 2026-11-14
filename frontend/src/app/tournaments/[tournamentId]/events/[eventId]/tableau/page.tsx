@@ -1,3 +1,4 @@
+import { Background } from "@/components/primitives/background";
 import { getTableau } from "../_services/tableau";
 import { TableauView } from "./_components/tableau-view";
 
@@ -9,9 +10,12 @@ export default async function TableauTab({ params }: TableauTabProps) {
   const tableau = await getTableau(eventId);
 
   return (
-    <TableauView
-      tableau={tableau}
-      boutBasePath={`/tournaments/${tournamentId}/events/${eventId}/bout`}
-    />
+    <div className="relative isolate -mx-4 min-h-218.5 overflow-clip bg-fencing-white px-4 py-4">
+      <Background version={7} />
+      <TableauView
+        tableau={tableau}
+        boutBasePath={`/tournaments/${tournamentId}/events/${eventId}/bout`}
+      />
+    </div>
   );
 }

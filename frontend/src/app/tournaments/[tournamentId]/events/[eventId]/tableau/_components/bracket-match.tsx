@@ -3,7 +3,7 @@ import { cn } from "cn";
 
 import type { TableauBout } from "../../_types/tableau";
 import { BracketFencerRow } from "./bracket-fencer-row";
-import { rowStyles } from "./bout-row-styles";
+import { pillTones } from "./bout-pill-tones";
 
 interface BracketMatchProps {
   bout: TableauBout;
@@ -14,7 +14,7 @@ interface BracketMatchProps {
 
 function BracketMatch({ bout, href, dimmed = false, matched = false }: BracketMatchProps) {
   const live = bout.status === "active";
-  const [topStyle, bottomStyle] = rowStyles(bout);
+  const [topTone, bottomTone] = pillTones(bout);
 
   return (
     <Link
@@ -29,8 +29,8 @@ function BracketMatch({ bout, href, dimmed = false, matched = false }: BracketMa
     >
       {live && <span className="sr-only">Live</span>}
       <div className="flex h-full flex-col divide-y divide-outline">
-        <BracketFencerRow fencer={bout.top} score={bout.topScore} {...topStyle} />
-        <BracketFencerRow fencer={bout.bottom} score={bout.bottomScore} {...bottomStyle} />
+        <BracketFencerRow fencer={bout.top} score={bout.topScore} pillTone={topTone} />
+        <BracketFencerRow fencer={bout.bottom} score={bout.bottomScore} pillTone={bottomTone} />
       </div>
     </Link>
   );
