@@ -11,7 +11,7 @@ import (
 	"boutline/internal/features/event"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
-	"boutline/internal/features/user"
+	"boutline/internal/session"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -88,7 +88,7 @@ func (s *competitorService) CreateCompetitor(
 		return nil, errs.HumaError(fmt.Errorf("get event: %w", err))
 	}
 	competitor.TournamentID = &owningEvent.TournamentID
-	if callerID, ok := user.UserIDFrom(ctx); ok {
+	if callerID, ok := session.UserIDFrom(ctx); ok {
 		competitor.UserID = &callerID
 	}
 	if err := s.repo.CreateCompetitor(ctx, competitor); err != nil {
@@ -104,7 +104,7 @@ func (s *competitorService) CreateCompetitor(
 // Competitor reads are public, so member numbers go only to signed-in callers;
 // otherwise anyone could page through the list and collect them with names.
 func memberNumberVisible(ctx context.Context) bool {
-	_, ok := user.UserIDFrom(ctx)
+	_, ok := session.UserIDFrom(ctx)
 	return ok
 }
 
@@ -383,7 +383,7 @@ func (s *competitorService) DeleteCompetitor(
 }
 
 func (s *competitorService) authorizeCompetitorDelete(ctx context.Context, stored *Competitor) error {
-	caller, ok := user.UserIDFrom(ctx)
+	caller, ok := session.UserIDFrom(ctx)
 	if !ok {
 		return errCompetitorDeleteForbidden
 	}

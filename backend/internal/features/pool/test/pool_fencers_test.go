@@ -12,7 +12,7 @@ import (
 	"boutline/internal/features/poolstage"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
-	"boutline/internal/features/user"
+	"boutline/internal/session"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -61,7 +61,7 @@ func newReseatFixture(t *testing.T) *reseatFixture {
 func (f *reseatFixture) patch(t *testing.T, id uuid.UUID, body pool.PoolUpdateBody) (*pool.PoolOutput, error) {
 	t.Helper()
 
-	return f.service.UpdatePoolByID(user.WithUserID(t.Context(), f.admin), &pool.PoolUpdateInput{ID: id.String(), Body: body})
+	return f.service.UpdatePoolByID(session.WithUserID(t.Context(), f.admin), &pool.PoolUpdateInput{ID: id.String(), Body: body})
 }
 
 // seatedPairs is the bout order a pool of these fencers gets: seated in the order
@@ -285,7 +285,7 @@ func TestReseatPoolRequiresATournamentAdmin(t *testing.T) {
 			caller: func(t *testing.T, f *reseatFixture) context.Context {
 				referee := uuid.New()
 				f.memberships.Roles[[2]uuid.UUID{f.tournament, referee}] = tournamentuser.TournamentUserRoleReferee
-				return user.WithUserID(t.Context(), referee)
+				return session.WithUserID(t.Context(), referee)
 			},
 		},
 		{
@@ -293,12 +293,14 @@ func TestReseatPoolRequiresATournamentAdmin(t *testing.T) {
 			caller: func(t *testing.T, f *reseatFixture) context.Context {
 				other := uuid.New()
 				f.memberships.Roles[[2]uuid.UUID{uuid.New(), other}] = tournamentuser.TournamentUserRoleAdmin
-				return user.WithUserID(t.Context(), other)
+				return session.WithUserID(t.Context(), other)
 			},
 		},
 		{
-			name:   "a user with no role in the tournament",
-			caller: func(t *testing.T, _ *reseatFixture) context.Context { return user.WithUserID(t.Context(), uuid.New()) },
+			name: "a user with no role in the tournament",
+			caller: func(t *testing.T, _ *reseatFixture) context.Context {
+				return session.WithUserID(t.Context(), uuid.New())
+			},
 		},
 		{
 			name:   "a request with no caller",

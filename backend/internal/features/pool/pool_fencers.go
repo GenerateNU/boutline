@@ -9,7 +9,7 @@ import (
 	"boutline/internal/features/poolstage"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
-	"boutline/internal/features/user"
+	"boutline/internal/session"
 
 	"github.com/google/uuid"
 )
@@ -61,7 +61,7 @@ func (s *poolService) reseatPool(ctx context.Context, id uuid.UUID, update PoolU
 // authorizeReseat allows only an admin of the pool's tournament. It runs before the
 // stage lock, since a read on another connection while holding it can starve the pool.
 func (s *poolService) authorizeReseat(ctx context.Context, poolID uuid.UUID) error {
-	caller, ok := user.UserIDFrom(ctx)
+	caller, ok := session.UserIDFrom(ctx)
 	if !ok {
 		return errPoolReseatForbidden
 	}

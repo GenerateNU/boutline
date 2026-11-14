@@ -10,7 +10,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/competitor"
-	"boutline/internal/features/user"
+	"boutline/internal/session"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -314,7 +314,7 @@ func TestMemberNumberVisibility(t *testing.T) {
 			t.Parallel()
 			ctx := t.Context()
 			if tt.signedIn {
-				ctx = user.WithUserID(ctx, uuid.New())
+				ctx = session.WithUserID(ctx, uuid.New())
 			}
 
 			got, err := service.GetCompetitorByID(ctx, &competitor.CompetitorIDInput{ID: stored.ID.String()})
@@ -815,7 +815,7 @@ func TestDeleteCompetitor(t *testing.T) {
 			}
 			ctx := t.Context()
 			if tt.caller != nil {
-				ctx = user.WithUserID(ctx, *tt.caller)
+				ctx = session.WithUserID(ctx, *tt.caller)
 			}
 
 			_, err := NewTestService(repo).DeleteCompetitor(ctx, &competitor.CompetitorIDInput{ID: id})
@@ -851,7 +851,7 @@ func TestCreateCompetitorRecordsOwner(t *testing.T) {
 			repo := NewFakeCompetitorRepository()
 			ctx := t.Context()
 			if tt.caller != nil {
-				ctx = user.WithUserID(ctx, *tt.caller)
+				ctx = session.WithUserID(ctx, *tt.caller)
 			}
 
 			_, err := NewTestService(repo).CreateCompetitor(ctx, &competitor.CompetitorCreateInput{

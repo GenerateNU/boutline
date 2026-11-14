@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"boutline/internal/features/competitor"
-	"boutline/internal/features/user"
+	"boutline/internal/session"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
@@ -384,7 +384,7 @@ func TestDeleteEndpoint(t *testing.T) {
 		t.Parallel()
 		api := newTestAPI(t, stored)
 		path := "/api/v1/competitors/" + stored.ID.String()
-		ctx := user.WithUserID(t.Context(), owner)
+		ctx := session.WithUserID(t.Context(), owner)
 		require.Equal(t, http.StatusNoContent, api.DeleteCtx(ctx, path).Code)
 		assert.Equal(t, http.StatusNotFound, api.Get(path).Code)
 		assert.Equal(t, http.StatusNotFound, api.DeleteCtx(ctx, path).Code)
