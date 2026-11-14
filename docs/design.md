@@ -543,11 +543,16 @@ search bar with a clear button. Fencer and club rows keep their pin button, whic
   no label). Missing values show as placeholders: "Dates TBC", "Location TBC", and
   "Organizer contact TBC" always, since no contact is stored. An unknown ID is a 404.
 - **Fencers:** the tournament name as the title, then search (suggesting fencer
-  names as you type), the fencer filter sheet (Club, Rating, Gender; see §4.4, plus
-  Weapon and Age Category as disabled "coming soon" placeholders),
-  removable chips, and a paginated list of fencer cards (name, country · club, a
-  rating badge like "A26") from `GET /competitors?tournament_id=&q&team&rating&gender`.
-  The country is a placeholder showing US for everyone.
+  names as you type), the fencer filter sheet (Club, Weapon, Age Category, Rating,
+  Gender, in that order; see §4.4), removable chips, and a paginated list of fencer
+  cards (name, country · club, a rating badge like "A26") from
+  `GET /competitors?tournament_id=&q&team&weapon&ageCategory&rating&gender`.
+  The country is a placeholder showing US for everyone. Weapon and Age Category
+  reuse the labels the Events tab's filter sheet uses below, and filter on the
+  competitor's owning event, since `competitors` carries neither column (§2.5);
+  the shared
+  `FencerBrowser` renders them only on this tab, passing the sheet
+  `scope="tournament"`.
 - **Clubs:** the tournament name as the title, search suggesting Fencers and Clubs,
   and a paginated list of clubs from `GET /tournaments/{id}/teams`; each links to
   the Fencers tab filtered to that club. Its filter sheet's Fencer, Club and Weapon
@@ -586,10 +591,13 @@ back to the tournament.
   with the page's own search bar, so free-text name search is the search bar (`?q=`)
   alone now. Applied filters show as `Name: Value` removable pills (e.g. "Club: bos",
   "Rating: Unrated", "Gender: Female") under the search bar and at the top of the
-  sheet. Weapon and Age Category appear in the Figma but are deferred to the
-  tournament-level Fencers tab, since `competitors` carries neither column (both live
-  on `events`). It lists the event's own competitors (§8.4). Rows link to a fencer
-  page, which is placeholder text.
+  sheet. Weapon and Age Category are deliberately absent here: an event has exactly
+  one weapon and one age category, so filtering by either would be meaningless on
+  this page. The shared `FencerFilterSheet` takes a `scope: "tournament" | "event"`
+  prop to express that — this page passes `scope="event"` — and the tournament-level
+  Fencers tab (§4.3), which spans events, is where those two filters apply. It lists
+  the event's own competitors (§8.4). Rows link to a fencer page, which is
+  placeholder text.
 - **Pooling** (Partial): see §11.6 for its current state.
 - **Tableau** (Completed): bracket and list views of `GET /events/{id}/tableau`, with
   search. See §12.5.
