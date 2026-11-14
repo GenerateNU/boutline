@@ -26,6 +26,14 @@ func parseRating(raw string) (Rating, error) {
 	return rating, nil
 }
 
+func parseGender(raw string) (Gender, error) {
+	gender := Gender(strings.TrimSpace(raw))
+	if !gender.IsValid() {
+		return "", errs.Public("gender must be one of F, M, or O", errs.ErrInvalidInput)
+	}
+	return gender, nil
+}
+
 func parseBirthdate(raw string) (time.Time, error) {
 	birthdate, err := time.Parse(birthdateLayout, raw)
 	if err != nil {

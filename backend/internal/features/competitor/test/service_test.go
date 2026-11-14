@@ -393,9 +393,11 @@ func TestListCompetitorsFilters(t *testing.T) {
 	t.Parallel()
 	otherEvent := seeded("D", "Davis", competitor.RatingA, "NU Fencing")
 	otherEvent.EventID = uuid.New()
+	baker := seeded("B", "Baker", competitor.RatingA, "BU Fencing")
+	baker.Gender = competitor.GenderM
 	seed := []competitor.Competitor{
 		seeded("A", "Adams", competitor.RatingA, "NU Fencing"),
-		seeded("B", "Baker", competitor.RatingA, "BU Fencing"),
+		baker,
 		seeded("C", "Clark", competitor.RatingC, "NU Fencing"),
 		otherEvent,
 	}
@@ -414,6 +416,18 @@ func TestListCompetitorsFilters(t *testing.T) {
 			name:     "filters by rating",
 			input:    &competitor.CompetitorListInput{EventID: testEventID.String(), Rating: "A"},
 			wantLast: []string{"Adams", "Baker"},
+		},
+		{
+			name:     "filters by gender",
+			input:    &competitor.CompetitorListInput{EventID: testEventID.String(), Gender: "M"},
+			wantLast: []string{"Baker"},
+		},
+		{
+			name: "combines rating and gender",
+			input: &competitor.CompetitorListInput{
+				EventID: testEventID.String(), Rating: "A", Gender: "F",
+			},
+			wantLast: []string{"Adams"},
 		},
 		{
 			name:     "filters by team",
@@ -485,6 +499,14 @@ func TestListCompetitorsFilters(t *testing.T) {
 		t.Parallel()
 		_, err := NewTestService(NewFakeCompetitorRepository(seed...)).
 			ListCompetitors(t.Context(), &competitor.CompetitorListInput{Rating: "Z"})
+		code, _ := apiError(t, err)
+		assert.Equal(t, http.StatusBadRequest, code)
+	})
+
+	t.Run("rejects an invalid gender", func(t *testing.T) {
+		t.Parallel()
+		_, err := NewTestService(NewFakeCompetitorRepository(seed...)).
+			ListCompetitors(t.Context(), &competitor.CompetitorListInput{Gender: "Z"})
 		code, _ := apiError(t, err)
 		assert.Equal(t, http.StatusBadRequest, code)
 	})

@@ -17,12 +17,9 @@ export default async function FencersTab({
   const offset = readOffsetParam(query);
   const basePath = `/tournaments/${tournamentId}/fencers`;
 
-  const { data, total, limit } = await getCompetitors(
-    tournamentId,
-    PAGE_SIZE,
-    offset,
-    search,
-  );
+  const { data, total, limit } = await getCompetitors(tournamentId, PAGE_SIZE, offset, {
+    query: search,
+  });
 
   return (
     <Section title="Fencers">

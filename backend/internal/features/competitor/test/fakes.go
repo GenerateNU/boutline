@@ -163,6 +163,9 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 		if filter.Rating != nil && candidate.Rating != *filter.Rating {
 			continue
 		}
+		if filter.Gender != nil && candidate.Gender != *filter.Gender {
+			continue
+		}
 		if filter.Team != nil && !strings.Contains(strings.ToLower(candidate.Team), strings.ToLower(*filter.Team)) {
 			continue
 		}
