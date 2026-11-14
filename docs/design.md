@@ -327,7 +327,8 @@ timed, on a strip.
 | POST | `/bouts` | tournament must be active; the pool must belong to the same tournament; a pool bout copies the pool's referee, strip and number and takes its next `slot`, under the pool stage lock (§11.2), until pool create makes pool bouts |
 | GET | `/bouts?tournament_id&pool_id&status&ids` | newest first |
 | GET | `/bouts/{id}` | |
-| PATCH | `/bouts/{id}` | only while `upcoming`; `pool_id` can't change |
+| PATCH | `/bouts/{id}` | admin only; only while `upcoming`; `pool_id` can't change |
+| POST | `/bouts/{id}/claim` | sets `referee_id` to the caller; needs the referee role (an admin passes); only while `upcoming` and unassigned or already the caller's, 409 otherwise |
 | POST | `/bouts/{id}/start` | tournament active, referee assigned, `upcoming → active` |
 | POST | `/bouts/{id}/end` | `active → ended` |
 | DELETE | `/bouts/{id}` | only while `upcoming` or `ended` (narrowed in §8.3) |
@@ -489,6 +490,8 @@ from the venue floor.
   sets `?club=`; Country offers only countries that have tournaments, from
   `GET /countries`, and sets `?country=` to the code. Suggestions appear only while
   typing, in a dropdown under the search bar, and picked values show as removable filter tags at the top of the sheet.
+  Club accepts either a picked suggestion or typed text committed with Enter; Country
+  is a local, `includes()`-filtered list and stays pick-only.
   Sections follow the Figma order: Country, Club, Distance, Tournament Status.
 - A "Create tournament" card links to the creation form when the viewer has a
   session cookie.
@@ -524,7 +527,8 @@ Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers. These
 replace the tournament's tabs rather than stacking under them.
 
 - **Fencers** (Completed): search, pagination, and a filter sheet with Fencer (sets
-  `?q=`) and Club (sets `?team=`) searches, each picked from a dropdown of matches. It lists every fencer in the tournament, since
+  `?q=`) and Club (sets `?team=`) searches, each accepting either a picked suggestion
+  from the dropdown or typed text committed with Enter. It lists every fencer in the tournament, since
   competitors don't belong to an event yet (§8.4). Rows link to a fencer page,
   which is placeholder text.
 - **Pooling** and **Tableau** (Placeholder): a bout list from a hardcoded fixture,
@@ -590,7 +594,7 @@ so it is built to survive double taps, slow networks and failed requests.
 
 | Phase | When | Referee sees |
 | --- | --- | --- |
-| `not-started` | bout `upcoming` | "Start match" |
+| `not-started` | bout `upcoming` | "Start match" (claims the bout for the signed-in referee if none is assigned) |
 | `scoring` | active, no winner | a large "Touch {name}" button per fencer, Undo, a match-point banner when a side is one touch away (both sides can be) |
 | `confirming` | a side reached `points_to_win` | "{winner} wins A–B", one confirm button per fencer, Undo |
 | `over` | bout `ended` | the winner banner; no controls |
@@ -616,14 +620,14 @@ so it is built to survive double taps, slow networks and failed requests.
   and history from the server, which wins.
 - **History.** A newest-first log of time, "Touch {name}", running score
   (fencer 1 – fencer 2), with revoked touches kept and labelled "Revoked".
-- Start assigns a referee if none is set, then starts the bout.
+- Start claims an unassigned bout via `POST /bouts/{id}/claim`, then starts it.
 
 ### 5.3 Temporary bypass
 
 **Status:** Open until §7.1 and §7.2.
 
 The page sits behind the login gate, but it still sends a fixed seeded user
-(`FALLBACK_SCORER_ID`, Alex Morgan) as scorer and referee instead of the logged-in
+(`FALLBACK_SCORER_ID`, Alex Morgan) as scorer instead of the logged-in
 user. The real referee checks are commented out with TODOs. **Any logged-in user
 can score any bout.**
 
@@ -714,8 +718,8 @@ an admin still need that row backfilled, which is its own ticket.
 
 - **Built:** `tournamentuser.RequireRole(ctx, memberships, tournamentID, role)`
   runs on every mutating route and returns 403 unless the caller holds the role in
-  that tournament. An admin passes a referee check. Bout start and end and the
-  scoring writes need `referee`. Every other write needs `admin`, except creating
+  that tournament. An admin passes a referee check. Bout claim, start and end and
+  the scoring writes need `referee`. Every other write needs `admin`, except creating
   a tournament, which any signed-in user can do.
 - **Built:** creating a tournament records the signed-in caller as its
   `created_by`, which the request body can't set, and writes them into
@@ -726,6 +730,10 @@ an admin still need that row backfilled, which is its own ticket.
   must be the bout's `referee_id`: 403 otherwise, and 409 while the bout has no
   referee. An admin passes the role check but still referees only the bouts they
   are assigned to.
+- **Built:** `claimBout` (`POST /bouts/{id}/claim`) uses `RequireRole(referee)` and
+  takes `referee_id` from `session.UserIDFrom`, never from the body. "Unassigned or
+  already the caller's" is part of the UPDATE's WHERE, so two racing referees can't
+  both win. Setting `referee_id` through `PATCH /bouts/{id}` stays admin-only.
 - **Built:** the creator stays an admin. Changing their role to `referee` or
   removing them is refused with 409. Every tournament's creator is made an admin
   on create, so no tournament can be left without an admin.

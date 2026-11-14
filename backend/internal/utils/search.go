@@ -8,57 +8,84 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// A single character has too few trigrams to score meaningfully against
-// word_similarity_threshold, so %> matches nothing. Below that length, both
-// functions fall back to a plain prefix match instead.
+// Single-char matches are too short for trigram, so we fall back to prefix matching
 const trigramMinLength = 2
 
-// TrigramMatch narrows query to rows where term matches some continuous
-// extent of expr under pg_trgm's word_similarity_threshold, so the GIN
-// trigram indexes are used. This is a prefix/substring-friendly match rather
-// than a whole-string one: a short, partially typed term scores against the
-// best-matching part of expr, not the full thing. %> takes the indexed
-// expression on the left (matching the operator's indexable strategy) and
-// term on the right, equivalent to word_similarity(term, expr) > threshold.
-// expr is trusted SQL from the caller (a column or a concatenation); term is
-// always bound as a parameter. expr is parenthesized because %> binds tighter
-// than ||, so an unparenthesized concatenation expr would only apply %> to
-// its last operand and fail the boolean WHERE clause. The same parenthesizing
-// applies to ILIKE, which binds looser than ||.
-//
-// An empty term leaves query unfiltered, so a search with no term but a
-// filter (e.g. tournament_id) still returns every row the filter matches,
-// rather than nothing.
-func TrigramMatch(query *gorm.DB, expr, term string) *gorm.DB {
-	if term == "" {
-		return query
-	}
-	if utf8.RuneCountInString(term) < trigramMinLength {
-		return query.Where("("+expr+") ILIKE ?", LikePrefixPattern(term))
-	}
-	return query.Where("("+expr+") %> ?", term)
+// To trigram match on cols (e.g. first and last name) we just concatenate with a space between
+func TrigramExpr(columns []string) string {
+	return strings.Join(columns, " || ' ' || ")
 }
 
-// TrigramOrder sorts by descending word similarity, breaking ties with
-// tiebreaker so a page is stable. Apply it after Count: a count query cannot
-// order by word_similarity().
-//
-// An empty term, or one too short for TrigramMatch to rank by similarity,
-// orders by emptyOrder instead (e.g. "created_at DESC"). tiebreaker and
-// emptyOrder are trusted SQL from the caller, not bound as parameters.
-func TrigramOrder(query *gorm.DB, expr, term, emptyOrder, tiebreaker string) *gorm.DB {
+// Applies a trigram matching WHERE clause to a query
+func TrigramMatch(query *gorm.DB, columns []string, term string) *gorm.DB {
+	fragment, args := TrigramPredicate(columns, term)
+	if fragment == "" {
+		return query
+	}
+	return query.Where(fragment, args...)
+}
+
+// Applies a substring matching WHERE clause to a query
+func SubstringMatch(query *gorm.DB, columns []string, term string) *gorm.DB {
+	fragment, args := SubstringPredicate(columns, term)
+	if fragment == "" {
+		return query
+	}
+	return query.Where(fragment, args...)
+}
+
+// Returns the WHERE clause for a trigram predicate, falls back to prefix
+// matching for short strings
+func TrigramPredicate(columns []string, term string) (string, []any) {
+	if term == "" {
+		return "", nil
+	}
+	if utf8.RuneCountInString(term) < trigramMinLength {
+		return ilikeAny(columns, likeEscaped(term)+"%")
+	}
+	return "(" + TrigramExpr(columns) + ") %> ?", []any{term}
+}
+
+// Returns the WHERE clause for a substring match predicate
+func SubstringPredicate(columns []string, term string) (string, []any) {
+	if term == "" {
+		return "", nil
+	}
+	return ilikeAny(columns, "%"+likeEscaped(term)+"%")
+}
+
+// Returns the WHERE clause for a prefix match predicate
+func PrefixPredicate(columns []string, term string) (string, []any) {
+	if term == "" {
+		return "", nil
+	}
+	return ilikeAny(columns, likeEscaped(term)+"%")
+}
+
+// Applies ILIKE across columns (e.g. first and last name)
+func ilikeAny(columns []string, pattern string) (string, []any) {
+	clauses := make([]string, len(columns))
+	args := make([]any, len(columns))
+	for i, col := range columns {
+		clauses[i] = col + " ILIKE ?"
+		args[i] = pattern
+	}
+	return "(" + strings.Join(clauses, " OR ") + ")", args
+}
+
+// Applies a trigram ORDER clause to the query. Accepts fallback conditions for both
+// an empty search term, and to tiebreak equally-similar rows
+func TrigramOrder(query *gorm.DB, columns []string, term, emptyOrder, tiebreaker string) *gorm.DB {
 	if utf8.RuneCountInString(term) < trigramMinLength {
 		return query.Order(emptyOrder + ", " + tiebreaker)
 	}
 	return query.Clauses(clause.OrderBy{Expression: clause.Expr{
-		SQL:  "word_similarity(?, " + expr + ") DESC, " + tiebreaker,
+		SQL:  "word_similarity(?, " + TrigramExpr(columns) + ") DESC, " + tiebreaker,
 		Vars: []any{term},
 	}})
 }
 
-// LikePrefixPattern escapes term's LIKE metacharacters so it matches
-// literally, then appends the wildcard that makes it a prefix match.
-func LikePrefixPattern(term string) string {
-	escaped := strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(term)
-	return escaped + "%"
+// Escape for ILIKE
+func likeEscaped(term string) string {
+	return strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(term)
 }

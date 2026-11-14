@@ -14,9 +14,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// userNameTrigramExpr must match the migration's indexed expression exactly,
+// userNameSearchColumns must match the migration's indexed expression exactly,
 // or the GIN trigram index on users won't be used.
-const userNameTrigramExpr = "first_name || ' ' || last_name"
+var userNameSearchColumns = []string{"first_name", "last_name"}
 
 type UserRepository interface {
 	SignupUser(ctx context.Context, user *User) error
@@ -133,11 +133,10 @@ func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) (
 	// TODO: apply other filters once decided
 	query := r.db.WithContext(ctx).Model(&User{})
 	if filter.Term != "" {
-		// A fresh session keeps the OR inside its own parentheses instead of
-		// merging with whatever conditions query already carries.
-		nameOrEmail := utils.TrigramMatch(r.db.Session(&gorm.Session{NewDB: true}), userNameTrigramExpr, filter.Term).
-			Or("email LIKE ?", utils.LikePrefixPattern(strings.ToLower(strings.TrimSpace(filter.Term))))
-		query = query.Where(nameOrEmail)
+		// A name match or an email starting with the term, so referees can be found either way.
+		nameMatch, nameArgs := utils.TrigramPredicate(userNameSearchColumns, filter.Term)
+		emailMatch, emailArgs := utils.PrefixPredicate([]string{"email"}, filter.Term)
+		query = query.Where("("+nameMatch+" OR "+emailMatch+")", append(nameArgs, emailArgs...)...)
 	}
 
 	var total int64
@@ -145,7 +144,7 @@ func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) (
 		return nil, 0, fmt.Errorf("count users: %w", err)
 	}
 
-	query = utils.TrigramOrder(query, userNameTrigramExpr, filter.Term, "created_at DESC", "id")
+	query = utils.TrigramOrder(query, userNameSearchColumns, filter.Term, "created_at DESC", "id")
 
 	users := make([]User, 0, filter.Limit)
 	// Avoid pulling password ever, makes it harder to leak

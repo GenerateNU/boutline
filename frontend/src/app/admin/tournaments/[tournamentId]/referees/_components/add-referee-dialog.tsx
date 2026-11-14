@@ -66,6 +66,7 @@ async function fetchEventPools({ id, name }: TournamentEvent): Promise<Tournamen
     .map((pool) => ({ ...pool, eventName: name }));
 }
 
+// Every event's upcoming pools, as one list for the Pool dropdown.
 async function fetchTournamentPools(events: TournamentEvent[]) {
   const poolsByEvent = await Promise.all(events.map(fetchEventPools));
   return poolsByEvent.flat();
@@ -103,12 +104,14 @@ function AddRefereeDialog({ tournamentId, events, open, onOpenChange, returnFocu
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  // Search-as-you-type over users by name or email.
   const userSearch = useSearchSuggestions(async (term) => {
     const query = new URLSearchParams({ q: term, limit: String(SUGGESTION_LIMIT) });
     const result = await apiRequest<ListResponse<AuthUser>>(`/users?${query}`);
     return result.data.map(toSuggestion);
   });
 
+  // Load the pools each time the dialog opens; ignore stops a stale load from landing after it closes.
   useEffect(() => {
     if (!open) {
       return;
@@ -131,6 +134,7 @@ function AddRefereeDialog({ tournamentId, events, open, onOpenChange, returnFocu
     };
   }, [open, events]);
 
+  // Opening or closing always starts from a blank form.
   function handleOpenChange(next: boolean) {
     setPickedUser(null);
     setPools(null);
@@ -148,6 +152,7 @@ function AddRefereeDialog({ tournamentId, events, open, onOpenChange, returnFocu
     setError(null);
     const selectedPool = pools?.find(({ id }) => id === poolId);
 
+    // Add them to the staff, then put them on the pool if one was picked.
     startTransition(async () => {
       try {
         await addToStaff(tournamentId, pickedUser.value, Boolean(selectedPool));
@@ -157,6 +162,7 @@ function AddRefereeDialog({ tournamentId, events, open, onOpenChange, returnFocu
             body: JSON.stringify({ referee_id: pickedUser.value }),
           });
         }
+        // Re-fetch the server-rendered roster so the new referee shows up.
         router.refresh();
         toast({
           description: selectedPool

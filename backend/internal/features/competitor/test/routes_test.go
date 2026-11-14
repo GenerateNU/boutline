@@ -204,11 +204,26 @@ func TestListEndpoint(t *testing.T) {
 			seeded("A", "Adams", competitor.RatingU, "NU Fencing"),
 			seeded("B", "Baker", competitor.RatingU, "BU Fencing"),
 		}
-		resp := newTestAPI(t, mixed...).Get("/api/v1/competitors?team=NU%20Fencing")
-		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
-		body := decodeBody(t, resp.Body.Bytes())
-		assert.Len(t, body["data"], 1)
-		assert.InDelta(t, 1, body["total"], 0)
+
+		cases := []struct {
+			name      string
+			team      string
+			wantCount int
+		}{
+			{"exact full name", "NU%20Fencing", 1},
+			{"partial, case-insensitive term", "nu", 1},
+			{"term matching no team", "zzz", 0},
+		}
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				t.Parallel()
+				resp := newTestAPI(t, mixed...).Get("/api/v1/competitors?team=" + c.team)
+				require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+				body := decodeBody(t, resp.Body.Bytes())
+				assert.Len(t, body["data"], c.wantCount)
+				assert.InDelta(t, c.wantCount, body["total"], 0)
+			})
+		}
 	})
 
 	t.Run("filters by tournament", func(t *testing.T) {

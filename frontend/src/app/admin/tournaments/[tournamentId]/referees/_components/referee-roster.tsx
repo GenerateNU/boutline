@@ -14,6 +14,7 @@ import { errorMessage } from "@/utils/error-message";
 
 import { AddRefereeDialog } from "./add-referee-dialog";
 
+// The API row, shaped for RefereeCard.
 function toReferee({ user_id, first_name, last_name, occupied, pool_number }: RefereeResponse): Referee {
   return {
     id: user_id,
@@ -38,6 +39,7 @@ function RefereeRoster({ tournamentId, referees, events }: RefereeRosterProps) {
   const addButton = useRef<HTMLButtonElement>(null);
   const rows = referees.map(toReferee);
 
+  // Runs from the "Remove referee?" confirmation, then refreshes the roster.
   function confirmRemove() {
     if (!refereeToRemove) {
       return;
@@ -68,6 +70,7 @@ function RefereeRoster({ tournamentId, referees, events }: RefereeRosterProps) {
       ) : (
         <RefereeCard
           referees={rows}
+          // Remove only asks first; confirmRemove does the delete.
           onRemove={(id) => setRefereeToRemove(rows.find((row) => row.id === id) ?? null)}
         />
       )}

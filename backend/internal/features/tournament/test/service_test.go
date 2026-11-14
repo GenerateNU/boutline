@@ -1438,6 +1438,11 @@ func TestListTournamentsByClubAndCountry(t *testing.T) {
 			wantNames: []string{"Summer Invitational"},
 		},
 		{
+			name:      "a partial club matches fuzzily",
+			input:     &tournament.TournamentListInput{Club: "allez"},
+			wantNames: []string{"Fall Open"},
+		},
+		{
 			name:      "club and country combine",
 			input:     &tournament.TournamentListInput{Club: "Allez Fencing", Country: "CA"},
 			wantNames: []string{},

@@ -98,14 +98,13 @@ INSERT INTO events (id, tournament_id, name, status, start_time, started_at, com
 ON CONFLICT DO NOTHING;
 
 -- Competitors are entered in an event and tagged with that event's
--- tournament, except Priya, Diego, and Marcus, left untagged to
--- exercise competitors with no tournament yet. Grace lists Allez Fencing as
--- both clubs, so /clubs must still count her once.
+-- tournament. Grace lists Allez Fencing as both clubs, so /clubs
+-- must still count her once.
 INSERT INTO competitors (id, event_id, tournament_id, first_name, last_name, rating, team, gender, birthdate, division, created_at, updated_at, primary_club, secondary_club) VALUES
   ('d0000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Maya', 'Chen', 'A', 'Boston Fencing Club', 'F', '1998-04-12', 'Massachusetts', now(), now(), 'Boston Fencing Club', NULL),
   ('d0000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Liam', 'O''Brien', 'B', 'Northeastern Fencing', 'M', '2001-09-03', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
-  ('d0000000-0000-4000-8000-000000000003', 'c0000000-0000-4000-8000-000000000001', NULL, 'Priya', 'Patel', 'C', 'Cambridge FC', 'F', '1995-01-27', 'New York', now(), now(), 'Cambridge FC', NULL),
-  ('d0000000-0000-4000-8000-000000000004', 'c0000000-0000-4000-8000-000000000001', NULL, 'Diego', 'Martinez', 'U', '', 'M', '2003-06-18', 'California', now(), now(), NULL, NULL),
+  ('d0000000-0000-4000-8000-000000000003', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Priya', 'Patel', 'C', 'Cambridge FC', 'F', '1995-01-27', 'New York', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000004', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Diego', 'Martinez', 'U', '', 'M', '2003-06-18', 'California', now(), now(), NULL, NULL),
   ('d0000000-0000-4000-8000-000000000005', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Hana', 'Sato', 'A', 'Northeastern Fencing', 'F', '1999-11-30', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
   ('d0000000-0000-4000-8000-000000000006', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Noah', 'Williams', 'D', 'Boston Fencing Club', 'O', '2000-02-14', 'Connecticut', now(), now(), 'Boston Fencing Club', NULL),
   ('d0000000-0000-4000-8000-000000000007', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Amara', 'Okafor', 'B', 'Cambridge FC', 'F', '1997-07-08', 'New Jersey', now(), now(), 'Cambridge FC', NULL),
@@ -141,7 +140,7 @@ INSERT INTO competitors (id, event_id, tournament_id, first_name, last_name, rat
   ('d0000000-0000-4000-8000-000000000009', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Sofia', 'Rossi', 'C', 'Boston Fencing Club', 'F', '1996-03-05', 'New York', now(), now(), 'Boston Fencing Club', NULL),
   ('d0000000-0000-4000-8000-000000000010', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Kenji', 'Tanaka', 'U', 'Northeastern Fencing', 'M', '2002-08-16', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
   ('d0000000-0000-4000-8000-000000000011', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Leila', 'Haddad', 'D', 'Cambridge FC', 'F', '1994-10-09', 'Rhode Island', now(), now(), 'Cambridge FC', NULL),
-  ('d0000000-0000-4000-8000-000000000012', 'c0000000-0000-4000-8000-000000000003', NULL, 'Marcus', 'Johnson', 'B', '', 'M', '1993-05-25', 'Texas', now(), now(), NULL, NULL),
+  ('d0000000-0000-4000-8000-000000000012', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Marcus', 'Johnson', 'B', '', 'M', '1993-05-25', 'Texas', now(), now(), NULL, NULL),
   ('d0000000-0000-4000-8000-000000000013', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Maya', 'Chen', 'A', 'Boston Fencing Club', 'F', '1998-04-12', 'Massachusetts', now(), now(), 'Boston Fencing Club', NULL),
   ('d0000000-0000-4000-8000-000000000014', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Kenji', 'Tanaka', 'U', 'Northeastern Fencing', 'M', '2002-08-16', 'Massachusetts', now(), now(), 'Northeastern Fencing', 'Tokyo Fencing Club'),
   ('d0000000-0000-4000-8000-000000000015', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Hana', 'Sato', 'A', 'Northeastern Fencing', 'F', '1999-11-30', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),

@@ -100,6 +100,14 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			wantField:   "name",
 			wantContain: "Fall Open 2026",
 		},
+		{
+			name:        "competitors list matches a single-character q against the last name",
+			route:       "/api/v1/competitors",
+			query:       map[string]string{"q": "w", "tournament_id": fallOpen2026}, // seeded: Noah Williams; pins the fix for anchoring the LIKE pattern to the full concatenated name, which could never match a surname
+			wantStatus:  http.StatusOK,
+			wantField:   "lastName",
+			wantContain: "Williams",
+		},
 	}
 
 	for _, tt := range tests {

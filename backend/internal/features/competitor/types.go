@@ -25,12 +25,6 @@ type CompetitorResponse struct {
 }
 
 func newCompetitorResponse(competitor Competitor, showMemberNumber bool) CompetitorResponse {
-	// Not every competitor is entered in a tournament yet, so the column is
-	// nullable and an untagged competitor reports an empty id.
-	tournamentID := ""
-	if competitor.TournamentID != nil {
-		tournamentID = competitor.TournamentID.String()
-	}
 	var athleteID *string
 	if competitor.AthleteID != nil {
 		id := competitor.AthleteID.String()
@@ -43,7 +37,7 @@ func newCompetitorResponse(competitor Competitor, showMemberNumber bool) Competi
 	return CompetitorResponse{
 		ID:            competitor.ID.String(),
 		EventID:       competitor.EventID.String(),
-		TournamentID:  tournamentID,
+		TournamentID:  competitor.TournamentID.String(),
 		FirstName:     competitor.FirstName,
 		LastName:      competitor.LastName,
 		Gender:        string(competitor.Gender),
@@ -124,7 +118,7 @@ type CompetitorListInput struct {
 	EventID      string `query:"eventId" format:"uuid" doc:"Only competitors in this event"`
 	TournamentID string `query:"tournament_id" doc:"Only competitors entered in this tournament"`
 	Rating       string `query:"rating" enum:"A,B,C,D,E,U" doc:"Only competitors with this rating"`
-	Team         string `query:"team" maxLength:"120" doc:"Only competitors on this team (exact match)"`
+	Team         string `query:"team" maxLength:"120" doc:"Only competitors whose team contains this text; omit to return every competitor"`
 }
 
 type CompetitorListBody struct {

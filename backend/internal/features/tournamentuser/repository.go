@@ -31,8 +31,8 @@ type TournamentUserFilter struct {
 	Offset int
 }
 
-// Mirrors idx_users_name_trgm so the trigram index serves the search.
-const memberNameTrigramExpr = "users.first_name || ' ' || users.last_name"
+// Joined like idx_users_name_trgm, so the trigram index serves the search.
+var memberNameSearchColumns = []string{"users.first_name", "users.last_name"}
 
 // The member's unfinished pools in this tournament, for the two columns below.
 const memberOpenPoolsSQL = `FROM pools
@@ -90,14 +90,14 @@ func (r *tournamentUserRepository) ListMembersByTournament(
 	if filter.Role != "" {
 		query = query.Where("tournament_users.role = ?", filter.Role)
 	}
-	query = utils.TrigramMatch(query, memberNameTrigramExpr, filter.Term)
+	query = utils.TrigramMatch(query, memberNameSearchColumns, filter.Term)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count users in tournament %s: %w", tournamentID, err)
 	}
 
-	query = utils.TrigramOrder(query, memberNameTrigramExpr, filter.Term,
+	query = utils.TrigramOrder(query, memberNameSearchColumns, filter.Term,
 		"tournament_users.created_at", "tournament_users.user_id")
 
 	members := make([]TournamentMember, 0, filter.Limit)
