@@ -469,8 +469,9 @@ from the venue floor.
 
 - A server-rendered list of public tournaments with a status badge (Upcoming /
   Active / Ended), empty states, and Previous/Next pagination, 20 per page.
-- **Loading:** a skeleton of the page (dark date row, search bar, title, five
-  shimmering card placeholders) shows until the list arrives.
+- **Loading:** the date strip stays live above a skeleton of the rest of the
+  page (search bar, title, five shimmering card placeholders) until the list
+  arrives.
 - **Search:** a plain GET form that works without JS; with JS it updates `?q=`
   after a 300 ms debounce.
 - **Dates:** five day tabs in a dark row under the global nav, with paging. A
