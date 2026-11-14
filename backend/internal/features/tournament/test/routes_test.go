@@ -440,6 +440,33 @@ func TestListUsersByTournamentEndpoint(t *testing.T) {
 		assert.InDelta(t, 1, body["limit"], 0)
 	})
 
+	t.Run("filters by role and includes names", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newMembershipTestAPI(t, seed...).Get("/api/v1/tournaments/" + tournamentID.String() + "/users?role=referee")
+
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.InDelta(t, 1, body["total"], 0)
+		rows, ok := body["data"].([]any)
+		require.True(t, ok)
+		require.Len(t, rows, 1)
+		row, ok := rows[0].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "referee", row["role"])
+		assert.Contains(t, row, "first_name")
+		assert.Contains(t, row, "last_name")
+	})
+
+	t.Run("rejects a role outside the enum", func(t *testing.T) {
+		t.Parallel()
+
+		resp := newMembershipTestAPI(t, seed...).Get("/api/v1/tournaments/" + tournamentID.String() + "/users?role=judge")
+
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+
 	t.Run("rejects a limit above the maximum", func(t *testing.T) {
 		t.Parallel()
 

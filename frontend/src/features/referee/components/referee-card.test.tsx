@@ -14,9 +14,16 @@ describe("RefereeCard", () => {
         ["Yan Wang", "Occupied", "Pool 1"],
         ["Ana Diaz", "Available"],
       ],
+      absent: [],
     },
-    { name: "no referees", referees: [], rows: [] },
-  ])("renders $name", ({ referees, rows }) => {
+    {
+      name: "a referee without an occupied status",
+      referees: [{ id: "3", name: "Sam Lee" }],
+      rows: [["Sam Lee"]],
+      absent: ["Occupied", "Available"],
+    },
+    { name: "no referees", referees: [], rows: [], absent: [] },
+  ])("renders $name", ({ referees, rows, absent }) => {
     render(<RefereeCard referees={referees} />);
 
     expect(screen.getByText("Referees:")).toBeInTheDocument();
@@ -24,7 +31,10 @@ describe("RefereeCard", () => {
     expect(items).toHaveLength(rows.length);
     rows.forEach((row, i) => {
       row.forEach((text) => expect(within(items[i]).getByText(text)).toBeInTheDocument());
-      expect(within(items[i]).getByRole("button", { name: "Remove" })).toBeInTheDocument();
+      expect(
+        within(items[i]).getByRole("button", { name: `Remove ${row[0]}` }),
+      ).toBeInTheDocument();
     });
+    absent.forEach((text) => expect(screen.queryByText(text)).not.toBeInTheDocument());
   });
 });

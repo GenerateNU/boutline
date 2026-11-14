@@ -3,9 +3,19 @@ import { useId } from "react";
 
 import { Select, SelectItem } from "@/components/primitives/select";
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
 interface SelectFieldProps extends Omit<React.ComponentProps<typeof Select>, "children"> {
   label: React.ReactNode;
-  options: string[];
+  // A plain string is both the value and the label.
+  options: (string | SelectOption)[];
+}
+
+function toOption(option: string | SelectOption): SelectOption {
+  return typeof option === "string" ? { value: option, label: option } : option;
 }
 
 function SelectField({ className, id, label, options, ...props }: SelectFieldProps) {
@@ -18,9 +28,9 @@ function SelectField({ className, id, label, options, ...props }: SelectFieldPro
         {label}
       </label>
       <Select id={selectId} {...props}>
-        {options.map((option) => (
-          <SelectItem key={option} value={option}>
-            {option}
+        {options.map(toOption).map(({ value, label: optionLabel }) => (
+          <SelectItem key={value} value={value}>
+            {optionLabel}
           </SelectItem>
         ))}
       </Select>
@@ -29,3 +39,4 @@ function SelectField({ className, id, label, options, ...props }: SelectFieldPro
 }
 
 export { SelectField };
+export type { SelectOption };

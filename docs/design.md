@@ -148,7 +148,7 @@ how to test it.
   through the real app: routing, OpenAPI security and the auth middleware, plus
   DB-backed login, search and list-filter tests. Those skip without Postgres;
   `REQUIRE_DB=1` makes them fail instead, as CI does.
-- **Frontend:** Jest with Testing Library, 64 test files. They cover the proxy,
+- **Frontend:** Jest with Testing Library, 74 test files. They cover the proxy,
   `apiRequest`, the API services, auth actions, the search and filter components,
   pagination, pinning and the referee screen. No browser end-to-end tests yet.
 
@@ -217,8 +217,8 @@ is deleted.
 
 | Method | Path | |
 | --- | --- | --- |
-| POST | `/tournaments/{id}/users` | add `{user_id, role}`; 409 if already a member |
-| GET | `/tournaments/{id}/users` | list |
+| POST | `/tournaments/{id}/users` | add `{user_id, role}`; 409 "This user is already on the tournament's staff" if already a member |
+| GET | `/tournaments/{id}/users?role&q&limit&offset` | list; each member carries first and last name, `occupied` (running a started pool or an active bout here) and `pool_number` (that pool, else their next unfinished one; null if none). `q` is a fuzzy name search |
 | PATCH | `/tournaments/{id}/users/{user_id}` | change role |
 | DELETE | `/tournaments/{id}/users/{user_id}` | remove |
 
@@ -356,7 +356,7 @@ fencers don't need one.
 
 - `users`: `id`, `email` (unique, lowercased, validated with `net/mail`),
   `password` (bcrypt, 1–72 bytes, never returned), `first_name`, `last_name`.
-- `GET /users?q=` (fuzzy full-name search) and `GET /users/{id}` require a login.
+- `GET /users?q=` (fuzzy full-name search, also an email prefix) and `GET /users/{id}` require a login.
 - `PATCH /users/{id}` changes names only.
 - `DELETE /users/{id}` is a 409 if the user created a tournament, referees a bout
   or pool, or recorded a touch; memberships cascade.
@@ -418,7 +418,7 @@ different roles in different tournaments.
   an httpOnly, `sameSite=lax` cookie (`boutline_session`) with the token's
   lifetime, so page scripts never see it.
 - `src/proxy.ts` moves the cookie into the `Authorization` header on `/api/*`. It
-  redirects `/admin/*` and `/…/referee` to `/login?next=…` when there is no cookie.
+  redirects `/admin/*`, `/tournaments/[id]/referees` and `/…/referee` to `/login?next=…` when there is no cookie.
 
 ---
 
@@ -487,7 +487,7 @@ from the venue floor.
 
 **Status:** Completed, with fields filled in by §10.1.
 
-Tabs: Overview · Fencers · Clubs · Events.
+Tabs: Overview · Fencers · Referees (signed in only) · Clubs · Events.
 
 - **Overview:** name, the date range (from its events, else `start_time`), and
   Ongoing and Upcoming event cards. Location and organizer contact read "TBC" until
@@ -502,6 +502,10 @@ Tabs: Overview · Fencers · Clubs · Events.
 - **Events:** every event grouped by start time, with an accent-insensitive name
   search and a day strip that opens on today, the next day with events, or the
   last one. The strip's calendar button is disabled.
+- **Referees:** a searchable, paginated roster of the tournament's referees, from
+  `GET /tournaments/{id}/users?role=referee`. "Add Referees" opens a dialog that
+  searches users by name or email and adds one as referee, optionally to one of an
+  event's pools, then closes. Each row's Remove asks for confirmation first.
 
 ### 4.4 Event page (`/tournaments/[id]/events/[eventId]`)
 
@@ -948,8 +952,14 @@ Fencing, adding staff, and checking fencers in on the day.
 
 ### 10.3 Staff
 
-**Status:** Planned. Issues: #16, #20.
+**Status:** Partial. Issues: #16, #20. The Referees tab (§4.3) is built and shown to
+any signed-in user until role checks (§7.2) land. The rest is planned.
 
+- Add Referees can also pick an event and one of its pools; the referee is then
+  set on that pool with `PATCH /pools/{id}` (§11.2), even if they were already on
+  the staff.
+- Each row shows Occupied or Available and the referee's current pool (§2.3).
+- Not built: the creation-flow step.
 - The creation form's free-text "Admins" field (comma-separated emails) resolves
   emails to users and adds them as admins.
 - A Staff screen under the tournament for admins.

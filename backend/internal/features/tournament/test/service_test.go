@@ -862,7 +862,7 @@ func TestAddTournamentUser(t *testing.T) {
 			userID:       existing.String(),
 			role:         tournamentuser.TournamentUserRoleAdmin,
 			wantCode:     http.StatusConflict,
-			wantDetail:   "already exists",
+			wantDetail:   "This user is already on the tournament's staff",
 		},
 	}
 
@@ -899,59 +899,142 @@ func TestListUsersByTournament(t *testing.T) {
 
 	tournamentID := uuid.New()
 	other := uuid.New()
+	yan, sam, ada, stranger := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	names := map[uuid.UUID][2]string{
+		yan:      {"Yan", "Wang"},
+		sam:      {"Sam", "Rivera"},
+		ada:      {"Ada", "Lee"},
+		stranger: {"Zed", "Other"},
+	}
 	seed := []tournamentuser.TournamentUser{
-		seededMembership(tournamentID, uuid.New(), tournamentuser.TournamentUserRoleReferee),
-		seededMembership(tournamentID, uuid.New(), tournamentuser.TournamentUserRoleAdmin),
-		seededMembership(other, uuid.New(), tournamentuser.TournamentUserRoleReferee),
+		seededMembership(tournamentID, yan, tournamentuser.TournamentUserRoleReferee),
+		seededMembership(tournamentID, sam, tournamentuser.TournamentUserRoleReferee),
+		seededMembership(tournamentID, ada, tournamentuser.TournamentUserRoleAdmin),
+		seededMembership(other, stranger, tournamentuser.TournamentUserRoleReferee),
 	}
 
-	t.Run("returns a page and the unpaged total for that tournament only", func(t *testing.T) {
+	tests := []struct {
+		name         string
+		tournamentID uuid.UUID
+		input        tournament.TournamentUserListInput
+		wantTotal    int64
+		wantLen      int
+		wantLimit    int
+		wantLast     []string
+	}{
+		{
+			name:         "returns a page and the unpaged total for that tournament only",
+			tournamentID: tournamentID,
+			input:        tournament.TournamentUserListInput{Limit: 1},
+			wantTotal:    3,
+			wantLen:      1,
+			wantLimit:    1,
+		},
+		{
+			name:         "skips past the offset",
+			tournamentID: tournamentID,
+			input:        tournament.TournamentUserListInput{Limit: 5, Offset: 2},
+			wantTotal:    3,
+			wantLen:      1,
+			wantLimit:    5,
+		},
+		{
+			name:         "filters by role",
+			tournamentID: tournamentID,
+			input:        tournament.TournamentUserListInput{Role: tournamentuser.TournamentUserRoleReferee},
+			wantTotal:    2,
+			wantLen:      2,
+			wantLimit:    tournament.TournamentDefaultPageSize,
+			wantLast:     []string{"Rivera", "Wang"},
+		},
+		{
+			name:         "filters by name and trims the term",
+			tournamentID: tournamentID,
+			input:        tournament.TournamentUserListInput{Query: "  riv "},
+			wantTotal:    1,
+			wantLen:      1,
+			wantLimit:    tournament.TournamentDefaultPageSize,
+			wantLast:     []string{"Rivera"},
+		},
+		{
+			name:         "combines role and name filters",
+			tournamentID: tournamentID,
+			input:        tournament.TournamentUserListInput{Role: tournamentuser.TournamentUserRoleReferee, Query: "lee"},
+			wantTotal:    0,
+			wantLen:      0,
+			wantLimit:    tournament.TournamentDefaultPageSize,
+		},
+		{
+			name:         "defaults the page size",
+			tournamentID: tournamentID,
+			input:        tournament.TournamentUserListInput{},
+			wantTotal:    3,
+			wantLen:      3,
+			wantLimit:    tournament.TournamentDefaultPageSize,
+		},
+		{
+			name:         "clamps the page size",
+			tournamentID: tournamentID,
+			input:        tournament.TournamentUserListInput{Limit: 5000},
+			wantTotal:    3,
+			wantLen:      3,
+			wantLimit:    tournament.TournamentMaxPageSize,
+		},
+		{
+			name:         "returns an empty page for a tournament with no members",
+			tournamentID: uuid.New(),
+			input:        tournament.TournamentUserListInput{},
+			wantTotal:    0,
+			wantLen:      0,
+			wantLimit:    tournament.TournamentDefaultPageSize,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakeTournamentUserRepository(seed...)
+			repo.Names = names
+			service := tournament.NewTournamentService(NewFakeTournamentRepository(), repo)
+
+			tt.input.TournamentID = tt.tournamentID.String()
+			output, err := service.ListUsersByTournament(context.Background(), &tt.input)
+
+			require.NoError(t, err)
+			assert.Len(t, output.Body.Data, tt.wantLen)
+			assert.Equal(t, tt.wantTotal, output.Body.Total)
+			assert.Equal(t, tt.wantLimit, output.Body.Limit)
+
+			if tt.wantLast != nil {
+				lastNames := make([]string, 0, len(output.Body.Data))
+				for _, row := range output.Body.Data {
+					lastNames = append(lastNames, row.LastName)
+				}
+				assert.ElementsMatch(t, tt.wantLast, lastNames)
+			}
+		})
+	}
+
+	t.Run("includes the member's name and role", func(t *testing.T) {
 		t.Parallel()
 
-		service := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository(seed...))
+		repo := NewFakeTournamentUserRepository(seed...)
+		repo.Names = names
+		service := tournament.NewTournamentService(NewFakeTournamentRepository(), repo)
 
 		output, err := service.ListUsersByTournament(context.Background(), &tournament.TournamentUserListInput{
 			TournamentID: tournamentID.String(),
-			Limit:        1,
+			Query:        "yan",
 		})
 
 		require.NoError(t, err)
-		assert.Len(t, output.Body.Data, 1)
-		assert.Equal(t, int64(2), output.Body.Total)
-		assert.Equal(t, 1, output.Body.Limit)
-	})
-
-	t.Run("defaults and clamps the page size", func(t *testing.T) {
-		t.Parallel()
-
-		service := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository(seed...))
-
-		defaulted, err := service.ListUsersByTournament(context.Background(), &tournament.TournamentUserListInput{
-			TournamentID: tournamentID.String(),
-		})
-		require.NoError(t, err)
-		assert.Equal(t, tournament.TournamentDefaultPageSize, defaulted.Body.Limit)
-
-		clamped, err := service.ListUsersByTournament(context.Background(), &tournament.TournamentUserListInput{
-			TournamentID: tournamentID.String(),
-			Limit:        5000,
-		})
-		require.NoError(t, err)
-		assert.Equal(t, tournament.TournamentMaxPageSize, clamped.Body.Limit)
-	})
-
-	t.Run("returns an empty page for a tournament with no members", func(t *testing.T) {
-		t.Parallel()
-
-		service := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository(seed...))
-
-		output, err := service.ListUsersByTournament(context.Background(), &tournament.TournamentUserListInput{
-			TournamentID: uuid.New().String(),
-		})
-
-		require.NoError(t, err)
-		assert.Empty(t, output.Body.Data)
-		assert.Equal(t, int64(0), output.Body.Total)
+		require.Len(t, output.Body.Data, 1)
+		row := output.Body.Data[0]
+		assert.Equal(t, yan.String(), row.UserID)
+		assert.Equal(t, "Yan", row.FirstName)
+		assert.Equal(t, "Wang", row.LastName)
+		assert.Equal(t, tournamentuser.TournamentUserRoleReferee, row.Role)
 	})
 }
 

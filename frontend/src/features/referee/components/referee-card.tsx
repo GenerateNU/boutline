@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/primitives/status-badge";
 interface Referee {
   id: string;
   name: string;
-  occupied: boolean;
+  occupied?: boolean;
   pool?: string;
 }
 
@@ -24,13 +24,23 @@ function RefereeCard({ referees, onRemove }: RefereeCardProps) {
         {referees.map(({ id, name, occupied, pool }) => (
           <li key={id} className="flex items-center gap-3 py-3">
             <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <p className="truncate text-sm text-obsidian">{name}</p>
-              <div className="flex items-center gap-1.5">
-                <StatusBadge status={occupied ? "occupied" : "available"} />
-                {pool && <p className="text-xs font-medium text-obsidian">{pool}</p>}
-              </div>
+              <p className="truncate text-sm text-obsidian uppercase">{name}</p>
+              {(occupied !== undefined || pool) && (
+                <div className="flex items-center gap-1.5">
+                  {occupied !== undefined && (
+                    <StatusBadge status={occupied ? "occupied" : "available"} />
+                  )}
+                  {pool && <p className="text-xs font-medium text-obsidian">{pool}</p>}
+                </div>
+              )}
             </div>
-            <Button variant="text" size="sm" className="min-w-20" onClick={() => onRemove?.(id)}>
+            <Button
+              variant="text"
+              size="sm"
+              className="min-w-20"
+              aria-label={`Remove ${name}`}
+              onClick={() => onRemove?.(id)}
+            >
               Remove
             </Button>
           </li>

@@ -34,7 +34,7 @@ func TrigramMatch(query *gorm.DB, expr, term string) *gorm.DB {
 		return query
 	}
 	if utf8.RuneCountInString(term) < trigramMinLength {
-		return query.Where("("+expr+") ILIKE ?", likePrefixPattern(term))
+		return query.Where("("+expr+") ILIKE ?", LikePrefixPattern(term))
 	}
 	return query.Where("("+expr+") %> ?", term)
 }
@@ -56,9 +56,9 @@ func TrigramOrder(query *gorm.DB, expr, term, emptyOrder, tiebreaker string) *go
 	}})
 }
 
-// likePrefixPattern escapes term's LIKE metacharacters so it matches
+// LikePrefixPattern escapes term's LIKE metacharacters so it matches
 // literally, then appends the wildcard that makes it a prefix match.
-func likePrefixPattern(term string) string {
+func LikePrefixPattern(term string) string {
 	escaped := strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(term)
 	return escaped + "%"
 }

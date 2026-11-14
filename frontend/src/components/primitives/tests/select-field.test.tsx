@@ -38,6 +38,17 @@ describe("SelectField", () => {
     expect(new FormData(screen.getByTestId("form") as HTMLFormElement).get("weapon")).toBe("Foil");
   });
 
+  it("shows a labelled option's label and submits its value", () => {
+    renderField({ options: [{ value: "e-1", label: "Mixed Épée" }] });
+    const trigger = screen.getByRole("combobox", { name: "Weapon" });
+
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    fireEvent.click(screen.getByRole("option", { name: "Mixed Épée" }));
+
+    expect(trigger).toHaveTextContent("Mixed Épée");
+    expect(new FormData(screen.getByTestId("form") as HTMLFormElement).get("weapon")).toBe("e-1");
+  });
+
   it("disables the trigger", () => {
     renderField({ disabled: true });
 

@@ -268,7 +268,9 @@ type membershipKey struct {
 type FakeTournamentUserRepository struct {
 	Memberships map[membershipKey]tournamentuser.TournamentUser
 	Tournaments map[uuid.UUID]tournament.Tournament
-	Err         error
+	// Names holds {first, last} per user id, standing in for the users table.
+	Names map[uuid.UUID][2]string
+	Err   error
 }
 
 func NewFakeTournamentUserRepository(seed ...tournamentuser.TournamentUser) *FakeTournamentUserRepository {
@@ -280,6 +282,7 @@ func NewFakeTournamentUserRepository(seed ...tournamentuser.TournamentUser) *Fak
 	return &FakeTournamentUserRepository{
 		Memberships: memberships,
 		Tournaments: map[uuid.UUID]tournament.Tournament{},
+		Names:       map[uuid.UUID][2]string{},
 	}
 }
 
@@ -323,56 +326,54 @@ func (f *FakeTournamentUserRepository) GetTournamentUser(
 	return &found, nil
 }
 
-func (f *FakeTournamentUserRepository) ListUsersByTournament(
+func (f *FakeTournamentUserRepository) ListMembersByTournament(
 	_ context.Context,
 	tournamentID uuid.UUID,
-	limit, offset int,
-) ([]tournamentuser.TournamentUser, error) {
+	filter tournamentuser.TournamentUserFilter,
+) ([]tournamentuser.TournamentMember, int64, error) {
 	if f.Err != nil {
-		return nil, f.Err
+		return nil, 0, f.Err
 	}
 
-	matched := make([]tournamentuser.TournamentUser, 0, len(f.Memberships))
+	term := strings.ToLower(filter.Term)
+	matched := make([]tournamentuser.TournamentMember, 0, len(f.Memberships))
 	for _, candidate := range f.Memberships {
-		if candidate.TournamentID == tournamentID {
-			matched = append(matched, candidate)
+		if candidate.TournamentID != tournamentID {
+			continue
 		}
+		if filter.Role != "" && candidate.Role != filter.Role {
+			continue
+		}
+
+		name := f.Names[candidate.UserID]
+		if !strings.Contains(strings.ToLower(name[0]+" "+name[1]), term) {
+			continue
+		}
+
+		matched = append(matched, tournamentuser.TournamentMember{
+			TournamentUser: candidate,
+			FirstName:      name[0],
+			LastName:       name[1],
+		})
 	}
 
 	// Ordered by user id, not the repository's created_at, so that iterating a
 	// map still yields the same page on every run.
-	slices.SortFunc(matched, func(a, b tournamentuser.TournamentUser) int {
+	slices.SortFunc(matched, func(a, b tournamentuser.TournamentMember) int {
 		return strings.Compare(a.UserID.String(), b.UserID.String())
 	})
 
-	if offset >= len(matched) {
-		return []tournamentuser.TournamentUser{}, nil
+	total := int64(len(matched))
+	if filter.Offset >= len(matched) {
+		return []tournamentuser.TournamentMember{}, total, nil
 	}
 
-	matched = matched[offset:]
-	if limit < len(matched) {
-		matched = matched[:limit]
+	matched = matched[filter.Offset:]
+	if filter.Limit < len(matched) {
+		matched = matched[:filter.Limit]
 	}
 
-	return matched, nil
-}
-
-func (f *FakeTournamentUserRepository) CountUsersByTournament(
-	_ context.Context,
-	tournamentID uuid.UUID,
-) (int64, error) {
-	if f.Err != nil {
-		return 0, f.Err
-	}
-
-	var total int64
-	for _, candidate := range f.Memberships {
-		if candidate.TournamentID == tournamentID {
-			total++
-		}
-	}
-
-	return total, nil
+	return matched, total, nil
 }
 
 func (f *FakeTournamentUserRepository) ListTournamentsByUser(

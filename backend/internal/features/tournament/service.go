@@ -382,6 +382,9 @@ func (s *tournamentService) AddTournamentUser(
 		Role:         input.Body.Role,
 	}
 	if err := s.membershipRepo.CreateTournamentUser(ctx, membership); err != nil {
+		if errors.Is(err, errs.ErrDuplicate) {
+			err = errs.Public("This user is already on the tournament's staff", err)
+		}
 		return nil, errs.HumaError(fmt.Errorf("add tournament user: %w", err))
 	}
 
@@ -399,19 +402,19 @@ func (s *tournamentService) ListUsersByTournament(
 
 	limit, offset := page(input.Limit, input.Offset)
 
-	memberships, err := s.membershipRepo.ListUsersByTournament(ctx, tournamentID, limit, offset)
+	members, total, err := s.membershipRepo.ListMembersByTournament(ctx, tournamentID, tournamentuser.TournamentUserFilter{
+		Role:   input.Role,
+		Term:   strings.TrimSpace(input.Query),
+		Limit:  limit,
+		Offset: offset,
+	})
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list users in tournament: %w", err))
 	}
 
-	total, err := s.membershipRepo.CountUsersByTournament(ctx, tournamentID)
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("list users in tournament: %w", err))
-	}
-
-	data := make([]TournamentUserResponse, 0, len(memberships))
-	for _, membership := range memberships {
-		data = append(data, newTournamentUserResponse(membership))
+	data := make([]TournamentMemberResponse, 0, len(members))
+	for _, member := range members {
+		data = append(data, newTournamentMemberResponse(member))
 	}
 
 	return &TournamentUserListOutput{Body: TournamentUserListBody{

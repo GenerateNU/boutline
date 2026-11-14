@@ -12,6 +12,7 @@ export const config = {
   matcher: [
     "/api/:path*",
     "/admin/:path*",
+    "/tournaments/:tournamentId/referees",
     "/tournaments/:tournamentId/events/:eventId/bout/:boutId/referee",
   ],
 };

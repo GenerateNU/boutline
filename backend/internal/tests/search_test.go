@@ -45,6 +45,14 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			wantContain: "Lee",
 		},
 		{
+			name:        "users list matches an email prefix",
+			route:       "/api/v1/users",
+			query:       map[string]string{"q": "casey.nguyen@"}, // seeded: Casey Nguyen
+			wantStatus:  http.StatusOK,
+			wantField:   "lastName",
+			wantContain: "Nguyen",
+		},
+		{
 			name:        "competitors list tolerates a typo in q",
 			route:       "/api/v1/competitors",
 			query:       map[string]string{"q": "Hana Satoo"}, // seeded: Hana Sato

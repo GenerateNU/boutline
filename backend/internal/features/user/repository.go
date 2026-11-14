@@ -131,7 +131,14 @@ func (r *userRepository) UpdateUserByID(ctx context.Context, id uuid.UUID, updat
 
 func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error) {
 	// TODO: apply other filters once decided
-	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&User{}), userNameTrigramExpr, filter.Term)
+	query := r.db.WithContext(ctx).Model(&User{})
+	if filter.Term != "" {
+		// A fresh session keeps the OR inside its own parentheses instead of
+		// merging with whatever conditions query already carries.
+		nameOrEmail := utils.TrigramMatch(r.db.Session(&gorm.Session{NewDB: true}), userNameTrigramExpr, filter.Term).
+			Or("email LIKE ?", utils.LikePrefixPattern(strings.ToLower(strings.TrimSpace(filter.Term))))
+		query = query.Where(nameOrEmail)
+	}
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
