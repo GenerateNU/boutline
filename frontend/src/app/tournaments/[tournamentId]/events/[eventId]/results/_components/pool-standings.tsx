@@ -5,9 +5,10 @@ import { ResultList } from "./result-list";
 interface PoolStandingsProps {
   standings: PoolStanding[];
   fencerBasePath: string;
+  action?: React.ReactNode;
 }
 
-function PoolStandings({ standings, fencerBasePath }: PoolStandingsProps) {
+function PoolStandings({ standings, fencerBasePath, action }: PoolStandingsProps) {
   if (standings.length === 0) {
     return <p className="text-sm text-muted-foreground">No pool results yet.</p>;
   }
@@ -31,6 +32,7 @@ function PoolStandings({ standings, fencerBasePath }: PoolStandingsProps) {
           </p>
           <p className="text-xs text-muted-foreground">of fencers qualified</p>
         </div>
+        {action}
       </div>
 
       {qualifiers.length > 0 && (

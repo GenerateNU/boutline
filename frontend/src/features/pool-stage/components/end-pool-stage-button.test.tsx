@@ -8,7 +8,7 @@ import { EndPoolStageButton } from "./end-pool-stage-button";
 const refresh = jest.fn();
 
 jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
-jest.mock("../../../../../../../services/api-request", () => ({ apiRequest: jest.fn() }));
+jest.mock("../../../services/api-request", () => ({ apiRequest: jest.fn() }));
 
 const apiRequestMock = jest.mocked(apiRequest);
 

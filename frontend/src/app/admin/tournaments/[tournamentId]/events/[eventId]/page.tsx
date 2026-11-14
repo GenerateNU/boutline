@@ -2,9 +2,10 @@ import { BackButton } from "@/components/primitives/back-button";
 import { Section } from "@/components/primitives/section";
 import { EventStatusBadge } from "@/features/event/components/event-status-badge";
 
+import { EndPoolStageButton } from "@/features/pool-stage/components/end-pool-stage-button";
+import { getEventPoolStage } from "@/features/pool-stage/services/get-event-pool-stage";
+
 import { DirectEliminationSection } from "./_components/direct-elimination-section";
-import { EndPoolStageButton } from "./_components/end-pool-stage-button";
-import { getEventPoolStage } from "./_services/get-event-pool-stage";
 
 export default async function AdminEventPage({
   params,
