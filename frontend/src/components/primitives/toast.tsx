@@ -28,7 +28,7 @@ function Toast({
     <ToastPrimitive.Root
       data-slot="toast"
       className={cn(
-        "flex items-center gap-3 rounded-lg bg-obsidian px-4 py-3 text-sm text-white shadow-md [&_svg]:size-5 [&_svg]:shrink-0",
+        "flex items-center gap-3 rounded-lg bg-obsidian px-4 py-3 text-sm text-white shadow-md motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-fade-out [&_svg]:size-5 [&_svg]:shrink-0",
         className,
       )}
       {...props}

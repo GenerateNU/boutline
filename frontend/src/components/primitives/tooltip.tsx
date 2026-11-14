@@ -27,7 +27,7 @@ function TooltipContent({
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          "z-50 max-w-mobile bg-foreground px-4 py-2 text-sm text-background",
+          "z-50 max-w-mobile origin-(--radix-tooltip-content-transform-origin) bg-foreground px-4 py-2 text-sm text-background motion-safe:data-[state=closed]:animate-pop-out motion-safe:data-[state=delayed-open]:animate-pop-in motion-safe:data-[state=instant-open]:animate-pop-in",
           className,
         )}
         {...props}

@@ -1,7 +1,6 @@
 import { Pagination } from "@/components/primitives/pagination";
 import { ActiveFilterChips } from "@/features/tournament/components/active-filter-chips";
 import { CalendarButton } from "@/features/tournament/components/calendar-button";
-import { CalendarView } from "@/features/tournament/components/calendar-view";
 import { FilterSheet } from "@/features/tournament/components/filter-sheet";
 import { SearchForm } from "@/features/tournament/components/search-form";
 import { TournamentCard } from "@/features/tournament/components/tournament-card";
@@ -24,7 +23,7 @@ async function TournamentBrowser({
   query,
   visibility,
 }: TournamentBrowserProps) {
-  const { offset, status, date, calendarView, search, tz, club, country } =
+  const { offset, status, date, search, tz, club, country } =
     parseTournamentFilters(query);
 
   const { data, total, limit } = await getTournaments(TOURNAMENT_PAGE_SIZE, offset, {
@@ -41,8 +40,6 @@ async function TournamentBrowser({
     <>
       <WeekStrip />
       <main className="mx-auto flex w-full max-w-mobile flex-1 flex-col bg-background pb-5 font-manrope">
-        {calendarView && <CalendarView />}
-
         <div className="flex items-center gap-2.5 px-5 pt-3.5 pb-2.5">
           <SearchForm
             action={basePath}
@@ -89,7 +86,6 @@ async function TournamentBrowser({
               country,
               date,
               tz: date ? tz : undefined,
-              view: calendarView ? "calendar" : undefined,
             }}
           />
         </div>
