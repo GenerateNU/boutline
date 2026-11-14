@@ -268,3 +268,96 @@ func TestDeleteEndpointRefusesActiveEvent(t *testing.T) {
 
 	assert.Equal(t, http.StatusConflict, api.DeleteCtx(asUser(t, TestAdminID), "/api/v1/events/"+stored.ID.String()).Code)
 }
+
+var eventAttributes = map[string]any{
+	"type":         "team",
+	"weapon":       "sabre",
+	"gender":       "mixed",
+	"age_category": "veteran",
+	"rating_limit": "c_and_under",
+	"qualifier":    true,
+}
+
+func TestCreateEndpointAttributes(t *testing.T) {
+	t.Parallel()
+
+	tourney := seededTournament()
+	nulls := map[string]any{
+		"type": nil, "weapon": nil, "gender": nil, "age_category": nil, "rating_limit": nil, "qualifier": false,
+	}
+
+	tests := []struct {
+		name       string
+		extra      map[string]any
+		wantStatus int
+		wantFields map[string]any
+	}{
+		{name: "echoes every attribute", extra: eventAttributes, wantStatus: http.StatusCreated, wantFields: eventAttributes},
+		{name: "defaults omitted attributes to null and false", wantStatus: http.StatusCreated, wantFields: nulls},
+		{name: "rejects an unknown type", extra: map[string]any{"type": "relay"}, wantStatus: http.StatusUnprocessableEntity},
+		{name: "rejects an unknown weapon", extra: map[string]any{"weapon": "saber"}, wantStatus: http.StatusUnprocessableEntity},
+		{name: "rejects an unknown gender", extra: map[string]any{"gender": "other"}, wantStatus: http.StatusUnprocessableEntity},
+		{name: "rejects an unknown age category", extra: map[string]any{"age_category": "u9"}, wantStatus: http.StatusUnprocessableEntity},
+		{name: "rejects an unknown rating limit", extra: map[string]any{"rating_limit": "a_and_under"}, wantStatus: http.StatusUnprocessableEntity},
+		{name: "rejects a non-boolean qualifier", extra: map[string]any{"qualifier": "yes"}, wantStatus: http.StatusUnprocessableEntity},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			body := map[string]any{"tournament_id": tourney.ID.String(), "name": "lightweight"}
+			for k, v := range tt.extra {
+				body[k] = v
+			}
+
+			resp := newTestAPI(t, NewFakeTournamentLookup(tourney)).PostCtx(asUser(t, TestAdminID), "/api/v1/events", body)
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+
+			got := decodeBody(t, resp.Body.Bytes())
+			for field, want := range tt.wantFields {
+				assert.Equal(t, want, got[field], field)
+			}
+		})
+	}
+}
+
+func TestUpdateEndpointAttributes(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		patch      map[string]any
+		wantStatus int
+		wantFields map[string]any
+	}{
+		{name: "sets type", patch: map[string]any{"type": "team"}, wantStatus: http.StatusOK, wantFields: map[string]any{"type": "team"}},
+		{name: "sets weapon", patch: map[string]any{"weapon": "epee"}, wantStatus: http.StatusOK, wantFields: map[string]any{"weapon": "epee"}},
+		{name: "sets gender", patch: map[string]any{"gender": "women"}, wantStatus: http.StatusOK, wantFields: map[string]any{"gender": "women"}},
+		{name: "sets age category", patch: map[string]any{"age_category": "y12"}, wantStatus: http.StatusOK, wantFields: map[string]any{"age_category": "y12"}},
+		{name: "sets rating limit", patch: map[string]any{"rating_limit": "unrated"}, wantStatus: http.StatusOK, wantFields: map[string]any{"rating_limit": "unrated"}},
+		{name: "sets qualifier", patch: map[string]any{"qualifier": true}, wantStatus: http.StatusOK, wantFields: map[string]any{"qualifier": true}},
+		{name: "sets all attributes at once", patch: eventAttributes, wantStatus: http.StatusOK, wantFields: eventAttributes},
+		{name: "rejects an unknown weapon", patch: map[string]any{"weapon": "saber"}, wantStatus: http.StatusUnprocessableEntity},
+		{name: "rejects an empty body", patch: map[string]any{}, wantStatus: http.StatusBadRequest},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			stored := seededEvent(event.EventStatusUpcoming, TestTournamentID)
+			api := newTestAPI(t, NewFakeTournamentLookup(), stored)
+			path := "/api/v1/events/" + stored.ID.String()
+
+			resp := api.PatchCtx(asUser(t, TestAdminID), path, tt.patch)
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+
+			got := decodeBody(t, api.Get(path).Body.Bytes())
+			for field, want := range tt.wantFields {
+				assert.Equal(t, want, got[field], field)
+			}
+		})
+	}
+}

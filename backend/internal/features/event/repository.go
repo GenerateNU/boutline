@@ -21,15 +21,39 @@ type EventRepository interface {
 }
 
 type EventUpdate struct {
-	Name      *string
-	StartTime *time.Time
+	Name        *string
+	Type        *EventType
+	Weapon      *EventWeapon
+	Gender      *EventGender
+	AgeCategory *EventAgeCategory
+	RatingLimit *EventRatingLimit
+	Qualifier   *bool
+	StartTime   *time.Time
 }
 
 func (e EventUpdate) columns() map[string]any {
-	columns := make(map[string]any, 2)
+	columns := make(map[string]any, 8)
 
 	if e.Name != nil {
 		columns["name"] = *e.Name
+	}
+	if e.Type != nil {
+		columns["type"] = *e.Type
+	}
+	if e.Weapon != nil {
+		columns["weapon"] = *e.Weapon
+	}
+	if e.Gender != nil {
+		columns["gender"] = *e.Gender
+	}
+	if e.AgeCategory != nil {
+		columns["age_category"] = *e.AgeCategory
+	}
+	if e.RatingLimit != nil {
+		columns["rating_limit"] = *e.RatingLimit
+	}
+	if e.Qualifier != nil {
+		columns["qualifier"] = *e.Qualifier
 	}
 	if e.StartTime != nil {
 		columns["start_time"] = *e.StartTime
