@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
 import { cn } from "cn";
 
 import { Button } from "@/components/primitives/button";
 
 type BackButtonSize = "sm" | "default" | "lg";
 
-const sizeClasses: Record<BackButtonSize, string> = {
+const SIZE_CLASSES: Record<BackButtonSize, string> = {
   sm: "pr-3 pl-2",
   default: "pr-4 pl-3 [&_svg]:size-5",
   lg: "pr-5 pl-4 [&_svg]:size-6",
@@ -33,7 +33,7 @@ function BackButton({
       size={size}
       className={cn(
         "gap-1 aria-disabled:pointer-events-none aria-disabled:text-disabled-foreground",
-        sizeClasses[size],
+        SIZE_CLASSES[size],
         className,
       )}
     >
@@ -45,7 +45,7 @@ function BackButton({
         tabIndex={disabled ? -1 : props.tabIndex}
         onClick={disabled ? (event) => event.preventDefault() : props.onClick}
       >
-        <ChevronLeft aria-hidden />
+        <ChevronLeftOutlined aria-hidden />
         {children}
       </Link>
     </Button>

@@ -4,11 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
-import { CircleUserRound, KeyRound, Menu, Search, Settings } from "lucide-react";
+import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
+import KeyOutlined from "@mui/icons-material/KeyOutlined";
+import SearchOutlined from "@mui/icons-material/SearchOutlined";
+import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
 import { useRef, useState } from "react";
 import { Dialog } from "radix-ui";
 
 import { Button } from "@/components/primitives/button";
+import { Navbar } from "@/components/primitives/navigation/navbar";
+import { LogoutDialog } from "@/features/auth/components/logout-dialog";
 import { PrivateTournamentDialog } from "@/features/tournament/components/private-tournament-dialog";
 
 function sidebarItemClassName(selected = false) {
@@ -29,49 +35,33 @@ function GlobalNav() {
   return (
     <>
       <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
-        <header className="relative flex h-10 items-center overflow-hidden bg-obsidian">
-          <Image
-            src="/brand/nav-plate.svg"
-            alt=""
-            width={297}
-            height={57}
-            className="absolute top-1/2 left-0 -translate-y-1/2"
-          />
-          <Image
-            src="/brand/nav-blade.svg"
-            alt=""
-            width={28}
-            height={55}
-            className="absolute top-1/2 left-69.75 -translate-y-1/2"
-          />
-          <Dialog.Trigger asChild>
-            <Button
-              ref={menuButton}
-              variant="text"
-              size="icon"
-              aria-label="Open menu"
-              className="relative ml-2.5 text-white hover:bg-background/10 [&_svg]:size-6"
-            >
-              <Menu />
-            </Button>
-          </Dialog.Trigger>
-          <Link href="/" className="relative ml-2.5 flex items-center gap-2.5">
-            <Image src="/brand/logo-mark.svg" alt="" width={21} height={24} />
-            <span className="font-wordmark text-[17px] tracking-[1.02px] text-white">
-              BOUTLINE
-            </span>
-          </Link>
-        </header>
+        <Navbar
+          menuRef={menuButton}
+          wrapMenuButton={(button) => <Dialog.Trigger asChild>{button}</Dialog.Trigger>}
+        >
+          {pathname.startsWith("/admin") && <LogoutDialog />}
+        </Navbar>
 
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40" />
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40 motion-safe:data-open:animate-fade-in motion-safe:data-closed:animate-fade-out" />
+          {/* Radix keeps the drawer mounted until its closing animation ends, so it slides back out too. */}
           <Dialog.Content
             aria-describedby={undefined}
             onCloseAutoFocus={(event) => codeOpen && event.preventDefault()}
-            className="fixed inset-y-0 left-0 z-50 flex w-73 flex-col justify-between bg-fencing-white pb-10 font-manrope shadow-lg"
+            className="fixed inset-y-0 left-0 z-50 flex w-73 flex-col justify-between bg-fencing-white pb-10 font-manrope shadow-lg motion-safe:data-open:animate-drawer-in motion-safe:data-closed:animate-drawer-out"
           >
             <div className="flex flex-col gap-6">
-              <div className="flex h-18.5 items-center gap-3 bg-obsidian px-6">
+              <div className="flex h-18.5 items-center gap-3 bg-obsidian pr-6 pl-2.5">
+                <Dialog.Close asChild>
+                  <Button
+                    variant="text"
+                    size="icon"
+                    aria-label="Close menu"
+                    className="text-white hover:bg-background/10 [&_svg]:size-6"
+                  >
+                    <CloseOutlined />
+                  </Button>
+                </Dialog.Close>
                 <Image src="/brand/logo-mark-sidebar.svg" alt="" width={27} height={31} />
                 <Dialog.Title className="font-wordmark text-2xl tracking-[1.44px] text-white">
                   BOUTLINE
@@ -84,7 +74,7 @@ function GlobalNav() {
                     aria-current={pathname === "/login" ? "page" : undefined}
                     className={sidebarItemClassName(pathname === "/login")}
                   >
-                    <CircleUserRound aria-hidden />
+                    <AccountCircleOutlined aria-hidden />
                     Admin Login
                   </Link>
                 </Dialog.Close>
@@ -94,7 +84,7 @@ function GlobalNav() {
                     aria-current={pathname === "/tournaments" ? "page" : undefined}
                     className={sidebarItemClassName(onTournaments)}
                   >
-                    <Search aria-hidden />
+                    <SearchOutlined aria-hidden />
                     Search Tournaments
                   </Link>
                 </Dialog.Close>
@@ -106,15 +96,21 @@ function GlobalNav() {
                   }}
                   className={sidebarItemClassName()}
                 >
-                  <KeyRound aria-hidden />
+                  <KeyOutlined aria-hidden />
                   Find Private Tournament
                 </button>
               </nav>
             </div>
-            <p className="flex h-11 items-center gap-6 px-6 text-sm font-medium text-obsidian">
-              <Settings aria-hidden className="size-6" />
-              Settings
-            </p>
+            <Dialog.Close asChild>
+              <Link
+                href="/settings"
+                aria-current={pathname === "/settings" ? "page" : undefined}
+                className="flex h-11 items-center gap-6 px-6 text-sm font-medium text-obsidian hover:text-blue aria-[current=page]:text-blue"
+              >
+                <SettingsOutlined aria-hidden className="size-6" />
+                Settings
+              </Link>
+            </Dialog.Close>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

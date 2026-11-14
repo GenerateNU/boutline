@@ -1,8 +1,11 @@
-import { fetchPinnedItems } from "@/features/pinning/services/pinned-items-query";
+import { fetchPinnedFencers } from "@/features/pinning/services/pinned-items-query";
 import { Competitor } from "@/types/competitor";
-import { Bout } from "@/types/bout";
 
-describe("fetchPinnedItems", () => {
+function fencer(id: string, firstName: string, lastName: string): Competitor {
+  return { id, eventId: "e1", firstName, lastName, rating: "A", ratingYear: null, team: "" };
+}
+
+describe("fetchPinnedFencers", () => {
   const fetchMock = jest.fn();
 
   beforeEach(() => {
@@ -13,84 +16,35 @@ describe("fetchPinnedItems", () => {
     fetchMock.mockReset();
   });
 
-  const fencer: Competitor = { id: "f1", firstName: "Jane", lastName: "Doe", rating: "A", team: "A" };
-  const bout: Bout = {
-    id: "m1",
-    referee_id: null,
-    competitor_1_id: "f1",
-    competitor_2_id: "f2",
-    points_to_win: 15,
-    status: "upcoming",
-  };
-
-  it("requests both endpoints when both id lists are populated", async () => {
-    fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ data: [fencer], total: 1, limit: 1, offset: 0 }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ data: [bout], total: 1, limit: 1, offset: 0 }),
-      });
-
-    const result = await fetchPinnedItems({ fencerIds: ["f1"], boutIds: ["m1"] });
-
-    expect(result).toEqual({ fencers: [fencer], bouts: [bout] });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-
-    const competitorsUrl = new URL(fetchMock.mock.calls[0][0] as string, "http://localhost");
-    expect(competitorsUrl.pathname).toBe("/api/v1/competitors");
-    expect(competitorsUrl.searchParams.get("ids")).toBe("f1");
-    expect(competitorsUrl.searchParams.get("limit")).toBe("1");
-
-    const boutsUrl = new URL(fetchMock.mock.calls[1][0] as string, "http://localhost");
-    expect(boutsUrl.pathname).toBe("/api/v1/bouts");
-    expect(boutsUrl.searchParams.get("ids")).toBe("m1");
-    expect(boutsUrl.searchParams.get("limit")).toBe("1");
-  });
-
-  it("requests only competitors when only fencerIds is populated", async () => {
+  function respondWith(data: Competitor[]) {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      json: async () => ({ data: [fencer], total: 1, limit: 2, offset: 0 }),
+      json: async () => ({ data, total: data.length, limit: data.length, offset: 0 }),
     });
+  }
 
-    const result = await fetchPinnedItems({ fencerIds: ["f1", "f2"], boutIds: [] });
+  it("fetches the pinned fencers by id", async () => {
+    respondWith([fencer("f1", "Jane", "Doe")]);
 
-    expect(result).toEqual({ fencers: [fencer], bouts: [] });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await fetchPinnedFencers(["f1", "f2"]);
 
-    const requestedUrl = new URL(fetchMock.mock.calls[0][0] as string, "http://localhost");
-    expect(requestedUrl.pathname).toBe("/api/v1/competitors");
-    expect(requestedUrl.searchParams.get("ids")).toBe("f1,f2");
-    expect(requestedUrl.searchParams.get("limit")).toBe("2");
+    const url = new URL(fetchMock.mock.calls[0][0] as string, "http://localhost");
+    expect(url.pathname).toBe("/api/v1/competitors");
+    expect(url.searchParams.get("ids")).toBe("f1,f2");
+    expect(url.searchParams.get("limit")).toBe("2");
   });
 
-  it("requests only bouts when only boutIds is populated", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ data: [bout], total: 1, limit: 1, offset: 0 }),
-    });
+  it("sorts them alphabetically, ignoring case", async () => {
+    respondWith([fencer("f1", "Zoe", "Adams"), fencer("f2", "Max", "Cole"), fencer("f3", "amy", "Brown")]);
 
-    const result = await fetchPinnedItems({ fencerIds: [], boutIds: ["m1"] });
+    const fencers = await fetchPinnedFencers(["f1", "f2", "f3"]);
 
-    expect(result).toEqual({ fencers: [], bouts: [bout] });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-
-    const requestedUrl = new URL(fetchMock.mock.calls[0][0] as string, "http://localhost");
-    expect(requestedUrl.pathname).toBe("/api/v1/bouts");
-    expect(requestedUrl.searchParams.get("ids")).toBe("m1");
+    expect(fencers.map(({ firstName }) => firstName)).toEqual(["amy", "Max", "Zoe"]);
   });
 
-  it("makes no requests and returns empty lists when both id lists are empty", async () => {
-    const result = await fetchPinnedItems({ fencerIds: [], boutIds: [] });
-
-    expect(result).toEqual({ fencers: [], bouts: [] });
+  it("makes no request when nothing is pinned", async () => {
+    expect(await fetchPinnedFencers([])).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

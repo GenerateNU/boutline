@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { TournamentResultsCard } from "@/features/tournament/components/tournament-results-card";
 import type { Tournament } from "@/features/tournament/types/tournament";
 
-const tournament: Tournament = {
+const TOURNAMENT: Tournament = {
   id: "t1",
   name: "Generate Fencing Open",
   visibility: "public",
@@ -26,7 +26,7 @@ describe("TournamentResultsCard", () => {
   ])("renders $name", ({ start_time, want }) => {
     render(
       <TournamentResultsCard
-        tournament={{ ...tournament, start_time }}
+        tournament={{ ...TOURNAMENT, start_time }}
         eventCount={12}
         resultsHref="/tournaments/t1/results"
       />,

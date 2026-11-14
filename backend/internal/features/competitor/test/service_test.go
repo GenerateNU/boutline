@@ -183,10 +183,11 @@ func TestCreateCompetitorStoresNewFields(t *testing.T) {
 		b.RatingYear = ptr(int16(24))
 		b.PrimaryClub = "  NU Fencing "
 		b.SecondaryClub = "   " // blank means "no secondary club"
-		b.MemberNumber = "100123"
+		b.MemberNumber = "100000123"
 	})
 
-	out, err := NewTestService(NewFakeCompetitorRepository()).
+	repo := NewFakeCompetitorRepository()
+	out, err := NewTestService(repo).
 		CreateCompetitor(adminCtx(t), &competitor.CompetitorCreateInput{Body: body})
 	require.NoError(t, err)
 
@@ -197,7 +198,9 @@ func TestCreateCompetitorStoresNewFields(t *testing.T) {
 	assert.Equal(t, ptr(int16(24)), out.Body.RatingYear)
 	assert.Equal(t, ptr("NU Fencing"), out.Body.PrimaryClub)
 	assert.Nil(t, out.Body.SecondaryClub)
-	assert.Equal(t, ptr("100123"), out.Body.MemberNumber)
+	for _, stored := range repo.Competitors {
+		assert.Equal(t, ptr("100000123"), stored.MemberNumber)
+	}
 }
 
 func TestCreateCompetitorTagsTheEventsTournament(t *testing.T) {
@@ -229,14 +232,14 @@ func TestCreateCompetitorRejectsAnUnknownEvent(t *testing.T) {
 func TestCreateCompetitorMemberNumber(t *testing.T) {
 	t.Parallel()
 	existing := seeded("Grace", "Hopper", competitor.RatingU, "")
-	existing.MemberNumber = ptr("100123")
+	existing.MemberNumber = ptr("100000123")
 
 	t.Run("rejects a duplicate member number in the same event", func(t *testing.T) {
 		t.Parallel()
 		repo := NewFakeCompetitorRepository(existing)
 		_, err := NewTestService(repo).CreateCompetitor(adminCtx(t),
 			&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
-				b.MemberNumber = "100123"
+				b.MemberNumber = "100000123"
 			})})
 		code, detail := apiError(t, err)
 		assert.Equal(t, http.StatusConflict, code)
@@ -250,7 +253,7 @@ func TestCreateCompetitorMemberNumber(t *testing.T) {
 		_, err := NewTestService(repo).CreateCompetitor(adminCtx(t),
 			&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
 				b.EventID = otherTestEventID.String()
-				b.MemberNumber = "100123"
+				b.MemberNumber = "100000123"
 			})})
 		require.NoError(t, err)
 		assert.Len(t, repo.Competitors, 2)
@@ -295,6 +298,41 @@ func TestGetCompetitorByID(t *testing.T) {
 		code, _ := apiError(t, err)
 		assert.Equal(t, http.StatusBadRequest, code)
 	})
+}
+
+func TestMemberNumberVisibility(t *testing.T) {
+	t.Parallel()
+	stored := seeded("Lee", "Kiefer", competitor.RatingA, "")
+	stored.MemberNumber = ptr("100000123")
+	service := NewTestService(NewFakeCompetitorRepository(stored))
+
+	tests := []struct {
+		name     string
+		signedIn bool
+		want     *string
+	}{
+		{name: "shows the member number to a signed-in caller", signedIn: true, want: ptr("100000123")},
+		{name: "hides the member number from an anonymous caller", signedIn: false, want: nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := t.Context()
+			if tt.signedIn {
+				ctx = session.WithUserID(ctx, uuid.New())
+			}
+
+			got, err := service.GetCompetitorByID(ctx, &competitor.CompetitorIDInput{ID: stored.ID.String()})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got.Body.MemberNumber)
+
+			list, err := service.ListCompetitors(ctx, &competitor.CompetitorListInput{Limit: 20})
+			require.NoError(t, err)
+			require.Len(t, list.Body.Data, 1)
+			assert.Equal(t, tt.want, list.Body.Data[0].MemberNumber)
+		})
+	}
 }
 
 func TestListCompetitors(t *testing.T) {
@@ -562,7 +600,7 @@ func TestUpdateCompetitorNewFields(t *testing.T) {
 	t.Parallel()
 	stored := seeded("Lee", "Kiefer", competitor.RatingB, "")
 	stored.PrimaryClub = ptr("NU Fencing")
-	stored.MemberNumber = ptr("100123")
+	stored.MemberNumber = ptr("100000123")
 
 	update := func(t *testing.T, seed []competitor.Competitor, body competitor.CompetitorUpdateBody) (
 		*competitor.CompetitorOutput, error,
@@ -620,9 +658,9 @@ func TestUpdateCompetitorNewFields(t *testing.T) {
 	t.Run("rejects a member number already used in the same event", func(t *testing.T) {
 		t.Parallel()
 		other := seeded("Grace", "Hopper", competitor.RatingU, "")
-		other.MemberNumber = ptr("200456")
+		other.MemberNumber = ptr("100000456")
 		_, err := update(t, []competitor.Competitor{stored, other}, competitor.CompetitorUpdateBody{
-			MemberNumber: ptr("200456"),
+			MemberNumber: ptr("100000456"),
 		})
 		code, _ := apiError(t, err)
 		assert.Equal(t, http.StatusConflict, code)
@@ -631,10 +669,10 @@ func TestUpdateCompetitorNewFields(t *testing.T) {
 	t.Run("keeps its own member number without conflicting with itself", func(t *testing.T) {
 		t.Parallel()
 		out, err := update(t, []competitor.Competitor{stored}, competitor.CompetitorUpdateBody{
-			MemberNumber: ptr("100123"),
+			MemberNumber: ptr("100000123"),
 		})
 		require.NoError(t, err)
-		assert.Equal(t, ptr("100123"), out.Body.MemberNumber)
+		assert.Equal(t, ptr(FakeAthleteID("100000123").String()), out.Body.AthleteID)
 	})
 }
 
@@ -1062,4 +1100,179 @@ func TestListTeamsByTournament(t *testing.T) {
 		code, _ := apiError(t, err)
 		assert.Equal(t, http.StatusNotFound, code)
 	})
+}
+
+const invalidMemberNumberMessage = "member number must be 9 digits starting with 1"
+
+func TestMemberNumberValidation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		number     string
+		wantStored *string
+		wantDetail string
+	}{
+		{name: "accepts a valid number", number: "100000123", wantStored: ptr("100000123")},
+		{name: "trims surrounding whitespace", number: " 100000123 ", wantStored: ptr("100000123")},
+		{name: "treats a blank number as none", number: "   ", wantStored: nil},
+		{name: "rejects 8 digits", number: "10000012", wantDetail: invalidMemberNumberMessage},
+		{name: "rejects 10 digits", number: "1000001234", wantDetail: invalidMemberNumberMessage},
+		{name: "rejects a leading 0", number: "000000123", wantDetail: invalidMemberNumberMessage},
+		{name: "rejects letters", number: "10000012a", wantDetail: invalidMemberNumberMessage},
+	}
+	for _, tt := range tests {
+		t.Run("create "+tt.name, func(t *testing.T) {
+			t.Parallel()
+			repo := NewFakeCompetitorRepository()
+			_, err := NewTestService(repo).CreateCompetitor(adminCtx(t),
+				&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
+					b.MemberNumber = tt.number
+				})})
+			if tt.wantDetail != "" {
+				code, detail := apiError(t, err)
+				assert.Equal(t, http.StatusBadRequest, code)
+				assert.Equal(t, tt.wantDetail, detail)
+				assert.Empty(t, repo.Competitors)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, repo.Competitors, 1)
+			for _, stored := range repo.Competitors {
+				assert.Equal(t, tt.wantStored, stored.MemberNumber)
+			}
+		})
+	}
+
+	patchTests := []struct {
+		name       string
+		number     string
+		wantDetail string
+	}{
+		{name: "accepts a valid number", number: "100000789"},
+		{name: "rejects an invalid number", number: "12345", wantDetail: invalidMemberNumberMessage},
+	}
+	for _, tt := range patchTests {
+		t.Run("patch "+tt.name, func(t *testing.T) {
+			t.Parallel()
+			stored := seeded("Lee", "Kiefer", competitor.RatingB, "")
+			_, err := NewTestService(NewFakeCompetitorRepository(stored)).UpdateCompetitorByID(adminCtx(t),
+				&competitor.CompetitorUpdateInput{
+					ID:   stored.ID.String(),
+					Body: competitor.CompetitorUpdateBody{MemberNumber: ptr(tt.number)},
+				})
+			if tt.wantDetail != "" {
+				code, detail := apiError(t, err)
+				assert.Equal(t, http.StatusBadRequest, code)
+				assert.Equal(t, tt.wantDetail, detail)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestCreateCompetitorLinksAthlete(t *testing.T) {
+	t.Parallel()
+
+	create := func(t *testing.T, service competitor.CompetitorService, eventID uuid.UUID, number string) *competitor.CompetitorOutput {
+		t.Helper()
+		out, err := service.CreateCompetitor(adminCtx(t),
+			&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
+				b.EventID = eventID.String()
+				b.MemberNumber = number
+			})})
+		require.NoError(t, err)
+		return out
+	}
+
+	t.Run("sets athleteId from the member number", func(t *testing.T) {
+		t.Parallel()
+		repo := NewFakeCompetitorRepository()
+		out := create(t, NewTestService(repo), testEventID, "100000123")
+		assert.Equal(t, ptr(FakeAthleteID("100000123").String()), out.Body.AthleteID)
+		assert.Equal(t, ptr(FakeAthleteID("100000123")), repo.Competitors[uuid.MustParse(out.Body.ID)].AthleteID)
+	})
+
+	t.Run("gives the same athleteId across events", func(t *testing.T) {
+		t.Parallel()
+		service := NewTestService(NewFakeCompetitorRepository())
+		first := create(t, service, testEventID, "100000123")
+		second := create(t, service, otherTestEventID, "100000123")
+		require.NotNil(t, first.Body.AthleteID)
+		assert.Equal(t, first.Body.AthleteID, second.Body.AthleteID)
+	})
+
+	t.Run("leaves athleteId nil without a member number", func(t *testing.T) {
+		t.Parallel()
+		out := create(t, NewTestService(NewFakeCompetitorRepository()), testEventID, "")
+		assert.Nil(t, out.Body.AthleteID)
+	})
+}
+
+func TestUpdateCompetitorAthleteLink(t *testing.T) {
+	t.Parallel()
+	linked := seeded("Lee", "Kiefer", competitor.RatingB, "")
+	linked.MemberNumber = ptr("100000123")
+	linked.AthleteID = ptr(FakeAthleteID("100000123"))
+
+	tests := []struct {
+		name     string
+		linker   FakeAthleteLinker
+		body     competitor.CompetitorUpdateBody
+		racing   string // a member number a concurrent update saves and links while this one upserts
+		wantLink *uuid.UUID
+	}{
+		{
+			name:     "clearing the member number unlinks the athlete",
+			body:     competitor.CompetitorUpdateBody{MemberNumber: ptr("")},
+			wantLink: nil,
+		},
+		{
+			name:     "a new member number links the new athlete",
+			body:     competitor.CompetitorUpdateBody{MemberNumber: ptr("100000999")},
+			wantLink: ptr(FakeAthleteID("100000999")),
+		},
+		{
+			name:     "a new member number with a failing linker unlinks instead of keeping the old athlete",
+			linker:   FakeAthleteLinker{Err: errors.New("boom")},
+			body:     competitor.CompetitorUpdateBody{MemberNumber: ptr("100000999")},
+			wantLink: nil,
+		},
+		{
+			name:     "a link resolved from a number a newer update replaced keeps the newer athlete",
+			body:     competitor.CompetitorUpdateBody{MemberNumber: ptr("100000999")},
+			racing:   "100000555",
+			wantLink: ptr(FakeAthleteID("100000555")),
+		},
+		{
+			name:     "leaving the member number out keeps the athlete",
+			body:     competitor.CompetitorUpdateBody{Rating: ptr("A")},
+			wantLink: ptr(FakeAthleteID("100000123")),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			repo := NewFakeCompetitorRepository(linked)
+			linker := tt.linker
+			if tt.racing != "" {
+				linker.OnUpsert = func() {
+					stored := repo.Competitors[linked.ID]
+					stored.MemberNumber = ptr(tt.racing)
+					stored.AthleteID = ptr(FakeAthleteID(tt.racing))
+					repo.Competitors[linked.ID] = stored
+				}
+			}
+			out, err := NewTestServiceWithAthletes(repo, linker).UpdateCompetitorByID(adminCtx(t),
+				&competitor.CompetitorUpdateInput{ID: linked.ID.String(), Body: tt.body})
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantLink, repo.Competitors[linked.ID].AthleteID)
+			if tt.wantLink == nil {
+				assert.Nil(t, out.Body.AthleteID)
+			} else {
+				assert.Equal(t, ptr(tt.wantLink.String()), out.Body.AthleteID)
+			}
+		})
+	}
 }

@@ -18,17 +18,27 @@ type CompetitorResponse struct {
 	PrimaryClub   *string   `json:"primaryClub" nullable:"true"`
 	SecondaryClub *string   `json:"secondaryClub" nullable:"true"`
 	MemberNumber  *string   `json:"memberNumber" nullable:"true"`
+	AthleteID     *string   `json:"athleteId" nullable:"true" format:"uuid"`
 	Team          string    `json:"team"`
 	CreatedAt     time.Time `json:"createdAt"`
 	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
-func newCompetitorResponse(competitor Competitor) CompetitorResponse {
+func newCompetitorResponse(competitor Competitor, showMemberNumber bool) CompetitorResponse {
 	// Not every competitor is entered in a tournament yet, so the column is
 	// nullable and an untagged competitor reports an empty id.
 	tournamentID := ""
 	if competitor.TournamentID != nil {
 		tournamentID = competitor.TournamentID.String()
+	}
+	var athleteID *string
+	if competitor.AthleteID != nil {
+		id := competitor.AthleteID.String()
+		athleteID = &id
+	}
+	var memberNumber *string
+	if showMemberNumber {
+		memberNumber = competitor.MemberNumber
 	}
 	return CompetitorResponse{
 		ID:            competitor.ID.String(),
@@ -43,7 +53,8 @@ func newCompetitorResponse(competitor Competitor) CompetitorResponse {
 		RatingYear:    competitor.RatingYear,
 		PrimaryClub:   competitor.PrimaryClub,
 		SecondaryClub: competitor.SecondaryClub,
-		MemberNumber:  competitor.MemberNumber,
+		MemberNumber:  memberNumber,
+		AthleteID:     athleteID,
 		Team:          competitor.Team,
 		CreatedAt:     competitor.CreatedAt,
 		UpdatedAt:     competitor.UpdatedAt,
@@ -71,7 +82,7 @@ type CompetitorCreateBody struct {
 
 	PrimaryClub   string `json:"primaryClub,omitempty" maxLength:"120" doc:"Primary club; omit if none"`
 	SecondaryClub string `json:"secondaryClub,omitempty" maxLength:"120" doc:"Secondary club; omit if none"`
-	MemberNumber  string `json:"memberNumber,omitempty" maxLength:"64" doc:"Member number; unique within an event"`
+	MemberNumber  string `json:"memberNumber,omitempty" maxLength:"64" doc:"USA Fencing member number: 9 digits starting with 1; unique within an event"`
 
 	Team string `json:"team,omitempty" maxLength:"120" doc:"Deprecated: use primaryClub"`
 }
@@ -92,7 +103,7 @@ type CompetitorUpdateBody struct {
 
 	PrimaryClub   *string `json:"primaryClub,omitempty" maxLength:"120" doc:"Primary club; send an empty string to clear it"`
 	SecondaryClub *string `json:"secondaryClub,omitempty" maxLength:"120" doc:"Secondary club; send an empty string to clear it"`
-	MemberNumber  *string `json:"memberNumber,omitempty" maxLength:"64" doc:"Member number; send an empty string to clear it"`
+	MemberNumber  *string `json:"memberNumber,omitempty" maxLength:"64" doc:"USA Fencing member number: 9 digits starting with 1; send an empty string to clear it and unlink the athlete"`
 
 	Team *string `json:"team,omitempty" maxLength:"120" doc:"Deprecated: use primaryClub"`
 }

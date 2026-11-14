@@ -17,10 +17,15 @@ var errMissingBearerToken = errors.New("missing bearer token")
 
 // NewAuthMiddleware requires a valid bearer token on every operation
 // requiresAuth selects, and puts the verified user ID on the request context
-// for handlers to read with session.UserIDFrom.
+// for handlers to read with session.UserIDFrom. A public operation still reads a
+// token when one is sent, so it can show signed-in callers more; a bad token
+// there just leaves the request anonymous.
 func NewAuthMiddleware(api huma.API, tokens *user.UserTokenManager) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		if !requiresAuth(ctx.Operation()) {
+			if userID, err := authenticate(ctx, tokens); err == nil {
+				ctx = huma.WithContext(ctx, session.WithUserID(ctx.Context(), userID))
+			}
 			next(ctx)
 			return
 		}

@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { TournamentCard } from "@/features/tournament/components/tournament-card";
 import type { Tournament } from "@/features/tournament/types/tournament";
 
-const tournament: Tournament = {
+const TOURNAMENT: Tournament = {
   id: "t1",
   name: "Northeastern Open",
   visibility: "public",
@@ -24,12 +24,21 @@ describe("TournamentCard", () => {
     { name: "public", admin: false, want: "Oakland, US", notWant: "Created Oct 6, 2026" },
     { name: "admin", admin: true, want: "Created Oct 6, 2026", notWant: "Oakland, US" },
   ])("renders the $name meta line", ({ admin, want, notWant }) => {
-    render(<TournamentCard tournament={tournament} admin={admin} />);
+    render(<TournamentCard tournament={TOURNAMENT} admin={admin} />);
 
     expect(screen.getByRole("link")).toHaveAttribute("href", "/tournaments/t1");
     expect(screen.getByText("Northeastern Open")).toBeInTheDocument();
     expect(screen.getByText(want)).toBeInTheDocument();
     expect(screen.queryByText(notWant)).not.toBeInTheDocument();
     expect(screen.getByText("In Progress")).toBeInTheDocument();
+  });
+
+  it.each([
+    { name: "public", admin: false, want: "Upcoming" },
+    { name: "admin", admin: true, want: "Scheduled" },
+  ])("labels a pending tournament for the $name view", ({ admin, want }) => {
+    render(<TournamentCard tournament={{ ...TOURNAMENT, status: "pending" }} admin={admin} />);
+
+    expect(screen.getByText(want)).toBeInTheDocument();
   });
 });

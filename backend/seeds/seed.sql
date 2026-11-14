@@ -99,6 +99,18 @@ INSERT INTO competitors (id, event_id, tournament_id, first_name, last_name, rat
   ('d0000000-0000-4000-8000-000000000030', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Pablo', 'Ruiz', 'E', 'Northeastern Fencing', 'M', '1997-12-29', 'Texas', now(), now(), 'Northeastern Fencing', NULL),
   ('d0000000-0000-4000-8000-000000000031', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Freya', 'Olsen', 'A', 'Allez Fencing', 'F', '1995-03-16', 'Massachusetts', now(), now(), 'Allez Fencing', NULL),
   ('d0000000-0000-4000-8000-000000000032', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Andre', 'Silva', 'D', 'Cambridge FC', 'M', '2002-09-01', 'New Jersey', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000033', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Sofia', 'Russo', 'A', 'Cambridge FC', 'F', '1997-03-14', 'Massachusetts', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000034', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Lena', 'Fischer', 'B', 'Northeastern Fencing', 'F', '2000-08-02', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000035', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Mei', 'Tanaka', 'C', 'Cambridge FC', 'F', '1999-11-23', 'New York', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000036', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Zara', 'Ahmed', 'B', 'Allez Fencing', 'F', '2002-05-30', 'New Jersey', now(), now(), 'Allez Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000037', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Chloe', 'Martin', 'D', 'Allez Fencing', 'F', '2003-01-09', 'Massachusetts', now(), now(), 'Allez Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000038', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Ines', 'Costa', 'A', 'Northeastern Fencing', 'F', '1996-07-18', 'Rhode Island', now(), now(), 'Northeastern Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000039', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Freya', 'Hansen', 'E', '', 'F', '2004-10-05', 'Connecticut', now(), now(), NULL, NULL),
+  ('d0000000-0000-4000-8000-000000000040', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Leah', 'Goldberg', 'C', 'Allez Fencing', 'F', '2001-02-27', 'New York', now(), now(), 'Allez Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000041', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Ava', 'Nguyen', 'U', 'Cambridge FC', 'F', '2005-06-11', 'Massachusetts', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000042', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Maria', 'Lopez', 'B', 'Northeastern Fencing', 'F', '1998-12-03', 'New Jersey', now(), now(), 'Northeastern Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000043', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Ruth', 'Okoro', 'D', 'Allez Fencing', 'F', '2000-04-21', 'Connecticut', now(), now(), 'Allez Fencing', NULL),
+  ('d0000000-0000-4000-8000-000000000044', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Julia', 'Novak', 'C', 'Northeastern Fencing', 'F', '1999-09-16', 'Rhode Island', now(), now(), 'Northeastern Fencing', NULL),
   ('d0000000-0000-4000-8000-000000000009', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Sofia', 'Rossi', 'C', 'Boston Fencing Club', 'F', '1996-03-05', 'New York', now(), now(), 'Boston Fencing Club', NULL),
   ('d0000000-0000-4000-8000-000000000010', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Kenji', 'Tanaka', 'U', 'Northeastern Fencing', 'M', '2002-08-16', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
   ('d0000000-0000-4000-8000-000000000011', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Leila', 'Haddad', 'D', 'Cambridge FC', 'F', '1994-10-09', 'Rhode Island', now(), now(), 'Cambridge FC', NULL),
@@ -108,6 +120,23 @@ INSERT INTO competitors (id, event_id, tournament_id, first_name, last_name, rat
   ('d0000000-0000-4000-8000-000000000015', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Hana', 'Sato', 'A', 'Northeastern Fencing', 'F', '1999-11-30', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
   ('d0000000-0000-4000-8000-000000000016', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Sofia', 'Rossi', 'C', 'Boston Fencing Club', 'F', '1996-03-05', 'New York', now(), now(), 'Boston Fencing Club', NULL)
 ON CONFLICT DO NOTHING;
+
+-- Maya and Kenji each entered two events; the shared athlete row is what
+-- ties their per-event competitor records together.
+INSERT INTO athletes (id, member_number, created_at, updated_at) VALUES
+  ('aa000000-0000-4000-8000-000000000001', '100000001', now(), now()),
+  ('aa000000-0000-4000-8000-000000000002', '100000002', now(), now())
+ON CONFLICT DO NOTHING;
+
+UPDATE competitors SET member_number = v.member_number, athlete_id = athletes.id
+FROM (VALUES
+  ('d0000000-0000-4000-8000-000000000001'::uuid, '100000001'),
+  ('d0000000-0000-4000-8000-000000000013'::uuid, '100000001'),
+  ('d0000000-0000-4000-8000-000000000010'::uuid, '100000002'),
+  ('d0000000-0000-4000-8000-000000000014'::uuid, '100000002')
+) v(id, member_number)
+JOIN athletes ON athletes.member_number = v.member_number
+WHERE competitors.id = v.id;
 
 -- Mixed Épée is mid-way through its pool stage; Women's Foil has one planned
 -- but not yet split into pools.

@@ -2,34 +2,32 @@ import { Pagination } from "@/components/primitives/pagination";
 import { ActiveFilterChips } from "@/features/tournament/components/active-filter-chips";
 import { CalendarButton } from "@/features/tournament/components/calendar-button";
 import { CalendarView } from "@/features/tournament/components/calendar-view";
-import { CreateTournamentCard } from "@/features/tournament/components/create-tournament-card";
 import { FilterSheet } from "@/features/tournament/components/filter-sheet";
 import { SearchForm } from "@/features/tournament/components/search-form";
 import { TournamentCard } from "@/features/tournament/components/tournament-card";
 import { WeekStrip } from "@/features/tournament/components/week-strip";
-import { parseTournamentFilters } from "@/features/tournament/lib/tournament-filters";
+import {
+  parseTournamentFilters,
+  TOURNAMENT_PAGE_SIZE,
+} from "@/features/tournament/lib/tournament-filters";
 import { getTournaments } from "@/features/tournament/services/getTournaments";
 import type { TournamentVisibility } from "@/features/tournament/types/tournament";
-
-const PAGE_SIZE = 20;
 
 interface TournamentBrowserProps {
   basePath: string;
   query: Record<string, string | string[] | undefined>;
-  canCreate?: boolean;
   visibility?: TournamentVisibility;
 }
 
 async function TournamentBrowser({
   basePath,
   query,
-  canCreate = false,
   visibility,
 }: TournamentBrowserProps) {
   const { offset, status, date, calendarView, search, tz, club, country } =
     parseTournamentFilters(query);
 
-  const { data, total, limit } = await getTournaments(PAGE_SIZE, offset, {
+  const { data, total, limit } = await getTournaments(TOURNAMENT_PAGE_SIZE, offset, {
     query: search,
     status,
     visibility,
@@ -43,12 +41,6 @@ async function TournamentBrowser({
     <>
       <WeekStrip />
       <main className="mx-auto flex w-full max-w-mobile flex-1 flex-col bg-background pb-5 font-manrope">
-        {canCreate && (
-          <div className="px-5 pt-5">
-            <CreateTournamentCard />
-          </div>
-        )}
-
         {calendarView && <CalendarView />}
 
         <div className="flex items-center gap-2.5 px-5 pt-3.5 pb-2.5">

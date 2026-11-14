@@ -74,6 +74,12 @@ type FakeScoringRepository struct {
 	Scores map[int64]scoring.Scoring
 	Err    error // when set, every method fails with it
 	nextID int64
+
+	// BeforeListScoringHistoryReturn, if set, runs after ListScoringHistory
+	// has computed its result but before returning it — lets a test simulate
+	// a write landing between a read's DB fetch and the cache fill that
+	// follows it, without real goroutines touching Scores concurrently.
+	BeforeListScoringHistoryReturn func()
 }
 
 func NewFakeScoringRepository(seed ...scoring.Scoring) *FakeScoringRepository {
@@ -229,6 +235,10 @@ func (f *FakeScoringRepository) ListScoringHistory(_ context.Context, boutID uui
 
 		return cmp.Compare(b.ID, a.ID)
 	})
+
+	if f.BeforeListScoringHistoryReturn != nil {
+		f.BeforeListScoringHistoryReturn()
+	}
 
 	return scores, nil
 }

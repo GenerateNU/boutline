@@ -3,6 +3,7 @@ package scoring
 import (
 	"net/http"
 
+	"boutline/internal/cache"
 	"boutline/internal/features/bout"
 	"boutline/internal/features/tournamentuser"
 	"boutline/internal/types"
@@ -16,8 +17,14 @@ const (
 )
 
 func RegisterScoringRoutes(api huma.API, params *types.ServiceParams) {
+	repo := NewScoringRepository(params.DB)
+	// nil in the shared test app, which builds routes without a real Redis connection.
+	if params.Redis != nil {
+		repo = NewCachedScoringRepository(repo, cache.NewRedisCache(params.Redis))
+	}
+
 	RegisterScoringService(api, NewScoringService(
-		NewScoringRepository(params.DB),
+		repo,
 		bout.NewBoutRepository(params.DB),
 		tournamentuser.NewTournamentUserRepository(params.DB),
 	))

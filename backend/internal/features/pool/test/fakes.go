@@ -65,6 +65,10 @@ type FakePoolRepository struct {
 	Tournaments map[uuid.UUID]uuid.UUID // pool id to the tournament its stage's event belongs to
 	OpenBouts   map[uuid.UUID]int64     // pool id to its bouts that have not ended
 	Err         error                   // when set, every method fails with it
+
+	Bouts       []pool.PoolBout
+	Competitors map[uuid.UUID]pool.PoolEntrant     // competitors that exist, by id
+	Stages      map[uuid.UUID]pool.LockedPoolStage // pool stage id to what create reads under its lock
 }
 
 func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
@@ -80,24 +84,90 @@ func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
 		WithBouts:   map[uuid.UUID]bool{},
 		Tournaments: tournaments,
 		OpenBouts:   map[uuid.UUID]int64{},
+
+		Competitors: map[uuid.UUID]pool.PoolEntrant{},
+		Stages:      map[uuid.UUID]pool.LockedPoolStage{},
 	}
 }
 
-func (f *FakePoolRepository) CreatePool(_ context.Context, toCreate *pool.Pool) error {
+func (f *FakePoolRepository) CreatePoolsWithBouts(_ context.Context, lineups []pool.PoolLineup) error {
 	if f.Err != nil {
 		return f.Err
 	}
 
-	if f.numberTaken(toCreate.PoolStageID, toCreate.Number, uuid.Nil) {
-		return fmt.Errorf("create pool: %w", errDuplicateNumber())
+	// The unique number and referee foreign key are the database's to enforce; the
+	// real-database test covers them.
+	now := time.Now()
+	for i := range lineups {
+		lineup := &lineups[i]
+		lineup.Pool.ID = uuid.New()
+		lineup.Pool.CreatedAt = now
+		lineup.Pool.UpdatedAt = now
+		f.Pools[lineup.Pool.ID] = lineup.Pool
+
+		for j := range lineup.Bouts {
+			lineup.Bouts[j].ID = uuid.New()
+			lineup.Bouts[j].PoolID = lineup.Pool.ID
+			lineup.Bouts[j].CreatedAt = now
+			lineup.Bouts[j].UpdatedAt = now
+			f.Bouts = append(f.Bouts, lineup.Bouts[j])
+		}
+		// New bouts are upcoming, so the pool can't be deleted or ended until they finish.
+		f.WithBouts[lineup.Pool.ID] = true
+		f.OpenBouts[lineup.Pool.ID] = int64(len(lineup.Bouts))
 	}
 
-	toCreate.ID = uuid.New()
-	toCreate.CreatedAt = time.Now()
-	toCreate.UpdatedAt = toCreate.CreatedAt
-	f.Pools[toCreate.ID] = *toCreate
-
 	return nil
+}
+
+// The fake has no concurrency to guard against, so fn runs on the fake itself.
+func (f *FakePoolRepository) WithLockedPoolStage(
+	_ context.Context,
+	poolStageID uuid.UUID,
+	fn func(repo pool.PoolRepository, stage pool.LockedPoolStage) error,
+) error {
+	if f.Err != nil {
+		return f.Err
+	}
+
+	stage, ok := f.Stages[poolStageID]
+	if !ok {
+		return fmt.Errorf("lock pool stage %s: %w", poolStageID, errs.ErrNotFound)
+	}
+
+	return fn(f, stage)
+}
+
+func (f *FakePoolRepository) ListPoolEntrants(
+	_ context.Context,
+	poolStageID uuid.UUID,
+	competitorIDs []uuid.UUID,
+	exceptPoolID uuid.UUID,
+) ([]pool.PoolEntrant, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	var entrants []pool.PoolEntrant
+	for _, id := range competitorIDs {
+		if entrant, ok := f.Competitors[id]; ok {
+			entrant.Seated = f.seated(poolStageID, id, exceptPoolID)
+			entrants = append(entrants, entrant)
+		}
+	}
+
+	return entrants, nil
+}
+
+func (f *FakePoolRepository) seated(poolStageID, competitorID, exceptPoolID uuid.UUID) bool {
+	for _, bout := range f.Bouts {
+		inBout := bout.Competitor1ID == competitorID || bout.Competitor2ID == competitorID
+		if inBout && bout.PoolID != exceptPoolID && f.Pools[bout.PoolID].PoolStageID == poolStageID {
+			return true
+		}
+	}
+
+	return false
 }
 
 // numberTaken mirrors the unique index on (pool_stage_id, number); except is the
@@ -203,6 +273,61 @@ func (f *FakePoolRepository) UpdatePoolByID(_ context.Context, id uuid.UUID, upd
 	}
 	stored.UpdatedAt = time.Now()
 	f.Pools[id] = stored
+
+	return nil
+}
+
+func (f *FakePoolRepository) GetPoolBoutSummary(_ context.Context, poolID uuid.UUID) (pool.PoolBoutSummary, error) {
+	if f.Err != nil {
+		return pool.PoolBoutSummary{}, f.Err
+	}
+
+	var summary pool.PoolBoutSummary
+	ruleSets := map[[2]int]bool{}
+	for _, bout := range f.Bouts {
+		if bout.PoolID != poolID {
+			continue
+		}
+		summary.Total++
+		if bout.Status != "upcoming" {
+			summary.Started++
+		}
+		ruleSets[[2]int{bout.PointsToWin, bout.TimeLimitSeconds}] = true
+		summary.PointsToWin = max(summary.PointsToWin, bout.PointsToWin)
+		summary.TimeLimitSeconds = max(summary.TimeLimitSeconds, bout.TimeLimitSeconds)
+	}
+	summary.RuleSets = int64(len(ruleSets))
+
+	return summary, nil
+}
+
+// ReplacePoolBouts swaps the pool's bouts. The started guards are the database's to
+// enforce under concurrency, and re-seat checks them first, so the fake trusts it.
+func (f *FakePoolRepository) ReplacePoolBouts(
+	ctx context.Context,
+	id uuid.UUID,
+	update pool.PoolUpdate,
+	bouts []pool.PoolBout,
+) error {
+	if err := f.UpdatePoolByID(ctx, id, update); err != nil {
+		return err
+	}
+
+	kept := make([]pool.PoolBout, 0, len(f.Bouts)+len(bouts))
+	for _, bout := range f.Bouts {
+		if bout.PoolID != id {
+			kept = append(kept, bout)
+		}
+	}
+	now := time.Now()
+	for i := range bouts {
+		bouts[i].ID = uuid.New()
+		bouts[i].PoolID = id
+		bouts[i].CreatedAt = now
+		bouts[i].UpdatedAt = now
+		kept = append(kept, bouts[i])
+	}
+	f.Bouts = kept
 
 	return nil
 }

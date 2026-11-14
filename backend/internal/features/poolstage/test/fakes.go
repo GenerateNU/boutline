@@ -63,9 +63,10 @@ func NewTestMemberships() *tournamentusertest.FakeMembershipLookup {
 type PoolCount struct{ Total, Open int64 }
 
 type FakePoolStageRepository struct {
-	PoolStages map[uuid.UUID]poolstage.PoolStage
-	WithBouts  map[uuid.UUID]bool // stages whose pools have bouts, so a delete is refused
-	PoolCounts map[uuid.UUID]PoolCount
+	PoolStages  map[uuid.UUID]poolstage.PoolStage
+	WithBouts   map[uuid.UUID]bool // stages whose pools have bouts, so a delete is refused
+	PoolCounts  map[uuid.UUID]PoolCount
+	Competitors map[uuid.UUID]poolstage.PoolStageCompetitor // competitors a proposal can read
 	// TournamentID is the tournament every stored stage's event belongs to.
 	TournamentID uuid.UUID
 	Err          error // when set, every method fails with it
@@ -78,9 +79,10 @@ func NewFakePoolStageRepository(seed ...poolstage.PoolStage) *FakePoolStageRepos
 	}
 
 	return &FakePoolStageRepository{
-		PoolStages: stages,
-		WithBouts:  map[uuid.UUID]bool{},
-		PoolCounts: map[uuid.UUID]PoolCount{},
+		PoolStages:  stages,
+		WithBouts:   map[uuid.UUID]bool{},
+		PoolCounts:  map[uuid.UUID]PoolCount{},
+		Competitors: map[uuid.UUID]poolstage.PoolStageCompetitor{},
 
 		TournamentID: TestTournamentID,
 	}
@@ -228,6 +230,24 @@ func (f *FakePoolStageRepository) DeletePoolStageByID(_ context.Context, id uuid
 	delete(f.PoolStages, id)
 
 	return nil
+}
+
+func (f *FakePoolStageRepository) ListPoolStageCompetitors(
+	_ context.Context,
+	competitorIDs []uuid.UUID,
+) ([]poolstage.PoolStageCompetitor, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	var competitors []poolstage.PoolStageCompetitor
+	for _, id := range competitorIDs {
+		if competitor, ok := f.Competitors[id]; ok {
+			competitors = append(competitors, competitor)
+		}
+	}
+
+	return competitors, nil
 }
 
 func (f *FakePoolStageRepository) guard(
