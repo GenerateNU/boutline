@@ -28,6 +28,15 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
   );
   const [query, setQuery] = useState("");
 
+  // Jumps to the furthest-along round the searched fencer appears in.
+  function handleQueryChange(next: string) {
+    setQuery(next);
+    const roundId = latestMatchingRoundId(tableau.rounds, next);
+    if (roundId) {
+      setSelectedRoundId(roundId);
+    }
+  }
+
   if (tableau.rounds.length === 0) {
     return (
       <p className="py-8 text-center text-muted-foreground">
@@ -45,15 +54,7 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
               type="text"
               aria-label="Search fencers or clubs"
               value={query}
-              onChange={(event) => {
-                const next = event.target.value;
-                setQuery(next);
-                // Jump to the furthest-along round the searched fencer appears in.
-                const roundId = latestMatchingRoundId(tableau.rounds, next);
-                if (roundId) {
-                  setSelectedRoundId(roundId);
-                }
-              }}
+              onChange={(event) => handleQueryChange(event.target.value)}
               placeholder="Enter search text"
               className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 placeholder:text-neutral-secondary focus-visible:ring-0"
             />
