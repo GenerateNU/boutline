@@ -1,0 +1,28 @@
+import { cn } from "cn";
+
+interface TbaBoutProps {
+  dimmed?: boolean;
+}
+
+// Stands in for a bout whose fencers aren't decided yet, e.g. the final before the semis finish.
+function TbaBout({ dimmed = false }: TbaBoutProps) {
+  return (
+    <div
+      role="group"
+      aria-label="Bout to be announced"
+      className={cn(
+        "w-full divide-y bg-card divide-muted-foreground/40 rounded-md border border-dashed border-outline px-3 py-1 text-muted-foreground",
+        { "opacity-40": dimmed },
+      )}
+    >
+      {[0, 1].map((side) => (
+        <div key={side} className="py-2">
+          <p>TBA</p>
+          <p className="text-xs">TBA</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export { TbaBout };

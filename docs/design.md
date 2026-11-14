@@ -545,8 +545,8 @@ replace the tournament's tabs rather than stacking under them.
   on `events`). It lists the event's own competitors (§8.4). Rows link to a fencer
   page, which is placeholder text.
 - **Pooling** (Partial): see §11.6 for its current state.
-- **Tableau** (Placeholder): a bout list from a hardcoded fixture, the same for every
-  event. Replaced in §12.5.
+- **Tableau** (Completed): bracket and list views of `GET /events/{id}/tableau`, with
+  search. See §12.5.
 - **Results** (Placeholder): static text. Replaced in §13.3.
 - **Bout page** (`…/bout/[boutId]`, Placeholder): two score tiles, a "Referee
   view" button and a touch log, from the fixture. Only its referee link reaches
@@ -1454,7 +1454,7 @@ once the event's pool stage has ended:
 
 ### 12.5 Tableau endpoint and tab
 
-**Status:** Planned. Issues: #156, #100, #168.
+**Status:** Completed. Issues: #156, #100, #168.
 
 - `GET /events/{id}/tableau` (public) returns every round from the bracket size
   down to the final, each with its bouts in slot order and each fencer's seed.
@@ -1470,9 +1470,11 @@ once the event's pool stage has ended:
 - `rounds` is `[]` when the event has no direct elimination or no entries.
   A bout whose fencer has no entry row is corrupt data and returns a 500.
 - The Tableau tab shows the bracket by round, with live scores on active bouts.
-  Positions without a bout (byes, rounds not yet created) are drawn empty. On a
-  phone it snaps to one round at a time, with round tabs kept in sync (#168).
-  Today it is the shared fixture (§4.4).
+  Positions without a bout (byes, rounds not yet created) are drawn as dashed
+  "TBA" cards. Scrolling the bracket sideways snaps to the nearest round, and the
+  round buttons above it follow: the button for the round snapped to is selected,
+  and picking a round button scrolls the bracket to that round (#168). A list view
+  of the selected round and a name/club search sit alongside the bracket.
 
 ---
 

@@ -45,6 +45,8 @@
   --color-obsidian: var(--obsidian);
   --color-fencing-white: var(--fencing-white);
   --color-blue-lightest: var(--blue-lightest);
+  --color-blue-soft: var(--blue-soft);
+  --color-blue-vivid: var(--blue-vivid);
   --color-neutral-secondary: var(--neutral-secondary);
   --color-neutral-muted: var(--neutral-muted);
   --color-accent-green: var(--accent-green);
@@ -203,6 +205,8 @@
   --obsidian: #010d21;
   --fencing-white: #fafafa;
   --blue-lightest: #f2f6fe;
+  --blue-soft: #dbe3f9;
+  --blue-vivid: #2840a9;
   --neutral-secondary: #586472;
   --neutral-muted: #969da5;
   --accent-green: #00c597;

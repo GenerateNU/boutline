@@ -1,21 +1,37 @@
-import { Section } from "@/components/primitives/section";
+import { Background } from "@/components/primitives/background";
+import { BackButton } from "@/components/primitives/back-button";
+import { getEvents } from "@/features/event/services/getEvents";
+import { getTableau } from "../_services/tableau";
+import { TableauView } from "./_components/tableau-view";
 
-import { BoutList } from "../_components/bout-list";
-import { BOUTS } from "../_services/bouts";
-
-interface TableauTabProps
-  extends PageProps<"/tournaments/[tournamentId]/events/[eventId]/tableau"> {}
+interface TableauTabProps extends PageProps<"/tournaments/[tournamentId]/events/[eventId]/tableau"> {}
 
 export default async function TableauTab({ params }: TableauTabProps) {
   const { tournamentId, eventId } = await params;
+  const [tableau, events] = await Promise.all([
+    getTableau(eventId),
+    getEvents(tournamentId),
+  ]);
+  const eventName =
+    events.find((event) => event.id === eventId)?.name ?? "Events";
 
   return (
-    <Section title="Tableau Tab" className="flex flex-col gap-4">
-      <p>the direct elimination bracket for this event</p>
-      <BoutList
-        bouts={BOUTS.filter(({ stage }) => stage === "tableau")}
-        eventPath={`/tournaments/${tournamentId}/events/${eventId}`}
-      />
-    </Section>
+    <div className="relative isolate -mx-4 h-[calc(100dvh-10.5rem)] overflow-clip bg-fencing-white px-4 pt-4">
+      <Background version={7} />
+      <div className="flex h-full flex-col">
+        <BackButton
+          href={`/tournaments/${tournamentId}/events`}
+          className="-ml-3 mb-2 w-fit shrink-0 text-2xl text-[#1E1E1E]"
+        >
+          {eventName}
+        </BackButton>
+        <div className="min-h-0 flex-1">
+          <TableauView
+            tableau={tableau}
+            boutBasePath={`/tournaments/${tournamentId}/events/${eventId}/bout`}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
