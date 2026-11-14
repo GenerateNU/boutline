@@ -40,8 +40,13 @@ async function search(term: string) {
   });
 }
 
-async function openSheet() {
-  render(<FencerFilterSheet tournamentId="t 1" />);
+const EVENTS = [
+  { value: "e1", label: "Cadet Men's Épée" },
+  { value: "e2", label: "Junior Women's Foil" },
+];
+
+async function openSheet(events?: typeof EVENTS) {
+  render(<FencerFilterSheet tournamentId="t 1" events={events} />);
   await act(async () => {
     fireEvent.click(screen.getByRole("button", { name: "Filter fencers" }));
   });
@@ -126,6 +131,27 @@ describe("FencerFilterSheet", () => {
       "Men",
       "Other",
     ]);
+  });
+
+  it.each([
+    { name: "on an event's page", events: undefined, hasEvent: false },
+    { name: "on the tournament's Fencers tab", events: EVENTS, hasEvent: true },
+  ])("offers the Event filter only $name", async ({ events, hasEvent }) => {
+    await openSheet(events);
+
+    expect(Boolean(screen.queryByRole("combobox", { name: "Event" }))).toBe(hasEvent);
+  });
+
+  it("filters by a picked event, starting from the one in the URL", async () => {
+    currentParams = new URLSearchParams("event=e1");
+    await openSheet(EVENTS);
+    expect(screen.getByRole("combobox", { name: "Event" })).toHaveTextContent("Cadet Men's Épée");
+
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "Event" }), { key: "Enter" });
+    fireEvent.click(screen.getByRole("option", { name: "Junior Women's Foil" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/fencers?event=e2", { scroll: false });
   });
 
   it("filters by a picked rating and keeps the club from the URL", async () => {

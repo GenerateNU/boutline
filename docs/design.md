@@ -516,19 +516,21 @@ search bar with a clear button. Fencer and club rows keep their pin button, whic
   no label). Missing values show as placeholders: "Dates TBC", "Location TBC", and
   "Organizer contact TBC" always, since no contact is stored. An unknown ID is a 404.
 - **Fencers:** the tournament name as the title, then search (suggesting fencer
-  names as you type), a filter sheet (Club, Weapon, Age Category, Rating Category,
-  Gender), removable filter chips, and a paginated list of fencer cards (name,
-  country · club, a rating badge like "A26") from
-  `GET /competitors?tournament_id=&q&team&rating`. The country is a placeholder
-  showing US for everyone. Only Club and Rating Category work; Weapon, Age and
-  Gender show as disabled controls under a "Greyed-out filters are coming soon."
-  note, since competitors don't store them, and set no URL param.
+  names as you type), a filter sheet (Club, Event, Weapon, Age Category, Rating
+  Category, Gender), removable filter chips, and a paginated list of fencer cards
+  (name, country · club, a rating badge like "A26") from
+  `GET /competitors?tournament_id=&q&team&rating&eventId`. The country is a
+  placeholder showing US for everyone. Club, Event and Rating Category work, using
+  the filters the API already has; Weapon, Age and Gender show as disabled controls
+  under a "Greyed-out filters are coming soon." note, since the API can't filter on
+  them, and set no URL param.
 - **Clubs:** the tournament name as the title, search suggesting Fencers and Clubs,
-  a filter button, and a paginated list of clubs with their fencer counts from
+  a filter button, and a paginated list of clubs from
   `GET /tournaments/{id}/teams`; each links to the Fencers tab filtered to that
   club. The filter sheet's Fencer, Club and Weapon sections are all disabled
-  placeholders (same note), and its buttons just close it. There is no club
-  location: clubs store only a name.
+  placeholders (same note), and its buttons just close it. Each row's second line
+  reads "US · Location TBC", as the design's "US · Boston, MA": clubs store no
+  location yet.
 - **Events:** "< {name}" back to Overview, search, a filter sheet (Fencer, Club,
   Weapon, Age Category, Gender, Event Status, Date, Event Type; all but Fencer and
   Club filter on the page) with chips, a light week strip whose calendar icon opens an
@@ -549,9 +551,9 @@ back to the tournament.
 
 - **Fencers** (Completed): a "Fencers" heading and the same list as the tournament's
   Fencers tab (search with suggestions, Club and Rating filters, chips, and rows
-  with the pin button). It lists every fencer in the tournament, since competitors
-  don't belong to an event yet (§8.4). Rows link to a fencer page, which is
-  placeholder text.
+  with the pin button), limited to this event's fencers with
+  `GET /competitors?eventId=`; the Event filter isn't offered here. Rows link to a
+  fencer page, which is placeholder text.
 - **Pooling** (Partial): see §11.6 for its current state.
 - **Tableau** (Placeholder): a bout list from a hardcoded fixture, the same for every
   event. Replaced in §12.5.

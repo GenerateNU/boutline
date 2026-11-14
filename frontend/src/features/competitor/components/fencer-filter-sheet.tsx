@@ -7,7 +7,7 @@ import { ChipGroup, ChipGroupOptions } from "@/components/primitives/chip-group"
 import { ComingSoonNote } from "@/components/primitives/coming-soon-note";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
-import { SelectField } from "@/components/primitives/select-field";
+import { SelectField, type SelectOption } from "@/components/primitives/select-field";
 import {
   AGE_OPTIONS,
   GENDER_OPTIONS,
@@ -23,12 +23,15 @@ const SUGGESTION_LIMIT = 10;
 
 interface FencerFilterSheetProps {
   tournamentId: string;
+  // The tournament's events to filter by; left out on an event's own page.
+  events?: SelectOption[];
 }
 
-function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
+function FencerFilterSheet({ tournamentId, events }: FencerFilterSheetProps) {
   const { searchParams, setFilters } = useTournamentFilters();
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState("");
+  const [eventId, setEventId] = useState("");
 
   const clubField = useFilterSearch(async (term) => {
     const query = new URLSearchParams({ limit: String(SUGGESTION_LIMIT), q: term });
@@ -47,6 +50,7 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         if (next) {
           clubField.reset(searchParams.get("team") ?? "");
           setRating(searchParams.get("rating") ?? "");
+          setEventId(searchParams.get("event") ?? "");
         }
         setOpen(next);
       }}
@@ -56,9 +60,10 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
       onReset={() => {
         clubField.reset();
         setRating("");
+        setEventId("");
       }}
       onSubmit={() => {
-        setFilters({ team: clubField.submitValue(), rating });
+        setFilters({ team: clubField.submitValue(), rating, ...(events && { event: eventId }) });
         setOpen(false);
       }}
     >
@@ -85,6 +90,16 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         maxLength={120}
         noun="clubs"
       />
+
+      {events && (
+        <SelectField
+          label="Event"
+          placeholder="Any event"
+          options={events}
+          value={eventId}
+          onValueChange={setEventId}
+        />
+      )}
 
       <ChipGroup label="Weapon" disabled>
         <ChipGroupOptions options={WEAPON_OPTIONS} />

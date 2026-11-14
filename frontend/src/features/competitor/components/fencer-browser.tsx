@@ -4,6 +4,7 @@ import { FencerCard } from "@/features/competitor/components/fencer-card";
 import { FencerFilterSheet } from "@/features/competitor/components/fencer-filter-sheet";
 import { RATING_CATEGORIES } from "@/features/competitor/lib/rating-categories";
 import { getCompetitors } from "@/features/competitor/services/getCompetitors";
+import { getEvents } from "@/features/event/services/getEvents";
 import {
   ActiveFilterChips,
   type ActiveFilter,
@@ -17,9 +18,11 @@ interface FencerBrowserProps {
   tournamentId: string;
   basePath: string;
   query: SearchParams;
+  // Set on an event's page, which lists only that event's fencers.
+  eventId?: string;
 }
 
-async function FencerBrowser({ tournamentId, basePath, query }: FencerBrowserProps) {
+async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerBrowserProps) {
   const search = readStringParam(query, "q");
   const team = readStringParam(query, "team");
   const ratingParam = readStringParam(query, "rating");
@@ -27,15 +30,21 @@ async function FencerBrowser({ tournamentId, basePath, query }: FencerBrowserPro
   const rating = RATING_CATEGORIES.includes(ratingParam) ? ratingParam : "";
   const offset = readOffsetParam(query);
 
+  // Only the tournament-wide list offers the Event filter.
+  const events = eventId ? [] : await getEvents(tournamentId);
+  const pickedEvent = events.find(({ id }) => id === readStringParam(query, "event"));
+
   const { data, total, limit } = await getCompetitors(tournamentId, PAGE_SIZE, offset, {
     query: search,
     team,
     rating,
+    eventId: eventId ?? pickedEvent?.id,
   });
 
   const activeFilters: ActiveFilter[] = [
     { param: "team", label: team && `Club: ${team}` },
     { param: "rating", label: rating && `Rating: ${rating}` },
+    { param: "event", label: pickedEvent && `Event: ${pickedEvent.name}` },
   ].filter((filter): filter is ActiveFilter => Boolean(filter.label));
 
   return (
@@ -48,7 +57,10 @@ async function FencerBrowser({ tournamentId, basePath, query }: FencerBrowserPro
           defaultValue={search}
           suggest={{ tournamentId, sources: [{ kind: "fencers", href: basePath }] }}
         />
-        <FencerFilterSheet tournamentId={tournamentId} />
+        <FencerFilterSheet
+          tournamentId={tournamentId}
+          events={eventId ? undefined : events.map(({ id, name }) => ({ value: id, label: name }))}
+        />
       </div>
 
       <ActiveFilterChips filters={activeFilters} />
@@ -72,7 +84,7 @@ async function FencerBrowser({ tournamentId, basePath, query }: FencerBrowserPro
         limit={limit}
         offset={offset}
         basePath={basePath}
-        params={{ q: search, team, rating }}
+        params={{ q: search, team, rating, event: pickedEvent?.id }}
       />
     </>
   );

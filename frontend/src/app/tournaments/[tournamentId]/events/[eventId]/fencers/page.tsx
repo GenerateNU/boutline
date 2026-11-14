@@ -7,7 +7,6 @@ export default async function EventFencersTab({
 }: PageProps<"/tournaments/[tournamentId]/events/[eventId]/fencers">) {
   const [{ tournamentId, eventId }, query] = await Promise.all([params, searchParams]);
 
-  // The backend has no event roster yet, so this lists the whole tournament.
   return (
     <>
       <Text as="h1" variant="title">
@@ -17,6 +16,7 @@ export default async function EventFencersTab({
         tournamentId={tournamentId}
         basePath={`/tournaments/${tournamentId}/events/${eventId}/fencers`}
         query={query}
+        eventId={eventId}
       />
     </>
   );
