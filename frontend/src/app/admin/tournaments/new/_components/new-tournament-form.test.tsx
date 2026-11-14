@@ -435,7 +435,7 @@ describe("NewTournamentForm", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Create tournament" }));
 
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/tournaments/id-1"));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/admin/tournaments/id-1"));
     expect(requests()).toEqual(["POST /api/v1/tournaments", "POST /api/v1/events"]);
     expect(apiCalls[1].body).toMatchObject({ tournament_id: "id-1", weapon: "foil", gender: "female" });
     const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY)!);
@@ -496,6 +496,6 @@ describe("NewTournamentForm", () => {
     expect(screen.queryByText(/Autofilled/)).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Y14 Women's Foil" })).not.toBeInTheDocument();
     await act(async () => finishSaving!());
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/tournaments/t1"));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/admin/tournaments/t1"));
   });
 });

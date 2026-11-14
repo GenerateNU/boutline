@@ -1103,8 +1103,9 @@ are placed into pools.
   back in keeps its draft.
 - **Submit:** Create tournament runs the same checks, saves the tournament if it
   isn't saved, then every unsaved event in parallel. When all succeed it clears
-  the draft and opens `/tournaments/{id}`. Otherwise it stays, names the cards
-  that failed, and keeps the draft; the button is disabled while anything saves.
+  the draft and opens the tournament dashboard (§4.6). Otherwise it stays, names
+  the cards that failed, and keeps the draft; the button is disabled while anything
+  saves.
 - **Accepted risk:** requests carry no idempotency key, so a create that succeeds
   on the server but fails on the network can be duplicated by the retry.
 - **Planned:** adding staff and showing the competitor and staff counts on the

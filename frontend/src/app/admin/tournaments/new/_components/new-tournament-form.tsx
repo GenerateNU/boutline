@@ -137,7 +137,7 @@ function NewTournamentForm() {
       return;
     }
     clear();
-    router.push(`/tournaments/${tournamentId}`);
+    router.push(`/admin/tournaments/${tournamentId}`);
   }
 
   // Derived from the cards' own errors, so it goes away once a retry fixes them.
