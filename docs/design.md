@@ -459,6 +459,8 @@ from the venue floor.
 
 - A server-rendered list of public tournaments with a status badge (Upcoming /
   Active / Ended), empty states, and Previous/Next pagination, 20 per page.
+- **Loading:** a skeleton of the page (dark date row, search bar, title, five
+  shimmering card placeholders) shows until the list arrives.
 - **Search:** a plain GET form that works without JS; with JS it updates `?q=`
   after a 300 ms debounce.
 - **Dates:** five day tabs in a dark row under the global nav, with paging and a
@@ -1651,7 +1653,7 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   tag), label, button, segmented button, search bar, dropdown, text field,
   select, date field, checkbox, radio, toggle, slider, calendar,
   dropzone and upload dialog, modal, filter sheet, pagination, toast, tooltip,
-  progress indicators, and a loading spinner.
+  progress indicators, a loading spinner, and a shimmering skeleton block.
 - Form fields (text field, select, date field) share one hi-fi frame: a `text-xs`
   label above a `rounded-md border-outline` box that turns `border-blue` with a
   `ring-blue-lighter` halo on focus or open, a 2px `border-red-dark` when
@@ -1675,6 +1677,8 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   route. The logo takes its tone from the text colour (`text-white` or `text-blue`).
 - Fetched content shows `Loading` until it arrives: a route's `loading.tsx` sits
   under its tab bar, and client fetches render it in place of their first result.
+  `/tournaments` shows a `Skeleton` layout of the page instead (§4.2). `Skeleton`
+  shimmers with `motion-safe:` and stays flat when reduced motion is on.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.
 

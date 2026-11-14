@@ -86,6 +86,7 @@
   --animate-pop-out: pop-out 120ms ease-in;
   --animate-sheet-in: sheet-in 250ms cubic-bezier(0.32, 0.72, 0, 1);
   --animate-sheet-out: sheet-out 200ms ease-in;
+  --animate-shimmer: shimmer 1.5s ease-in-out infinite;
 
   /* `scale` and `translate` are their own properties, so these don't clobber
      Tailwind's -translate-*-1/2 centring the way a `transform` keyframe would. */
@@ -130,6 +131,11 @@
   @keyframes fade-out {
     to {
       opacity: 0;
+    }
+  }
+  @keyframes shimmer {
+    to {
+      translate: 100% 0;
     }
   }
   /* Radix measures the content and exposes its height for these. Fading as it
