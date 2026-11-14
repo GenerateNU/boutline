@@ -84,6 +84,7 @@ type CompetitorListFilter struct {
 	EventID      *uuid.UUID  // nil means don't filter by event
 	TournamentID *uuid.UUID  // nil means don't filter by tournament
 	Rating       *Rating     // nil means don't filter by rating
+	Gender       *Gender     // nil means don't filter by gender
 	Team         *string     // nil means don't filter by team
 	Term         string      // fuzzy match against name; empty means don't filter
 	Limit        int
@@ -210,6 +211,9 @@ func (r *competitorRepository) ListCompetitors(
 	}
 	if filter.Rating != nil {
 		query = query.Where("rating = ?", string(*filter.Rating))
+	}
+	if filter.Gender != nil {
+		query = query.Where("gender = ?", string(*filter.Gender))
 	}
 	if filter.Team != nil {
 		query = utils.SubstringMatch(query, competitorTeamSearchColumns, *filter.Team)

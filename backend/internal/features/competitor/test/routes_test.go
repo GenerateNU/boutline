@@ -198,6 +198,20 @@ func TestListEndpoint(t *testing.T) {
 		assert.InDelta(t, 1, body["total"], 0)
 	})
 
+	t.Run("filters by gender from the query string", func(t *testing.T) {
+		t.Parallel()
+		mixed := []competitor.Competitor{
+			seeded("A", "Adams", competitor.RatingA, ""),
+			seeded("B", "Baker", competitor.RatingA, ""),
+		}
+		mixed[1].Gender = competitor.GenderM
+		resp := newTestAPI(t, mixed...).Get("/api/v1/competitors?gender=M")
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+		body := decodeBody(t, resp.Body.Bytes())
+		assert.Len(t, body["data"], 1)
+		assert.InDelta(t, 1, body["total"], 0)
+	})
+
 	t.Run("filters by team from the query string", func(t *testing.T) {
 		t.Parallel()
 		mixed := []competitor.Competitor{

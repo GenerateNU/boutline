@@ -485,8 +485,9 @@ from the venue floor.
   without moving the strip. The icon beside the title opens a Calendar pop-up
   (month and year steppers); picking a day and pressing Show Tournaments applies
   it. Both filter by `start_time`.
-- **Active filters:** each applied Status, Club or Country filter shows as a pill
-  under the search bar; its × removes just that filter.
+- **Active filters:** each applied Status, Club or Country filter shows as a
+  `Name: Value` pill (e.g. "Status: In Progress", "Country: France") under the
+  search bar; its × removes just that filter.
 - **Filter sheet:** Status, Club and Country work; the Distance slider is inert, since
   tournaments have no coordinates (#122). Club suggests names from `GET /clubs` and
   sets `?club=`; Country offers only countries that have tournaments, from
@@ -528,11 +529,19 @@ Tabs: Overview · Fencers · Clubs · Events.
 Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers. These
 replace the tournament's tabs rather than stacking under them.
 
-- **Fencers** (Completed): search, pagination, and a filter sheet with Fencer (sets
-  `?q=`) and Club (sets `?team=`) searches, each accepting either a picked suggestion
-  from the dropdown or typed text committed with Enter. It lists every fencer in the tournament, since
-  competitors don't belong to an event yet (§8.4). Rows link to a fencer page,
-  which is placeholder text.
+- **Fencers** (Completed): search, pagination, and a filter sheet with Club (sets
+  `?team=`, a search accepting either a picked suggestion from the dropdown or typed
+  text committed with Enter), Rating (a select, sets `?rating=`, A–E plus U shown as
+  "Unrated"), and Gender (a row of single-select outline chips, sets `?gender=`, F/M/O
+  shown as Female/Male/Other). There is no Fencer search in the sheet — that collided
+  with the page's own search bar, so free-text name search is the search bar (`?q=`)
+  alone now. Applied filters show as `Name: Value` removable pills (e.g. "Club: bos",
+  "Rating: Unrated", "Gender: Female") under the search bar and at the top of the
+  sheet. Weapon and Age Category appear in the Figma but are deferred to the
+  tournament-level Fencers tab, since `competitors` carries neither column (both live
+  on `events`). It lists every fencer in the tournament, since competitors don't
+  belong to an event yet (§8.4). Rows link to a fencer page, which is placeholder
+  text.
 - **Pooling** (Partial): see §11.6 for its current state.
 - **Tableau** (Placeholder): a bout list from a hardcoded fixture, the same for every
   event. Replaced in §12.5.
@@ -1783,10 +1792,10 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   filled or `destructive` action). The filter sheet is a `rounded-t-3xl` bottom sheet
   whose search sections are a label above a `FilterSearchField` whose suggestions show
   in a `Dropdown` of `DropdownOption` rows while typing; picked values show as
-  removable tags at the top until submitted. Other sections are a Distance slider and
-  rows of outline chips (`ChipGroup` / `ChipGroupItem`), then a full-width Clear All
-  and a filled submit. `triggerActive` gives the trigger its pressed look while
-  filters are applied. The toast is
+  removable tags at the top until submitted. Other sections are a Distance slider, a
+  Select, and rows of outline chips (`ChipGroup` / `ChipGroupItem`), then a full-width
+  Clear All and a filled submit. `triggerActive` gives the trigger its pressed look
+  while filters are applied. The toast is
   a single obsidian row with white `text-sm`, a leading icon, an `accent-green`
   action, and no close button.
 - The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and `navigation-item`.

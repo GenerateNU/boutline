@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 
-import { ActiveFilterChips } from "@/features/tournament/components/active-filter-chips";
+import { ActiveFilterChips } from "@/components/primitives/active-filter-chips";
 
 const replace = jest.fn();
 const CURRENT_PARAMS = new URLSearchParams("status=active&club=Salle+Nord&country=FR&q=open");
@@ -10,22 +10,29 @@ jest.mock("next/navigation", () => ({
   usePathname: () => "/tournaments",
   useSearchParams: () => CURRENT_PARAMS,
 }));
-jest.mock("../../../services/api-request", () => ({ apiRequest: jest.fn() }));
 
 describe("ActiveFilterChips", () => {
   beforeEach(() => replace.mockClear());
 
   it("renders nothing without filters", () => {
-    const { container } = render(<ActiveFilterChips />);
+    const { container } = render(<ActiveFilterChips filters={[]} />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it.each([
-    ["In Progress", "/tournaments?club=Salle+Nord&country=FR&q=open"],
-    ["Salle Nord", "/tournaments?status=active&country=FR&q=open"],
-    ["France", "/tournaments?status=active&club=Salle+Nord&q=open"],
-  ])("removes only the %s filter", (label, expected) => {
-    render(<ActiveFilterChips status="active" club="Salle Nord" country="FR" />);
+    ["Status: In Progress", "status", "/tournaments?club=Salle+Nord&country=FR&q=open"],
+    ["Club: Salle Nord", "club", "/tournaments?status=active&country=FR&q=open"],
+    ["Country: France", "country", "/tournaments?status=active&club=Salle+Nord&q=open"],
+  ])("removes only the %s filter", (label, _param, expected) => {
+    render(
+      <ActiveFilterChips
+        filters={[
+          { param: "status", name: "Status", value: "In Progress" },
+          { param: "club", name: "Club", value: "Salle Nord" },
+          { param: "country", name: "Country", value: "France" },
+        ]}
+      />,
+    );
 
     expect(screen.getByText(label)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: `Remove ${label}` }));
