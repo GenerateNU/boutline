@@ -273,11 +273,12 @@ func TestDeleteEndpoint(t *testing.T) {
 	api := newTestAPI(t, NewFakeTournamentLookup(activeTournament), stored)
 	base := "/api/v1/bouts/" + stored.ID.String()
 	admin := asUser(t, TestAdminID)
+	referee := asUser(t, TestRefereeID)
 
-	require.Equal(t, http.StatusOK, api.PostCtx(admin, base+"/start").Code)
+	require.Equal(t, http.StatusOK, api.PostCtx(referee, base+"/start").Code)
 	assert.Equal(t, http.StatusConflict, api.DeleteCtx(admin, base).Code)
 
-	require.Equal(t, http.StatusOK, api.PostCtx(admin, base+"/end").Code)
+	require.Equal(t, http.StatusOK, api.PostCtx(referee, base+"/end").Code)
 	deleted := api.DeleteCtx(admin, base)
 	require.Equal(t, http.StatusNoContent, deleted.Code, "body: %s", deleted.Body)
 	assert.Empty(t, deleted.Body.String())
@@ -327,6 +328,12 @@ func TestForbiddenCallersEndpoints(t *testing.T) {
 			return api.PostCtx(ctx, base+upcoming.ID.String()+"/start").Code
 		}},
 		{"end by a non-member", ptr(uuid.New()), func(api humatest.TestAPI, ctx context.Context) int {
+			return api.PostCtx(ctx, base+active.ID.String()+"/end").Code
+		}},
+		{"start by an admin who is not the bout's referee", ptr(TestAdminID), func(api humatest.TestAPI, ctx context.Context) int {
+			return api.PostCtx(ctx, base+upcoming.ID.String()+"/start").Code
+		}},
+		{"end by a referee who is not the bout's referee", ptr(TestOtherRefereeID), func(api humatest.TestAPI, ctx context.Context) int {
 			return api.PostCtx(ctx, base+active.ID.String()+"/end").Code
 		}},
 	}

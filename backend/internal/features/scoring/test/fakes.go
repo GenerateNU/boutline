@@ -30,8 +30,9 @@ var (
 )
 
 // NewTestBouts holds the one bout, TestBoutID, that the tests' scores belong to.
+// TestRefereeID is its assigned referee.
 func NewTestBouts() *FakeBoutLookup {
-	return NewFakeBoutLookup(bout.Bout{ID: TestBoutID, TournamentID: TestTournamentID})
+	return NewFakeBoutLookup(bout.Bout{ID: TestBoutID, TournamentID: TestTournamentID, RefereeID: &TestRefereeID})
 }
 
 // NewTestMemberships makes TestAdminID an admin and TestRefereeID a referee of TestTournamentID.

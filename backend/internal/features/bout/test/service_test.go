@@ -33,7 +33,7 @@ func seededBout(status bout.BoutStatus, tournamentID uuid.UUID) bout.Bout {
 	return bout.Bout{
 		ID:            uuid.New(),
 		TournamentID:  tournamentID,
-		RefereeID:     ptr(uuid.New()),
+		RefereeID:     ptr(TestRefereeID),
 		PointsToWin:   11,
 		Status:        status,
 		Competitor1ID: uuid.New(),
@@ -648,7 +648,7 @@ func TestStartBout(t *testing.T) {
 
 		code, detail := apiError(t, err)
 		assert.Equal(t, http.StatusConflict, code)
-		assert.Equal(t, "a referee must be assigned before the bout can start", detail)
+		assert.Equal(t, "a referee must be assigned to the bout first", detail)
 		assert.Equal(t, bout.BoutStatusUpcoming, repo.Bouts[stored.ID].Status)
 	})
 
@@ -755,20 +755,45 @@ func TestEndBout(t *testing.T) {
 	})
 }
 
-func TestStartAndEndRequireReferee(t *testing.T) {
+func TestStartAndEndRequireTheAssignedReferee(t *testing.T) {
 	t.Parallel()
 
+	const (
+		roleDetail        = "this requires the referee role in the tournament"
+		notAssignedDetail = "only the bout's assigned referee can start, score or end it"
+	)
 	activeTournament := seededTournament(tournament.TournamentStatusActive)
+	outsider := uuid.New()
 	tests := []struct {
-		name     string
-		noCaller bool
-		caller   uuid.UUID
-		allowed  bool
+		name       string
+		noCaller   bool
+		caller     uuid.UUID
+		assigned   *uuid.UUID // the bout's referee; nil means none is assigned
+		wantCode   int        // 0 means allowed
+		wantDetail string
 	}{
-		{name: "no caller", noCaller: true},
-		{name: "not a member", caller: uuid.New()},
-		{name: "referee", caller: TestRefereeID, allowed: true},
-		{name: "admin", caller: TestAdminID, allowed: true},
+		{name: "the assigned referee", caller: TestRefereeID, assigned: &TestRefereeID},
+		{name: "an admin assigned as the referee", caller: TestAdminID, assigned: &TestAdminID},
+		{
+			name: "an admin who is not the bout's referee", caller: TestAdminID, assigned: &TestRefereeID,
+			wantCode: http.StatusForbidden, wantDetail: notAssignedDetail,
+		},
+		{
+			name: "another referee of the tournament", caller: TestOtherRefereeID, assigned: &TestRefereeID,
+			wantCode: http.StatusForbidden, wantDetail: notAssignedDetail,
+		},
+		{
+			name: "an assigned referee outside the tournament's staff", caller: outsider, assigned: &outsider,
+			wantCode: http.StatusForbidden, wantDetail: roleDetail,
+		},
+		{
+			name: "no caller", noCaller: true, assigned: &TestRefereeID,
+			wantCode: http.StatusForbidden, wantDetail: roleDetail,
+		},
+		{
+			name: "a referee when no one is assigned", caller: TestRefereeID,
+			wantCode: http.StatusConflict, wantDetail: "a referee must be assigned to the bout first",
+		},
 	}
 
 	transitions := []struct {
@@ -786,20 +811,21 @@ func TestStartAndEndRequireReferee(t *testing.T) {
 				t.Parallel()
 
 				stored := seededBout(transition.from, activeTournament.ID)
+				stored.RefereeID = tt.assigned
 				repo := NewFakeBoutRepository(stored)
 				service := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament), NewFakePoolLookup(nil), staffOf(activeTournament.ID))
 
 				out, err := transition.call(service, callerCtx(t, tt.noCaller, tt.caller), &bout.BoutIDInput{ID: stored.ID.String()})
 
-				if tt.allowed {
+				if tt.wantCode == 0 {
 					require.NoError(t, err)
 					assert.Equal(t, transition.to, out.Body.Status)
 					return
 				}
 
 				code, detail := apiError(t, err)
-				assert.Equal(t, http.StatusForbidden, code)
-				assert.Equal(t, "this requires the referee role in the tournament", detail)
+				assert.Equal(t, tt.wantCode, code)
+				assert.Equal(t, tt.wantDetail, detail)
 				assert.Equal(t, transition.from, repo.Bouts[stored.ID].Status)
 			})
 		}
