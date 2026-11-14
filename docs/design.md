@@ -449,9 +449,9 @@ from the venue floor.
   from a page nested under it (an event's Events tab), which adds an entry.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
-- **`/`**: quick links to login, tournaments and pinned items, then a showcase of
-  the design-system primitives (Appendix C). The showcase is a development page,
-  not the product's home.
+- **`/`**: redirects to `/tournaments`.
+- **404** (`app/not-found.tsx`): unmatched URLs and `notFound()` calls show the
+  logo, "Page not found" and a Back to home button that links to `/`.
 
 ### 4.2 Tournament search (`/tournaments`)
 
@@ -466,9 +466,9 @@ from the venue floor.
   Dragging the row locks to the previous, current or next five days: past a
   quarter of its width it turns the page, otherwise it springs back. Turning a
   page, by drag or chevron, selects its first day; tapping a day selects it
-  without moving the strip. The icon beside the title toggles a month calendar (with month and
-  year steppers) open above the search bar, on the same screen. Both filter by
-  `start_time`.
+  without moving the strip. The icon beside the title opens a Calendar pop-up
+  (month and year steppers); picking a day and pressing Show Tournaments applies
+  it. Both filter by `start_time`.
 - **Active filters:** each applied Status, Club or Country filter shows as a pill
   under the search bar; its × removes just that filter.
 - **Filter sheet:** Status, Club and Country work; the Distance slider is inert, since
@@ -1675,7 +1675,6 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   route. The logo takes its tone from the text colour (`text-white` or `text-blue`).
 - Fetched content shows `Loading` until it arrives: a route's `loading.tsx` sits
   under its tab bar, and client fetches render it in place of their first result.
-- Many are only used by the `/` showcase so far.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.
 

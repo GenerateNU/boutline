@@ -43,12 +43,12 @@ function GlobalNav() {
         </Navbar>
 
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40 motion-safe:data-open:animate-fade-in motion-safe:data-closed:animate-fade-out" />
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40 motion-safe:data-[state=open]:animate-fade-in motion-safe:data-[state=closed]:animate-fade-out" />
           {/* Radix keeps the drawer mounted until its closing animation ends, so it slides back out too. */}
           <Dialog.Content
             aria-describedby={undefined}
             onCloseAutoFocus={(event) => codeOpen && event.preventDefault()}
-            className="fixed inset-y-0 left-0 z-50 flex w-73 flex-col justify-between bg-fencing-white pb-10 font-manrope shadow-lg motion-safe:data-open:animate-drawer-in motion-safe:data-closed:animate-drawer-out"
+            className="fixed inset-y-0 left-0 z-50 flex w-73 flex-col justify-between bg-fencing-white pb-10 font-manrope shadow-lg motion-safe:data-[state=open]:animate-drawer-in motion-safe:data-[state=closed]:animate-drawer-out"
           >
             <div className="flex flex-col gap-6">
               <div className="flex h-18.5 items-center gap-3 bg-obsidian pr-6 pl-2.5">
