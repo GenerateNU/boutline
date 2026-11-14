@@ -1316,8 +1316,9 @@ with `buildPool` (`pooling/_fixtures/build-pool.ts`).
   a pick shows as a removable chip; then Pool Status and Pool Number chips, and Sort
   by Pool Number, Start time or Strip, with Clear All and Show pools. The button
   shows its pressed look while filters are applied.
-- **Pool page** (Planned): a back button to the list, the status pill and fencer count, and
-  the V/D grid (`V5` / `D3` cells). Below it sits the standings table. Tapping a
+- **Pool page:** one pool from `GET /api/v1/pool-sheets/{id}` (not-found for an
+  unknown or malformed id): a back button to the list, the status pill and fencer
+  count, and the V/D grid (`V5` / `D3` cells). Below it sits the standings table. Tapping a
   bout cell outlines it in navy and swaps the standings for "Showing the bout you
   tapped" and a bout card: Bout N of M, "Pool bout", an All bouts link, winner and
   loser rows with V/D tiles and scores, Status / Pool / Strip, and links to both
