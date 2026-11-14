@@ -145,6 +145,6 @@ describe("getTableau", () => {
   it("throws when the backend responds with an error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 404 });
 
-    await expect(getTableau("e-1")).rejects.toThrow("get tableau: 404");
+    await expect(getTableau("e-1")).rejects.toThrow("Request failed with status 404");
   });
 });
