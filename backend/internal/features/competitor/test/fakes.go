@@ -164,7 +164,7 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 		if filter.Rating != nil && candidate.Rating != *filter.Rating {
 			continue
 		}
-		if filter.Team != nil && candidate.Team != *filter.Team {
+		if filter.Team != nil && !strings.Contains(strings.ToLower(candidate.Team), strings.ToLower(*filter.Team)) {
 			continue
 		}
 		if len(filter.IDs) > 0 && !slices.Contains(filter.IDs, candidate.ID) {

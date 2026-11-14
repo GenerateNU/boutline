@@ -155,7 +155,7 @@ func (f *FakeTournamentRepository) ListTournaments(
 		if filter.CreatedBy != uuid.Nil && candidate.CreatedBy != filter.CreatedBy {
 			continue
 		}
-		if filter.Club != "" && !slices.Contains(f.Clubs[candidate.ID], filter.Club) {
+		if filter.Club != "" && !clubsContain(f.Clubs[candidate.ID], filter.Club) {
 			continue
 		}
 		if !strings.Contains(strings.ToLower(candidate.Name), term) {
@@ -179,6 +179,18 @@ func (f *FakeTournamentRepository) ListTournaments(
 	}
 
 	return matched, total, nil
+}
+
+// clubsContain approximates trigram word similarity with a case-insensitive
+// substring scan, since the fake has no pg_trgm to match against.
+func clubsContain(clubs []string, term string) bool {
+	term = strings.ToLower(term)
+	for _, club := range clubs {
+		if strings.Contains(strings.ToLower(club), term) {
+			return true
+		}
+	}
+	return false
 }
 
 func (f *FakeTournamentRepository) UpdateTournamentByID(

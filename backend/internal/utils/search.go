@@ -15,28 +15,41 @@ const trigramMinLength = 2
 
 // TrigramMatch narrows query to rows where term matches some continuous
 // extent of expr under pg_trgm's word_similarity_threshold, so the GIN
-// trigram indexes are used. This is a prefix/substring-friendly match rather
-// than a whole-string one: a short, partially typed term scores against the
-// best-matching part of expr, not the full thing. %> takes the indexed
-// expression on the left (matching the operator's indexable strategy) and
-// term on the right, equivalent to word_similarity(term, expr) > threshold.
-// expr is trusted SQL from the caller (a column or a concatenation); term is
-// always bound as a parameter. expr is parenthesized because %> binds tighter
-// than ||, so an unparenthesized concatenation expr would only apply %> to
-// its last operand and fail the boolean WHERE clause. The same parenthesizing
-// applies to ILIKE, which binds looser than ||.
+// trigram indexes are used.
 //
 // An empty term leaves query unfiltered, so a search with no term but a
 // filter (e.g. tournament_id) still returns every row the filter matches,
 // rather than nothing.
 func TrigramMatch(query *gorm.DB, expr, term string) *gorm.DB {
-	if term == "" {
+	fragment, args := TrigramPredicate(expr, term)
+	if fragment == "" {
 		return query
 	}
-	if utf8.RuneCountInString(term) < trigramMinLength {
-		return query.Where("("+expr+") ILIKE ?", likePrefixPattern(term))
+	return query.Where(fragment, args...)
+}
+
+// TrigramPredicate returns the WHERE fragment and args TrigramMatch would
+// apply, for callers that must embed it in SQL they build themselves. It
+// returns "", nil for an empty term.
+//
+// This is a prefix/substring-friendly match rather than a whole-string one:
+// a short, partially typed term scores against the best-matching part of
+// expr, not the full thing. %> takes the indexed expression on the left
+// (matching the operator's indexable strategy) and term on the right,
+// equivalent to word_similarity(term, expr) > threshold. expr is trusted SQL
+// from the caller (a column or a concatenation); term is always bound as a
+// parameter. expr is parenthesized because %> binds tighter than ||, so an
+// unparenthesized concatenation expr would only apply %> to its last operand
+// and fail the boolean WHERE clause. The same parenthesizing applies to
+// ILIKE, which binds looser than ||.
+func TrigramPredicate(expr, term string) (string, []any) {
+	if term == "" {
+		return "", nil
 	}
-	return query.Where("("+expr+") %> ?", term)
+	if utf8.RuneCountInString(term) < trigramMinLength {
+		return "(" + expr + ") ILIKE ?", []any{likePrefixPattern(term)}
+	}
+	return "(" + expr + ") %> ?", []any{term}
 }
 
 // TrigramOrder sorts by descending word similarity, breaking ties with

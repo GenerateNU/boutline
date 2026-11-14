@@ -207,7 +207,7 @@ func (r *competitorRepository) ListCompetitors(
 		query = query.Where("rating = ?", string(*filter.Rating))
 	}
 	if filter.Team != nil {
-		query = query.Where("team = ?", *filter.Team)
+		query = utils.TrigramMatch(query, competitorTeamTrigramExpr, *filter.Team)
 	}
 	if len(filter.IDs) > 0 {
 		query = query.Where("id IN ?", filter.IDs)

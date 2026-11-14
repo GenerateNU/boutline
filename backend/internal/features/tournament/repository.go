@@ -234,12 +234,15 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 	if filter.Club != "" {
 		// Raw SQL: importing the competitor package here would be an import cycle.
 		// Joins through events because competitors.tournament_id is nullable.
-		query = query.Where(`EXISTS (
+		primaryFragment, primaryArgs := utils.TrigramPredicate("competitors.primary_club", filter.Club)
+		secondaryFragment, secondaryArgs := utils.TrigramPredicate("competitors.secondary_club", filter.Club)
+		query = query.Where(fmt.Sprintf(`EXISTS (
 			SELECT 1 FROM competitors
 			JOIN events ON events.id = competitors.event_id
 			WHERE events.tournament_id = tournaments.id
-			AND (competitors.primary_club = ? OR competitors.secondary_club = ?))`,
-			filter.Club, filter.Club)
+			AND (%s OR %s))`, primaryFragment, secondaryFragment),
+			// Args line up positionally with the two predicates above: primary first, then secondary.
+			append(primaryArgs, secondaryArgs...)...)
 	}
 	query = utils.TrigramMatch(query, tournamentNameTrigramExpr, filter.Term)
 
