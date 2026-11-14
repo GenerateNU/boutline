@@ -25,20 +25,21 @@ function renderField(props: Partial<React.ComponentProps<typeof FilterSearchFiel
   return { onSubmit, onPick, onCommitText };
 }
 
-function pressEnter(value: string) {
+function pressEnter(value: string, isComposing = false) {
   const box = screen.getByRole("searchbox", { name: "Club" });
   fireEvent.change(box, { target: { value } });
-  fireEvent.keyDown(box, { key: "Enter" });
+  fireEvent.keyDown(box, { key: "Enter", isComposing });
 }
 
 describe("FilterSearchField", () => {
   it.each([
-    { name: "trims and commits typed text", text: "  bos  ", wantCommit: "bos" },
-    { name: "commits nothing for whitespace only", text: "   ", wantCommit: null },
-  ])("$name on Enter, without submitting the form", ({ text, wantCommit }) => {
+    { name: "trims and commits typed text", text: "  bos  ", isComposing: false, wantCommit: "bos" },
+    { name: "commits nothing for whitespace only", text: "   ", isComposing: false, wantCommit: null },
+    { name: "commits nothing mid IME composition", text: "bos", isComposing: true, wantCommit: null },
+  ])("$name on Enter, without submitting the form", ({ text, isComposing, wantCommit }) => {
     const { onSubmit, onCommitText } = renderField();
 
-    pressEnter(text);
+    pressEnter(text, isComposing);
 
     if (wantCommit) {
       expect(onCommitText).toHaveBeenCalledWith(wantCommit);
