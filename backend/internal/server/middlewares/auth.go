@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"boutline/internal/features/user"
+	"boutline/internal/session"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -16,7 +17,7 @@ var errMissingBearerToken = errors.New("missing bearer token")
 
 // NewAuthMiddleware requires a valid bearer token on every operation
 // requiresAuth selects, and puts the verified user ID on the request context
-// for handlers to read with user.UserIDFrom.
+// for handlers to read with session.UserIDFrom.
 func NewAuthMiddleware(api huma.API, tokens *user.UserTokenManager) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		if !requiresAuth(ctx.Operation()) {
@@ -35,7 +36,7 @@ func NewAuthMiddleware(api huma.API, tokens *user.UserTokenManager) func(huma.Co
 			return
 		}
 
-		next(huma.WithContext(ctx, user.WithUserID(ctx.Context(), userID)))
+		next(huma.WithContext(ctx, session.WithUserID(ctx.Context(), userID)))
 	}
 }
 
