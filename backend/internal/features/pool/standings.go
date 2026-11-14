@@ -2,10 +2,12 @@ package pool
 
 import "github.com/google/uuid"
 
-func poolStandings(fencers []PoolSheetFencerRow, bouts []PoolSheetBoutRow) map[uuid.UUID]PoolStanding {
-	standings := make(map[uuid.UUID]PoolStanding, len(fencers))
-	for _, fencer := range fencers {
-		standings[fencer.CompetitorID] = PoolStanding{}
+// RankPoolFencers ranks one pool, or a whole stage when given every pool's bouts at
+// once: each fencer's tally only reads their own bouts (FIE o.73 general ranking).
+func RankPoolFencers(competitorIDs []uuid.UUID, bouts []PoolSheetBoutRow) map[uuid.UUID]PoolStanding {
+	standings := make(map[uuid.UUID]PoolStanding, len(competitorIDs))
+	for _, id := range competitorIDs {
+		standings[id] = PoolStanding{}
 	}
 
 	for _, bout := range bouts {

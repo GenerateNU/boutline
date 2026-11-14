@@ -14,17 +14,21 @@ import {
   missingEventFields,
   RequiredEventField,
 } from "../tournament-draft-helpers";
-
-const WEAPONS = ["Foil", "Épée", "Sabre"];
-const GENDER_MIXES = ["Men", "Women", "Mixed"];
-const AGE_CATEGORIES = ["Y8", "Y10", "Y12", "Y14", "Cadet", "Junior", "Senior", "Veteran", "Open"];
-const RATING_LEVELS = ["Open", "B and under", "C and under", "D and under", "E and under", "Unrated"];
-const QUALIFIER_OPTIONS = ["No", "Yes"];
+import {
+  AGE_CATEGORIES,
+  GENDER_MIXES,
+  QUALIFIER_OPTIONS,
+  RATING_LEVELS,
+  WEAPONS,
+} from "../tournament-request-helpers";
 
 interface EventDraftFieldsProps {
   event: EventDraft;
-  // An event can only be saved once its tournament is.
+  // An event can only be saved once its tournament exists on the server.
   canSave: boolean;
+  saving: boolean;
+  // Set while the card is being deleted, so Save can't race the delete.
+  removing: boolean;
   // True once Save has failed, so empty fields stay marked from then on.
   attempted: boolean;
   onChange: (patch: Partial<EventDraft>) => void;
@@ -33,7 +37,7 @@ interface EventDraftFieldsProps {
   children: React.ReactNode;
 }
 
-function EventDraftFields({ event, canSave, attempted, onChange, onSave, children }: EventDraftFieldsProps) {
+function EventDraftFields({ event, canSave, saving, removing, attempted, onChange, onSave, children }: EventDraftFieldsProps) {
   const errorId = useId();
   // Recomputed from the event, so a field turns back to normal once it's filled.
   const invalid = new Set<RequiredEventField>(attempted ? missingEventFields(event) : []);
@@ -45,7 +49,7 @@ function EventDraftFields({ event, canSave, attempted, onChange, onSave, childre
   }
 
   return (
-    <>
+    <fieldset disabled={saving || removing} className="flex min-w-0 flex-col gap-4">
       <TextField
         label="Event name"
         placeholder="Y14 Women's Foil"
@@ -143,10 +147,16 @@ function EventDraftFields({ event, canSave, attempted, onChange, onSave, childre
       {canSave ? null : (
         <p className="text-xs text-neutral-secondary">Save the tournament details before saving an event.</p>
       )}
-      <Button type="button" variant="tonal" className="h-10 rounded-full" disabled={!canSave} onClick={onSave}>
-        Save event
+      <Button
+        type="button"
+        variant="tonal"
+        className="h-10 rounded-full"
+        disabled={!canSave || saving || removing}
+        onClick={onSave}
+      >
+        {saving ? "Saving…" : "Save event"}
       </Button>
-    </>
+    </fieldset>
   );
 }
 

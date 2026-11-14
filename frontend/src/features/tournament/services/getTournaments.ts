@@ -13,7 +13,7 @@ export async function getTournaments(
   limit: number,
   offset: number,
   { query, status, visibility, date, timeZone, club, country, mine }: TournamentListFilters = {},
-  sessionToken?: string,
+  token?: string,
 ): Promise<TournamentListResult> {
   const url = new URL("/api/v1/tournaments", API_PROXY_TARGET);
   url.searchParams.set("limit", String(limit));
@@ -44,8 +44,10 @@ export async function getTournaments(
 
   // This fetch skips the proxy that normally adds the session header, so the
   // caller passes the token when it wants mine or the roles.
-  const headers: HeadersInit = sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
-  const response = await fetch(url, { cache: "no-store", headers });
+  const response = await fetch(url, {
+    cache: "no-store",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
   if (!response.ok) {
     throw new Error(`list tournaments: ${response.status}`);
   }

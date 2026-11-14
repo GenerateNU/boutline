@@ -17,11 +17,12 @@ interface AdminTournamentBrowserProps {
 
 async function AdminTournamentBrowser({ query }: AdminTournamentBrowserProps) {
   const { offset, status } = parseTournamentFilters(query);
+  const token = await getSessionToken();
   const { data, total, limit } = await getTournaments(
     TOURNAMENT_PAGE_SIZE,
     offset,
     { status, mine: true },
-    await getSessionToken(),
+    token,
   );
 
   return (

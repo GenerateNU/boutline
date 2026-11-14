@@ -1,4 +1,4 @@
-import { apiRequest } from "./api-request";
+import { ApiError, apiRequest } from "./api-request";
 
 function respondWith(status: number, body: unknown) {
   global.fetch = jest.fn(async () => ({
@@ -13,6 +13,22 @@ describe("apiRequest", () => {
     respondWith(200, { id: "b1" });
 
     await expect(apiRequest("/bouts/b1")).resolves.toEqual({ id: "b1" });
+  });
+
+  it("resolves to undefined on a 204 with no body", async () => {
+    respondWith(204, undefined);
+
+    await expect(apiRequest("/competitors/c1", { method: "DELETE" })).resolves.toBeUndefined();
+  });
+
+  it("rejects with the response status on the error", async () => {
+    respondWith(404, { detail: "not found" });
+
+    await expect(apiRequest("/events/e1")).rejects.toMatchObject({
+      status: 404,
+      message: "not found",
+    });
+    await expect(apiRequest("/events/e1")).rejects.toBeInstanceOf(ApiError);
   });
 
   it.each([

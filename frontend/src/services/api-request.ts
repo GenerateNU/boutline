@@ -30,6 +30,9 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     headers.set("Content-Type", "application/json");
   }
   const response = await fetch(`/api/v1${path}`, { ...init, headers });
+  if (response.status === 204) {
+    return undefined as T;
+  }
   let body: unknown = null;
   try {
     body = await response.json();

@@ -115,17 +115,27 @@ describe("getTournaments", () => {
   });
 
   it.each([
-    { name: "mine with a session", filters: { mine: true }, token: "tok", wantMine: "true", wantAuth: "Bearer tok" },
-    { name: "neither", filters: {}, token: undefined, wantMine: null, wantAuth: undefined },
-  ])("sends mine and the session for $name", async ({ filters, token, wantMine, wantAuth }) => {
+    {
+      name: "mine and a token",
+      filters: { mine: true },
+      token: "abc",
+      expected: { mine: "true", authorization: "Bearer abc" },
+    },
+    {
+      name: "neither",
+      filters: {},
+      token: undefined,
+      expected: { mine: null, authorization: undefined },
+    },
+  ])("sends the mine param and bearer header for $name", async ({ filters, token, expected }) => {
     const body = { data: [], total: 0, limit: 20, offset: 0 };
     fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => body });
 
     await getTournaments(20, 0, filters, token);
 
     const [url, init] = fetchMock.mock.calls[0];
-    expect(new URL(url as string).searchParams.get("mine")).toBe(wantMine);
-    expect((init.headers as Record<string, string>).Authorization).toBe(wantAuth);
+    expect(new URL(url as string).searchParams.get("mine")).toBe(expected.mine);
+    expect(init.headers?.Authorization).toBe(expected.authorization);
   });
 
   it("throws when the backend responds with an error status", async () => {
