@@ -41,6 +41,18 @@ describe("useSessionStorage", () => {
     expect(sessionStorage.getItem("key")).toBe(JSON.stringify("updated"));
   });
 
+  it("applies an updater to the latest value, not the one from the last render", () => {
+    const { result } = renderHook(() => useSessionStorage("key", 0));
+    const setCount = result.current[1];
+
+    act(() => {
+      setCount((count) => count + 1);
+      setCount((count) => count + 1);
+    });
+
+    expect(result.current[0]).toBe(2);
+  });
+
   it("keeps the new value in memory when the storage write throws", () => {
     const { result } = renderHook(() => useSessionStorage("key", "default"));
 

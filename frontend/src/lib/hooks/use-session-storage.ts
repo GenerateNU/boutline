@@ -72,17 +72,23 @@ function writeValue<T>(key: string, value: T) {
 // useSyncExternalStore (rather than useState+useEffect) keeps the read in the
 // render/snapshot path, avoiding a setState-in-effect cascade and giving a
 // server snapshot for free.
+// An updater function reads the stored value at call time, so a caller that
+// awaited something in between can't overwrite writes made meanwhile.
 function useSessionStorage<T>(
   key: string,
   initialValue: T,
-): readonly [T, (value: T) => void] {
+): readonly [T, (next: T | ((current: T) => T)) => void] {
   const value = useSyncExternalStore(
     useCallback((onStoreChange: Listener) => subscribe(key, onStoreChange), [key]),
     useCallback(() => readValue(key, initialValue), [key, initialValue]),
     () => initialValue,
   );
 
-  const setStoredValue = useCallback((next: T) => writeValue(key, next), [key]);
+  const setStoredValue = useCallback(
+    (next: T | ((current: T) => T)) =>
+      writeValue(key, next instanceof Function ? next(readValue(key, initialValue)) : next),
+    [key, initialValue],
+  );
 
   return [value, setStoredValue] as const;
 }

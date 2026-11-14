@@ -982,15 +982,24 @@ are placed into pools.
 
 ### 10.6 Creation form (`/admin/tournaments/new`)
 
-**Status:** Partial. Issue: #136.
+**Status:** Partial. Issues: #136, #252.
 
-- **Built (UI only):** tournament fields (§10.1), four import dropzones (§10.4),
-  an admins field (§10.3), and any number of event blocks with every attribute in
-  §8.5.
+- **Built (UI only):** one page holds the tournament fields (§10.1), a CSV
+  dropzone (§10.4), and one card per event ("Event 1", "Event 2", …) with the
+  event name and the attributes in §8.5. Cards can be added and removed, keeping
+  at least one.
+- **Import:** the CSV's valid rows are sorted into cards by their Event column. A
+  card with a matching name (ignoring case) gets those fencers in place of its own,
+  so a second upload doesn't double them. Other events fill a blank card that has no
+  fencers yet, then get new cards. Each card lists its fencers in a toggle.
+- **Save event:** checks only that card's required fields, marking any that are
+  empty, then collapses the card to a summary until Edit reopens it.
+- **Draft:** the whole form, events and fencers included, is kept in
+  sessionStorage, so a reload doesn't lose it.
 - **Planned:** submit creates the tournament, then its events, then imports
   competitors and adds staff, showing per-row errors and landing on the new
-  tournament. Today submit discards everything and navigates away, and event
-  blocks cannot be removed.
+  tournament (#252). Today submit clears the draft and returns to the admin home.
+  Adding an event to an existing tournament has no screen.
 
 ### 10.7 Organizer console (`/admin`)
 
@@ -1623,9 +1632,9 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   progress indicators, and a loading spinner.
 - Form fields (text field, select, date field) share one hi-fi frame: a `text-xs`
   label above a `rounded-md border-outline` box that turns `border-blue` with a
-  `ring-blue-lighter` halo on focus or open, `border-red-dark` when `aria-invalid`,
-  a 2px `border-red-dark` when `:user-invalid` (a required field left empty once
-  edited or submitted), and `bg-disabled` when disabled. A required field's label
+  `ring-blue-lighter` halo on focus or open, a 2px `border-red-dark` when
+  `aria-invalid` or `:user-invalid` (a required field left empty once edited or
+  submitted), and `bg-disabled` when disabled. A required field's label
   ends in a `text-red-dark` asterisk, hidden from screen readers since `required`
   is already announced. Select is Radix Select; the date field opens the calendar
   in a Radix Popover.

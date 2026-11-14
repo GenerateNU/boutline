@@ -47,7 +47,7 @@ function TextField({
         className={cn(
           "flex h-10 items-center gap-2 rounded-md border border-outline bg-background px-3 text-sm text-obsidian [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-neutral-secondary",
           "not-has-disabled:hover:border-neutral-muted focus-within:border-blue focus-within:ring-3 focus-within:ring-blue-lighter",
-          "has-disabled:border-disabled-border has-disabled:bg-disabled has-disabled:text-disabled-foreground has-aria-invalid:border-red-dark has-user-invalid:border-2 has-user-invalid:border-red-dark has-user-invalid:px-2.75",
+          "has-disabled:border-disabled-border has-disabled:bg-disabled has-disabled:text-disabled-foreground has-aria-invalid:border-2 has-aria-invalid:border-red-dark has-aria-invalid:px-2.75 has-user-invalid:border-2 has-user-invalid:border-red-dark has-user-invalid:px-2.75",
         )}
       >
         {leading}

@@ -1,8 +1,4 @@
-import Link from "next/link";
-
-import { Button } from "@/components/primitives/button";
 import { Section } from "@/components/primitives/section";
-import { getSessionToken } from "@/features/auth/services/session";
 import { EventCard } from "@/features/event/components/event-card";
 import { getEvents } from "@/features/event/services/getEvents";
 import { SearchForm } from "@/features/tournament/components/search-form";
@@ -30,10 +26,7 @@ export default async function EventsTab({
   const requestedDay = readStringParam(query, "date") || undefined;
   const basePath = `/tournaments/${tournamentId}/events`;
 
-  const [events, sessionToken] = await Promise.all([
-    getEvents(tournamentId),
-    getSessionToken(),
-  ]);
+  const events = await getEvents(tournamentId);
 
   const days = eventDays(events);
   const selectedDay = selectEventDay(
@@ -63,13 +56,6 @@ export default async function EventsTab({
         placeholder="Enter Search Text"
         defaultValue={search}
       />
-      {sessionToken && (
-        <Button asChild className="self-start rounded-2xl">
-          <Link href={`/admin/tournaments/new/event?tournamentId=${tournamentId}`}>
-            Add event
-          </Link>
-        </Button>
-      )}
 
       {selectedDay && (
         <EventDateStrip
