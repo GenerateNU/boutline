@@ -1,8 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 
-import type { PoolTableData } from "../_types/pool-table";
-
-import { PoolTable } from "./pool-table";
+import { PoolTable } from "@/features/pool/components/pool-table";
+import type { PoolTableData } from "@/features/pool/types/pool-table";
 
 function grid(fencers: number): PoolTableData {
   const indexes = Array.from({ length: fencers }, (_, index) => index);

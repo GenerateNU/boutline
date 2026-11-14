@@ -462,7 +462,12 @@ from the venue floor.
   underline spans the whole tab.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
-- **`/`**: redirects to `/tournaments`.
+- **`/`**: the landing page. A `blue-dark` hero with a "Live fencing results"
+  eyebrow, the "Every bout. Every score. Live." headline, and two buttons: Find a
+  tournament (`/tournaments`) and Run your tournament (`/admin`). Below them sit an
+  Ongoing Events card, then a "Built for the strip, not the spreadsheet." section
+  with a sample `PoolTable`. Only the two buttons are interactive. The events and
+  the pool are placeholder data.
 - **404** (`app/not-found.tsx`): unmatched URLs and `notFound()` calls show the
   logo, "Page not found" and a Back to home button that links to `/`.
 
@@ -1764,7 +1769,9 @@ Geist Sans; Geist Mono for aligned numbers. Hi-fi screens (global nav, tournamen
 browser, filter sheet, Pools tab) use Manrope (`font-manrope`), and the BOUTLINE
 wordmark uses Special Gothic Expanded One (`font-wordmark`). Body and controls `text-sm`, metadata
 `text-xs text-muted-foreground`, at most `font-medium`. Sizes from `text-2xl` up are
-reserved for scores and bout banners. Referee scores go up to `text-9xl`.
+reserved for scores and bout banners. The exception is the landing page's `text-4xl`
+headlines (§4.1): the hero in the wordmark face and the section heading in semibold
+Manrope. Referee scores go up to `text-9xl`.
 
 ### C.4 Shape and interaction
 - `--radius` 0.625rem, with `rounded-sm`…`rounded-xl` derived from it. List cards

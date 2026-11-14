@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 
+import { PoolTable } from "@/features/pool/components/pool-table";
+
 import { PoolStandingsTable } from "../../_components/pool-standings-table";
-import { PoolTable } from "../../_components/pool-table";
 import { poolBoutDetail } from "../../_services/pool-bout-detail";
 import { boutsTable } from "../../_services/pool-table-data";
 import { poolTitle } from "../../_services/pool-title";

@@ -1,5 +1,6 @@
+import { PoolTableCell, PoolTableData } from "@/features/pool/types/pool-table";
+
 import { PoolBoard, PoolFencer } from "../_types/pool-board";
-import { PoolTableCell, PoolTableData } from "../_types/pool-table";
 
 import { fencerListName } from "./fencer-name";
 
