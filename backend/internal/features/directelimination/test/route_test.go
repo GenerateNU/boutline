@@ -24,8 +24,11 @@ func newDirectEliminationTestAPI(
 	t.Helper()
 
 	_, api := humatest.New(t)
-	directelimination.RegisterDirectEliminationService(api,
-		NewTestService(NewFakeDirectEliminationRepository(seed...)))
+	repo := NewFakeDirectEliminationRepository(seed...)
+	for _, round := range seed {
+		repo.Entries[round.ID] = 1
+	}
+	directelimination.RegisterDirectEliminationService(api, NewTestService(repo))
 
 	return api
 }

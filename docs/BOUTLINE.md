@@ -314,7 +314,7 @@ a status; there are no bracket rows.
 
 `direct_eliminations`: `event_id` (no foreign key yet, §8.2), `status`,
 `started_at`, `completed_at`. CRUD plus `POST /direct-eliminations/{id}/start`
-(`upcoming → active`) and `/complete` (`active → ended`). Only `event_id` is
+(`upcoming → active`, once the tableau is drawn) and `/complete` (`active → ended`). Only `event_id` is
 editable, and not once ended.
 
 ### 2.8 Bouts
