@@ -1,5 +1,5 @@
 import { Loading } from "@/components/primitives/loading";
 
-export default function AdminLoading() {
+export default function AdminTournamentsLoading() {
   return <Loading />;
 }

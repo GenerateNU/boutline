@@ -23,7 +23,7 @@ export default async function NewEventPage({
       </Link>
       <h1 className="text-xl font-medium text-brand">Create Event</h1>
       <NewEventForm
-        doneHref={eventsHref ?? "/admin"}
+        doneHref={eventsHref ?? "/admin/tournaments"}
         completesTournamentDraft={eventsHref === undefined}
       />
     </main>

@@ -9,18 +9,18 @@ describe("StatusTabs", () => {
     ["active", "In Progress"],
     ["ended", "Completed"],
   ] as const)("marks the %s tab as current", (status, label) => {
-    render(<StatusTabs basePath="/admin" status={status} />);
+    render(<StatusTabs basePath="/admin/tournaments" status={status} />);
 
     expect(screen.getByRole("link", { current: "page" })).toHaveTextContent(label);
   });
 
   it.each([
-    ["All", "/admin"],
-    ["Completed", "/admin?status=ended"],
-    ["In Progress", "/admin?status=active"],
-    ["Scheduled", "/admin?status=pending"],
+    ["All", "/admin/tournaments"],
+    ["Completed", "/admin/tournaments?status=ended"],
+    ["In Progress", "/admin/tournaments?status=active"],
+    ["Scheduled", "/admin/tournaments?status=pending"],
   ])("links %s to %s", (label, href) => {
-    render(<StatusTabs basePath="/admin" />);
+    render(<StatusTabs basePath="/admin/tournaments" />);
 
     expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", href);
   });

@@ -1,5 +1,7 @@
-import { AdminTournamentBrowser } from "@/features/tournament/components/admin-tournament-browser";
+import { redirect } from "next/navigation";
 
-export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
-  return <AdminTournamentBrowser query={await searchParams} />;
+// /admin is reserved for the organizer console; until it exists, the
+// tournament list is the admin home.
+export default function AdminPage() {
+  redirect("/admin/tournaments");
 }

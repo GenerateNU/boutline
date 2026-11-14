@@ -410,7 +410,7 @@ different roles in different tournaments.
   over a faint line pattern; each links to the other. Sign-up also asks for first
   and last name, which the backend requires. Failures show an error alert. On
   success it returns to `?next=` (validated so it can only point inside the
-  site), else `/admin`.
+  site), else `/admin/tournaments`.
 - **Log out:** on `/admin` pages a profile icon at the right of the global nav
   opens a "Log out?" confirmation; confirming clears the session and goes to
   `/login`.
@@ -521,7 +521,7 @@ replace the tournament's tabs rather than stacking under them.
   view" button and a touch log, from the fixture. Only its referee link reaches
   the real API.
 
-### 4.5 Admin home (`/admin`)
+### 4.5 Admin home (`/admin/tournaments`)
 
 **Status:** Partial.
 
@@ -530,8 +530,8 @@ Where login and signup land by default, behind the login gate. A solid-outlined
 Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) over
 every tournament (not yet only the caller's), paginated. Cards show the created
 date instead of the location. Organizers see `pending` as "Scheduled" with the blue
-badge; public screens keep "Upcoming". It switches to
-`GET /users/{me}/tournaments` in §10.7.
+badge; public screens keep "Upcoming". `/admin` redirects here until the console
+(§10.7) exists. It switches to `GET /users/{me}/tournaments` in §10.7.
 
 ---
 
@@ -993,8 +993,9 @@ are placed into pools.
 
 **Status:** Partial.
 
-The admin home (§4.5) is the console's entry point. Its tournaments list switches
-to `GET /users/{me}/tournaments`.
+Planned as a hub for the organizer's tools; until it exists, `/admin` redirects to
+the admin home (§4.5). The tournaments list switches to
+`GET /users/{me}/tournaments`.
 
 On the day, the admin checks fencers in, starts the tournament, generates pools
 (which creates bouts, so it needs the tournament `active`), assigns referees, and
