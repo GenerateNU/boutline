@@ -39,4 +39,17 @@ describe("CalendarButton", () => {
 
     expect(replace).not.toHaveBeenCalled();
   });
+
+  it("keeps the selected day when it's clicked again", async () => {
+    render(<CalendarButton />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Calendar" }));
+    });
+    fireEvent.click(screen.getByRole("button", { name: /October 5/ }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Show Tournaments" }));
+    });
+
+    expect(replace.mock.calls[0][0]).toContain("date=2026-10-05");
+  });
 });
