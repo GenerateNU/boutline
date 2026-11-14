@@ -25,6 +25,7 @@ export interface TournamentListFilters {
   timeZone?: string;
   club?: string;
   country?: string;
+  managed?: boolean;
 }
 
 export interface TournamentListResult {
@@ -32,4 +33,10 @@ export interface TournamentListResult {
   total: number;
   limit: number;
   offset: number;
+}
+
+export type TournamentRole = "admin" | "referee";
+
+export interface TournamentRoleResponse {
+  role: TournamentRole | null;
 }

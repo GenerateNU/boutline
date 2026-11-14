@@ -28,3 +28,9 @@ export async function getSessionToken(): Promise<string | undefined> {
   const cookieStore = await cookies();
   return cookieStore.get(SESSION_COOKIE)?.value;
 }
+
+// Server-side fetches to the backend send the session token the same way the /api proxy does.
+export async function sessionAuthHeaders(): Promise<Record<string, string>> {
+  const token = await getSessionToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}

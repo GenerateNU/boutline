@@ -1,3 +1,4 @@
+import { sessionAuthHeaders } from "@/features/auth/services/session";
 import { dayRange } from "@/features/tournament/lib/day-range";
 import type {
   TournamentListFilters,
@@ -12,7 +13,7 @@ const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000"
 export async function getTournaments(
   limit: number,
   offset: number,
-  { query, status, visibility, date, timeZone, club, country }: TournamentListFilters = {},
+  { query, status, visibility, date, timeZone, club, country, managed }: TournamentListFilters = {},
 ): Promise<TournamentListResult> {
   const url = new URL("/api/v1/tournaments", API_PROXY_TARGET);
   url.searchParams.set("limit", String(limit));
@@ -37,8 +38,13 @@ export async function getTournaments(
     url.searchParams.set("start_from", from.toISOString());
     url.searchParams.set("start_to", to.toISOString());
   }
+  if (managed) {
+    url.searchParams.set("managed", "true");
+  }
 
-  const response = await fetch(url, { cache: "no-store" });
+  // Only the managed list is per-user; skipping the token keeps the public list anonymous.
+  const headers = managed ? await sessionAuthHeaders() : undefined;
+  const response = await fetch(url, { cache: "no-store", headers });
   if (!response.ok) {
     throw new Error(`list tournaments: ${response.status}`);
   }

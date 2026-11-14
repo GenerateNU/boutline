@@ -6,6 +6,7 @@ import (
 
 	"boutline/internal/tests/testkit"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -98,4 +99,93 @@ func TestListTournamentUsersShowsWhatARefereeIsRunning(t *testing.T) {
 	assert.Equal(t, "Lee", lee["last_name"])
 	assert.Equal(t, true, lee["occupied"])
 	assert.Equal(t, float64(1), lee["pool_number"])
+}
+
+func TestGetCallerTournamentRoleAgainstRealDatabase(t *testing.T) {
+	app := testkit.GetDBTestApp(t)
+
+	tests := []struct {
+		name       string
+		headers    map[string]string
+		wantStatus int
+		wantRole   any
+	}{
+		{name: "an admin reads admin", headers: authHeaders(t, uuid.MustParse(alexMorgan)), wantStatus: http.StatusOK, wantRole: "admin"},
+		{name: "a referee reads referee", headers: authHeaders(t, uuid.MustParse(jordanLee)), wantStatus: http.StatusOK, wantRole: "referee"},
+		{name: "a user off the staff reads null", headers: authHeaders(t, searchTestUserID), wantStatus: http.StatusOK},
+		{name: "no token is unauthorized", wantStatus: http.StatusUnauthorized},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testkit.New(t).
+				Request(testkit.Request{
+					App:     app,
+					Route:   "/api/v1/tournaments/" + fallOpen2026 + "/role",
+					Method:  testkit.GET,
+					Headers: tt.headers,
+				}).
+				AssertStatus(tt.wantStatus)
+
+			if tt.wantStatus == http.StatusOK {
+				body := resp.GetBody()
+				role, present := body["role"]
+				require.True(t, present, "role must be present even when null")
+				assert.Equal(t, tt.wantRole, role)
+			}
+		})
+	}
+}
+
+func TestListManagedTournamentsAgainstRealDatabase(t *testing.T) {
+	app := testkit.GetDBTestApp(t)
+
+	list := func(userID string) []string {
+		body := testkit.New(t).
+			Request(testkit.Request{
+				App:     app,
+				Route:   "/api/v1/tournaments",
+				Method:  testkit.GET,
+				Query:   map[string]string{"managed": "true", "limit": "100"},
+				Headers: authHeaders(t, uuid.MustParse(userID)),
+			}).
+			AssertStatus(http.StatusOK).
+			GetBody()
+
+		rows, ok := body["data"].([]any)
+		require.True(t, ok, "data field is not an array")
+		names := make([]string, 0, len(rows))
+		for _, raw := range rows {
+			row, ok := raw.(map[string]any)
+			require.True(t, ok)
+			name, ok := row["name"].(string)
+			require.True(t, ok)
+			names = append(names, name)
+		}
+
+		return names
+	}
+
+	t.Run("an admin sees the tournaments they administer and not the others", func(t *testing.T) {
+		names := list(alexMorgan)
+
+		assert.Contains(t, names, "Fall Open 2026")
+		assert.Contains(t, names, "Summer Invitational 2026")
+		assert.NotContains(t, names, "Winter Classic 2026")
+	})
+
+	t.Run("a referee who administers nothing sees none", func(t *testing.T) {
+		assert.NotContains(t, list(jordanLee), "Fall Open 2026")
+	})
+
+	t.Run("no token is refused", func(t *testing.T) {
+		testkit.New(t).
+			Request(testkit.Request{
+				App:    app,
+				Route:  "/api/v1/tournaments",
+				Method: testkit.GET,
+				Query:  map[string]string{"managed": "true"},
+			}).
+			AssertStatus(http.StatusForbidden)
+	})
 }

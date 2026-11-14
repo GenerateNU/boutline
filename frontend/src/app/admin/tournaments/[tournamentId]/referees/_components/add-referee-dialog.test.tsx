@@ -37,7 +37,7 @@ const POOLS = { data: [{ id: "p-2", number: 2 }], total: 1, limit: 100, offset: 
 
 const EVENTS = [{ id: "e-1", name: "Mixed Épée" }] as TournamentEvent[];
 
-const DUPLICATE = new ApiError("This user is already on the tournament's staff", 409);
+const DUPLICATE = new ApiError("This user is already a referee in this tournament", 409);
 
 async function pickUser() {
   fireEvent.change(screen.getByRole("searchbox", { name: "Referee" }), {

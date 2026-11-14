@@ -1,10 +1,17 @@
+import { sessionAuthHeaders } from "@/features/auth/services/session";
 import { getTournaments } from "@/features/tournament/services/getTournaments";
+
+// next/jest rewrites the @/ alias in imports but not in jest.mock paths.
+jest.mock("../../auth/services/session", () => ({ sessionAuthHeaders: jest.fn() }));
+
+const sessionAuthHeadersMock = jest.mocked(sessionAuthHeaders);
 
 describe("getTournaments", () => {
   const fetchMock = jest.fn();
 
   beforeEach(() => {
     global.fetch = fetchMock;
+    sessionAuthHeadersMock.mockResolvedValue({ Authorization: "Bearer tok" });
   });
 
   afterEach(() => {
@@ -112,6 +119,28 @@ describe("getTournaments", () => {
     expect(searchParams.get("start_from")).toBe(expected.start_from);
     expect(searchParams.get("start_to")).toBe(expected.start_to);
     expect(searchParams.get("visibility")).toBe(expected.visibility);
+  });
+
+  it.each([
+    {
+      name: "managed",
+      filters: { managed: true },
+      expected: { managed: "true", authorization: "Bearer tok" },
+    },
+    {
+      name: "not managed",
+      filters: {},
+      expected: { managed: null, authorization: undefined },
+    },
+  ])("sends the right managed param and auth header when $name", async ({ filters, expected }) => {
+    const body = { data: [], total: 0, limit: 20, offset: 0 };
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => body });
+
+    await getTournaments(20, 0, filters);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(new URL(url as string).searchParams.get("managed")).toBe(expected.managed);
+    expect(init.headers?.Authorization).toBe(expected.authorization);
   });
 
   it("throws when the backend responds with an error status", async () => {

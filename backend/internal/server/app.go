@@ -8,6 +8,7 @@ import (
 	"boutline/internal/features/user"
 	"boutline/internal/server/middlewares"
 	"boutline/internal/server/routers"
+	"boutline/internal/session"
 	"boutline/internal/types"
 	"boutline/internal/utils"
 
@@ -32,7 +33,7 @@ func CreateApp(cfg *config.Configuration, db *gorm.DB, redisClient *redis.Client
 	humaConfig := huma.DefaultConfig(cfg.App.Name, cfg.App.Version)
 	humaConfig.DocsRenderer = huma.DocsRendererSwaggerUI
 	humaConfig.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
-		user.UserBearerScheme: {Type: "http", Scheme: "bearer", BearerFormat: "JWT"},
+		session.BearerScheme: {Type: "http", Scheme: "bearer", BearerFormat: "JWT"},
 	}
 
 	api := humafiber.NewV2(app, humaConfig)

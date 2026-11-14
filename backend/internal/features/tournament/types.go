@@ -56,6 +56,14 @@ type TournamentIDInput struct {
 	ID string `path:"id" format:"uuid" doc:"Tournament ID"`
 }
 
+type TournamentRoleResponse struct {
+	Role *tournamentuser.TournamentUserRole `json:"role" enum:"referee,admin" doc:"The caller's role in this tournament; null when they hold none"`
+}
+
+type TournamentRoleOutput struct {
+	Body TournamentRoleResponse
+}
+
 type TournamentCodeInput struct {
 	Code string `path:"code" minLength:"6" doc:"Join code, case-insensitive"`
 }
@@ -84,6 +92,7 @@ type TournamentListInput struct {
 	Visibility TournamentVisibility `query:"visibility" enum:"public,private" doc:"Filter by visibility; omit for all"`
 	Club       string               `query:"club" maxLength:"120" doc:"Only tournaments with a competitor whose primary or secondary club is exactly this"`
 	Country    string               `query:"country" pattern:"^[A-Z]{2}$" doc:"Only tournaments in this country (exact ISO 3166-1 alpha-2 code)"`
+	Managed    bool                 `query:"managed" doc:"Only tournaments the caller is an admin of; needs a token"`
 }
 
 type TournamentCountryListInput struct {

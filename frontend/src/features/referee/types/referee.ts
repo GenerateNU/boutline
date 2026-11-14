@@ -1,4 +1,4 @@
-export type TournamentRole = "admin" | "referee";
+import type { TournamentRole } from "@/features/tournament/types/tournament";
 
 export interface TournamentMember {
   user_id: string;

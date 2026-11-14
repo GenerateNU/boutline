@@ -3,6 +3,7 @@ package user
 import (
 	"net/http"
 
+	"boutline/internal/session"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -44,7 +45,7 @@ func RegisterUserService(api huma.API, service UserService) {
 		Path:        userBasePath,
 		Summary:     "List users, optionally fuzzy-matched by name",
 		Tags:        []string{"Users"},
-		Security:    UserBearerSecurity(),
+		Security:    session.BearerSecurity(),
 	}, service.ListUsers)
 
 	huma.Register(api, huma.Operation{
@@ -53,7 +54,7 @@ func RegisterUserService(api huma.API, service UserService) {
 		Path:        userBasePath + "/{id}",
 		Summary:     "Get a user by ID",
 		Tags:        []string{"Users"},
-		Security:    UserBearerSecurity(),
+		Security:    session.BearerSecurity(),
 	}, service.GetUserByID)
 
 	huma.Register(api, huma.Operation{

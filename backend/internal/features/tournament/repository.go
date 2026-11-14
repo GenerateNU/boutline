@@ -84,6 +84,7 @@ type TournamentListFilter struct {
 	Visibility TournamentVisibility
 	Club       string
 	Country    string
+	ManagedBy  uuid.UUID // zero means no filter
 	Limit      int
 	Offset     int
 }
@@ -228,6 +229,14 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 			WHERE events.tournament_id = tournaments.id
 			AND (competitors.primary_club = ? OR competitors.secondary_club = ?))`,
 			filter.Club, filter.Club)
+	}
+	if filter.ManagedBy != uuid.Nil {
+		// Raw SQL: tournamentuser imports this package, so it can't be used here.
+		query = query.Where(`EXISTS (
+			SELECT 1 FROM tournament_users
+			WHERE tournament_users.tournament_id = tournaments.id
+			AND tournament_users.user_id = ? AND tournament_users.role = 'admin')`,
+			filter.ManagedBy)
 	}
 	query = utils.TrigramMatch(query, tournamentNameTrigramExpr, filter.Term)
 

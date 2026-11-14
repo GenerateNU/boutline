@@ -9,6 +9,7 @@ import (
 
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
+	"boutline/internal/session"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
@@ -911,6 +912,91 @@ func TestCountriesEndpoint(t *testing.T) {
 			body := decodeBody(t, resp.Body.Bytes())
 			assert.Equal(t, tt.wantData, body["data"])
 			assert.InDelta(t, tt.wantTotal, body["total"], 0)
+		})
+	}
+}
+
+func TestCallerRoleEndpoint(t *testing.T) {
+	t.Parallel()
+
+	stored := seeded("stored", tournament.TournamentStatusPending)
+
+	tests := []struct {
+		name       string
+		caller     Caller
+		path       string
+		wantStatus int
+		wantRole   any
+	}{
+		{name: "an admin reads admin", caller: CallerAdmin, path: stored.ID.String(), wantStatus: http.StatusOK, wantRole: "admin"},
+		{name: "a referee reads referee", caller: CallerReferee, path: stored.ID.String(), wantStatus: http.StatusOK, wantRole: "referee"},
+		{name: "a stranger reads null", caller: CallerStranger, path: stored.ID.String(), wantStatus: http.StatusOK},
+		{name: "a caller with no identity is refused", caller: CallerAnonymous, path: stored.ID.String(), wantStatus: http.StatusForbidden},
+		{name: "rejects an id that is not a uuid", caller: CallerAdmin, path: "not-a-uuid", wantStatus: http.StatusUnprocessableEntity},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := newTestAPI(t, stored).GetCtx(tt.caller.Context(t.Context()), "/api/v1/tournaments/"+tt.path+"/role")
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+			if tt.wantStatus == http.StatusOK {
+				body := decodeBody(t, resp.Body.Bytes())
+				role, present := body["role"]
+				require.True(t, present, "role must be present even when null")
+				assert.Equal(t, tt.wantRole, role)
+			}
+		})
+	}
+}
+
+func TestCallerRoleEndpointRequiresABearerToken(t *testing.T) {
+	t.Parallel()
+
+	op := newTestAPI(t).OpenAPI().Paths["/api/v1/tournaments/{id}/role"].Get
+
+	require.NotNil(t, op)
+	assert.Equal(t, session.BearerSecurity(), op.Security)
+}
+
+func TestListEndpointManaged(t *testing.T) {
+	t.Parallel()
+
+	mine := seeded("Mine", tournament.TournamentStatusPending)
+	other := seeded("Other", tournament.TournamentStatusPending)
+
+	tests := []struct {
+		name       string
+		caller     Caller
+		query      string
+		wantStatus int
+		wantNames  []string
+	}{
+		{name: "an admin sees their tournaments", caller: CallerAdmin, query: "?managed=true", wantStatus: http.StatusOK, wantNames: []string{"Mine", "Other"}},
+		{name: "a stranger sees none", caller: CallerStranger, query: "?managed=true", wantStatus: http.StatusOK, wantNames: []string{}},
+		{name: "anonymous is refused", caller: CallerAnonymous, query: "?managed=true", wantStatus: http.StatusForbidden},
+		{name: "managed=false does not filter", caller: CallerAnonymous, query: "?managed=false", wantStatus: http.StatusOK, wantNames: []string{"Mine", "Other"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := newTestAPI(t, mine, other).GetCtx(tt.caller.Context(t.Context()), "/api/v1/tournaments"+tt.query)
+
+			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+			if tt.wantStatus != http.StatusOK {
+				return
+			}
+			rows, ok := decodeBody(t, resp.Body.Bytes())["data"].([]any)
+			require.True(t, ok)
+			names := make([]string, 0, len(rows))
+			for _, row := range rows {
+				names = append(names, row.(map[string]any)["name"].(string))
+			}
+			assert.Equal(t, tt.wantNames, names)
 		})
 	}
 }

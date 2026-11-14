@@ -54,10 +54,6 @@ describe("proxy", () => {
       want: "http://localhost:3000/login?next=%2Fadmin%2Ftournaments%2Fnew%3Fstep%3D2",
     },
     {
-      path: "/tournaments/t1/referees?q=ana",
-      want: "http://localhost:3000/login?next=%2Ftournaments%2Ft1%2Freferees%3Fq%3Dana",
-    },
-    {
       path: "/tournaments/t1/events/e1/bout/b1/referee",
       want: "http://localhost:3000/login?next=%2Ftournaments%2Ft1%2Fevents%2Fe1%2Fbout%2Fb1%2Freferee",
     },
@@ -74,7 +70,8 @@ describe("proxy", () => {
     { path: "/api/v1/tournaments", want: true },
     { path: "/admin", want: true },
     { path: "/admin/tournaments/new", want: true },
-    { path: "/tournaments/t1/referees", want: true },
+    { path: "/admin/tournaments/t1/referees", want: true },
+    { path: "/tournaments/t1/referees", want: false },
     { path: "/tournaments/t1/events/e1/bout/b1/referee", want: true },
     { path: "/tournaments", want: false },
     { path: "/tournaments/t1/events/e1/bout/b1", want: false },

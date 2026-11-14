@@ -11,12 +11,12 @@ const PAGE_SIZE = 20;
 export default async function RefereesTab({
   params,
   searchParams,
-}: PageProps<"/tournaments/[tournamentId]/referees">) {
+}: PageProps<"/admin/tournaments/[tournamentId]/referees">) {
   const [{ tournamentId }, query] = await Promise.all([params, searchParams]);
 
   const search = readStringParam(query, "q");
   const offset = readOffsetParam(query);
-  const basePath = `/tournaments/${tournamentId}/referees`;
+  const basePath = `/admin/tournaments/${tournamentId}/referees`;
 
   const [{ data, total, limit }, events] = await Promise.all([
     getReferees(tournamentId, PAGE_SIZE, offset, search),
