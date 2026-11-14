@@ -683,11 +683,13 @@ every pin when it's opened without one.
 
 ### 6.3 Pin controls
 
-**Status:** Planned.
+**Status:** Partial. Pools can be pinned (§11.6); the rest is Planned.
 
 A pin toggle on each fencer row (pinned rows turn light blue with a navy rating
 badge and pin), on clubs and on pools, and listing pinned clubs and pools (the
-Figma's Club and Pool cards).
+Figma's Club and Pool cards). Pool pins are stored with the others as `poolIds`;
+pins saved before that keep their fencers and bouts. `/pinned` doesn't list pinned
+pools yet.
 
 ---
 
@@ -1317,7 +1319,10 @@ with `buildPool` (`pooling/_fixtures/build-pool.ts`).
   and a Clubs group (up to five each); picking one searches for it. A card
   has a Bouts | Standings toggle that shows the V/D grid or the standings table (# ·
   Fencer · V · V/M · TS · TR · Ind, by place, names as "Last, First"), and a View
-  pool link. Pool pins are not built yet (§6.3).
+  pool link. A pin above each card's top-right corner pins the pool (filled navy
+  when pinned). Pinned pools always lead the list, alphabetically by title with
+  numbers compared as numbers, ahead of the chosen sort; the pool page has the same
+  pin beside its back button.
 - **Filter sheet:** a filter button beside the search opens the shared
   `FilterSheetDialog`. Fencer and Club suggest names from the pools as you type, and
   a pick shows as a removable chip; then Pool Status and Pool Number chips, and Sort

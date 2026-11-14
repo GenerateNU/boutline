@@ -1,11 +1,15 @@
 "use client";
 
+import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
+
 import { usePoolFilters } from "../_hooks/use-pool-filters";
 import { noPoolsMessage } from "../_services/no-pools-message";
+import { pinnedFirst } from "../_services/pinned-first";
 import type { PoolBoard } from "../_types/pool-board";
 
 import { PoolCard } from "./pool-card";
 import { PoolFilterSheet } from "./pool-filter-sheet";
+import { PoolPinButton } from "./pool-pin-button";
 import { PoolSearch } from "./pool-search";
 
 interface PoolListProps {
@@ -15,6 +19,8 @@ interface PoolListProps {
 
 export function PoolList({ pools, poolingPath }: PoolListProps) {
   const { search, setSearch, filters, setFilters, matches, options } = usePoolFilters(pools);
+  const { pinned } = usePinnedItems();
+  const ordered = pinnedFirst(matches, pinned.poolIds);
 
   return (
     <div className="flex flex-col gap-6 font-manrope">
@@ -22,10 +28,11 @@ export function PoolList({ pools, poolingPath }: PoolListProps) {
         <PoolSearch value={search} onChange={setSearch} options={options} />
         <PoolFilterSheet filters={filters} options={options} onApply={setFilters} />
       </div>
-      {matches.length > 0 ? (
-        <ul aria-label="Pools" className="flex flex-col gap-6">
-          {matches.map((pool) => (
-            <li key={pool.id}>
+      {ordered.length > 0 ? (
+        <ul aria-label="Pools" className="flex flex-col gap-4">
+          {ordered.map((pool) => (
+            <li key={pool.id} className="flex flex-col gap-1">
+              <PoolPinButton pool={pool} className="self-end" />
               <PoolCard pool={pool} poolingPath={poolingPath} />
             </li>
           ))}

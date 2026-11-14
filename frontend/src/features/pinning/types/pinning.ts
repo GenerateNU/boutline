@@ -1,6 +1,7 @@
 export interface PinnedIds {
   fencerIds: string[];
   boutIds: string[];
+  poolIds: string[];
 }
 
 export const PINNED_STORAGE_KEY = "boutline:pinned";

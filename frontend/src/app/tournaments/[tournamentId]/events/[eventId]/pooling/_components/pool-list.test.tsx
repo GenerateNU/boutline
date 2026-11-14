@@ -110,6 +110,10 @@ describe("PoolList search suggestions", () => {
 });
 
 describe("PoolList", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
   it.each([
     { query: "", all: poolTitles },
     { query: "strip 4", all: [poolTitles[1]] },
@@ -197,5 +201,40 @@ describe("PoolList", () => {
     applyFilter((sheet) => fireEvent.click(chip(sheet, "Completed")));
 
     expect(screen.getByText('No pools match "zzz" with these filters.')).toBeInTheDocument();
+  });
+
+  function pin(title: string) {
+    fireEvent.click(screen.getByRole("button", { name: `Pin ${title}` }));
+  }
+
+  it.each([
+    { case: "one pinned pool", pins: [poolTitles[2]], order: [2, 0, 1, 3] },
+    { case: "pinned pools, alphabetically", pins: [poolTitles[3], poolTitles[1]], order: [1, 3, 0, 2] },
+  ])("puts $case at the top", ({ pins, order }) => {
+    renderList("");
+
+    pins.forEach(pin);
+
+    expect(titles()).toEqual(order.map((index) => poolTitles[index]));
+  });
+
+  it("keeps pinned pools on top of the chosen sort", () => {
+    renderList("");
+    pin(poolTitles[0]);
+
+    applyFilter((sheet) => fireEvent.click(chip(sheet, "Strip")));
+
+    // Pool 1 is pinned; the rest follow by strip: 2, 4, 5.
+    expect(titles()).toEqual([poolTitles[0], poolTitles[3], poolTitles[1], poolTitles[2]]);
+  });
+
+  it("unpins a pool back into its place", () => {
+    renderList("");
+    pin(poolTitles[2]);
+
+    fireEvent.click(screen.getByRole("button", { name: `Unpin ${poolTitles[2]}` }));
+
+    expect(titles()).toEqual(poolTitles);
+    expect(screen.getByRole("button", { name: `Pin ${poolTitles[2]}` })).toHaveAttribute("aria-pressed", "false");
   });
 });
