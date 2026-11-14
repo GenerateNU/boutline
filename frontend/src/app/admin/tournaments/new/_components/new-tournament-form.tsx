@@ -13,6 +13,7 @@ import { pluralize } from "@/lib/pluralize";
 import { errorMessage } from "@/utils/error-message";
 
 import { useTournamentDraft } from "../_hooks/use-tournament-draft";
+import { missingEventFields } from "../tournament-draft-helpers";
 import { EventDraftCard } from "./event-draft-card";
 
 const AUTHORITIES = ["askFRED", "USA Fencing", "FIE", "Other"];
@@ -26,6 +27,8 @@ function NewTournamentForm() {
   const router = useRouter();
   const { draft, setField, addEvent, updateEvent, removeEvent, importRows, clear } = useTournamentDraft();
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const latestUpload = useRef(0);
 
   // Parses an uploaded CSV and sorts its fencers into event cards. A file that
@@ -50,9 +53,27 @@ function NewTournamentForm() {
     }
   }
 
+  function setExpanded(ids: string[], expanded: boolean) {
+    setCollapsed((current) => {
+      const next = new Set(current);
+      ids.forEach((id) => (expanded ? next.delete(id) : next.add(id)));
+      return next;
+    });
+  }
+
+  // The browser only checks fields on the page, and a collapsed card's aren't,
+  // so unsaved cards are checked here and reopened if they're missing anything.
   // Submitting doesn't save anything yet (#252), so it only clears the draft.
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const incomplete = draft.events
+      .map((draftEvent, index) => ({ draftEvent, title: `Event ${index + 1}` }))
+      .filter(({ draftEvent }) => !draftEvent.saved && missingEventFields(draftEvent).length > 0);
+    if (incomplete.length > 0) {
+      setExpanded(incomplete.map(({ draftEvent }) => draftEvent.id), true);
+      setSubmitError(`Finish ${incomplete.map(({ title }) => title).join(", ")} before creating the tournament.`);
+      return;
+    }
     clear();
     router.push("/admin/tournaments");
   }
@@ -119,6 +140,8 @@ function NewTournamentForm() {
           key={event.id}
           event={event}
           number={index + 1}
+          expanded={!collapsed.has(event.id)}
+          onToggle={() => setExpanded([event.id], collapsed.has(event.id))}
           onChange={(patch) => updateEvent(event.id, patch)}
           onRemove={draft.events.length > 1 ? () => removeEvent(event.id) : undefined}
         />
@@ -128,9 +151,16 @@ function NewTournamentForm() {
         Add event
       </Button>
 
-      <Button type="submit" variant="filled" className="mt-6 h-12 rounded-full">
-        Create tournament
-      </Button>
+      <div className="mt-6 flex flex-col gap-2">
+        {submitError ? (
+          <p role="alert" className="text-xs text-red-dark">
+            {submitError}
+          </p>
+        ) : null}
+        <Button type="submit" variant="filled" className="h-12 rounded-full">
+          Create tournament
+        </Button>
+      </div>
     </form>
   );
 }

@@ -994,6 +994,9 @@ are placed into pools.
   fencers yet, then get new cards. Each card lists its fencers in a toggle.
 - **Save event:** checks only that card's required fields, marking any that are
   empty, then collapses the card to a summary until Edit reopens it.
+- **Collapsing:** each card's header toggles it down to its title, event name and
+  fencer count. Collapsed fields escape the browser's required check, so submit
+  reopens any unsaved card that is missing fields and names it instead.
 - **Draft:** the whole form, events and fencers included, is kept in
   sessionStorage, so a reload doesn't lose it.
 - **Planned:** submit creates the tournament, then its events, then imports

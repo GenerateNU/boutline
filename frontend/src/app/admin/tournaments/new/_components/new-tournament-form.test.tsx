@@ -100,6 +100,47 @@ describe("NewTournamentForm", () => {
     expect(screen.getByRole("group", { name: "Event 2" })).toHaveTextContent("1 fencer");
   });
 
+  it("collapses a card to its name and fencer count, and expands it again", () => {
+    saveDraft([newEventDraft("Y14 Foil", [MARIA])]);
+    render(<NewTournamentForm />);
+    const card = screen.getByRole("group", { name: "Event 1" });
+    const toggle = within(card).getByRole("button", { expanded: true });
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveTextContent("Y14 Foil · 1 fencer");
+    expect(within(card).queryByRole("textbox")).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(within(card).getByRole("textbox", { name: "Event name" })).toHaveValue("Y14 Foil");
+  });
+
+  it("reopens a collapsed, unfinished card instead of submitting", () => {
+    sessionStorage.setItem(
+      "tournament-creation-draft",
+      JSON.stringify({
+        ...EMPTY_TOURNAMENT_DRAFT,
+        name: "Open",
+        location: "Boston, MA",
+        venue: "Gym",
+        date: "2026-11-20",
+        time: "09:00",
+        authority: "FIE",
+        events: [{ ...newEventDraft(), ...FILLED_EVENT, saved: true }, newEventDraft("Div II Epee")],
+      }),
+    );
+    render(<NewTournamentForm />);
+    const second = screen.getByRole("group", { name: "Event 2" });
+    fireEvent.click(within(second).getByRole("button", { expanded: true }));
+
+    fireEvent.submit(screen.getByRole("button", { name: "Create tournament" }).closest("form")!);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Finish Event 2 before creating the tournament.");
+    expect(within(second).getByRole("textbox", { name: "Event name" })).toHaveValue("Div II Epee");
+  });
+
   it("won't save an event with empty fields, and marks them", () => {
     saveDraft([{ ...newEventDraft(), ...FILLED_EVENT, weapon: "" }]);
     render(<NewTournamentForm />);
