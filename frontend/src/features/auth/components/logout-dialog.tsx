@@ -1,6 +1,6 @@
 "use client";
 
-import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
+import LogoutOutlined from "@mui/icons-material/LogoutOutlined";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Dialog } from "radix-ui";
@@ -37,10 +37,10 @@ function LogoutDialog() {
         <Button
           variant="text"
           size="icon"
-          aria-label="Account"
+          aria-label="Log out"
           className="relative mr-2 ml-auto text-white hover:bg-background/10 [&_svg]:size-6"
         >
-          <AccountCircleOutlined />
+          <LogoutOutlined />
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
