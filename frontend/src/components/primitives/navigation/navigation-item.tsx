@@ -5,7 +5,7 @@ type NavigationSurface = "dark" | "light";
 
 const SURFACES = {
   dark: {
-    item: "h-12 items-center rounded-xl px-4 lg:text-lg",
+    item: "h-12 items-center rounded-xl px-4",
     active: "text-white",
     idle: "text-neutral-muted hover:text-white",
     // On laptops the indicator spans the whole tab rather than just its label.

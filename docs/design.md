@@ -449,8 +449,7 @@ from the venue floor.
   BOUTLINE wordmark. The menu slides a light sidebar in from the left (no motion
   with reduced motion on) with Admin Login, Search Tournaments, Find Private
   Tournament, and Settings; the current route's item is highlighted. An X at the
-  sidebar's top left closes it. From `lg` (laptops) the bar is taller, with a
-  larger plate and wordmark.
+  sidebar's top left closes it.
 - **`/settings`**: Profile, Accessibility and Language, then Privacy Policy and
   Help, in two cards. None has a page yet, so the rows are labels only.
 - **Tabs** (tournament and event pages, and the admin tournament dashboard, §4.6): a full-width obsidian row directly under
@@ -458,8 +457,9 @@ from the venue floor.
   tabs replaces the history entry, so the browser's Back button leaves the page
   rather than stepping back through tabs. The exception is the active tab clicked
   from a page nested under it (an event's Events tab), which adds an entry. From
-  `lg` the tab row moves up into the global nav, right of the plate, and the active
-  tab's green underline spans the whole tab.
+  `lg` the tab row moves up into the global nav, right of the plate, with each tab
+  as wide as its label rather than spread evenly, and the active tab's green
+  underline spans the whole tab.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
 - **`/`**: redirects to `/tournaments`.
