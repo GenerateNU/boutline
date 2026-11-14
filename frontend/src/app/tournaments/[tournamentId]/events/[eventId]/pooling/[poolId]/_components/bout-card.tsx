@@ -11,6 +11,7 @@ import type { PoolBoutDetail, PoolBoutSide } from "../../_types/pool-bout-detail
 interface BoutCardProps {
   detail: PoolBoutDetail;
   fencersPath: string;
+  refereePath: string | null;
   onShowAll: () => void;
 }
 
@@ -55,7 +56,7 @@ function InfoCell({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-export function BoutCard({ detail, fencersPath, onShowAll }: BoutCardProps) {
+export function BoutCard({ detail, fencersPath, refereePath, onShowAll }: BoutCardProps) {
   const headingId = useId();
 
   return (
@@ -94,6 +95,11 @@ export function BoutCard({ detail, fencersPath, onShowAll }: BoutCardProps) {
           </Button>
         ))}
       </div>
+      {refereePath && (
+        <Button asChild>
+          <Link href={refereePath}>Referee bout</Link>
+        </Button>
+      )}
     </section>
   );
 }
