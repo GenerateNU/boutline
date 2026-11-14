@@ -386,10 +386,9 @@ func (s *competitorService) DeleteCompetitor(
 	return nil, nil
 }
 
-// requireTournamentAdmin checks a competitor with no tournament against uuid.Nil, which no one is a member of.
+// requireTournamentAdmin requires the caller to be an admin of the competitor's tournament.
 func (s *competitorService) requireTournamentAdmin(ctx context.Context, stored *Competitor) error {
-	var tournamentID uuid.UUID
-	return tournamentuser.RequireRole(ctx, s.memberships, tournamentID, tournamentuser.TournamentUserRoleAdmin)
+	return tournamentuser.RequireRole(ctx, s.memberships, stored.TournamentID, tournamentuser.TournamentUserRoleAdmin)
 }
 
 func (s *competitorService) ListTeamsByTournament(
