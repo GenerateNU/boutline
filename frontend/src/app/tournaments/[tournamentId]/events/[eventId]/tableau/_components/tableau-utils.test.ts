@@ -9,7 +9,7 @@ const fencer = (firstName: string, lastName: string, club: string) => ({
   seed: 1,
 });
 
-const bout: TableauBout = {
+const BOUT: TableauBout = {
   id: "b-1",
   number: 1,
   status: "upcoming",
@@ -34,15 +34,15 @@ describe("matchesQuery", () => {
     { name: "a club", query: "boston", want: true },
     { name: "no match", query: "zzz", want: false },
   ])("with $name", ({ query, want }) => {
-    expect(matchesQuery(bout, query)).toBe(want);
+    expect(matchesQuery(BOUT, query)).toBe(want);
   });
 });
 
 describe("boutTitle", () => {
   it.each([
     { name: "the final, before its bout exists", size: 2, bouts: [], want: "Bout" },
-    { name: "a round with a single bout so far", size: 8, bouts: [bout], want: "Bout 3" },
-    { name: "a round of many bouts", size: 16, bouts: [bout, bout], want: "Bout 3" },
+    { name: "a round with a single bout so far", size: 8, bouts: [BOUT], want: "Bout 3" },
+    { name: "a round of many bouts", size: 16, bouts: [BOUT, BOUT], want: "Bout 3" },
   ])("names $name", ({ size, bouts, want }) => {
     expect(boutTitle(round(size, bouts), 3)).toBe(want);
   });

@@ -5,7 +5,7 @@ import { TableauView } from "./tableau-view";
 
 const fencer = (id: string, firstName: string) => ({ id, firstName, lastName: "Fencer", club: "", seed: 1 });
 
-const tableau: Tableau = {
+const TABLEAU: Tableau = {
   rounds: [
     {
       id: "4",
@@ -21,7 +21,7 @@ const tableau: Tableau = {
   ],
 };
 
-const renderView = (value: Tableau = tableau) =>
+const renderView = (value: Tableau = TABLEAU) =>
   render(<TableauView tableau={value} boutBasePath="/bout" />);
 
 beforeAll(() => {

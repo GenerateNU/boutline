@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 
 import { ButtonGroup } from "@/components/primitives/button-group";
 
-const options = [
+const OPTIONS = [
   { value: "semis", label: "Semi-finals" },
   { value: "finals", label: "Finals" },
 ];
@@ -10,7 +10,7 @@ const options = [
 describe("ButtonGroup", () => {
   it("marks only the button matching value as pressed", () => {
     render(
-      <ButtonGroup options={options} value="finals" onValueChange={jest.fn()} aria-label="Rounds" />,
+      <ButtonGroup options={OPTIONS} value="finals" onValueChange={jest.fn()} aria-label="Rounds" />,
     );
 
     expect(screen.getByRole("group", { name: "Rounds" })).toBeInTheDocument();
@@ -21,7 +21,7 @@ describe("ButtonGroup", () => {
   it("reports the clicked option's value", () => {
     const onValueChange = jest.fn();
     render(
-      <ButtonGroup options={options} value="finals" onValueChange={onValueChange} aria-label="Rounds" />,
+      <ButtonGroup options={OPTIONS} value="finals" onValueChange={onValueChange} aria-label="Rounds" />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Semi-finals" }));

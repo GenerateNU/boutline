@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { List, Network, Search } from "lucide-react";
+import AccountTreeOutlined from "@mui/icons-material/AccountTreeOutlined";
+import ListOutlined from "@mui/icons-material/ListOutlined";
+import SearchOutlined from "@mui/icons-material/SearchOutlined";
 
 import { Button } from "@/components/primitives/button";
 import { ButtonGroup } from "@/components/primitives/button-group";
@@ -38,7 +40,7 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
             placeholder="Enter search text"
             className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 focus-visible:ring-0"
           />
-          <Search aria-hidden className="size-5" />
+          <SearchOutlined aria-hidden className="size-5" />
         </label>
         <Button
           variant="outline"
@@ -47,7 +49,7 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
           aria-label={view === "bracket" ? "Show as list" : "Show as bracket"}
           onClick={() => setView(view === "bracket" ? "list" : "bracket")}
         >
-          {view === "bracket" ? <List /> : <Network />}
+          {view === "bracket" ? <ListOutlined /> : <AccountTreeOutlined />}
         </Button>
       </div>
 

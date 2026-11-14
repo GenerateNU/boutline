@@ -8,9 +8,9 @@ const fencer = (id: string, first: string, last: string, club: string | null, se
   seed,
 });
 
-const noClub = fencer("f-9", "Ana", "Silva", null, 9);
-const maya = fencer("f-1", "Maya", "Chen", "Boston Fencing Club", 1);
-const kenji = fencer("f-4", "Kenji", "Tanaka", "Northeastern Fencing", 4);
+const NO_CLUB = fencer("f-9", "Ana", "Silva", null, 9);
+const MAYA = fencer("f-1", "Maya", "Chen", "Boston Fencing Club", 1);
+const KENJI = fencer("f-4", "Kenji", "Tanaka", "Northeastern Fencing", 4);
 
 describe("getTableau", () => {
   const fetchMock = jest.fn();
@@ -44,7 +44,7 @@ describe("getTableau", () => {
         {
           size: 4,
           bouts: [
-            { id: "b-1", slot: 1, status: "ended", top: maya, bottom: kenji, top_score: 15, bottom_score: 9 },
+            { id: "b-1", slot: 1, status: "ended", top: MAYA, bottom: KENJI, top_score: 15, bottom_score: 9 },
           ],
         },
         { size: 2, bouts: [] },
@@ -93,7 +93,7 @@ describe("getTableau", () => {
         {
           size: 2,
           bouts: [
-            { id: "b-1", slot: 1, status: "upcoming", top: maya, bottom: kenji, top_score: null, bottom_score: null },
+            { id: "b-1", slot: 1, status: "upcoming", top: MAYA, bottom: KENJI, top_score: null, bottom_score: null },
           ],
         },
       ],
@@ -106,8 +106,8 @@ describe("getTableau", () => {
   });
 
   it.each([
-    { name: "top", top: noClub, bottom: kenji },
-    { name: "bottom", top: maya, bottom: noClub },
+    { name: "top", top: NO_CLUB, bottom: KENJI },
+    { name: "bottom", top: MAYA, bottom: NO_CLUB },
   ])("turns a null club on the $name fencer into an empty string", async ({ name, top, bottom }) => {
     respondWith({
       rounds: [
@@ -128,7 +128,7 @@ describe("getTableau", () => {
       rounds: [
         {
           size: 2,
-          bouts: [{ id: "b-1", slot: 1, status, top: maya, bottom: kenji, top_score: null, bottom_score: null }],
+          bouts: [{ id: "b-1", slot: 1, status, top: MAYA, bottom: KENJI, top_score: null, bottom_score: null }],
         },
       ],
     });

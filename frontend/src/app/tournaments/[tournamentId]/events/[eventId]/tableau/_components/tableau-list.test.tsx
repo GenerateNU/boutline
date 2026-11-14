@@ -11,7 +11,7 @@ const bout = (number: number, firstName: string, lastName: string): TableauBout 
   bottom: { id: `u-${number}`, firstName: "Kenji", lastName: "Tanaka", club: "", seed: 8 },
 });
 
-const rounds: TableauRound[] = [
+const ROUNDS: TableauRound[] = [
   {
     id: "4",
     size: 4,
@@ -24,7 +24,7 @@ const rounds: TableauRound[] = [
 
 function renderList(selectedRoundId: string, query = "") {
   render(
-    <TableauList rounds={rounds} selectedRoundId={selectedRoundId} query={query} boutBasePath="/bout" />,
+    <TableauList rounds={ROUNDS} selectedRoundId={selectedRoundId} query={query} boutBasePath="/bout" />,
   );
 }
 
