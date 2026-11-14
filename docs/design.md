@@ -186,7 +186,9 @@ for sharing it privately.
 - `tournaments`: `name` (1–120), `visibility` (`private` | `public`, default
   private), `code` (unique), `status` (`pending` | `active` | `ended`),
   `created_by` (user), `start_time`, `started_at`, `completed_at`, `city`
-  (free text, optional), `country` (ISO 3166-1 alpha-2 such as `US`, optional).
+  (free text, optional; the creation form stores its Location here), `country`
+  (ISO 3166-1 alpha-2 such as `US`, optional), `venue` (free text, optional),
+  `sanctioning_authority` (`askfred` | `usa_fencing` | `fie` | `other`, optional).
 - **Join code:** six characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, which
   leaves out the look-alikes 0/O and 1/I/L. Generated with `crypto/rand` and
   retried up to five times on collision. Lookup is case-insensitive and trims
@@ -195,10 +197,10 @@ for sharing it privately.
 | Method | Path | Notes |
 | --- | --- | --- |
 | POST | `/tournaments` | create; the code is server-generated |
-| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly) |
+| GET | `/tournaments?q&status&visibility&start_from&start_to&club&country&mine&limit&offset` | fuzzy name search; filters by status, visibility, a `start_time` window, exact country code, and a club (any competitor whose primary or secondary club matches exactly). `mine=true` keeps only tournaments the caller created; it needs a signed-in caller (anonymous gets 403) |
 | GET | `/tournaments/{id}` | |
 | GET | `/tournaments/code/{code}` | open by code |
-| PATCH | `/tournaments/{id}` | name, visibility, start_time, city, country (an empty string clears city or country); 409 once ended |
+| PATCH | `/tournaments/{id}` | name, visibility, start_time, city, country, venue, sanctioning_authority (an empty string clears city, country or venue); 409 once ended |
 | GET | `/countries?visibility&limit&offset` | the countries that have tournaments, with a count each, sorted by code |
 | POST | `/tournaments/{id}/start` | `pending → active` |
 | POST | `/tournaments/{id}/complete` | `active → ended` |
@@ -230,8 +232,11 @@ An event is one competition inside a tournament, such as "Y14 Men's Foil". Each
 event runs its own pools and tableau.
 
 `events`: `tournament_id`, `name` (1–200), `format` (only
-`pool_then_direct_elimination`), `status` (`upcoming` | `active` | `ended`),
-`start_time`, `started_at`, `completed_at`.
+`pool_then_direct_elimination`, set by the server), `status` (`upcoming` | `active`
+| `ended`), `start_time`, `started_at`, `completed_at`, and the attributes in §8.5:
+`type`, `weapon`, `gender`, `age_category`, `rating_limit` (each optional, so older
+events stay valid) and `qualifier` (boolean, default false). `POST /events` and
+`PATCH /events/{id}` accept the six attributes; the responses return them.
 
 `POST /events` (tournament must exist), `GET /events?tournament_id&status`,
 `GET /events/{id}`, `PATCH /events/{id}` and `DELETE /events/{id}` (both only while
@@ -790,15 +795,17 @@ the tournament and bout `end` state.
 
 ### 8.5 Event attributes and bout settings
 
-**Status:** Planned. Issue: #186 (touches and time).
+**Status:** Partial. The first six attributes below are built (type through
+qualifier). Issue: #186 (touches and time).
 
-Event attributes the creation form already collects, to add as columns:
+Event attributes the creation form collects. `type`, `weapon`, `gender`,
+`age_category`, `rating_limit` and `qualifier` are columns; the rest are planned:
 
 | Field | Values |
 | --- | --- |
 | type | individual, team |
 | weapon | foil, épée, sabre |
-| gender | men, women, mixed (both boxes checked) |
+| gender | male, female, other |
 | age category | Y8, Y10, Y12, Y14, Cadet, Junior, Senior, Veteran, Open |
 | rating limit | e.g. "D and under", "Open" |
 | seeding | by rating, by ranking points, random |

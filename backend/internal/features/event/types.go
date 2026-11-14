@@ -3,16 +3,22 @@ package event
 import "time"
 
 type EventResponse struct {
-	ID           string      `json:"id" format:"uuid"`
-	TournamentID string      `json:"tournament_id" format:"uuid"`
-	Format       EventFormat `json:"format"`
-	Name         string      `json:"name"`
-	Status       EventStatus `json:"status" enum:"upcoming,active,ended"`
-	StartTime    *time.Time  `json:"start_time" doc:"Scheduled start, if one was set"`
-	StartedAt    *time.Time  `json:"started_at" doc:"When the event actually went active"`
-	CompletedAt  *time.Time  `json:"completed_at"`
-	CreatedAt    time.Time   `json:"created_at"`
-	UpdatedAt    time.Time   `json:"updated_at"`
+	ID           string            `json:"id" format:"uuid"`
+	TournamentID string            `json:"tournament_id" format:"uuid"`
+	Format       EventFormat       `json:"format"`
+	Name         string            `json:"name"`
+	Status       EventStatus       `json:"status" enum:"upcoming,active,ended"`
+	Type         *EventType        `json:"type" enum:"individual,team"`
+	Weapon       *EventWeapon      `json:"weapon" enum:"foil,epee,sabre"`
+	Gender       *EventGender      `json:"gender" enum:"male,female,other"`
+	AgeCategory  *EventAgeCategory `json:"age_category" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open"`
+	RatingLimit  *EventRatingLimit `json:"rating_limit" enum:"open,b_and_under,c_and_under,d_and_under,e_and_under,unrated"`
+	Qualifier    bool              `json:"qualifier"`
+	StartTime    *time.Time        `json:"start_time" doc:"Scheduled start, if one was set"`
+	StartedAt    *time.Time        `json:"started_at" doc:"When the event actually went active"`
+	CompletedAt  *time.Time        `json:"completed_at"`
+	CreatedAt    time.Time         `json:"created_at"`
+	UpdatedAt    time.Time         `json:"updated_at"`
 }
 
 func newEventResponse(event Event) EventResponse {
@@ -22,6 +28,12 @@ func newEventResponse(event Event) EventResponse {
 		Format:       event.Format,
 		Name:         event.Name,
 		Status:       event.Status,
+		Type:         event.Type,
+		Weapon:       event.Weapon,
+		Gender:       event.Gender,
+		AgeCategory:  event.AgeCategory,
+		RatingLimit:  event.RatingLimit,
+		Qualifier:    event.Qualifier,
 		StartTime:    event.StartTime,
 		StartedAt:    event.StartedAt,
 		CompletedAt:  event.CompletedAt,
@@ -31,9 +43,15 @@ func newEventResponse(event Event) EventResponse {
 }
 
 type EventCreateBody struct {
-	TournamentID string     `json:"tournament_id" format:"uuid" doc:"Tournament this event belongs to"`
-	Name         string     `json:"name" minLength:"1" maxLength:"200"`
-	StartTime    *time.Time `json:"start_time,omitempty" doc:"Scheduled start"`
+	TournamentID string            `json:"tournament_id" format:"uuid" doc:"Tournament this event belongs to"`
+	Name         string            `json:"name" minLength:"1" maxLength:"200"`
+	Type         *EventType        `json:"type,omitempty" enum:"individual,team"`
+	Weapon       *EventWeapon      `json:"weapon,omitempty" enum:"foil,epee,sabre"`
+	Gender       *EventGender      `json:"gender,omitempty" enum:"male,female,other"`
+	AgeCategory  *EventAgeCategory `json:"age_category,omitempty" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open"`
+	RatingLimit  *EventRatingLimit `json:"rating_limit,omitempty" enum:"open,b_and_under,c_and_under,d_and_under,e_and_under,unrated"`
+	Qualifier    *bool             `json:"qualifier,omitempty"`
+	StartTime    *time.Time        `json:"start_time,omitempty" doc:"Scheduled start"`
 }
 
 type EventCreateInput struct {
@@ -45,8 +63,14 @@ type EventIDInput struct {
 }
 
 type EventUpdateBody struct {
-	Name      *string    `json:"name,omitempty" minLength:"1" maxLength:"200"`
-	StartTime *time.Time `json:"start_time,omitempty" doc:"New scheduled start"`
+	Name        *string           `json:"name,omitempty" minLength:"1" maxLength:"200"`
+	Type        *EventType        `json:"type,omitempty" enum:"individual,team"`
+	Weapon      *EventWeapon      `json:"weapon,omitempty" enum:"foil,epee,sabre"`
+	Gender      *EventGender      `json:"gender,omitempty" enum:"male,female,other"`
+	AgeCategory *EventAgeCategory `json:"age_category,omitempty" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open"`
+	RatingLimit *EventRatingLimit `json:"rating_limit,omitempty" enum:"open,b_and_under,c_and_under,d_and_under,e_and_under,unrated"`
+	Qualifier   *bool             `json:"qualifier,omitempty"`
+	StartTime   *time.Time        `json:"start_time,omitempty" doc:"New scheduled start"`
 }
 
 type EventUpdateInput struct {
