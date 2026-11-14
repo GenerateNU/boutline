@@ -13,15 +13,24 @@ import (
 // functions fall back to a plain prefix match instead.
 const trigramMinLength = 2
 
+// TrigramExpr concatenates columns the way the GIN trigram index on them
+// expects, so callers that build their own SQL (an ORDER BY with a MAX()
+// aggregate, say) stay index-compatible with TrigramMatch and TrigramOrder.
+// The separator must match backend/migrations/20261014020658_enable_fuzzy_search.sql
+// exactly.
+func TrigramExpr(columns []string) string {
+	return strings.Join(columns, " || ' ' || ")
+}
+
 // TrigramMatch narrows query to rows where term matches some continuous
-// extent of expr under pg_trgm's word_similarity_threshold, so the GIN
+// extent of columns under pg_trgm's word_similarity_threshold, so the GIN
 // trigram indexes are used.
 //
 // An empty term leaves query unfiltered, so a search with no term but a
 // filter (e.g. tournament_id) still returns every row the filter matches,
 // rather than nothing.
-func TrigramMatch(query *gorm.DB, expr, term string) *gorm.DB {
-	fragment, args := TrigramPredicate(expr, term)
+func TrigramMatch(query *gorm.DB, columns []string, term string) *gorm.DB {
+	fragment, args := TrigramPredicate(columns, term)
 	if fragment == "" {
 		return query
 	}
@@ -33,23 +42,43 @@ func TrigramMatch(query *gorm.DB, expr, term string) *gorm.DB {
 // returns "", nil for an empty term.
 //
 // This is a prefix/substring-friendly match rather than a whole-string one:
-// a short, partially typed term scores against the best-matching part of
-// expr, not the full thing. %> takes the indexed expression on the left
-// (matching the operator's indexable strategy) and term on the right,
-// equivalent to word_similarity(term, expr) > threshold. expr is trusted SQL
-// from the caller (a column or a concatenation); term is always bound as a
-// parameter. expr is parenthesized because %> binds tighter than ||, so an
-// unparenthesized concatenation expr would only apply %> to its last operand
-// and fail the boolean WHERE clause. The same parenthesizing applies to
-// ILIKE, which binds looser than ||.
-func TrigramPredicate(expr, term string) (string, []any) {
+// a short, partially typed term scores against the best-matching part of the
+// columns, not the full thing. Below trigramMinLength there are too few
+// trigrams for %> to score meaningfully against word_similarity_threshold, so
+// a short term falls back to a plain per-column ILIKE prefix match instead,
+// one clause per column OR'd together: a column list is a list of fields,
+// not a single string, so "starts with" has to mean "some column starts
+// with," and anchoring to a concatenation instead would only ever match the
+// first column. The OR list is parenthesized so it combines correctly with
+// whatever the caller ANDs it against.
+//
+// At or above trigramMinLength, %> needs the concatenated columns rather
+// than one at a time: scoring a multi-word term against a single column
+// would compare it to only part of what the user typed and likely fall
+// under the threshold. %> takes the indexed expression on the left (matching
+// the operator's indexable strategy) and term on the right, equivalent to
+// word_similarity(term, columns) > threshold. The concatenation is
+// parenthesized because %> binds tighter than ||, so an unparenthesized
+// concatenation would only apply %> to its last operand and fail the boolean
+// WHERE clause; this is no longer reachable from call sites now that callers
+// pass columns rather than a hand-written concatenation, but the hazard is
+// why the parens stay. columns is trusted SQL from the caller; term is
+// always bound as a parameter.
+func TrigramPredicate(columns []string, term string) (string, []any) {
 	if term == "" {
 		return "", nil
 	}
 	if utf8.RuneCountInString(term) < trigramMinLength {
-		return "(" + expr + ") ILIKE ?", []any{likePrefixPattern(term)}
+		pattern := likePrefixPattern(term)
+		clauses := make([]string, len(columns))
+		args := make([]any, len(columns))
+		for i, col := range columns {
+			clauses[i] = col + " ILIKE ?"
+			args[i] = pattern
+		}
+		return "(" + strings.Join(clauses, " OR ") + ")", args
 	}
-	return "(" + expr + ") %> ?", []any{term}
+	return "(" + TrigramExpr(columns) + ") %> ?", []any{term}
 }
 
 // TrigramOrder sorts by descending word similarity, breaking ties with
@@ -59,12 +88,12 @@ func TrigramPredicate(expr, term string) (string, []any) {
 // An empty term, or one too short for TrigramMatch to rank by similarity,
 // orders by emptyOrder instead (e.g. "created_at DESC"). tiebreaker and
 // emptyOrder are trusted SQL from the caller, not bound as parameters.
-func TrigramOrder(query *gorm.DB, expr, term, emptyOrder, tiebreaker string) *gorm.DB {
+func TrigramOrder(query *gorm.DB, columns []string, term, emptyOrder, tiebreaker string) *gorm.DB {
 	if utf8.RuneCountInString(term) < trigramMinLength {
 		return query.Order(emptyOrder + ", " + tiebreaker)
 	}
 	return query.Clauses(clause.OrderBy{Expression: clause.Expr{
-		SQL:  "word_similarity(?, " + expr + ") DESC, " + tiebreaker,
+		SQL:  "word_similarity(?, " + TrigramExpr(columns) + ") DESC, " + tiebreaker,
 		Vars: []any{term},
 	}})
 }

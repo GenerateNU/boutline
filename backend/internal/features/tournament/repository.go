@@ -13,9 +13,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// tournamentNameTrigramExpr must match the expression indexed by
+// tournamentNameTrigramColumns must match the expression indexed by
 // idx_tournaments_name_trgm exactly, or the search falls back to a sequential scan.
-const tournamentNameTrigramExpr = "name"
+var tournamentNameTrigramColumns = []string{"name"}
 
 type TournamentRepository interface {
 	CreateTournament(ctx context.Context, tournament *Tournament) error
@@ -234,8 +234,8 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 	if filter.Club != "" {
 		// Raw SQL: importing the competitor package here would be an import cycle.
 		// Joins through events because competitors.tournament_id is nullable.
-		primaryFragment, primaryArgs := utils.TrigramPredicate("competitors.primary_club", filter.Club)
-		secondaryFragment, secondaryArgs := utils.TrigramPredicate("competitors.secondary_club", filter.Club)
+		primaryFragment, primaryArgs := utils.TrigramPredicate([]string{"competitors.primary_club"}, filter.Club)
+		secondaryFragment, secondaryArgs := utils.TrigramPredicate([]string{"competitors.secondary_club"}, filter.Club)
 		query = query.Where(fmt.Sprintf(`EXISTS (
 			SELECT 1 FROM competitors
 			JOIN events ON events.id = competitors.event_id
@@ -244,14 +244,14 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 			// Args line up positionally with the two predicates above: primary first, then secondary.
 			append(primaryArgs, secondaryArgs...)...)
 	}
-	query = utils.TrigramMatch(query, tournamentNameTrigramExpr, filter.Term)
+	query = utils.TrigramMatch(query, tournamentNameTrigramColumns, filter.Term)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count tournaments: %w", err)
 	}
 
-	query = utils.TrigramOrder(query, tournamentNameTrigramExpr, filter.Term, "created_at DESC", "id")
+	query = utils.TrigramOrder(query, tournamentNameTrigramColumns, filter.Term, "created_at DESC", "id")
 
 	tournaments := make([]Tournament, 0, filter.Limit)
 	err := query.

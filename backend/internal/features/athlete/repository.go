@@ -18,8 +18,6 @@ const (
 		"AND tournaments.visibility = ? AND tournaments.status = ?"
 	recencyOrder = "COALESCE(tournaments.start_time, tournaments.created_at) DESC"
 
-	athleteNameTrigramExpr = "competitors.first_name || ' ' || competitors.last_name"
-
 	upsertAthleteByMemberNumberSQL = `
 INSERT INTO athletes (member_number, created_at, updated_at) VALUES (?, now(), now())
 ON CONFLICT (member_number) DO UPDATE SET updated_at = now()
@@ -37,6 +35,8 @@ LEFT JOIN users ON users.id = athletes.user_id
 WHERE athletes.id IN ?
 ORDER BY athletes.id, ` + recencyOrder + `, competitors.created_at DESC`
 )
+
+var athleteNameTrigramColumns = []string{"competitors.first_name", "competitors.last_name"}
 
 type AthleteRepository interface {
 	UpsertAthleteByMemberNumber(ctx context.Context, memberNumber string) (uuid.UUID, error)
@@ -151,7 +151,7 @@ func (r *athleteRepository) SearchAthleteProfiles(
 	search := func() *gorm.DB {
 		return utils.TrigramMatch(
 			r.publicHistory(ctx).Where("competitors.athlete_id IS NOT NULL"),
-			athleteNameTrigramExpr, filter.Term)
+			athleteNameTrigramColumns, filter.Term)
 	}
 
 	var total int64
@@ -164,7 +164,7 @@ func (r *athleteRepository) SearchAthleteProfiles(
 		Select("competitors.athlete_id").
 		Group("competitors.athlete_id").
 		Clauses(clause.OrderBy{Expression: clause.Expr{
-			SQL:  "MAX(word_similarity(?, " + athleteNameTrigramExpr + ")) DESC, competitors.athlete_id",
+			SQL:  "MAX(word_similarity(?, " + utils.TrigramExpr(athleteNameTrigramColumns) + ")) DESC, competitors.athlete_id",
 			Vars: []any{filter.Term},
 		}}).
 		Limit(filter.Limit).
