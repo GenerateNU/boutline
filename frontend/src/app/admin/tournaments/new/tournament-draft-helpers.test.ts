@@ -3,6 +3,7 @@ import { CompetitorImportRow, CompetitorImportStatus } from "@/types/competitor-
 import {
   eventTitle,
   formatRating,
+  importedEventCount,
   importFencers,
   missingEventFields,
   missingFencerFields,
@@ -111,6 +112,14 @@ describe("missingEventFields", () => {
     },
   ])("$name", ({ patch, want }) => {
     expect(missingEventFields({ ...newEventDraft(), ...patch })).toEqual(want);
+  });
+});
+
+describe("importedEventCount", () => {
+  it("counts the events valid rows fill, ignoring case and invalid rows", () => {
+    const rows = [row("Ada", "Y14 Foil"), row("Bea", "y14 foil "), row("Cy", ""), row("Di", "Sabre", "invalid")];
+
+    expect(importedEventCount(rows)).toBe(2);
   });
 });
 

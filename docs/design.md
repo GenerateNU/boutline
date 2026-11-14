@@ -993,7 +993,9 @@ are placed into pools.
 - **Import:** the CSV's valid rows are sorted into cards by their Event column. A
   card with a matching name (ignoring case) gets those fencers in place of its own,
   so a second upload doesn't double them. Other events fill a blank card that has no
-  fencers yet, then get new cards. Each card lists its fencers in a toggle.
+  fencers yet, then get new cards. A toast says how many events and fencers were
+  autofilled and how many rows were skipped; a file that can't be read gets an
+  inline error instead, so it doesn't vanish before it's fixed.
 - **Saving:** the tournament details card has its own Save, and Save event stays
   disabled until it is saved. Either Save checks only its own card (an event also
   checks its fencers), marks empty fields with `aria-invalid`, then collapses the

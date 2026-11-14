@@ -146,6 +146,11 @@ export function importFencers(events: EventDraft[], rows: CompetitorImportRow[])
   return [...filled, ...unmatched.map((group) => newEventDraft(group.name, group.fencers))];
 }
 
+// How many events an upload's valid rows fill, matching importFencers' grouping.
+export function importedEventCount(rows: CompetitorImportRow[]) {
+  return new Set(rows.filter((row) => row.status === "valid").map((row) => eventKey(row.competitor.event))).size;
+}
+
 // "C24" style: the letter plus the year's last two digits, or just "U".
 export function formatRating({ rating, ratingYear }: ImportedCompetitor) {
   return `${rating}${ratingYear ? String(ratingYear).slice(-2) : ""}`;

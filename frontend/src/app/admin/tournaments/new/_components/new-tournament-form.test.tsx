@@ -1,4 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render as renderWithoutToaster, screen, within } from "@testing-library/react";
+
+import { Toaster } from "@/components/primitives/toast";
 
 import { EXAMPLE_COMPETITOR_IMPORT } from "@/lib/competitor-import/example-competitor-import";
 
@@ -49,6 +51,11 @@ const SAVED_TOURNAMENT = {
 
 function saveDraft(events: ReturnType<typeof newEventDraft>[], tournament = SAVED_TOURNAMENT) {
   sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...tournament, events }));
+}
+
+// The form toasts import results, so it needs the app's Toaster around it.
+function render(ui: React.ReactElement) {
+  return renderWithoutToaster(<Toaster>{ui}</Toaster>);
 }
 
 // jsdom's File lacks text(), which the parser reads it with.
@@ -107,7 +114,7 @@ describe("NewTournamentForm", () => {
       target: { files: [csvFile(EXAMPLE_COMPETITOR_IMPORT)] },
     });
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Added 5 fencers.");
+    expect(await screen.findByText("Autofilled 2 events and 5 fencers from registrations.csv.")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Y14 Women's Foil" })).toHaveTextContent("4 fencers");
     expect(screen.getByRole("group", { name: "Div II Men's Epee" })).toHaveTextContent("1 fencer");
     expect(screen.queryByRole("group", { name: "Event 1" })).not.toBeInTheDocument();

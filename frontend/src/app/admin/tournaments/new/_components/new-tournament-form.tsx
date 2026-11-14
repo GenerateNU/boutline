@@ -1,27 +1,25 @@
 "use client";
 
 import AddOutlined from "@mui/icons-material/AddOutlined";
+import CheckCircleOutlined from "@mui/icons-material/CheckCircleOutlined";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/primitives/button";
+import { useToast } from "@/components/primitives/toast";
 import { ImportDropzone } from "@/features/tournament/components/import-dropzone";
 import { parseCompetitorImport } from "@/lib/competitor-import/parse-competitor-import";
 import { pluralize } from "@/lib/pluralize";
 import { errorMessage } from "@/utils/error-message";
 
 import { useTournamentDraft } from "../_hooks/use-tournament-draft";
-import { eventTitle, missingEventFields, missingFencerFields } from "../tournament-draft-helpers";
+import { eventTitle, importedEventCount, missingEventFields, missingFencerFields } from "../tournament-draft-helpers";
 import { EventDraftCard } from "./event-draft-card";
 import { TournamentDetailsCard } from "./tournament-details-card";
 
-interface ImportResult {
-  message: string;
-  failed: boolean;
-}
-
 function NewTournamentForm() {
   const router = useRouter();
+  const { toast } = useToast();
   const {
     draft,
     setField,
@@ -35,14 +33,15 @@ function NewTournamentForm() {
     importRows,
     clear,
   } = useTournamentDraft();
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [submitError, setSubmitError] = useState<string | null>(null);
   const latestUpload = useRef(0);
 
-  // Parses an uploaded CSV and sorts its fencers into event cards. A file that
-  // finishes parsing after a newer upload started is dropped, so it can't
-  // overwrite the newer one.
+  // Parses an uploaded CSV, sorts its fencers into event cards, and toasts what
+  // it filled in. A file that finishes parsing after a newer upload started is
+  // dropped, so it can't overwrite the newer one. A file that can't be read gets
+  // an inline error instead, since a toast would vanish before it's fixed.
   async function handleFile(file: File) {
     const upload = ++latestUpload.current;
     try {
@@ -51,13 +50,18 @@ function NewTournamentForm() {
         return;
       }
       importRows(rows);
-      const added = rows.filter((row) => row.status === "valid").length;
-      const skipped = rows.length - added;
-      const skippedNote = skipped > 0 ? `, skipped ${skipped} invalid or duplicate ${pluralize(skipped, "row")}` : "";
-      setImportResult({ message: `Added ${added} ${pluralize(added, "fencer")}${skippedNote}.`, failed: false });
+      setImportError(null);
+      const fencers = rows.filter((row) => row.status === "valid").length;
+      const events = importedEventCount(rows);
+      const skipped = rows.length - fencers;
+      const skippedNote = skipped > 0 ? ` Skipped ${skipped} invalid or duplicate ${pluralize(skipped, "row")}.` : "";
+      toast({
+        icon: <CheckCircleOutlined aria-hidden />,
+        description: `Autofilled ${events} ${pluralize(events, "event")} and ${fencers} ${pluralize(fencers, "fencer")} from ${file.name}.${skippedNote}`,
+      });
     } catch (error) {
       if (upload === latestUpload.current) {
-        setImportResult({ message: `Couldn't read ${file.name}: ${errorMessage(error)}`, failed: true });
+        setImportError(`Couldn't read ${file.name}: ${errorMessage(error)}`);
       }
     }
   }
@@ -102,12 +106,9 @@ function NewTournamentForm() {
     >
       <div className="flex flex-col gap-4">
         <ImportDropzone onFile={handleFile} />
-        {importResult ? (
-          <p
-            role={importResult.failed ? "alert" : "status"}
-            className={importResult.failed ? "text-xs text-red-dark" : "text-xs text-neutral-secondary"}
-          >
-            {importResult.message}
+        {importError ? (
+          <p role="alert" className="text-xs text-red-dark">
+            {importError}
           </p>
         ) : null}
         <TournamentDetailsCard draft={draft} onField={setField} onSavedChange={setTournamentSaved} />
