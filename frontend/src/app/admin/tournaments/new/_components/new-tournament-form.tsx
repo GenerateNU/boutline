@@ -100,15 +100,16 @@ function NewTournamentForm() {
     router.push("/admin/tournaments");
   }
 
-  // One column on phones (tournament, events, submit). On a laptop the events
-  // move to a right column spanning both rows, so submit sits under the
-  // tournament; the 1fr second row keeps it there however tall the events get.
+  // One column on phones (upload, tournament, events, submit). On a laptop the
+  // upload spans both columns, then events sit in a right column beside the
+  // tournament and submit; the 1fr last row keeps submit right under the
+  // tournament however tall the events get.
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-10 lg:grid lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10 lg:gap-y-6"
+      className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-x-10"
     >
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 lg:col-span-2">
         <ImportDropzone accept={CSV_ACCEPT} hint="Only .csv files are accepted." onFile={handleFile}>
           <CsvSampleButton />
         </ImportDropzone>
@@ -117,10 +118,13 @@ function NewTournamentForm() {
             {importError}
           </p>
         ) : null}
+      </div>
+
+      <div className="lg:col-start-1">
         <TournamentDetailsCard draft={draft} onField={setField} onSavedChange={setTournamentSaved} />
       </div>
 
-      <section aria-labelledby="events-heading" className="flex flex-col gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+      <section aria-labelledby="events-heading" className="flex flex-col gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-2">
         <h2 id="events-heading" className="text-lg font-semibold text-obsidian">
           Events
         </h2>

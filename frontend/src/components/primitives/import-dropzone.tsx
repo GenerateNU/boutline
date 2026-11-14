@@ -33,7 +33,7 @@ function ImportDropzone({
         <>
           <CloudUploadOutlined aria-hidden className="size-8 text-neutral-secondary" />
           <p className="text-base font-semibold text-obsidian">{title}</p>
-          <Button type="button" className="w-full" onClick={open}>
+          <Button type="button" className="w-full max-w-xs" onClick={open}>
             Upload
           </Button>
           {hint || children ? (

@@ -988,8 +988,8 @@ are placed into pools.
   dropzone (§10.4), and one card per event, titled by its event name ("Event 2"
   until it has one), with the attributes in §8.5. Cards can be added and removed,
   keeping at least one. Text fields carry example placeholders. From `lg` up the
-  page is two columns: upload, tournament and submit on the left, events on the
-  right; phones keep one column in that order with events before submit.
+  upload spans the page, then two columns: tournament and submit on the left,
+  events on the right. Phones keep one column: upload, tournament, events, submit.
 - **Import:** the CSV's valid rows are sorted into cards by their Event column. A
   card with a matching name (ignoring case) gets those fencers in place of its own,
   so a second upload doesn't double them. Other events fill a blank card that has no
