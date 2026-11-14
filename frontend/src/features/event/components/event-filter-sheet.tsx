@@ -3,33 +3,21 @@
 import { useState } from "react";
 
 import { ChipGroup, ChipGroupOptions } from "@/components/primitives/chip-group";
-import { ComingSoonNote } from "@/components/primitives/coming-soon-note";
 import { DateField } from "@/components/primitives/date-field";
-import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
 import { SelectField } from "@/components/primitives/select-field";
 import {
-  AGE_LABELS,
-  GENDER_LABELS,
-  STATUS_LABELS,
-  TYPE_LABELS,
-  WEAPON_LABELS,
+  AGE_OPTIONS,
+  GENDER_OPTIONS,
+  STATUS_OPTIONS,
+  TYPE_OPTIONS,
+  WEAPON_OPTIONS,
 } from "@/features/event/lib/event-filters";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { formatDateParam, parseDateParam } from "@/features/tournament/lib/date-param";
 
 const FILTER_PARAMS = ["weapon", "age", "gender", "status", "type"];
 const NO_VALUES = Object.fromEntries(FILTER_PARAMS.map((param) => [param, ""]));
-
-function toOptions(labels: Record<string, string>) {
-  return Object.entries(labels).map(([value, label]) => ({ value, label }));
-}
-
-const WEAPON_OPTIONS = toOptions(WEAPON_LABELS);
-const AGE_OPTIONS = toOptions(AGE_LABELS);
-const GENDER_OPTIONS = toOptions(GENDER_LABELS);
-const STATUS_OPTIONS = toOptions(STATUS_LABELS);
-const TYPE_OPTIONS = toOptions(TYPE_LABELS);
 
 interface EventFilterSheetProps {
   // "YYYY-MM-DD" days with events, marked in the date picker.
@@ -75,21 +63,6 @@ function EventFilterSheet({ eventDays }: EventFilterSheetProps) {
         setOpen(false);
       }}
     >
-      <ComingSoonNote />
-
-      {["Fencer", "Club"].map((label) => (
-        <FilterSearchField
-          key={label}
-          label={label}
-          disabled
-          suggestions={null}
-          failed={false}
-          selected=""
-          onPick={() => {}}
-          noun={`${label.toLowerCase()}s`}
-        />
-      ))}
-
       <ChipGroup label="Weapon" {...groupProps("weapon")}>
         <ChipGroupOptions options={WEAPON_OPTIONS} />
       </ChipGroup>

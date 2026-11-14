@@ -330,6 +330,13 @@ func (s *competitorService) ListCompetitors(
 		}
 		filter.Rating = &rating
 	}
+	if input.Gender != "" {
+		gender, err := parseGender(input.Gender)
+		if err != nil {
+			return nil, errs.HumaError(err)
+		}
+		filter.Gender = &gender
+	}
 	if team := strings.TrimSpace(input.Team); team != "" {
 		filter.Team = &team
 	}

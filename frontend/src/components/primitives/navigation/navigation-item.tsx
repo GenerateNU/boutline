@@ -8,7 +8,8 @@ const SURFACES = {
     item: "h-12 items-center rounded-xl px-4",
     active: "text-white",
     idle: "text-neutral-muted hover:text-white",
-    label: "relative h-full",
+    // On laptops the indicator spans the whole tab rather than just its label.
+    label: "relative h-full lg:static",
     indicator: "bottom-2 h-0.75",
   },
   light: {

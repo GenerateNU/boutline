@@ -33,11 +33,9 @@ describe("EventFilterSheet", () => {
     await openSheet();
 
     const labels = screen
-      .getAllByText(/^(Fencer|Club|Weapon|Age Category|Gender|Event Status|Date|Event Type)$/)
+      .getAllByText(/^(Weapon|Age Category|Gender|Event Status|Date|Event Type)$/)
       .map((node) => node.textContent);
     expect(labels).toEqual([
-      "Fencer",
-      "Club",
       "Weapon",
       "Age Category",
       "Gender",
@@ -45,18 +43,6 @@ describe("EventFilterSheet", () => {
       "Date",
       "Event Type",
     ]);
-  });
-
-  it("shows Fencer and Club as disabled placeholders that set no filter", async () => {
-    await openSheet();
-
-    const boxes = screen.getAllByRole("searchbox");
-    expect(boxes.map((box) => box.getAttribute("aria-label"))).toEqual(["Fencer", "Club"]);
-    boxes.forEach((box) => expect(box).toBeDisabled());
-    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Show Events" }));
-    expect(replace).toHaveBeenLastCalledWith("/tournaments/t1/events", { scroll: false });
   });
 
   it.each([

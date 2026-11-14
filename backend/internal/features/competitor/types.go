@@ -118,6 +118,7 @@ type CompetitorListInput struct {
 	EventID      string `query:"eventId" format:"uuid" doc:"Only competitors in this event"`
 	TournamentID string `query:"tournament_id" doc:"Only competitors entered in this tournament"`
 	Rating       string `query:"rating" enum:"A,B,C,D,E,U" doc:"Only competitors with this rating"`
+	Gender       string `query:"gender" enum:"F,M,O" doc:"Only competitors with this gender"`
 	Team         string `query:"team" maxLength:"120" doc:"Only competitors whose team contains this text; omit to return every competitor"`
 }
 

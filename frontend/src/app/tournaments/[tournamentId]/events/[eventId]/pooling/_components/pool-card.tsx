@@ -11,6 +11,7 @@ import { poolTitle } from "../_services/pool-title";
 import type { PoolBoard } from "../_types/pool-board";
 import type { PoolView } from "../_types/pool-table";
 
+import { PoolPinButton } from "./pool-pin-button";
 import { PoolStandingsTable } from "./pool-standings-table";
 import { PoolStatusBadge } from "./pool-status-badge";
 import { PoolTable } from "./pool-table";
@@ -32,6 +33,7 @@ export function PoolCard({ pool, poolingPath }: PoolCardProps) {
       <div className="flex items-center gap-2">
         <h3 className="flex-1 text-base font-medium">{title}</h3>
         <PoolStatusBadge status={pool.status} />
+        <PoolPinButton pool={pool} className="-my-1 -mr-2" />
       </div>
       <SegmentedButton
         type="single"

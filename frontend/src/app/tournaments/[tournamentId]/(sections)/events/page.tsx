@@ -11,7 +11,7 @@ import {
   parseEventFilters,
 } from "@/features/event/lib/event-filters";
 import { getEvents } from "@/features/event/services/getEvents";
-import { ActiveFilterChips } from "@/features/tournament/components/active-filter-chips";
+import { ActiveFilterChips } from "@/components/primitives/active-filter-chips";
 import { CalendarButton } from "@/features/tournament/components/calendar-button";
 import { SearchForm } from "@/features/tournament/components/search-form";
 import { WeekStrip } from "@/features/tournament/components/week-strip";

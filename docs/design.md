@@ -456,7 +456,10 @@ from the venue floor.
   the global nav, like the tournaments date strip. Each tab has its own URL, but switching
   tabs replaces the history entry, so the browser's Back button leaves the page
   rather than stepping back through tabs. The exception is the active tab clicked
-  from a page nested under it (an event's Events tab), which adds an entry.
+  from a page nested under it (an event's Events tab), which adds an entry. From
+  `lg` the tab row moves up into the global nav, right of the plate, with each tab
+  as wide as its label rather than spread evenly, and the active tab's green
+  underline spans the whole tab.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
 - **`/`**: redirects to `/tournaments`.
@@ -485,8 +488,9 @@ from the venue floor.
   without moving the strip. The icon beside the title opens a Calendar pop-up
   (month and year steppers); picking a day and pressing Show Tournaments applies
   it. Both filter by `start_time`.
-- **Active filters:** each applied Status, Club or Country filter shows as a pill
-  under the search bar; its × removes just that filter.
+- **Active filters:** each applied Status, Club or Country filter shows as a
+  `Name: Value` pill (e.g. "Status: In Progress", "Country: France") under the
+  search bar; its × removes just that filter.
 - **Filter sheet:** Status, Club and Country work; the Distance slider is inert, since
   tournaments have no coordinates (#122). Club suggests names from `GET /clubs` and
   sets `?club=`; Country offers only countries that have tournaments, from
@@ -516,27 +520,23 @@ search bar with a clear button. Fencer and club rows keep their pin button, whic
   no label). Missing values show as placeholders: "Dates TBC", "Location TBC", and
   "Organizer contact TBC" always, since no contact is stored. An unknown ID is a 404.
 - **Fencers:** the tournament name as the title, then search (suggesting fencer
-  names as you type), a filter sheet (Club, Event, Weapon, Age Category, Rating
-  Category, Gender), removable filter chips, and a paginated list of fencer cards
-  (name, country · club, a rating badge like "A26") from
-  `GET /competitors?tournament_id=&q&team&rating&eventId`. The country is a
-  placeholder showing US for everyone. Club, Event and Rating Category work, using
-  the filters the API already has; Weapon, Age and Gender show as disabled controls
-  under a "Greyed-out filters are coming soon." note, since the API can't filter on
-  them, and set no URL param.
+  names as you type), the fencer filter sheet (Club, Rating, Gender; see §4.4, plus
+  Weapon and Age Category as disabled "coming soon" placeholders),
+  removable chips, and a paginated list of fencer cards (name, country · club, a
+  rating badge like "A26") from `GET /competitors?tournament_id=&q&team&rating&gender`.
+  The country is a placeholder showing US for everyone.
 - **Clubs:** the tournament name as the title, search suggesting Fencers and Clubs,
-  a filter button, and a paginated list of clubs from
-  `GET /tournaments/{id}/teams`; each links to the Fencers tab filtered to that
-  club. The filter sheet's Fencer, Club and Weapon sections are all disabled
-  placeholders (same note), and its buttons just close it. Each row's second line
+  and a paginated list of clubs from `GET /tournaments/{id}/teams`; each links to
+  the Fencers tab filtered to that club. Its filter sheet's Fencer, Club and Weapon
+  sections are disabled "coming soon" placeholders, since the clubs API only searches
+  by name. Each row's second line
   reads "US · Location TBC", as the design's "US · Boston, MA": clubs store no
   location yet.
-- **Events:** "< {name}" back to Overview, search, a filter sheet (Fencer, Club,
-  Weapon, Age Category, Gender, Event Status, Date, Event Type; all but Fencer and
-  Club filter on the page) with chips, a light week strip whose calendar icon opens an
+- **Events:** "< {name}" back to Overview, search, a filter sheet (Weapon, Age
+  Category, Gender, Event Status, Date, Event Type, all filtered on the page) with
+  `Name: Value` chips, a light week strip whose calendar icon opens an
   inline month card under it (event days dotted; tapping a day picks it), and the day's events grouped under time headings. A day
-  picked with no events says so. Fencer and Club are disabled search fields under
-  the "coming soon" note. Each event card's second line is its competitor count
+  picked with no events says so. Each event card's second line is its competitor count
   ("5 competitors"), the total from `GET /competitors?eventId=&limit=1` for each
   event on the shown day.
 
@@ -549,11 +549,19 @@ Tabs: Pools · Tableau · Fencers · Results (routes `pooling`, `tableau`, `fenc
 than stacking under them, and a "< {tournament name}" link above the content leads
 back to the tournament.
 
-- **Fencers** (Completed): a "Fencers" heading and the same list as the tournament's
-  Fencers tab (search with suggestions, Club and Rating filters, chips, and rows
-  with the pin button), limited to this event's fencers with
-  `GET /competitors?eventId=`; the Event filter isn't offered here. Rows link to a
-  fencer page, which is placeholder text.
+- **Fencers** (Completed): a "Fencers" heading over the same list as the
+  tournament's Fencers tab (both use `FencerBrowser`): search, pagination, and a filter sheet with Club (sets
+  `?team=`, a search accepting either a picked suggestion from the dropdown or typed
+  text committed with Enter), Rating (a select, sets `?rating=`, A–E plus U shown as
+  "Unrated"), and Gender (a row of single-select outline chips, sets `?gender=`, F/M/O
+  shown as Female/Male/Other). There is no Fencer search in the sheet — that collided
+  with the page's own search bar, so free-text name search is the search bar (`?q=`)
+  alone now. Applied filters show as `Name: Value` removable pills (e.g. "Club: bos",
+  "Rating: Unrated", "Gender: Female") under the search bar and at the top of the
+  sheet. Weapon and Age Category appear in the Figma but are deferred to the
+  tournament-level Fencers tab, since `competitors` carries neither column (both live
+  on `events`). It lists the event's own competitors (§8.4). Rows link to a fencer
+  page, which is placeholder text.
 - **Pooling** (Partial): see §11.6 for its current state.
 - **Tableau** (Placeholder): a bout list from a hardcoded fixture, the same for every
   event. Replaced in §12.5.
@@ -704,11 +712,13 @@ every pin when it's opened without one.
 
 ### 6.3 Pin controls
 
-**Status:** Planned.
+**Status:** Partial. Pools can be pinned (§11.6); the rest is Planned.
 
 A pin toggle on each fencer row (pinned rows turn light blue with a navy rating
 badge and pin), on clubs and on pools, and listing pinned clubs and pools (the
-Figma's Club and Pool cards).
+Figma's Club and Pool cards). Pool pins are stored with the others as `poolIds`;
+pins saved before that keep their fencers and bouts. `/pinned` doesn't list pinned
+pools yet.
 
 ---
 
@@ -841,7 +851,8 @@ the tournament and bout `end` state.
 
 ### 8.4 One competitor per event
 
-**Status:** Planned. Issue: #77.
+**Status:** Partial. Every column below is built except `seed` and
+`checked_in_at`. Issue: #77.
 
 - A competitor row belongs to exactly one event (`event_id`, required). A person
   fencing foil and épée has two rows, one per event. Because ratings are per
@@ -851,7 +862,8 @@ the tournament and bout `end` state.
   `secondary_club` (both nullable), `division` (home state), `member_number`
   (optional, unique within an event; its authority comes from the tournament),
   `rating_year` (e.g. 24 in `C24`), `seed`, `checked_in_at`. `team` is deprecated
-  in favour of `primary_club`.
+  in favour of `primary_club`, and still the one the Clubs tab and the club
+  filter read.
 - `tournament_id` stays on the row, so tournament-wide lists don't need a join.
 - Club names are free text, so "NYAC" and "New York AC" count as two clubs. Club
   separation (§11.2) and the Clubs tab compare a normalised key (case, whitespace
@@ -1338,7 +1350,10 @@ with `buildPool` (`pooling/_fixtures/build-pool.ts`).
   and a Clubs group (up to five each); picking one searches for it. A card
   has a Bouts | Standings toggle that shows the V/D grid or the standings table (# ·
   Fencer · V · V/M · TS · TR · Ind, by place, names as "Last, First"), and a View
-  pool link. Pool pins are not built yet (§6.3).
+  pool link. A pin in the card's header, right of the status chip, pins the pool
+  (filled navy when pinned). Pinned pools always lead the list, alphabetically by title with
+  numbers compared as numbers, ahead of the chosen sort; the pool page has the same
+  pin beside its back button.
 - **Filter sheet:** a filter button beside the search opens the shared
   `FilterSheetDialog`. Fencer and Club suggest names from the pools as you type, and
   a pick shows as a removable chip; then Pool Status and Pool Number chips, and Sort
@@ -1809,16 +1824,16 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
   filled or `destructive` action). The filter sheet is a `rounded-t-3xl` bottom sheet
   whose search sections are a label above a `FilterSearchField` whose suggestions show
   in a `Dropdown` of `DropdownOption` rows while typing; picked values show as
-  removable tags at the top until submitted. Other sections are a Distance slider and
-  rows of outline chips (`ChipGroup` / `ChipGroupItem`), then a full-width Clear All
-  and a filled submit. `triggerActive` gives the trigger its pressed look while
-  filters are applied. The toast is
+  removable tags at the top until submitted. Other sections are a Distance slider, a
+  Select, and rows of outline chips (`ChipGroup` / `ChipGroupItem`), then a full-width
+  Clear All and a filled submit. `triggerActive` gives the trigger its pressed look
+  while filters are applied. The toast is
   a single obsidian row with white `text-sm`, a leading icon, an `accent-green`
   action, and no close button.
 - The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and `navigation-item`.
   `global-nav` renders `navbar` as its header. `navigation-bar` is the obsidian row of
   `navigation-item` tabs, and `tab-nav` renders it with the active tab taken from the
-  route. The logo takes its tone from the text colour (`text-white` or `text-blue`).
+  route; from `lg` it sits inside `navbar` rather than below it. The logo takes its tone from the text colour (`text-white` or `text-blue`).
 - Fetched content shows `Loading` until it arrives: a route's `loading.tsx` sits
   under its tab bar, and client fetches render it in place of their first result.
   `/tournaments` shows a `Skeleton` layout of the page instead (§4.2). `Skeleton`

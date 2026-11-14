@@ -1,8 +1,5 @@
+import { ActiveFilterChips } from "@/components/primitives/active-filter-chips";
 import { Pagination } from "@/components/primitives/pagination";
-import {
-  ActiveFilterChips,
-  type ActiveFilter,
-} from "@/features/tournament/components/active-filter-chips";
 import { CalendarButton } from "@/features/tournament/components/calendar-button";
 import { FilterSheet } from "@/features/tournament/components/filter-sheet";
 import { SearchForm } from "@/features/tournament/components/search-form";
@@ -40,11 +37,11 @@ async function TournamentBrowser({
     country,
   });
 
-  const activeFilters: ActiveFilter[] = [
-    { param: "status", label: status && statusLabels[status] },
-    { param: "club", label: club },
-    { param: "country", label: country && countryName(country) },
-  ].filter((filter): filter is ActiveFilter => Boolean(filter.label));
+  const activeFilters = [
+    { param: "status", name: "Status", value: status && statusLabels[status] },
+    { param: "club", name: "Club", value: club },
+    { param: "country", name: "Country", value: country && countryName(country) },
+  ];
 
   return (
     <main className="mx-auto flex w-full max-w-mobile flex-1 flex-col bg-background pb-5 font-manrope">
@@ -58,7 +55,7 @@ async function TournamentBrowser({
         <FilterSheet visibility={visibility} />
       </div>
 
-      <ActiveFilterChips filters={activeFilters} className="px-5 pb-2.5" />
+      <ActiveFilterChips className="px-5 pb-2.5" filters={activeFilters} />
 
       <div className="flex items-center justify-between px-6 py-1.25">
         <h1 className="text-xl font-semibold text-obsidian">Tournaments</h1>

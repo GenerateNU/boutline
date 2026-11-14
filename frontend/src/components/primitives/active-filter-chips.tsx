@@ -5,9 +5,10 @@ import { cn } from "cn";
 import { Chip } from "@/components/primitives/chip";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 
-export interface ActiveFilter {
+interface ActiveFilter {
   param: string;
-  label: string;
+  name: string;
+  value?: string;
 }
 
 interface ActiveFilterChipsProps {
@@ -17,21 +18,22 @@ interface ActiveFilterChipsProps {
 
 function ActiveFilterChips({ filters, className }: ActiveFilterChipsProps) {
   const { setFilters } = useTournamentFilters();
+  const active = filters.filter((filter) => filter.value);
 
-  if (filters.length === 0) {
+  if (active.length === 0) {
     return null;
   }
 
   return (
     <ul aria-label="Active filters" className={cn("flex flex-wrap gap-2", className)}>
-      {filters.map(({ param, label }) => (
+      {active.map(({ param, name, value }) => (
         <li key={param}>
           <Chip
             onDismiss={() => setFilters({ [param]: undefined })}
-            dismissLabel={`Remove ${label}`}
+            dismissLabel={`Remove ${name}: ${value}`}
             className="rounded-full border-blue bg-blue-lighter py-1 text-xs font-medium text-blue"
           >
-            {label}
+            {name}: {value}
           </Chip>
         </li>
       ))}

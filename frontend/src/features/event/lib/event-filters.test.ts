@@ -59,15 +59,19 @@ describe("matchesEventFilters", () => {
 });
 
 describe("eventFilterChips", () => {
-  it("labels the applied filters in sheet order", () => {
-    expect(eventFilterChips({ type: "team", gender: "other", weapon: "epee" })).toEqual([
-      { param: "weapon", label: "Epee" },
-      { param: "gender", label: "Mixed" },
-      { param: "type", label: "Team" },
-    ]);
-  });
-
-  it("is empty without filters", () => {
-    expect(eventFilterChips({})).toEqual([]);
+  it.each([
+    {
+      name: "names the applied filters in sheet order",
+      filters: { type: "team", gender: "other", weapon: "epee" } as const,
+      want: { weapon: "Epee", age: undefined, gender: "Mixed", status: undefined, type: "Team" },
+    },
+    {
+      name: "leaves every value empty without filters",
+      filters: {},
+      want: { weapon: undefined, age: undefined, gender: undefined, status: undefined, type: undefined },
+    },
+  ])("$name", ({ filters, want }) => {
+    const values = Object.fromEntries(eventFilterChips(filters).map(({ param, value }) => [param, value]));
+    expect(values).toEqual(want);
   });
 });

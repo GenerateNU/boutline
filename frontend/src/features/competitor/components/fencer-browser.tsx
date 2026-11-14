@@ -1,18 +1,18 @@
+import { ActiveFilterChips } from "@/components/primitives/active-filter-chips";
 import { Pagination } from "@/components/primitives/pagination";
 import { Text } from "@/components/primitives/text";
 import { FencerCard } from "@/features/competitor/components/fencer-card";
 import { FencerFilterSheet } from "@/features/competitor/components/fencer-filter-sheet";
-import { RATING_CATEGORIES } from "@/features/competitor/lib/rating-categories";
-import { getCompetitors } from "@/features/competitor/services/getCompetitors";
-import { getEvents } from "@/features/event/services/getEvents";
 import {
-  ActiveFilterChips,
-  type ActiveFilter,
-} from "@/features/tournament/components/active-filter-chips";
+  FENCER_PAGE_SIZE,
+  GENDER_OPTIONS,
+  optionLabel,
+  parseFencerFilters,
+  RATING_OPTIONS,
+} from "@/features/competitor/lib/fencer-filters";
+import { getCompetitors } from "@/features/competitor/services/getCompetitors";
 import { SearchForm } from "@/features/tournament/components/search-form";
-import { readOffsetParam, readStringParam, type SearchParams } from "@/lib/search-params";
-
-const PAGE_SIZE = 20;
+import type { SearchParams } from "@/lib/search-params";
 
 interface FencerBrowserProps {
   tournamentId: string;
@@ -22,30 +22,43 @@ interface FencerBrowserProps {
   eventId?: string;
 }
 
+interface EmptyMessageInput {
+  search: string;
+  hasFilters: boolean;
+  eventId?: string;
+}
+
+function emptyMessage({ search, hasFilters, eventId }: EmptyMessageInput) {
+  if (search) {
+    return `No fencers match “${search}”.`;
+  }
+  if (hasFilters) {
+    return "No fencers match these filters.";
+  }
+  if (eventId) {
+    return "No fencers have entered this event yet.";
+  }
+  return "No fencers have entered this tournament yet.";
+}
+
+// The searchable, filterable fencer list shared by the tournament and event Fencers tabs.
 async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerBrowserProps) {
-  const search = readStringParam(query, "q");
-  const team = readStringParam(query, "team");
-  const ratingParam = readStringParam(query, "rating");
-  // The backend rejects an unknown rating, so a hand-edited URL falls back to none.
-  const rating = RATING_CATEGORIES.includes(ratingParam) ? ratingParam : "";
-  const offset = readOffsetParam(query);
+  const { offset, search, team, rating, gender } = parseFencerFilters(query);
 
-  // Only the tournament-wide list offers the Event filter.
-  const events = eventId ? [] : await getEvents(tournamentId);
-  const pickedEvent = events.find(({ id }) => id === readStringParam(query, "event"));
-
-  const { data, total, limit } = await getCompetitors(tournamentId, PAGE_SIZE, offset, {
+  const { data, total, limit } = await getCompetitors(tournamentId, FENCER_PAGE_SIZE, offset, {
+    eventId,
     query: search,
     team,
     rating,
-    eventId: eventId ?? pickedEvent?.id,
+    gender,
   });
 
-  const activeFilters: ActiveFilter[] = [
-    { param: "team", label: team && `Club: ${team}` },
-    { param: "rating", label: rating && `Rating: ${rating}` },
-    { param: "event", label: pickedEvent && `Event: ${pickedEvent.name}` },
-  ].filter((filter): filter is ActiveFilter => Boolean(filter.label));
+  const activeFilters = [
+    { param: "team", name: "Club", value: team },
+    { param: "rating", name: "Rating", value: rating && optionLabel(RATING_OPTIONS, rating) },
+    { param: "gender", name: "Gender", value: gender && optionLabel(GENDER_OPTIONS, gender) },
+  ];
+  const hasFilters = Boolean(team || rating || gender);
 
   return (
     <>
@@ -57,18 +70,13 @@ async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerB
           defaultValue={search}
           suggest={{ tournamentId, sources: [{ kind: "fencers", href: basePath }] }}
         />
-        <FencerFilterSheet
-          tournamentId={tournamentId}
-          events={eventId ? undefined : events.map(({ id, name }) => ({ value: id, label: name }))}
-        />
+        <FencerFilterSheet tournamentId={tournamentId} />
       </div>
 
       <ActiveFilterChips filters={activeFilters} />
 
       {data.length === 0 && (
-        <Text variant="muted">
-          {search ? `No fencers match "${search}".` : "No fencers found."}
-        </Text>
+        <Text variant="muted">{emptyMessage({ search, hasFilters, eventId })}</Text>
       )}
 
       <ul className="flex flex-col gap-3">
@@ -84,7 +92,7 @@ async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerB
         limit={limit}
         offset={offset}
         basePath={basePath}
-        params={{ q: search, team, rating, event: pickedEvent?.id }}
+        params={{ q: search || undefined, team, rating, gender }}
       />
     </>
   );

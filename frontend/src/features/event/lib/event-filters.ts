@@ -6,7 +6,6 @@ import type {
   EventWeapon,
   TournamentEvent,
 } from "@/features/event/types/event";
-import type { ActiveFilter } from "@/features/tournament/components/active-filter-chips";
 import { readStringParam, type SearchParams } from "@/lib/search-params";
 
 // Key order is the order the filter sheet lists the options in.
@@ -82,24 +81,41 @@ function matchesEventFilters(event: TournamentEvent, filters: EventFilters): boo
   );
 }
 
-function eventFilterChips({ weapon, age, gender, status, type }: EventFilters): ActiveFilter[] {
+// Each label map as select or chip-group options.
+function toOptions(labels: Record<string, string>) {
+  return Object.entries(labels).map(([value, label]) => ({ value, label }));
+}
+
+const WEAPON_OPTIONS = toOptions(WEAPON_LABELS);
+const AGE_OPTIONS = toOptions(AGE_LABELS);
+const GENDER_OPTIONS = toOptions(GENDER_LABELS);
+const STATUS_OPTIONS = toOptions(STATUS_LABELS);
+const TYPE_OPTIONS = toOptions(TYPE_LABELS);
+
+// One chip per set filter; ActiveFilterChips skips the ones with no value.
+function eventFilterChips({ weapon, age, gender, status, type }: EventFilters) {
   return [
-    { param: "weapon", label: weapon && WEAPON_LABELS[weapon] },
-    { param: "age", label: age && AGE_LABELS[age] },
-    { param: "gender", label: gender && GENDER_LABELS[gender] },
-    { param: "status", label: status && STATUS_LABELS[status] },
-    { param: "type", label: type && TYPE_LABELS[type] },
-  ].filter((chip): chip is ActiveFilter => Boolean(chip.label));
+    { param: "weapon", name: "Weapon", value: weapon && WEAPON_LABELS[weapon] },
+    { param: "age", name: "Age", value: age && AGE_LABELS[age] },
+    { param: "gender", name: "Gender", value: gender && GENDER_LABELS[gender] },
+    { param: "status", name: "Status", value: status && STATUS_LABELS[status] },
+    { param: "type", name: "Type", value: type && TYPE_LABELS[type] },
+  ];
 }
 
 export {
   AGE_LABELS,
+  AGE_OPTIONS,
   eventFilterChips,
   GENDER_LABELS,
+  GENDER_OPTIONS,
   matchesEventFilters,
   parseEventFilters,
   STATUS_LABELS,
+  STATUS_OPTIONS,
   TYPE_LABELS,
+  TYPE_OPTIONS,
   WEAPON_LABELS,
+  WEAPON_OPTIONS,
 };
 export type { EventFilters };

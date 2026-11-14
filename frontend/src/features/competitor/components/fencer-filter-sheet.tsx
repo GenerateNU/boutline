@@ -3,17 +3,17 @@
 import { useState } from "react";
 
 import { Chip } from "@/components/primitives/chip";
-import { ChipGroup, ChipGroupOptions } from "@/components/primitives/chip-group";
-import { ComingSoonNote } from "@/components/primitives/coming-soon-note";
+import { ChipGroup, ChipGroupItem, ChipGroupOptions } from "@/components/primitives/chip-group";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
-import { SelectField, type SelectOption } from "@/components/primitives/select-field";
+import { SelectField } from "@/components/primitives/select-field";
+import { Text } from "@/components/primitives/text";
 import {
-  AGE_OPTIONS,
   GENDER_OPTIONS,
-  WEAPON_OPTIONS,
-} from "@/features/competitor/lib/placeholder-filter-options";
-import { RATING_CATEGORIES } from "@/features/competitor/lib/rating-categories";
+  RATING_OPTIONS,
+  optionLabel,
+} from "@/features/competitor/lib/fencer-filters";
+import { AGE_OPTIONS, WEAPON_OPTIONS } from "@/features/event/lib/event-filters";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { useFilterSearch } from "@/lib/hooks/use-filter-search";
 import { apiRequest } from "@/services/api-request";
@@ -23,15 +23,13 @@ const SUGGESTION_LIMIT = 10;
 
 interface FencerFilterSheetProps {
   tournamentId: string;
-  // The tournament's events to filter by; left out on an event's own page.
-  events?: SelectOption[];
 }
 
-function FencerFilterSheet({ tournamentId, events }: FencerFilterSheetProps) {
+function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
   const { searchParams, setFilters } = useTournamentFilters();
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState("");
-  const [eventId, setEventId] = useState("");
+  const [gender, setGender] = useState("");
 
   const clubField = useFilterSearch(async (term) => {
     const query = new URLSearchParams({ limit: String(SUGGESTION_LIMIT), q: term });
@@ -50,7 +48,7 @@ function FencerFilterSheet({ tournamentId, events }: FencerFilterSheetProps) {
         if (next) {
           clubField.reset(searchParams.get("team") ?? "");
           setRating(searchParams.get("rating") ?? "");
-          setEventId(searchParams.get("event") ?? "");
+          setGender(searchParams.get("gender") ?? "");
         }
         setOpen(next);
       }}
@@ -60,22 +58,43 @@ function FencerFilterSheet({ tournamentId, events }: FencerFilterSheetProps) {
       onReset={() => {
         clubField.reset();
         setRating("");
-        setEventId("");
+        setGender("");
       }}
       onSubmit={() => {
-        setFilters({ team: clubField.submitValue(), rating, ...(events && { event: eventId }) });
+        setFilters({ team: clubField.submitValue(), rating, gender });
         setOpen(false);
       }}
     >
-      <ComingSoonNote />
-
-      {clubField.value && (
+      {(clubField.value || rating || gender) && (
         <div className="flex flex-wrap gap-2">
-          <Chip onDismiss={() => clubField.reset()} dismissLabel={`Remove ${clubField.value}`}>
-            {clubField.value}
-          </Chip>
+          {clubField.value && (
+            <Chip
+              onDismiss={() => clubField.reset()}
+              dismissLabel={`Remove Club: ${clubField.value}`}
+            >
+              Club: {clubField.value}
+            </Chip>
+          )}
+          {rating && (
+            <Chip
+              onDismiss={() => setRating("")}
+              dismissLabel={`Remove Rating: ${optionLabel(RATING_OPTIONS, rating)}`}
+            >
+              Rating: {optionLabel(RATING_OPTIONS, rating)}
+            </Chip>
+          )}
+          {gender && (
+            <Chip
+              onDismiss={() => setGender("")}
+              dismissLabel={`Remove Gender: ${optionLabel(GENDER_OPTIONS, gender)}`}
+            >
+              Gender: {optionLabel(GENDER_OPTIONS, gender)}
+            </Chip>
+          )}
         </div>
       )}
+
+      <Text variant="caption">Greyed-out filters are coming soon.</Text>
 
       <FilterSearchField
         label="Club"
@@ -91,32 +110,28 @@ function FencerFilterSheet({ tournamentId, events }: FencerFilterSheetProps) {
         noun="clubs"
       />
 
-      {events && (
-        <SelectField
-          label="Event"
-          placeholder="Any event"
-          options={events}
-          value={eventId}
-          onValueChange={setEventId}
-        />
-      )}
-
+      {/* Weapon and age live on events, which the fencer list can't filter by yet. */}
       <ChipGroup label="Weapon" disabled>
         <ChipGroupOptions options={WEAPON_OPTIONS} />
       </ChipGroup>
 
-      <SelectField label="Age Category" placeholder="Any age category" options={AGE_OPTIONS} disabled />
+      <SelectField label="Age Category" placeholder="Select age" options={AGE_OPTIONS} disabled />
 
       <SelectField
-        label="Rating Category"
-        placeholder="Any rating"
-        options={RATING_CATEGORIES}
+        label="Rating"
+        name="rating"
+        placeholder="Select rating"
+        options={RATING_OPTIONS}
         value={rating}
         onValueChange={setRating}
       />
 
-      <ChipGroup label="Gender" disabled>
-        <ChipGroupOptions options={GENDER_OPTIONS} />
+      <ChipGroup label="Gender" value={gender} onValueChange={setGender}>
+        {GENDER_OPTIONS.map(({ value, label }) => (
+          <ChipGroupItem key={value} value={value} className="flex-1">
+            {label}
+          </ChipGroupItem>
+        ))}
       </ChipGroup>
     </FilterSheetDialog>
   );

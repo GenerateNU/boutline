@@ -3,12 +3,15 @@
 import { useState } from "react";
 
 import { ChipGroup, ChipGroupOptions } from "@/components/primitives/chip-group";
-import { ComingSoonNote } from "@/components/primitives/coming-soon-note";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
-import { WEAPON_OPTIONS } from "@/features/competitor/lib/placeholder-filter-options";
+import { Text } from "@/components/primitives/text";
+import { WEAPON_OPTIONS } from "@/features/event/lib/event-filters";
 
-// Every section is a disabled placeholder, so there is nothing to apply or reset.
+const PLACEHOLDER_SEARCHES = ["Fencer", "Club"];
+
+// The Clubs tab's filter sheet. The clubs API only searches by name, so every
+// section is a disabled placeholder and there is nothing to apply or reset.
 function ClubFilterSheet() {
   const [open, setOpen] = useState(false);
 
@@ -22,9 +25,9 @@ function ClubFilterSheet() {
       onReset={() => {}}
       onSubmit={() => setOpen(false)}
     >
-      <ComingSoonNote />
+      <Text variant="caption">Greyed-out filters are coming soon.</Text>
 
-      {["Fencer", "Club"].map((label) => (
+      {PLACEHOLDER_SEARCHES.map((label) => (
         <FilterSearchField
           key={label}
           label={label}
