@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 
 import { buildPool } from "../_fixtures/build-pool";
 
@@ -71,6 +71,43 @@ function applyFilter(choose: (sheet: HTMLElement) => void) {
 function chip(sheet: HTMLElement, name: string) {
   return within(sheet).getByRole("radio", { name });
 }
+
+function typeInSearch(query: string) {
+  render(<PoolList pools={poolBoards} poolingPath="/tournaments/t/events/e/pooling" />);
+  const search = screen.getByRole("searchbox", { name: "Search pools" });
+  act(() => search.focus());
+  fireEvent.change(search, { target: { value: query } });
+  return search;
+}
+
+function suggestions(group: string): string[] {
+  const section = screen.queryByRole("region", { name: group });
+  return section ? within(section).getAllByRole("button").map((button) => button.textContent ?? "") : [];
+}
+
+describe("PoolList search suggestions", () => {
+  it.each([
+    { query: "zoe", fencers: ["Zoe Kim"], clubs: [] },
+    { query: "cambridge", fencers: [], clubs: ["Cambridge FC"] },
+    { query: "new", fencers: [], clubs: ["New York Fencers Club"] },
+    { query: "zzz", fencers: [], clubs: [] },
+  ])("splits matches for '$query' into fencers and clubs", ({ query, fencers, clubs }) => {
+    typeInSearch(query);
+
+    expect(suggestions("Fencers")).toEqual(fencers);
+    expect(suggestions("Clubs")).toEqual(clubs);
+  });
+
+  it("searches for a picked suggestion and closes the list", () => {
+    const search = typeInSearch("cambridge");
+
+    fireEvent.click(screen.getByRole("button", { name: "Cambridge FC" }));
+
+    expect(search).toHaveValue("Cambridge FC");
+    expect(screen.queryByRole("region", { name: "Clubs" })).not.toBeInTheDocument();
+    expect(titles()).toEqual([poolTitles[1], poolTitles[2], poolTitles[3]]);
+  });
+});
 
 describe("PoolList", () => {
   it.each([

@@ -1,13 +1,12 @@
 "use client";
 
-import { SearchBar } from "@/components/primitives/search-bar";
-
 import { usePoolFilters } from "../_hooks/use-pool-filters";
 import { noPoolsMessage } from "../_services/no-pools-message";
 import type { PoolBoard } from "../_types/pool-board";
 
 import { PoolCard } from "./pool-card";
 import { PoolFilterSheet } from "./pool-filter-sheet";
+import { PoolSearch } from "./pool-search";
 
 interface PoolListProps {
   pools: PoolBoard[];
@@ -20,14 +19,7 @@ export function PoolList({ pools, poolingPath }: PoolListProps) {
   return (
     <div className="flex flex-col gap-6 font-manrope">
       <div className="flex gap-2">
-        <SearchBar
-          type="search"
-          aria-label="Search pools"
-          placeholder="Search pools"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          className="flex-1"
-        />
+        <PoolSearch value={search} onChange={setSearch} options={options} />
         <PoolFilterSheet filters={filters} options={options} onApply={setFilters} />
       </div>
       {matches.length > 0 ? (

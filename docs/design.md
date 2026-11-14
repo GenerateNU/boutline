@@ -1289,7 +1289,8 @@ with `buildPool` (`pooling/_fixtures/build-pool.ts`).
 
 - **Pool list:** the event's pools from `GET /api/v1/pool-sheets?event_id=…`, with
   "No pools yet." when there are none. A "Search pools" field sits above a card per
-  pool, always open. A card
+  pool, always open. While typing, the field drops down matching names in a Fencers
+  and a Clubs group (up to five each); picking one searches for it. A card
   has a Bouts | Standings toggle that shows the V/D grid or the standings table (# ·
   Fencer · V · V/M · TS · TR · Ind, by place, names as "Last, First"), and a View
   pool link. Pool pins are not built yet (§6.3).
