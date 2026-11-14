@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { Background } from "@/components/primitives/background";
 import { Button } from "@/components/primitives/button";
 
 import { OngoingEventsCard } from "./ongoing-events-card";
@@ -8,10 +7,10 @@ import { OngoingEventsCard } from "./ongoing-events-card";
 export function LandingHero() {
   return (
     <section className="relative isolate overflow-hidden bg-blue-dark text-white">
-      <Background version={3} />
+      
       <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 pt-10 pb-6">
         <div className="flex flex-col gap-4">
-          <p className="text-xs text-accent-green uppercase">Live fencing results</p>
+          <p className="font-bold text-xs text-accent-green uppercase">Live fencing results</p>
           <h1 className="font-wordmark text-4xl leading-10">
             <span className="block">Every bout.</span>
             <span className="block">Every score.</span>
