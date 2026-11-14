@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { TextField } from "@/components/primitives/text-field";
+import { claimAccountStorage } from "@/features/auth/services/account-storage";
 import { signup } from "@/features/auth/services/auth-actions";
 
 const MAX_PASSWORD_BYTES = 72;
@@ -42,6 +43,7 @@ function SignupForm({ redirectTo, loginHref }: SignupFormProps) {
         setError(result.error);
         return;
       }
+      claimAccountStorage(result.user.id);
       router.push(redirectTo);
     });
   }

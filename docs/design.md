@@ -966,9 +966,13 @@ name, club and rating.
 - **Built:** the parser (`frontend/src/lib/competitor-import/`). It maps headers,
   checks ratings and birthdates, finds duplicates by member number, and caps
   uploads at 2 MiB and 5000 rows, with tests.
-- **Planned:** the dropzones on the form call the parser (today they ignore their
-  files), a preview screen shows what will be created, and a backend route commits
-  it.
+- **Sample:** the creation form's dropzone says it takes only `.csv` and opens a
+  sample CSV in a dialog. The sample is the valid rows of #80's example upload
+  (`example-competitor-import.ts`), and a parser test keeps every row of it valid.
+- **Autofill:** the creation form's dropzone runs the parser and sorts valid rows
+  into event cards (§10.6). Rejected files and parse errors show inline.
+- **Planned:** submit commits the fencers with `POST /competitors` and reports
+  created and skipped counts (#208).
 
 ### 10.5 Check-in
 
@@ -977,17 +981,47 @@ name, club and rating.
 Admins mark fencers present on the day (`checked_in_at`). Only checked-in fencers
 are placed into pools.
 
-### 10.6 Creation form (`/admin/tournament/new`)
+### 10.6 Creation form (`/admin/tournaments/new`)
 
-**Status:** Partial. Issue: #136.
+**Status:** Partial. Issues: #136, #252.
 
-- **Built (UI only):** tournament fields (§10.1), four import dropzones (§10.4),
-  an admins field (§10.3), and any number of event blocks with every attribute in
-  §8.5.
+- **Built (UI only):** one page holds the tournament fields (§10.1), a CSV
+  dropzone (§10.4), and one card per event, titled by its event name ("Event 2"
+  until it has one), with the attributes in §8.5. Cards can be added and removed,
+  keeping at least one. Text fields carry example placeholders. From `lg` up the
+  upload spans the page, then two columns: tournament and submit on the left,
+  events on the right. Phones keep one column: upload, tournament, events, submit.
+- **Import:** the CSV's valid rows are sorted into cards by their Event column. A
+  card with a matching name (ignoring case) gets those fencers in place of its own,
+  so a second upload doesn't double them. Other events fill a blank card that has no
+  fencers yet, then get new cards. A toast says how many events and fencers were
+  autofilled and how many rows were skipped; a file that can't be read gets an
+  inline error instead, so it doesn't vanish before it's fixed.
+- **Saving:** the tournament details card has its own Save, and Save event stays
+  disabled until it is saved. Either Save checks only its own card (an event also
+  checks its fencers), marks empty fields with `aria-invalid`, then collapses the
+  card to a summary until Edit reopens it. An upload that replaces a saved card's
+  fencers reopens it for review.
+- **Fencers:** each is a card inside its event, showing name, club, rating and
+  member number, plus what it is still missing. First and last name, gender, birth
+  date and division are required, as `POST /competitors` requires them. Imported
+  genders are mapped to F, M or O; anything else is left blank to be filled in. While the
+  event is being edited, fencers can be edited, removed, or added by hand.
+- **Collapsing:** event cards and fencer lists use Radix Collapsible, animating
+  height and opacity (`animate-collapsible-down`/`-up`, off with reduced motion).
+  A card's header shows its title and fencer count, open or closed. Collapsed fields
+  escape the browser's required check, so submit reopens any unsaved card that is
+  missing fields or has incomplete fencers, and names it.
+- **Draft:** the whole form, events and fencers included, is kept in
+  sessionStorage, so a reload doesn't lose it. Its key starts with `account:`.
+  Fencers' details mustn't reach the next account in the tab, so logging out
+  clears `account:` keys, and so does signing in as a different account than the
+  one that owned them (an expired session skips logout). The same account signing
+  back in keeps its draft.
 - **Planned:** submit creates the tournament, then its events, then imports
   competitors and adds staff, showing per-row errors and landing on the new
-  tournament. Today submit discards everything and navigates away, and event
-  blocks cannot be removed.
+  tournament (#252). Today submit clears the draft and returns to the admin home.
+  Adding an event to an existing tournament has no screen.
 
 ### 10.7 Organizer console (`/admin`)
 
@@ -1620,9 +1654,12 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   progress indicators, and a loading spinner.
 - Form fields (text field, select, date field) share one hi-fi frame: a `text-xs`
   label above a `rounded-md border-outline` box that turns `border-blue` with a
-  `ring-blue-lighter` halo on focus or open, `border-red-dark` when `aria-invalid`,
-  and `bg-disabled` when disabled. Select is Radix Select; the date field opens the
-  calendar in a Radix Popover.
+  `ring-blue-lighter` halo on focus or open, a 2px `border-red-dark` when
+  `aria-invalid` or `:user-invalid` (a required field left empty once edited or
+  submitted), and `bg-disabled` when disabled. A required field's label
+  ends in a `text-red-dark` asterisk, hidden from screen readers since `required`
+  is already announced. Select is Radix Select; the date field opens the calendar
+  in a Radix Popover.
 - Overlays: Modal is a `rounded-3xl p-5` card with an `text-xl` title and close (X)
   header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a
   filled or `destructive` action). The filter sheet is a `rounded-t-3xl` bottom sheet
