@@ -1,7 +1,6 @@
-import { AdminTournamentBrowser } from "@/features/tournament/components/admin-tournament-browser";
+import { redirect } from "next/navigation";
 
-export default async function AdminTournamentsPage({
-  searchParams,
-}: PageProps<"/admin/tournaments">) {
-  return <AdminTournamentBrowser query={await searchParams} />;
+// The admin home moved to /admin; this keeps old links and bookmarks working.
+export default function AdminTournamentsPage() {
+  redirect("/admin");
 }

@@ -8,7 +8,7 @@ import {
 } from "@/features/tournament/lib/tournament-filters";
 import { getTournaments } from "@/features/tournament/services/getTournaments";
 
-const BASE_PATH = "/admin/tournaments";
+const BASE_PATH = "/admin";
 
 interface AdminTournamentBrowserProps {
   query: Record<string, string | string[] | undefined>;

@@ -410,7 +410,7 @@ different roles in different tournaments.
   over a faint line pattern; each links to the other. Sign-up also asks for first
   and last name, which the backend requires. Failures show an error alert. On
   success it returns to `?next=` (validated so it can only point inside the
-  site), else `/admin/tournaments`.
+  site), else `/admin`.
 - **Log out:** on `/admin` pages a profile icon at the right of the global nav
   opens a "Log out?" confirmation; confirming clears the session and goes to
   `/login`.
@@ -521,14 +521,17 @@ replace the tournament's tabs rather than stacking under them.
   view" button and a touch log, from the fixture. Only its referee link reaches
   the real API.
 
-### 4.5 Organizer list (`/admin/tournaments`)
+### 4.5 Admin home (`/admin`)
 
 **Status:** Partial.
 
-Behind the login gate: a dashed "Create tournament" card, then "Manage
-Tournaments" with All / Completed / In Progress / Upcoming tabs (`?status=`) over
+Where login and signup land by default, behind the login gate. A solid-outlined
+"Create tournament" card linking to the creation form (§10.6), then "Manage
+Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) over
 every tournament (not yet only the caller's), paginated. Cards show the created
-date instead of the location. It switches to `GET /users/{me}/tournaments` in §10.7.
+date instead of the location. Organizers see `pending` as "Scheduled" with the blue
+badge; public screens keep "Upcoming". `/admin/tournaments` redirects here. It
+switches to `GET /users/{me}/tournaments` in §10.7.
 
 ---
 
@@ -990,9 +993,8 @@ are placed into pools.
 
 **Status:** Partial.
 
-A hub linking to the organizer's tournaments (§4.5) and the creation form, plus
-inert buttons (tools, reports, view, save). The tournaments list switches to
-`GET /users/{me}/tournaments`.
+The admin home (§4.5) is the console's entry point. Its tournaments list switches
+to `GET /users/{me}/tournaments`.
 
 On the day, the admin checks fencers in, starts the tournament, generates pools
 (which creates bouts, so it needs the tournament `active`), assigns referees, and

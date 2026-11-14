@@ -5,7 +5,7 @@ import { LoginForm } from "./_components/login-form";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { next } = await searchParams;
-  const redirectTo = safeRedirectPath(next, "/admin/tournaments");
+  const redirectTo = safeRedirectPath(next, "/admin");
 
   return (
     <AuthScreen title="Admin Login" background={7}>
