@@ -35,7 +35,7 @@ function TableauBracket({ rounds, focusedRoundId, query, boutBasePath }: Tableau
   }, [focusedRoundId, firstRoundId]);
 
   return (
-    <div className="overflow-x-auto pb-2">
+    <div className="snap-x snap-mandatory overflow-x-auto pb-2">
       <div className="flex gap-8">
         {rounds.map((round, roundIndex) => (
           <BracketRound
