@@ -1319,8 +1319,8 @@ with `buildPool` (`pooling/_fixtures/build-pool.ts`).
   and a Clubs group (up to five each); picking one searches for it. A card
   has a Bouts | Standings toggle that shows the V/D grid or the standings table (# ·
   Fencer · V · V/M · TS · TR · Ind, by place, names as "Last, First"), and a View
-  pool link. A pin above each card's top-right corner pins the pool (filled navy
-  when pinned). Pinned pools always lead the list, alphabetically by title with
+  pool link. A pin in the card's header, right of the status chip, pins the pool
+  (filled navy when pinned). Pinned pools always lead the list, alphabetically by title with
   numbers compared as numbers, ahead of the chosen sort; the pool page has the same
   pin beside its back button.
 - **Filter sheet:** a filter button beside the search opens the shared

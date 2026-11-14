@@ -9,7 +9,6 @@ import type { PoolBoard } from "../_types/pool-board";
 
 import { PoolCard } from "./pool-card";
 import { PoolFilterSheet } from "./pool-filter-sheet";
-import { PoolPinButton } from "./pool-pin-button";
 import { PoolSearch } from "./pool-search";
 
 interface PoolListProps {
@@ -29,10 +28,9 @@ export function PoolList({ pools, poolingPath }: PoolListProps) {
         <PoolFilterSheet filters={filters} options={options} onApply={setFilters} />
       </div>
       {ordered.length > 0 ? (
-        <ul aria-label="Pools" className="flex flex-col gap-4">
+        <ul aria-label="Pools" className="flex flex-col gap-6">
           {ordered.map((pool) => (
-            <li key={pool.id} className="flex flex-col gap-1">
-              <PoolPinButton pool={pool} className="self-end" />
+            <li key={pool.id}>
               <PoolCard pool={pool} poolingPath={poolingPath} />
             </li>
           ))}

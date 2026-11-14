@@ -2,6 +2,7 @@
 
 import PushPin from "@mui/icons-material/PushPin";
 import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
+import { cn } from "cn";
 
 import { PinButton } from "@/components/primitives/pin-button";
 import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
@@ -26,7 +27,7 @@ export function PoolPinButton({ pool, className }: PoolPinButtonProps) {
       active={isPinned}
       aria-label={`${isPinned ? "Unpin" : "Pin"} ${poolTitle(pool)}`}
       onClick={() => (isPinned ? unpinPool(pool.id) : pinPool(pool.id))}
-      className={className}
+      className={cn("[&_svg]:size-5", className)}
     >
       <PinIcon aria-hidden />
     </PinButton>
