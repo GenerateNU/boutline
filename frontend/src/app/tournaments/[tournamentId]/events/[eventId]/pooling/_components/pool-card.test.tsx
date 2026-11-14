@@ -1,13 +1,23 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 
-import { poolBoards } from "../_fixtures/pool-boards";
+import { buildPool } from "../_fixtures/build-pool";
 
 import { PoolCard } from "./pool-card";
 
 const poolingPath = "/tournaments/t/events/e/pooling";
 
+const pool = buildPool({
+  number: 1,
+  strip: "Strip 3",
+  fencers: [
+    ["Yan", "Wang", "New York Fencers Club"],
+    ["Caitlin", "Lee", "New York Fencers Club"],
+  ],
+  bouts: [[1, 2, 5, 2]],
+});
+
 function renderCard() {
-  render(<PoolCard pool={poolBoards[0]} poolingPath={poolingPath} />);
+  render(<PoolCard pool={pool} poolingPath={poolingPath} />);
 }
 
 describe("PoolCard", () => {

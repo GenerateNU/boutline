@@ -1246,8 +1246,8 @@ results, stored on the DE entry (§12.1).
 ### 11.6 Pooling tab and pool screen
 
 **Status:** Partial. Issue: #127. Each part below is built to the hi-fi design and
-reads the pool sheets API unless marked Planned. Tests use the fixture pools in
-`pooling/_fixtures/pool-boards.ts`.
+reads the pool sheets API unless marked Planned. Tests build the pools they need
+with `buildPool` (`pooling/_fixtures/build-pool.ts`).
 
 - **Pool list:** the event's pools from `GET /api/v1/pool-sheets?event_id=…`, with
   "No pools yet." when there are none. A "Search pools" field sits above a card per

@@ -1,8 +1,50 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 
-import { poolBoards } from "../_fixtures/pool-boards";
+import { buildPool } from "../_fixtures/build-pool";
 
 import { PoolList } from "./pool-list";
+
+const poolBoards = [
+  buildPool({
+    number: 1,
+    strip: "Strip 3",
+    status: "active",
+    start_time: "2026-10-24T09:00:00Z",
+    fencers: [
+      ["Yan", "Wang", "New York Fencers Club"],
+      ["Caitlin", "Lee", "New York Fencers Club"],
+    ],
+  }),
+  buildPool({
+    number: 2,
+    strip: "Strip 4",
+    status: "ended",
+    start_time: "2026-10-24T09:30:00Z",
+    fencers: [
+      ["Maya", "Chen", "Boston Fencing Club"],
+      ["Priya", "Patel", "Cambridge FC"],
+    ],
+  }),
+  buildPool({
+    number: 3,
+    strip: "Strip 5",
+    status: "upcoming",
+    fencers: [
+      ["Amara", "Okafor", "Cambridge FC"],
+      ["Ethan", "Kowalski", "MIT Fencing"],
+    ],
+  }),
+  buildPool({
+    number: 4,
+    strip: "Strip 2",
+    status: "active",
+    start_time: "2026-10-24T10:00:00Z",
+    fencers: [
+      ["Zoe", "Kim", "New York Fencers Club"],
+      ["Mateo", "Garcia", "Cambridge FC"],
+    ],
+  }),
+];
 
 const poolTitles = ["Pool 1 · Strip 3", "Pool 2 · Strip 4", "Pool 3 · Strip 5", "Pool 4 · Strip 2"];
 
