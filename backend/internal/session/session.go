@@ -19,12 +19,3 @@ func UserIDFrom(ctx context.Context) (uuid.UUID, bool) {
 	id, ok := ctx.Value(userIDKey{}).(uuid.UUID)
 	return id, ok
 }
-
-// BearerScheme is the OpenAPI security scheme server.CreateApp registers.
-const BearerScheme = "bearer"
-
-// BearerSecurity marks a read operation as needing a bearer token; writes
-// need one already unless they opt out with an empty Security.
-func BearerSecurity() []map[string][]string {
-	return []map[string][]string{{BearerScheme: {}}}
-}

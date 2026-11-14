@@ -168,9 +168,10 @@ func (s *tournamentService) GetCallerTournamentRole(
 		return nil, errs.HumaError(err)
 	}
 
+	// A public read: someone signed out simply holds no role here.
 	caller, ok := session.UserIDFrom(ctx)
 	if !ok {
-		return nil, errs.HumaError(errs.Public("sign in to see your tournament role", errs.ErrForbidden))
+		return &TournamentRoleOutput{}, nil
 	}
 
 	membership, err := s.membershipRepo.GetTournamentUser(ctx, id, caller)

@@ -21,11 +21,8 @@ export async function getTournamentRole(tournamentId: string): Promise<Tournamen
     API_PROXY_TARGET,
   );
 
+  // The backend treats an expired token as signed out, so that comes back as null too.
   const response = await fetch(url, { cache: "no-store", headers });
-  // An expired token counts as not an admin.
-  if (response.status === 401) {
-    return null;
-  }
   if (!response.ok) {
     throw new Error(`get tournament role: ${response.status}`);
   }

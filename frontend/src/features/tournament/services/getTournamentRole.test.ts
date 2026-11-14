@@ -21,7 +21,6 @@ describe("getTournamentRole", () => {
   it.each([
     { name: "admin", status: 200, body: { role: "admin" }, want: "admin" },
     { name: "no role", status: 200, body: { role: null }, want: null },
-    { name: "expired token", status: 401, body: {}, want: null },
   ])("resolves $want for $name", async ({ status, body, want }) => {
     fetchMock.mockResolvedValue({
       ok: status === 200,

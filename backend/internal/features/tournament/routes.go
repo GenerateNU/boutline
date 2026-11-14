@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"boutline/internal/features/tournamentuser"
-	"boutline/internal/session"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -63,9 +62,8 @@ func RegisterTournamentService(api huma.API, service TournamentService) {
 		Method:      http.MethodGet,
 		Path:        tournamentBasePath + "/{id}/role",
 		Summary:     "Get the caller's role in a tournament",
-		Description: "role is null when the caller is not on the tournament's staff.",
+		Description: "role is null when the caller is signed out or not on the tournament's staff.",
 		Tags:        []string{"Tournaments"},
-		Security:    session.BearerSecurity(),
 	}, service.GetCallerTournamentRole)
 
 	huma.Register(api, huma.Operation{

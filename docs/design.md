@@ -221,7 +221,7 @@ is deleted.
 | GET | `/tournaments/{id}/users?role&q&limit&offset` | list; each member carries first and last name, `occupied` (running a started pool or an active bout here) and `pool_number` (that pool, else their next unfinished one; null if none). `q` is a fuzzy name search |
 | PATCH | `/tournaments/{id}/users/{user_id}` | change role |
 | DELETE | `/tournaments/{id}/users/{user_id}` | remove |
-| GET | `/tournaments/{id}/role` | the caller's role, `{"role": "admin" \| "referee" \| null}`; null when they aren't on the staff or the tournament is unknown. Needs a token, else 401 |
+| GET | `/tournaments/{id}/role` | the caller's role, `{"role": "admin" \| "referee" \| null}`; null when they're signed out, aren't on the staff, or the tournament is unknown. A public read: the token is used when sent |
 
 ### 2.4 Events
 
@@ -397,7 +397,7 @@ different roles in different tournaments.
   so response time doesn't reveal which emails exist.
 - The auth middleware makes reads public and every other method require
   `Authorization: Bearer <token>`. An operation can override this; `GET /users`
-  and `GET /users/{id}` require a token, as does `GET /tournaments/{id}/role`. Handlers read the verified ID with
+  and `GET /users/{id}` require a token. Handlers read the verified ID with
   `session.UserIDFrom`.
 - `JWT_SECRET` must be at least 32 bytes. A built-in dev secret is allowed only
   when `APP_ENVIRONMENT=dev`.

@@ -9,7 +9,6 @@ import (
 
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
-	"boutline/internal/session"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
@@ -931,7 +930,7 @@ func TestCallerRoleEndpoint(t *testing.T) {
 		{name: "an admin reads admin", caller: CallerAdmin, path: stored.ID.String(), wantStatus: http.StatusOK, wantRole: "admin"},
 		{name: "a referee reads referee", caller: CallerReferee, path: stored.ID.String(), wantStatus: http.StatusOK, wantRole: "referee"},
 		{name: "a stranger reads null", caller: CallerStranger, path: stored.ID.String(), wantStatus: http.StatusOK},
-		{name: "a caller with no identity is refused", caller: CallerAnonymous, path: stored.ID.String(), wantStatus: http.StatusForbidden},
+		{name: "a signed-out caller reads null", caller: CallerAnonymous, path: stored.ID.String(), wantStatus: http.StatusOK},
 		{name: "rejects an id that is not a uuid", caller: CallerAdmin, path: "not-a-uuid", wantStatus: http.StatusUnprocessableEntity},
 	}
 
@@ -950,13 +949,4 @@ func TestCallerRoleEndpoint(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestCallerRoleEndpointRequiresABearerToken(t *testing.T) {
-	t.Parallel()
-
-	op := newTestAPI(t).OpenAPI().Paths["/api/v1/tournaments/{id}/role"].Get
-
-	require.NotNil(t, op)
-	assert.Equal(t, session.BearerSecurity(), op.Security)
 }

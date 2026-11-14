@@ -48,7 +48,7 @@ func NewAuthMiddleware(api huma.API, tokens *user.UserTokenManager) func(huma.Co
 // ApplyDefaultSecurity runs as an OpenAPI OnAddOperation hook, so every
 // documented operation leaves registration with an explicit Security: reads
 // public, writes behind a bearer token. An operation that set its own Security
-// (session.BearerSecurity() on a read, an empty slice on login) keeps it. The
+// (user.UserBearerSecurity() on a read, an empty slice on login) keeps it. The
 // generated spec and the middleware then read the same value.
 func ApplyDefaultSecurity(_ *huma.OpenAPI, op *huma.Operation) {
 	if op.Security != nil {
@@ -58,7 +58,7 @@ func ApplyDefaultSecurity(_ *huma.OpenAPI, op *huma.Operation) {
 		op.Security = []map[string][]string{}
 		return
 	}
-	op.Security = session.BearerSecurity()
+	op.Security = user.UserBearerSecurity()
 }
 
 // Security is still nil only for an operation the hook never saw (one

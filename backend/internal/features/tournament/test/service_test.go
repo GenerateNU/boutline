@@ -1666,13 +1666,7 @@ func TestGetCallerTournamentRole(t *testing.T) {
 		},
 		{name: "a stranger gets null", caller: CallerStranger, id: stored.ID.String()},
 		{name: "an unknown tournament gives null", caller: CallerAdmin, id: uuid.New().String()},
-		{
-			name:       "an anonymous caller is refused",
-			caller:     CallerAnonymous,
-			id:         stored.ID.String(),
-			wantStatus: http.StatusForbidden,
-			wantDetail: "sign in to see your tournament role",
-		},
+		{name: "a signed-out caller gets null", caller: CallerAnonymous, id: stored.ID.String()},
 		{
 			name:       "a malformed id is a bad request",
 			caller:     CallerAdmin,

@@ -113,7 +113,7 @@ func TestGetCallerTournamentRoleAgainstRealDatabase(t *testing.T) {
 		{name: "an admin reads admin", headers: authHeaders(t, uuid.MustParse(alexMorgan)), wantStatus: http.StatusOK, wantRole: "admin"},
 		{name: "a referee reads referee", headers: authHeaders(t, uuid.MustParse(jordanLee)), wantStatus: http.StatusOK, wantRole: "referee"},
 		{name: "a user off the staff reads null", headers: authHeaders(t, searchTestUserID), wantStatus: http.StatusOK},
-		{name: "no token is unauthorized", wantStatus: http.StatusUnauthorized},
+		{name: "no token reads null", wantStatus: http.StatusOK},
 	}
 
 	for _, tt := range tests {
