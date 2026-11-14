@@ -35,7 +35,7 @@ const FILLED_EVENT = {
 };
 
 function saveDraft(events: ReturnType<typeof newEventDraft>[]) {
-  sessionStorage.setItem("tournament-draft", JSON.stringify({ ...EMPTY_TOURNAMENT_DRAFT, events }));
+  sessionStorage.setItem("tournament-creation-draft", JSON.stringify({ ...EMPTY_TOURNAMENT_DRAFT, events }));
 }
 
 // jsdom's File lacks text(), which the parser reads it with.
@@ -50,7 +50,7 @@ describe("NewTournamentForm", () => {
 
   it("restores the saved draft, events and fencers included", () => {
     sessionStorage.setItem(
-      "tournament-draft",
+      "tournament-creation-draft",
       JSON.stringify({
         ...EMPTY_TOURNAMENT_DRAFT,
         name: "Northeastern Open",
@@ -66,6 +66,13 @@ describe("NewTournamentForm", () => {
     expect(within(first).getByRole("textbox", { name: "Event name" })).toHaveValue("Y14 Foil");
     expect(within(first).getByText("Alvarez, Maria")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Event 2" })).toHaveTextContent("No fencers yet");
+  });
+
+  it("ignores a draft left by the old two-step form, which had no events", () => {
+    sessionStorage.setItem("tournament-draft", JSON.stringify({ name: "Old Open", authority: "FIE" }));
+    render(<NewTournamentForm />);
+
+    expect(screen.getByRole("group", { name: "Event 1" })).toBeInTheDocument();
   });
 
   it("adds and removes event cards, keeping at least one", () => {

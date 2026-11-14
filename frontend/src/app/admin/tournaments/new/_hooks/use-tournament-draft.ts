@@ -4,7 +4,9 @@ import { CompetitorImportRow } from "@/types/competitor-import";
 import { EventDraft, TournamentDraft } from "../_types/tournament-draft";
 import { EMPTY_TOURNAMENT_DRAFT, importFencers, newEventDraft } from "../tournament-draft-helpers";
 
-const DRAFT_KEY = "tournament-draft";
+// Not "tournament-draft": the old two-step form stored a different shape (no
+// events) there, and reading it would crash.
+const DRAFT_KEY = "tournament-creation-draft";
 
 type TournamentField = Exclude<keyof TournamentDraft, "events">;
 
