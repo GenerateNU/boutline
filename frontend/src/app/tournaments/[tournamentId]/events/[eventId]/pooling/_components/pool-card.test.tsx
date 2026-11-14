@@ -29,6 +29,16 @@ describe("PoolCard", () => {
     expect(within(screen.getByRole("row", { name: /Wang, Yan/ })).getByRole("cell", { name: "V5" })).toBeInTheDocument();
   });
 
+  it("puts the pin in the header, right after the status chip", () => {
+    renderCard();
+
+    const status = screen.getByText("In Progress");
+    const pin = screen.getByRole("button", { name: "Pin Pool 1 · Strip 3" });
+
+    expect(pin.parentElement).toBe(status.parentElement);
+    expect(status.nextElementSibling).toBe(pin);
+  });
+
   it("switches to standings", () => {
     renderCard();
 
