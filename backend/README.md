@@ -180,7 +180,8 @@ Every write that belongs to a tournament calls
 the tournament. It returns 403 unless the caller holds that role there, and an
 admin passes a referee check. Bout start and end and the scoring writes need
 `referee`, and every other write needs `admin`. Creating a tournament is the only
-write any signed-in user can make.
+write any signed-in user can make, and it writes the creator into
+`tournament_users` as the tournament's first admin.
 
 ## Layout
 

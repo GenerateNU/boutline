@@ -57,8 +57,9 @@ var _ tournament.TournamentRepository = (*FakeTournamentRepository)(nil)
 
 type FakeTournamentRepository struct {
 	Tournaments map[uuid.UUID]tournament.Tournament
-	Clubs       map[uuid.UUID][]string // clubs of each tournament's competitors, for the club filter
-	Err         error                  // when set, every method fails with it
+	Clubs       map[uuid.UUID][]string        // clubs of each tournament's competitors, for the club filter
+	Members     *FakeTournamentUserRepository // when set, a create writes its memberships here, as the real one does
+	Err         error                         // when set, every method fails with it
 }
 
 func NewFakeTournamentRepository(seed ...tournament.Tournament) *FakeTournamentRepository {
@@ -84,6 +85,13 @@ func (f *FakeTournamentRepository) CreateTournament(_ context.Context, toCreate 
 	toCreate.ID = uuid.New()
 	toCreate.CreatedAt = time.Now()
 	toCreate.UpdatedAt = toCreate.CreatedAt
+	for i := range toCreate.Memberships {
+		membership := &toCreate.Memberships[i]
+		membership.TournamentID = toCreate.ID
+		if f.Members != nil {
+			f.Members.Memberships[keyOf(membership.TournamentID, membership.UserID)] = *membership
+		}
+	}
 	f.Tournaments[toCreate.ID] = *toCreate
 
 	return nil

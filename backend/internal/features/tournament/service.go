@@ -90,6 +90,13 @@ func (s *tournamentService) CreateTournament(
 		StartTime:  input.Body.StartTime,
 		City:       optionalText(strings.TrimSpace(input.Body.City)),
 		Country:    optionalText(input.Body.Country),
+		// tournament_users is the only record of who administers a tournament,
+		// so the creator's admin row goes in with the tournament. The transaction
+		// is gorm's: tournamentRepository.CreateTournament's one Create call
+		// inserts both rows and rolls both back on failure.
+		Memberships: []tournamentuser.TournamentUser{
+			{UserID: createdBy, Role: tournamentuser.TournamentUserRoleAdmin},
+		},
 	}
 	if err := s.createWithGeneratedCode(ctx, tournament); err != nil {
 		return nil, errs.HumaError(err)
