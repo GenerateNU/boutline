@@ -3,13 +3,19 @@ import { useSessionStorage } from "@/lib/hooks/use-session-storage";
 import { CompetitorImportRow } from "@/types/competitor-import";
 
 import { EventDraft, FencerDraft, TournamentDraft } from "../_types/tournament-draft";
-import { EMPTY_TOURNAMENT_DRAFT, importFencers, newEventDraft, newFencerDraft } from "../tournament-draft-helpers";
+import {
+  EMPTY_TOURNAMENT_DRAFT,
+  importFencers,
+  newEventDraft,
+  newFencerDraft,
+  withoutFencer,
+} from "../tournament-draft-helpers";
 
 // Account-scoped, so logging out clears it. Not "tournament-draft": the old
 // two-step form stored a different shape there, and reading it would crash this form.
 const DRAFT_KEY = `${ACCOUNT_STORAGE_PREFIX}tournament-creation-draft`;
 
-type TournamentField = Exclude<keyof TournamentDraft, "events" | "saved">;
+type TournamentField = Exclude<keyof TournamentDraft, "events" | "saved" | "tournamentId">;
 
 // The whole creation form, events and fencers included, kept in sessionStorage
 // so a reload doesn't lose it. Every change goes through an updater so it
@@ -25,6 +31,12 @@ export function useTournamentDraft() {
     updateEvents((events) => events.map((event) => (event.id === id ? { ...event, ...patch } : event)));
   }
 
+  // The updater form lets an async save write its result onto the latest event,
+  // not the copy it started from.
+  function updateEventWith(id: string, update: (event: EventDraft) => EventDraft) {
+    updateEvents((events) => events.map((event) => (event.id === id ? update(event) : event)));
+  }
+
   function updateFencers(eventId: string, update: (fencers: FencerDraft[]) => FencerDraft[]) {
     updateEvents((events) =>
       events.map((event) => (event.id === eventId ? { ...event, fencers: update(event.fencers) } : event)),
@@ -33,6 +45,10 @@ export function useTournamentDraft() {
 
   function setField(field: TournamentField, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  function setTournamentId(tournamentId: string) {
+    setDraft((current) => ({ ...current, tournamentId }));
   }
 
   function setTournamentSaved(saved: boolean) {
@@ -53,12 +69,12 @@ export function useTournamentDraft() {
 
   function updateFencer(eventId: string, fencerId: string, patch: Partial<FencerDraft>) {
     updateFencers(eventId, (fencers) =>
-      fencers.map((fencer) => (fencer.id === fencerId ? { ...fencer, ...patch } : fencer)),
+      fencers.map((fencer) => (fencer.id === fencerId ? { ...fencer, ...patch, dirty: true } : fencer)),
     );
   }
 
   function removeFencer(eventId: string, fencerId: string) {
-    updateFencers(eventId, (fencers) => fencers.filter((fencer) => fencer.id !== fencerId));
+    updateEventWith(eventId, (event) => withoutFencer(event, fencerId));
   }
 
   function importRows(rows: CompetitorImportRow[]) {
@@ -72,9 +88,11 @@ export function useTournamentDraft() {
   return {
     draft,
     setField,
+    setTournamentId,
     setTournamentSaved,
     addEvent,
     updateEvent,
+    updateEventWith,
     removeEvent,
     addFencer,
     updateFencer,

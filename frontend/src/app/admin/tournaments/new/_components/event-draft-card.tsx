@@ -19,9 +19,13 @@ interface EventDraftCardProps {
   event: EventDraft;
   title: string;
   expanded: boolean;
-  tournamentSaved: boolean;
+  tournamentId?: string;
+  saving: boolean;
+  removing: boolean;
+  errors: string[];
   onExpandedChange: (expanded: boolean) => void;
   onChange: (patch: Partial<EventDraft>) => void;
+  onSave: () => void;
   onRemove?: () => void;
   onAddFencer: () => void;
   onChangeFencer: (fencerId: string, patch: Partial<FencerDraft>) => void;
@@ -32,9 +36,13 @@ function EventDraftCard({
   event,
   title,
   expanded,
-  tournamentSaved,
+  tournamentId,
+  saving,
+  removing,
+  errors,
   onExpandedChange,
   onChange,
+  onSave,
   onRemove,
   onAddFencer,
   onChangeFencer,
@@ -43,14 +51,15 @@ function EventDraftCard({
   const [attempted, setAttempted] = useState(false);
 
   // Saving checks only this card and its fencers; the browser's required check
-  // runs for the whole form on submit. A failed save marks what's missing.
+  // runs for the whole form on submit. A failed check marks what's missing;
+  // otherwise the card is sent to the server.
   function handleSave() {
     if (missingEventFields(event).length > 0 || hasIncompleteFencers(event)) {
       setAttempted(true);
       return;
     }
     setAttempted(false);
-    onChange({ saved: true });
+    onSave();
   }
 
   const fencerList = (
@@ -93,6 +102,7 @@ function EventDraftCard({
               variant="text"
               size="icon"
               aria-label={`Remove ${title}`}
+              disabled={saving || removing}
               onClick={onRemove}
               className="relative -m-2 text-neutral-secondary [&_svg]:size-5"
             >
@@ -113,7 +123,9 @@ function EventDraftCard({
             ) : (
               <EventDraftFields
                 event={event}
-                canSave={tournamentSaved}
+                canSave={Boolean(tournamentId)}
+                saving={saving}
+                removing={removing}
                 attempted={attempted}
                 onChange={onChange}
                 onSave={handleSave}
@@ -121,6 +133,13 @@ function EventDraftCard({
                 {fencerList}
               </EventDraftFields>
             )}
+            {errors.length > 0 ? (
+              <ul role="alert" className="flex flex-col gap-1 text-xs text-red-dark">
+                {errors.map((message) => (
+                  <li key={message}>{message}</li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         </CollapsibleContent>
       </Collapsible>

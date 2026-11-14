@@ -2,6 +2,7 @@ import { CompetitorImportRow, CompetitorImportStatus } from "@/types/competitor-
 
 import {
   eventTitle,
+  fencerChanges,
   formatRating,
   importedEventCount,
   importFencers,
@@ -9,6 +10,7 @@ import {
   missingFencerFields,
   newEventDraft,
   newFencerDraft,
+  withoutFencer,
 } from "./tournament-draft-helpers";
 
 function row(firstName: string, event: string, status: CompetitorImportStatus = "valid"): CompetitorImportRow {
@@ -90,6 +92,51 @@ describe("importFencers", () => {
     const [event] = importFencers([newEventDraft()], [row("Ada", ""), row("Bea", "")]);
 
     expect(new Set(event.fencers.map((fencer) => fencer.id)).size).toBe(2);
+  });
+});
+
+describe("importFencers saved competitors", () => {
+  it("moves the replaced fencers' competitor ids into removedCompetitorIds", () => {
+    const saved = newEventDraft("Y14 Foil", [
+      { ...newFencerDraft(), competitorId: "c1" },
+      newFencerDraft(),
+      { ...newFencerDraft(), competitorId: "c2" },
+    ]);
+
+    const [replaced] = importFencers([{ ...saved, removedCompetitorIds: ["c0"] }], [row("Ada", "Y14 Foil")]);
+
+    expect(replaced.removedCompetitorIds).toEqual(["c0", "c1", "c2"]);
+    expect(replaced.fencers.map((fencer) => fencer.competitorId)).toEqual([undefined]);
+  });
+});
+
+describe("withoutFencer", () => {
+  it.each([
+    { name: "records a saved fencer's competitor id", competitorId: "c1", want: ["c1"] },
+    { name: "records nothing for an unsaved fencer", competitorId: undefined, want: [] },
+  ])("$name", ({ competitorId, want }) => {
+    const keep = newFencerDraft();
+    const drop = { ...newFencerDraft(), competitorId };
+
+    const result = withoutFencer(newEventDraft("Y14 Foil", [keep, drop]), drop.id);
+
+    expect(result.fencers).toEqual([keep]);
+    expect(result.removedCompetitorIds).toEqual(want);
+  });
+});
+
+describe("fencerChanges", () => {
+  it("sorts a card's fencers into delete, update, and create", () => {
+    const unchanged = { ...newFencerDraft(), competitorId: "c1" };
+    const edited = { ...newFencerDraft(), competitorId: "c2", dirty: true };
+    const added = newFencerDraft();
+    const event = { ...newEventDraft("Y14 Foil", [unchanged, edited, added]), removedCompetitorIds: ["c3"] };
+
+    expect(fencerChanges(event)).toEqual({ toDelete: ["c3"], toUpdate: [edited], toCreate: [added] });
+  });
+
+  it("is empty for a card with nothing pending", () => {
+    expect(fencerChanges(newEventDraft("Y14 Foil"))).toEqual({ toDelete: [], toUpdate: [], toCreate: [] });
   });
 });
 

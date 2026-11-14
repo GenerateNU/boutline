@@ -14,6 +14,16 @@ export function problemMessage(body: unknown, status: number) {
   return reasons.length > 0 ? `${detail} (${reasons.join("; ")})` : detail;
 }
 
+export class ApiRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+  }
+}
+
 // Paths are relative to /api/v1, which Next proxies to the backend (see next.config.ts).
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
@@ -21,6 +31,9 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     headers.set("Content-Type", "application/json");
   }
   const response = await fetch(`/api/v1${path}`, { ...init, headers });
+  if (response.status === 204) {
+    return undefined as T;
+  }
   let body: unknown = null;
   try {
     body = await response.json();
@@ -28,7 +41,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     // No JSON body (e.g. a proxy error page); problemMessage falls back to the status.
   }
   if (!response.ok) {
-    throw new Error(problemMessage(body, response.status));
+    throw new ApiRequestError(problemMessage(body, response.status), response.status);
   }
   return body as T;
 }
