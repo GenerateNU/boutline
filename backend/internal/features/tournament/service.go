@@ -33,6 +33,7 @@ type TournamentService interface {
 	// Tournament Endpoints
 	CreateTournament(ctx context.Context, input *TournamentCreateInput) (*TournamentOutput, error)
 	GetTournamentByID(ctx context.Context, input *TournamentIDInput) (*TournamentOutput, error)
+	GetCallerTournamentRole(ctx context.Context, input *TournamentIDInput) (*TournamentRoleOutput, error)
 	GetTournamentByCode(ctx context.Context, input *TournamentCodeInput) (*TournamentOutput, error)
 	ListTournaments(ctx context.Context, input *TournamentListInput) (*TournamentListOutput, error)
 	ListTournamentCountries(ctx context.Context, input *TournamentCountryListInput) (*TournamentCountryListOutput, error)
@@ -163,6 +164,32 @@ func (s *tournamentService) GetTournamentByID(
 	}
 
 	return &TournamentOutput{Body: NewTournamentResponse(*tournament)}, nil
+}
+
+func (s *tournamentService) GetCallerTournamentRole(
+	ctx context.Context,
+	input *TournamentIDInput,
+) (*TournamentRoleOutput, error) {
+	id, err := utils.ParseUUID(input.ID, "id")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	// A public read: someone signed out simply holds no role here.
+	caller, ok := session.UserIDFrom(ctx)
+	if !ok {
+		return &TournamentRoleOutput{}, nil
+	}
+
+	membership, err := s.membershipRepo.GetTournamentUser(ctx, id, caller)
+	if errors.Is(err, errs.ErrNotFound) {
+		return &TournamentRoleOutput{}, nil
+	}
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get caller tournament role: %w", err))
+	}
+
+	return &TournamentRoleOutput{Body: TournamentRoleResponse{Role: &membership.Role}}, nil
 }
 
 func (s *tournamentService) GetTournamentByCode(
@@ -437,10 +464,27 @@ func (s *tournamentService) AddTournamentUser(
 		Role:         input.Body.Role,
 	}
 	if err := s.membershipRepo.CreateTournamentUser(ctx, membership); err != nil {
+		if errors.Is(err, errs.ErrDuplicate) {
+			err = errs.Public(s.duplicateMemberMessage(ctx, tournamentID, userID), err)
+		}
 		return nil, errs.HumaError(fmt.Errorf("add tournament user: %w", err))
 	}
 
 	return &TournamentUserOutput{Body: newTournamentUserResponse(*membership)}, nil
+}
+
+// A person holds one role per tournament, so a duplicate add says which role
+// they already have rather than just that they're on the staff.
+func (s *tournamentService) duplicateMemberMessage(ctx context.Context, tournamentID, userID uuid.UUID) string {
+	existing, err := s.membershipRepo.GetTournamentUser(ctx, tournamentID, userID)
+	if err != nil {
+		return "This user is already on the tournament's staff"
+	}
+	if existing.Role == tournamentuser.TournamentUserRoleAdmin {
+		return "This user is already an admin of this tournament, and each person holds one role " +
+			"per tournament. An admin can still referee a pool they're assigned to."
+	}
+	return "This user is already a referee in this tournament"
 }
 
 func (s *tournamentService) ListUsersByTournament(
@@ -454,19 +498,19 @@ func (s *tournamentService) ListUsersByTournament(
 
 	limit, offset := page(input.Limit, input.Offset)
 
-	memberships, err := s.membershipRepo.ListUsersByTournament(ctx, tournamentID, limit, offset)
+	members, total, err := s.membershipRepo.ListMembersByTournament(ctx, tournamentID, tournamentuser.TournamentUserFilter{
+		Role:   input.Role,
+		Term:   strings.TrimSpace(input.Query),
+		Limit:  limit,
+		Offset: offset,
+	})
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list users in tournament: %w", err))
 	}
 
-	total, err := s.membershipRepo.CountUsersByTournament(ctx, tournamentID)
-	if err != nil {
-		return nil, errs.HumaError(fmt.Errorf("list users in tournament: %w", err))
-	}
-
-	data := make([]TournamentUserResponse, 0, len(memberships))
-	for _, membership := range memberships {
-		data = append(data, newTournamentUserResponse(membership))
+	data := make([]TournamentMemberResponse, 0, len(members))
+	for _, member := range members {
+		data = append(data, newTournamentMemberResponse(member))
 	}
 
 	return &TournamentUserListOutput{Body: TournamentUserListBody{

@@ -45,6 +45,7 @@ describe("apiRequest", () => {
     respondWith(status, body);
 
     await expect(apiRequest("/anything")).rejects.toThrow(message);
+    await expect(apiRequest("/anything")).rejects.toMatchObject({ status });
   });
 
   it.each<{ name: string; headers: HeadersInit | undefined; expected: Record<string, string> }>([

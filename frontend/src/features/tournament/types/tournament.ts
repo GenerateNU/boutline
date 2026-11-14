@@ -33,3 +33,9 @@ export interface TournamentListResult {
   limit: number;
   offset: number;
 }
+
+export type TournamentRole = "admin" | "referee";
+
+export interface TournamentRoleResponse {
+  role: TournamentRole | null;
+}

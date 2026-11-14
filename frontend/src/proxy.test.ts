@@ -70,6 +70,8 @@ describe("proxy", () => {
     { path: "/api/v1/tournaments", want: true },
     { path: "/admin", want: true },
     { path: "/admin/tournaments/new", want: true },
+    { path: "/admin/tournaments/t1/referees", want: true },
+    { path: "/tournaments/t1/referees", want: false },
     { path: "/tournaments/t1/events/e1/bout/b1/referee", want: true },
     { path: "/tournaments", want: false },
     { path: "/tournaments/t1/events/e1/bout/b1", want: false },

@@ -132,6 +132,11 @@ func (r *userRepository) UpdateUserByID(ctx context.Context, id uuid.UUID, updat
 func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error) {
 	// TODO: apply other filters once decided
 	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&User{}), userNameSearchColumns, filter.Term)
+	// Also match an email starting with the term. Or applies to the whole WHERE,
+	// so any filter added here later must be grouped with the name match.
+	if emailMatch, emailArgs := utils.PrefixPredicate([]string{"email"}, filter.Term); emailMatch != "" {
+		query = query.Or(emailMatch, emailArgs...)
+	}
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {

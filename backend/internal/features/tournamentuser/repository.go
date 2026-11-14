@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"boutline/internal/errs"
+	"boutline/internal/utils"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -14,11 +15,44 @@ import (
 type TournamentUserRepository interface {
 	CreateTournamentUser(ctx context.Context, membership *TournamentUser) error
 	GetTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) (*TournamentUser, error)
-	ListUsersByTournament(ctx context.Context, tournamentID uuid.UUID, limit, offset int) ([]TournamentUser, error)
-	CountUsersByTournament(ctx context.Context, tournamentID uuid.UUID) (int64, error)
+	ListMembersByTournament(
+		ctx context.Context,
+		tournamentID uuid.UUID,
+		filter TournamentUserFilter,
+	) ([]TournamentMember, int64, error)
 	UpdateTournamentUserRole(ctx context.Context, tournamentID, userID uuid.UUID, role TournamentUserRole) error
 	DeleteTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) error
 }
+
+type TournamentUserFilter struct {
+	Role   TournamentUserRole // empty means any role
+	Term   string
+	Limit  int
+	Offset int
+}
+
+// Joined like idx_users_name_trgm, so the trigram index serves the search.
+var memberNameSearchColumns = []string{"users.first_name", "users.last_name"}
+
+// The member's unfinished pools in this tournament, for the two columns below.
+const memberOpenPoolsSQL = `FROM pools
+	JOIN pool_stages ON pool_stages.id = pools.pool_stage_id
+	JOIN events ON events.id = pool_stages.event_id
+	WHERE pools.referee_id = tournament_users.user_id
+		AND events.tournament_id = tournament_users.tournament_id
+		AND pools.completed_at IS NULL`
+
+// Occupied means running a pool right now or refereeing an active bout.
+const memberOccupiedSQL = `(EXISTS (SELECT 1 ` + memberOpenPoolsSQL + ` AND pools.started_at IS NOT NULL)
+	OR EXISTS (SELECT 1 FROM bouts
+		WHERE bouts.referee_id = tournament_users.user_id
+			AND bouts.tournament_id = tournament_users.tournament_id
+			AND bouts.status = 'active')) AS occupied`
+
+// The pool they're running now, else the next one they're down for.
+const memberPoolNumberSQL = `(SELECT pools.number ` + memberOpenPoolsSQL + `
+	ORDER BY pools.started_at IS NULL, pools.start_time NULLS LAST, pools.number
+	LIMIT 1) AS pool_number`
 
 type tournamentUserRepository struct {
 	db *gorm.DB
@@ -44,25 +78,41 @@ func (r *tournamentUserRepository) CreateTournamentUser(ctx context.Context, mem
 	return nil
 }
 
-func (r *tournamentUserRepository) ListUsersByTournament(
+func (r *tournamentUserRepository) ListMembersByTournament(
 	ctx context.Context,
 	tournamentID uuid.UUID,
-	limit int,
-	offset int,
-) ([]TournamentUser, error) {
-	var memberships []TournamentUser
+	filter TournamentUserFilter,
+) ([]TournamentMember, int64, error) {
+	query := r.db.WithContext(ctx).
+		Model(&TournamentUser{}).
+		Joins("JOIN users ON users.id = tournament_users.user_id").
+		Where("tournament_users.tournament_id = ?", tournamentID)
+	if filter.Role != "" {
+		query = query.Where("tournament_users.role = ?", filter.Role)
+	}
+	query = utils.TrigramMatch(query, memberNameSearchColumns, filter.Term)
 
-	err := r.db.WithContext(ctx).
-		Where("tournament_id = ?", tournamentID).
-		Order("created_at, user_id").
-		Limit(limit).
-		Offset(offset).
-		Find(&memberships).Error
-	if err != nil {
-		return nil, fmt.Errorf("select users in tournament %s: %w", tournamentID, err)
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count users in tournament %s: %w", tournamentID, err)
 	}
 
-	return memberships, nil
+	query = utils.TrigramOrder(query, memberNameSearchColumns, filter.Term,
+		"tournament_users.created_at", "tournament_users.user_id")
+
+	members := make([]TournamentMember, 0, filter.Limit)
+	err := query.
+		Select("tournament_users.user_id, tournament_users.tournament_id, tournament_users.role, " +
+			"tournament_users.created_at, tournament_users.updated_at, users.first_name, users.last_name, " +
+			memberOccupiedSQL + ", " + memberPoolNumberSQL).
+		Limit(filter.Limit).
+		Offset(filter.Offset).
+		Scan(&members).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("select users in tournament %s: %w", tournamentID, err)
+	}
+
+	return members, total, nil
 }
 
 func (r *tournamentUserRepository) UpdateTournamentUserRole(
@@ -120,21 +170,4 @@ func (r *tournamentUserRepository) GetTournamentUser(
 	}
 
 	return &membership, nil
-}
-
-func (r *tournamentUserRepository) CountUsersByTournament(
-	ctx context.Context,
-	tournamentID uuid.UUID,
-) (int64, error) {
-	var total int64
-
-	err := r.db.WithContext(ctx).
-		Model(&TournamentUser{}).
-		Where("tournament_id = ?", tournamentID).
-		Count(&total).Error
-	if err != nil {
-		return 0, fmt.Errorf("count users in tournament %s: %w", tournamentID, err)
-	}
-
-	return total, nil
 }
