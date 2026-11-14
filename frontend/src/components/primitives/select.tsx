@@ -18,6 +18,7 @@ interface SelectProps extends React.ComponentProps<typeof SelectPrimitive.Root> 
   placeholder?: string;
   "aria-label"?: string;
   "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
 
 function Select({
@@ -26,6 +27,7 @@ function Select({
   placeholder = "Select an option",
   "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   children,
   ...props
 }: SelectProps) {
@@ -35,6 +37,7 @@ function Select({
         id={id}
         aria-label={ariaLabel}
         aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         data-slot="select"
         className={cn(SELECT_TRIGGER_CLASS_NAME, className)}
       >

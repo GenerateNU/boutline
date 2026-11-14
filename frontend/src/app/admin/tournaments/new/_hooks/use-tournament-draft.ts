@@ -1,12 +1,13 @@
+import { ACCOUNT_STORAGE_PREFIX } from "@/features/auth/services/account-storage";
 import { useSessionStorage } from "@/lib/hooks/use-session-storage";
 import { CompetitorImportRow } from "@/types/competitor-import";
 
 import { EventDraft, FencerDraft, TournamentDraft } from "../_types/tournament-draft";
 import { EMPTY_TOURNAMENT_DRAFT, importFencers, newEventDraft, newFencerDraft } from "../tournament-draft-helpers";
 
-// Bump the version whenever TournamentDraft's shape changes, so a draft stored
-// in the old shape is ignored instead of crashing the form.
-const DRAFT_KEY = "tournament-creation-draft:2";
+// Account-scoped, so logging out clears it. Not "tournament-draft": the old
+// two-step form stored a different shape there, and reading it would crash this form.
+const DRAFT_KEY = `${ACCOUNT_STORAGE_PREFIX}tournament-creation-draft`;
 
 type TournamentField = Exclude<keyof TournamentDraft, "events" | "saved">;
 

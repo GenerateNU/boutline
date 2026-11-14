@@ -5,8 +5,6 @@ import { EventDraft, FencerDraft, TournamentDraft } from "./_types/tournament-dr
 export const EVENT_TYPES = ["Individual"];
 export const EVENT_FORMATS = ["Pool to Direct Elimination"];
 
-// Math.random rather than crypto.randomUUID, which is missing outside secure
-// contexts such as a phone opening the dev server by LAN IP.
 function draftId() {
   return Math.random().toString(36).slice(2);
 }
@@ -25,8 +23,26 @@ const BLANK_FENCER: ImportedCompetitor = {
   event: "",
 };
 
+// Spellings a registration export might use for each gender POST /competitors accepts.
+const GENDER_SPELLINGS: Record<string, string> = {
+  f: "F",
+  female: "F",
+  w: "F",
+  woman: "F",
+  women: "F",
+  m: "M",
+  male: "M",
+  man: "M",
+  men: "M",
+  o: "O",
+  other: "O",
+};
+
 export function newFencerDraft(competitor: ImportedCompetitor = BLANK_FENCER): FencerDraft {
-  return { ...competitor, id: draftId() };
+  // The parser keeps the file's gender as written. Anything unrecognized becomes
+  // blank, so the card asks for it instead of keeping a value the API would reject.
+  const gender = GENDER_SPELLINGS[competitor.gender.trim().toLowerCase()] ?? "";
+  return { ...competitor, gender, id: draftId() };
 }
 
 // What POST /competitors requires, so a fencer missing any of it would fail on submit.
@@ -45,6 +61,10 @@ export const FENCER_FIELD_LABELS: Record<RequiredFencerField, string> = {
 
 export function missingFencerFields(fencer: FencerDraft): RequiredFencerField[] {
   return REQUIRED_FENCER_FIELDS.filter((field) => fencer[field].trim() === "");
+}
+
+export function hasIncompleteFencers(event: EventDraft) {
+  return event.fencers.some((fencer) => missingFencerFields(fencer).length > 0);
 }
 
 // Type and format have one option each today, so they start chosen.

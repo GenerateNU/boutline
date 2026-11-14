@@ -1,5 +1,8 @@
+"use client";
+
 import DeleteOutlined from "@mui/icons-material/DeleteOutlined";
 import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
+import { useId, useState } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { Card } from "@/components/primitives/card";
@@ -7,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { pluralize } from "@/lib/pluralize";
 
 import { EventDraft, FencerDraft } from "../_types/tournament-draft";
+import { hasIncompleteFencers, missingEventFields } from "../tournament-draft-helpers";
 import { EventDraftFields } from "./event-draft-fields";
 import { EventDraftSummary } from "./event-draft-summary";
 import { EventFencerList } from "./event-fencer-list";
@@ -36,34 +40,53 @@ function EventDraftCard({
   onChangeFencer,
   onRemoveFencer,
 }: EventDraftCardProps) {
+  const [attempted, setAttempted] = useState(false);
+
+  // Saving checks only this card and its fencers; the browser's required check
+  // runs for the whole form on submit. A failed save marks what's missing.
+  function handleSave() {
+    if (missingEventFields(event).length > 0 || hasIncompleteFencers(event)) {
+      setAttempted(true);
+      return;
+    }
+    setAttempted(false);
+    onChange({ saved: true });
+  }
+
   const fencerList = (
     <EventFencerList
       fencers={event.fencers}
       editable={!event.saved}
+      showErrors={attempted}
       onAdd={onAddFencer}
       onChange={onChangeFencer}
       onRemove={onRemoveFencer}
     />
   );
   const fencerCount = `${event.fencers.length} ${pluralize(event.fencers.length, "fencer")}`;
-
+  const titleId = useId();
   return (
     <Card role="group" aria-label={title} className="gap-0 shadow-none">
       <Collapsible open={expanded} onOpenChange={onExpandedChange}>
-        <div className="flex items-center gap-2">
-          <h3 className="flex min-w-0 flex-1">
-            <CollapsibleTrigger className="group/trigger -m-2 flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md p-2 text-left outline-none focus-visible:ring-3 focus-visible:ring-blue-lighter">
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-base font-semibold text-obsidian">{title}</span>
-                {/* Shown open or closed, so the header doesn't change height mid-animation. */}
-                <span className="truncate text-xs text-neutral-secondary">{fencerCount}</span>
-              </span>
-              <ExpandMoreOutlined
-                aria-hidden
-                className="size-5 shrink-0 text-neutral-secondary transition-transform group-data-[state=open]/trigger:rotate-180"
-              />
-            </CollapsibleTrigger>
-          </h3>
+        <div className="relative flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <h3 id={titleId} className="truncate text-base font-semibold text-obsidian">
+              {title}
+            </h3>
+            {/* Shown open or closed, so the header doesn't change height mid-animation. */}
+            <p className="truncate text-xs text-neutral-secondary">{fencerCount}</p>
+          </div>
+          {/* A button can't hold the heading, so the trigger is the chevron and its
+              ::after stretches over the header to keep the whole row clickable. */}
+          <CollapsibleTrigger
+            aria-labelledby={titleId}
+            className="group/trigger flex shrink-0 cursor-pointer items-center outline-none after:absolute after:-inset-2 after:rounded-md focus-visible:after:ring-3 focus-visible:after:ring-blue-lighter"
+          >
+            <ExpandMoreOutlined
+              aria-hidden
+              className="size-5 text-neutral-secondary transition-transform group-data-[state=open]/trigger:rotate-180"
+            />
+          </CollapsibleTrigger>
           {onRemove ? (
             <Button
               type="button"
@@ -71,7 +94,7 @@ function EventDraftCard({
               size="icon"
               aria-label={`Remove ${title}`}
               onClick={onRemove}
-              className="-m-2 text-neutral-secondary [&_svg]:size-5"
+              className="relative -m-2 text-neutral-secondary [&_svg]:size-5"
             >
               <DeleteOutlined aria-hidden />
             </Button>
@@ -88,7 +111,13 @@ function EventDraftCard({
                 {fencerList}
               </>
             ) : (
-              <EventDraftFields event={event} canSave={tournamentSaved} onChange={onChange}>
+              <EventDraftFields
+                event={event}
+                canSave={tournamentSaved}
+                attempted={attempted}
+                onChange={onChange}
+                onSave={handleSave}
+              >
                 {fencerList}
               </EventDraftFields>
             )}

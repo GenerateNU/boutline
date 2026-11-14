@@ -132,6 +132,20 @@ describe("eventTitle", () => {
   });
 });
 
+describe("newFencerDraft", () => {
+  it.each([
+    { gender: "F", want: "F" },
+    { gender: " female ", want: "F" },
+    { gender: "m", want: "M" },
+    { gender: "Men", want: "M" },
+    { gender: "other", want: "O" },
+    { gender: "X", want: "" },
+    { gender: "", want: "" },
+  ])("reads an imported gender of \"$gender\" as \"$want\"", ({ gender, want }) => {
+    expect(newFencerDraft({ ...row("Ada", "").competitor, gender }).gender).toBe(want);
+  });
+});
+
 describe("missingFencerFields", () => {
   it.each([
     { name: "a blank fencer", patch: {}, want: ["firstName", "lastName", "gender", "birthdate", "division"] },

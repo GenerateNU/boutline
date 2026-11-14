@@ -13,6 +13,8 @@ interface ImportDropzoneProps {
   // Under the Upload button, e.g. which files are accepted.
   hint?: React.ReactNode;
   onFile?: (file: File) => void;
+  // A file the dropzone turned away, e.g. the wrong type or too large.
+  onReject?: (message: string) => void;
   // Extra actions under the hint, such as a link to a sample file.
   children?: React.ReactNode;
   className?: string;
@@ -24,11 +26,12 @@ function ImportDropzone({
   title = "Already have file?",
   hint,
   onFile,
+  onReject,
   children,
   className,
 }: ImportDropzoneProps) {
   return (
-    <Dropzone accept={accept} onFile={onFile} className={cn("gap-3 px-6 py-8", className)}>
+    <Dropzone accept={accept} onFile={onFile} onReject={onReject} className={cn("gap-3 px-6 py-8", className)}>
       {(open) => (
         <>
           <CloudUploadOutlined aria-hidden className="size-8 text-neutral-secondary" />

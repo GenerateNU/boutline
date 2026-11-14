@@ -13,7 +13,13 @@ import { pluralize } from "@/lib/pluralize";
 import { errorMessage } from "@/utils/error-message";
 
 import { useTournamentDraft } from "../_hooks/use-tournament-draft";
-import { eventTitle, importedEventCount, missingEventFields, missingFencerFields } from "../tournament-draft-helpers";
+import {
+  eventTitle,
+  hasIncompleteFencers,
+  importedEventCount,
+  missingEventFields,
+  missingTournamentFields,
+} from "../tournament-draft-helpers";
 import { CsvSampleButton } from "./csv-sample-button";
 import { EventDraftCard } from "./event-draft-card";
 import { TournamentDetailsCard } from "./tournament-details-card";
@@ -84,12 +90,18 @@ function NewTournamentForm() {
   // (#252), so it only clears the draft.
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // The browser's required check accepts a field of spaces, so the tournament
+    // is checked here too.
+    if (missingTournamentFields(draft).length > 0) {
+      setTournamentSaved(false);
+      setSubmitError("Finish the tournament details before creating the tournament.");
+      return;
+    }
     const incomplete = draft.events
       .map((draftEvent, index) => ({ draftEvent, title: eventTitle(draftEvent, index) }))
       .filter(({ draftEvent }) => {
         const hasMissingFields = missingEventFields(draftEvent).length > 0;
-        const hasIncompleteFencers = draftEvent.fencers.some((fencer) => missingFencerFields(fencer).length > 0);
-        return !draftEvent.saved && (hasMissingFields || hasIncompleteFencers);
+        return !draftEvent.saved && (hasMissingFields || hasIncompleteFencers(draftEvent));
       });
     if (incomplete.length > 0) {
       setExpanded(incomplete.map(({ draftEvent }) => draftEvent.id), true);
@@ -110,7 +122,12 @@ function NewTournamentForm() {
       className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-x-10"
     >
       <div className="flex flex-col gap-4 lg:col-span-2">
-        <ImportDropzone accept={CSV_ACCEPT} hint="Only .csv files are accepted." onFile={handleFile}>
+        <ImportDropzone
+          accept={CSV_ACCEPT}
+          hint="Only .csv files are accepted."
+          onFile={handleFile}
+          onReject={(message) => setImportError(`Couldn't import that file: ${message}`)}
+        >
           <CsvSampleButton />
         </ImportDropzone>
         {importError ? (

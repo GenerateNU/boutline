@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { SelectField } from "@/components/primitives/select-field";
@@ -21,6 +21,12 @@ function TournamentDraftFields({ draft, onField, onSave }: TournamentDraftFields
   const [attempted, setAttempted] = useState(false);
   // Recomputed from the draft, so a field turns back to normal once it's filled.
   const invalid = new Set<RequiredTournamentField>(attempted ? missingTournamentFields(draft) : []);
+  const errorId = useId();
+
+  // Marks an empty field and points it at the error, so a screen reader reads why.
+  function invalidProps(field: RequiredTournamentField) {
+    return invalid.has(field) ? { "aria-invalid": true, "aria-describedby": errorId } : {};
+  }
 
   function handleSave() {
     if (missingTournamentFields(draft).length > 0) {
@@ -36,7 +42,7 @@ function TournamentDraftFields({ draft, onField, onSave }: TournamentDraftFields
         label="Name of tournament"
         placeholder="Northeastern Open"
         value={draft.name}
-        aria-invalid={invalid.has("name")}
+        {...invalidProps("name")}
         onChange={(change) => onField("name", change.target.value)}
         required
       />
@@ -44,7 +50,7 @@ function TournamentDraftFields({ draft, onField, onSave }: TournamentDraftFields
         label="Location"
         placeholder="City, State"
         value={draft.location}
-        aria-invalid={invalid.has("location")}
+        {...invalidProps("location")}
         onChange={(change) => onField("location", change.target.value)}
         required
       />
@@ -52,7 +58,7 @@ function TournamentDraftFields({ draft, onField, onSave }: TournamentDraftFields
         label="Venue"
         placeholder="Cabot Center"
         value={draft.venue}
-        aria-invalid={invalid.has("venue")}
+        {...invalidProps("venue")}
         onChange={(change) => onField("venue", change.target.value)}
         required
       />
@@ -61,7 +67,7 @@ function TournamentDraftFields({ draft, onField, onSave }: TournamentDraftFields
           label="Date"
           type="date"
           value={draft.date}
-          aria-invalid={invalid.has("date")}
+          {...invalidProps("date")}
           onChange={(change) => onField("date", change.target.value)}
           required
         />
@@ -69,7 +75,7 @@ function TournamentDraftFields({ draft, onField, onSave }: TournamentDraftFields
           label="Time"
           type="time"
           value={draft.time}
-          aria-invalid={invalid.has("time")}
+          {...invalidProps("time")}
           onChange={(change) => onField("time", change.target.value)}
           required
         />
@@ -78,13 +84,13 @@ function TournamentDraftFields({ draft, onField, onSave }: TournamentDraftFields
         label="Authority"
         options={AUTHORITIES}
         value={draft.authority}
-        aria-invalid={invalid.has("authority")}
+        {...invalidProps("authority")}
         onValueChange={(authority) => onField("authority", authority)}
         required
       />
 
       {invalid.size > 0 ? (
-        <p role="alert" className="text-xs text-red-dark">
+        <p id={errorId} role="alert" className="text-xs text-red-dark">
           Fill in the highlighted fields to save the tournament.
         </p>
       ) : null}

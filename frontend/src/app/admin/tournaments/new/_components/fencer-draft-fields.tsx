@@ -3,6 +3,7 @@ import { TextField } from "@/components/primitives/text-field";
 import { CompetitorRating } from "@/types/competitor-import";
 
 import { FencerDraft } from "../_types/tournament-draft";
+import { RequiredFencerField } from "../tournament-draft-helpers";
 
 // The values POST /competitors accepts.
 const GENDERS = ["F", "M", "O"];
@@ -10,10 +11,17 @@ const RATINGS: CompetitorRating[] = ["A", "B", "C", "D", "E", "U"];
 
 interface FencerDraftFieldsProps {
   fencer: FencerDraft;
+  invalid: ReadonlySet<RequiredFencerField>;
+  // The card's "Missing …" line, which invalid fields point at.
+  errorId: string;
   onChange: (patch: Partial<FencerDraft>) => void;
 }
 
-function FencerDraftFields({ fencer, onChange }: FencerDraftFieldsProps) {
+function FencerDraftFields({ fencer, invalid, errorId, onChange }: FencerDraftFieldsProps) {
+  function invalidProps(field: RequiredFencerField) {
+    return invalid.has(field) ? { "aria-invalid": true, "aria-describedby": errorId } : {};
+  }
+
   function handleRatingYear(value: string) {
     const year = Number(value);
     onChange({ ratingYear: value === "" || Number.isNaN(year) ? undefined : year });
@@ -25,6 +33,7 @@ function FencerDraftFields({ fencer, onChange }: FencerDraftFieldsProps) {
         label="First name"
         placeholder="Maria"
         value={fencer.firstName}
+        {...invalidProps("firstName")}
         onChange={(change) => onChange({ firstName: change.target.value })}
         required
       />
@@ -32,6 +41,7 @@ function FencerDraftFields({ fencer, onChange }: FencerDraftFieldsProps) {
         label="Last name"
         placeholder="Alvarez"
         value={fencer.lastName}
+        {...invalidProps("lastName")}
         onChange={(change) => onChange({ lastName: change.target.value })}
         required
       />
@@ -39,6 +49,7 @@ function FencerDraftFields({ fencer, onChange }: FencerDraftFieldsProps) {
         label="Gender"
         options={GENDERS}
         value={fencer.gender}
+        {...invalidProps("gender")}
         onValueChange={(gender) => onChange({ gender })}
         required
       />
@@ -46,6 +57,7 @@ function FencerDraftFields({ fencer, onChange }: FencerDraftFieldsProps) {
         label="Birth date"
         type="date"
         value={fencer.birthdate}
+        {...invalidProps("birthdate")}
         onChange={(change) => onChange({ birthdate: change.target.value })}
         required
       />
@@ -53,6 +65,7 @@ function FencerDraftFields({ fencer, onChange }: FencerDraftFieldsProps) {
         label="Division"
         placeholder="New England"
         value={fencer.division}
+        {...invalidProps("division")}
         onChange={(change) => onChange({ division: change.target.value })}
         required
       />

@@ -3,7 +3,7 @@
 import CheckOutlined from "@mui/icons-material/CheckOutlined";
 import DeleteOutlined from "@mui/icons-material/DeleteOutlined";
 import EditOutlined from "@mui/icons-material/EditOutlined";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { Button } from "@/components/primitives/button";
 
@@ -19,15 +19,20 @@ function fencerName({ firstName, lastName, memberNumber }: FencerDraft) {
 interface FencerDraftCardProps {
   fencer: FencerDraft;
   editable: boolean;
+  showErrors: boolean;
   onChange: (patch: Partial<FencerDraft>) => void;
   onRemove: () => void;
 }
 
-function FencerDraftCard({ fencer, editable, onChange, onRemove }: FencerDraftCardProps) {
+function FencerDraftCard({ fencer, editable, showErrors, onChange, onRemove }: FencerDraftCardProps) {
   // A fencer added by hand starts blank, so it opens ready to fill in.
   const [editing, setEditing] = useState(fencer.firstName === "" && fencer.lastName === "");
   const name = fencerName(fencer);
   const missing = missingFencerFields(fencer);
+  const missingId = useId();
+  // After a failed save, an incomplete fencer opens with its empty fields marked.
+  const isBlockingSave = showErrors && missing.length > 0;
+  const showFields = editable && (editing || isBlockingSave);
   const details = [fencer.club || "Unattached", formatRating(fencer), fencer.memberNumber && `#${fencer.memberNumber}`]
     .filter(Boolean)
     .join(" · ");
@@ -36,12 +41,12 @@ function FencerDraftCard({ fencer, editable, onChange, onRemove }: FencerDraftCa
     <li role="group" aria-label={name} className="flex flex-col gap-3 rounded-md border border-outline p-3">
       <div className="flex items-start gap-2">
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-medium text-obsidian">{name}</span>
-          <span className="truncate text-xs text-neutral-secondary">{details}</span>
+          <p className="truncate text-sm font-medium text-obsidian">{name}</p>
+          <p className="truncate text-xs text-neutral-secondary">{details}</p>
           {missing.length > 0 ? (
-            <span className="text-xs text-red-dark">
+            <p id={missingId} className="text-xs text-red-dark">
               Missing {missing.map((field) => FENCER_FIELD_LABELS[field]).join(", ")}
-            </span>
+            </p>
           ) : null}
         </div>
         {editable ? (
@@ -50,11 +55,11 @@ function FencerDraftCard({ fencer, editable, onChange, onRemove }: FencerDraftCa
               type="button"
               variant="text"
               size="icon"
-              aria-label={editing ? `Done editing ${name}` : `Edit ${name}`}
-              onClick={() => setEditing(!editing)}
+              aria-label={showFields ? `Done editing ${name}` : `Edit ${name}`}
+              onClick={() => setEditing(!showFields)}
               className="-my-2 text-neutral-secondary [&_svg]:size-5"
             >
-              {editing ? <CheckOutlined aria-hidden /> : <EditOutlined aria-hidden />}
+              {showFields ? <CheckOutlined aria-hidden /> : <EditOutlined aria-hidden />}
             </Button>
             <Button
               type="button"
@@ -69,7 +74,14 @@ function FencerDraftCard({ fencer, editable, onChange, onRemove }: FencerDraftCa
           </>
         ) : null}
       </div>
-      {editable && editing ? <FencerDraftFields fencer={fencer} onChange={onChange} /> : null}
+      {showFields ? (
+        <FencerDraftFields
+          fencer={fencer}
+          invalid={new Set(isBlockingSave ? missing : [])}
+          errorId={missingId}
+          onChange={onChange}
+        />
+      ) : null}
     </li>
   );
 }

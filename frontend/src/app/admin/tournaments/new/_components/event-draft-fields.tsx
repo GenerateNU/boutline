@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { SelectField } from "@/components/primitives/select-field";
@@ -10,8 +10,8 @@ import { EventDraft } from "../_types/tournament-draft";
 import {
   EVENT_FORMATS,
   EVENT_TYPES,
+  hasIncompleteFencers,
   missingEventFields,
-  missingFencerFields,
   RequiredEventField,
 } from "../tournament-draft-helpers";
 
@@ -25,27 +25,23 @@ interface EventDraftFieldsProps {
   event: EventDraft;
   // An event can only be saved once its tournament is.
   canSave: boolean;
+  // True once Save has failed, so empty fields stay marked from then on.
+  attempted: boolean;
   onChange: (patch: Partial<EventDraft>) => void;
+  onSave: () => void;
   // The fencer list, shown above Save since saving covers the fencers too.
   children: React.ReactNode;
 }
 
-function EventDraftFields({ event, canSave, onChange, children }: EventDraftFieldsProps) {
-  const [attempted, setAttempted] = useState(false);
+function EventDraftFields({ event, canSave, attempted, onChange, onSave, children }: EventDraftFieldsProps) {
+  const errorId = useId();
   // Recomputed from the event, so a field turns back to normal once it's filled.
   const invalid = new Set<RequiredEventField>(attempted ? missingEventFields(event) : []);
-  const hasIncompleteFencers = event.fencers.some((fencer) => missingFencerFields(fencer).length > 0);
-  const showFencerError = attempted && hasIncompleteFencers;
+  const showFencerError = attempted && hasIncompleteFencers(event);
 
-  // Saving checks only this card and its fencers. The browser's own required
-  // check runs for the whole form on submit, so a failed save marks the empty
-  // fields itself; incomplete fencers already say what they're missing.
-  function handleSave() {
-    if (missingEventFields(event).length > 0 || hasIncompleteFencers) {
-      setAttempted(true);
-      return;
-    }
-    onChange({ saved: true });
+  // Marks an empty field and points it at the error, so a screen reader reads why.
+  function invalidProps(field: RequiredEventField) {
+    return invalid.has(field) ? { "aria-invalid": true, "aria-describedby": errorId } : {};
   }
 
   return (
@@ -54,7 +50,7 @@ function EventDraftFields({ event, canSave, onChange, children }: EventDraftFiel
         label="Event name"
         placeholder="Y14 Women's Foil"
         value={event.name}
-        aria-invalid={invalid.has("name")}
+        {...invalidProps("name")}
         onChange={(change) => onChange({ name: change.target.value })}
         required
       />
@@ -62,7 +58,7 @@ function EventDraftFields({ event, canSave, onChange, children }: EventDraftFiel
         label="Type of event"
         options={EVENT_TYPES}
         value={event.type}
-        aria-invalid={invalid.has("type")}
+        {...invalidProps("type")}
         onValueChange={(type) => onChange({ type })}
         required
       />
@@ -71,7 +67,7 @@ function EventDraftFields({ event, canSave, onChange, children }: EventDraftFiel
           label="Date"
           type="date"
           value={event.date}
-          aria-invalid={invalid.has("date")}
+          {...invalidProps("date")}
           onChange={(change) => onChange({ date: change.target.value })}
           required
         />
@@ -79,7 +75,7 @@ function EventDraftFields({ event, canSave, onChange, children }: EventDraftFiel
           label="Time"
           type="time"
           value={event.time}
-          aria-invalid={invalid.has("time")}
+          {...invalidProps("time")}
           onChange={(change) => onChange({ time: change.target.value })}
           required
         />
@@ -87,7 +83,7 @@ function EventDraftFields({ event, canSave, onChange, children }: EventDraftFiel
           label="Weapon"
           options={WEAPONS}
           value={event.weapon}
-          aria-invalid={invalid.has("weapon")}
+          {...invalidProps("weapon")}
           onValueChange={(weapon) => onChange({ weapon })}
           required
         />
@@ -95,7 +91,7 @@ function EventDraftFields({ event, canSave, onChange, children }: EventDraftFiel
           label="Gender Mix"
           options={GENDER_MIXES}
           value={event.genderMix}
-          aria-invalid={invalid.has("genderMix")}
+          {...invalidProps("genderMix")}
           onValueChange={(genderMix) => onChange({ genderMix })}
           required
         />
@@ -103,7 +99,7 @@ function EventDraftFields({ event, canSave, onChange, children }: EventDraftFiel
           label="Age Category"
           options={AGE_CATEGORIES}
           value={event.ageCategory}
-          aria-invalid={invalid.has("ageCategory")}
+          {...invalidProps("ageCategory")}
           onValueChange={(ageCategory) => onChange({ ageCategory })}
           required
         />
@@ -111,7 +107,7 @@ function EventDraftFields({ event, canSave, onChange, children }: EventDraftFiel
           label="Rating Level"
           options={RATING_LEVELS}
           value={event.ratingLevel}
-          aria-invalid={invalid.has("ratingLevel")}
+          {...invalidProps("ratingLevel")}
           onValueChange={(ratingLevel) => onChange({ ratingLevel })}
           required
         />
@@ -120,7 +116,7 @@ function EventDraftFields({ event, canSave, onChange, children }: EventDraftFiel
         label="Event Format"
         options={EVENT_FORMATS}
         value={event.format}
-        aria-invalid={invalid.has("format")}
+        {...invalidProps("format")}
         onValueChange={(format) => onChange({ format })}
         required
       />
@@ -128,14 +124,14 @@ function EventDraftFields({ event, canSave, onChange, children }: EventDraftFiel
         label="Qualifier"
         options={QUALIFIER_OPTIONS}
         value={event.qualifier}
-        aria-invalid={invalid.has("qualifier")}
+        {...invalidProps("qualifier")}
         onValueChange={(qualifier) => onChange({ qualifier })}
         required
       />
 
       {children}
       {invalid.size > 0 ? (
-        <p role="alert" className="text-xs text-red-dark">
+        <p id={errorId} role="alert" className="text-xs text-red-dark">
           Fill in the highlighted fields to save this event.
         </p>
       ) : null}
@@ -147,7 +143,7 @@ function EventDraftFields({ event, canSave, onChange, children }: EventDraftFiel
       {canSave ? null : (
         <p className="text-xs text-neutral-secondary">Save the tournament details before saving an event.</p>
       )}
-      <Button type="button" variant="tonal" className="h-10 rounded-full" disabled={!canSave} onClick={handleSave}>
+      <Button type="button" variant="tonal" className="h-10 rounded-full" disabled={!canSave} onClick={onSave}>
         Save event
       </Button>
     </>

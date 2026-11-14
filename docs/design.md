@@ -969,9 +969,10 @@ name, club and rating.
 - **Sample:** the creation form's dropzone says it takes only `.csv` and opens a
   sample CSV in a dialog. The sample is the valid rows of #80's example upload
   (`example-competitor-import.ts`), and a parser test keeps every row of it valid.
-- **Planned:** the dropzones on the form call the parser (today they ignore their
-  files), a preview screen shows what will be created, and a backend route commits
-  it.
+- **Autofill:** the creation form's dropzone runs the parser and sorts valid rows
+  into event cards (§10.6). Rejected files and parse errors show inline.
+- **Planned:** submit commits the fencers with `POST /competitors` and reports
+  created and skipped counts (#208).
 
 ### 10.5 Check-in
 
@@ -1003,7 +1004,8 @@ are placed into pools.
   fencers reopens it for review.
 - **Fencers:** each is a card inside its event, showing name, club, rating and
   member number, plus what it is still missing. First and last name, gender, birth
-  date and division are required, as `POST /competitors` requires them. While the
+  date and division are required, as `POST /competitors` requires them. Imported
+  genders are mapped to F, M or O; anything else is left blank to be filled in. While the
   event is being edited, fencers can be edited, removed, or added by hand.
 - **Collapsing:** event cards and fencer lists use Radix Collapsible, animating
   height and opacity (`animate-collapsible-down`/`-up`, off with reduced motion).
@@ -1011,8 +1013,9 @@ are placed into pools.
   escape the browser's required check, so submit reopens any unsaved card that is
   missing fields or has incomplete fencers, and names it.
 - **Draft:** the whole form, events and fencers included, is kept in
-  sessionStorage under a versioned key (bumped when its shape changes), so a reload
-  doesn't lose it.
+  sessionStorage, so a reload doesn't lose it. Its key starts with `account:`, so
+  logging out clears it (fencers' details shouldn't reach the next account in the
+  tab), and differs from the old two-step form's `tournament-draft`.
 - **Planned:** submit creates the tournament, then its events, then imports
   competitors and adds staff, showing per-row errors and landing on the new
   tournament (#252). Today submit clears the draft and returns to the admin home.

@@ -36,7 +36,7 @@ const FILLED_EVENT = {
   qualifier: "No",
 };
 
-const DRAFT_KEY = "tournament-creation-draft:2";
+const DRAFT_KEY = "account:tournament-creation-draft";
 
 const SAVED_TOURNAMENT = {
   ...EMPTY_TOURNAMENT_DRAFT,
@@ -96,6 +96,26 @@ describe("NewTournamentForm", () => {
     expect(screen.getByRole("group", { name: "Event 1" })).toBeInTheDocument();
   });
 
+  it("says why a dropped file was turned away", async () => {
+    const { container } = render(<NewTournamentForm />);
+
+    fireEvent.change(container.querySelector('input[type="file"]')!, {
+      target: { files: [new File(["hi"], "notes.txt", { type: "text/plain" })] },
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't import that file");
+  });
+
+  it("won't submit while a tournament field is only spaces", () => {
+    saveDraft([{ ...newEventDraft(), ...FILLED_EVENT, saved: true }], { ...SAVED_TOURNAMENT, venue: "   " });
+    render(<NewTournamentForm />);
+
+    fireEvent.submit(screen.getByRole("button", { name: "Create tournament" }).closest("form")!);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Finish the tournament details");
+    expect(screen.getByRole("textbox", { name: "Venue" })).toHaveValue("   ");
+  });
+
   it("adds and removes event cards, keeping at least one", () => {
     render(<NewTournamentForm />);
     expect(screen.queryByRole("button", { name: "Remove Event 1" })).not.toBeInTheDocument();
@@ -129,7 +149,8 @@ describe("NewTournamentForm", () => {
     fireEvent.click(toggle);
 
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(toggle).toHaveTextContent("Y14 Foil1 fencer");
+    expect(toggle).toHaveAccessibleName("Y14 Foil");
+    expect(card).toHaveTextContent("1 fencer");
     expect(within(card).queryByRole("textbox")).not.toBeInTheDocument();
 
     fireEvent.click(toggle);
@@ -169,7 +190,9 @@ describe("NewTournamentForm", () => {
     fireEvent.click(within(card).getByRole("button", { name: "Save event" }));
 
     expect(within(card).getByRole("alert")).toHaveTextContent("Fill in the highlighted fields");
-    expect(within(card).getByRole("combobox", { name: "Weapon" })).toHaveAttribute("aria-invalid", "true");
+    const weapon = within(card).getByRole("combobox", { name: "Weapon" });
+    expect(weapon).toHaveAttribute("aria-invalid", "true");
+    expect(weapon).toHaveAccessibleDescription("Fill in the highlighted fields to save this event.");
     expect(within(card).getByRole("textbox", { name: "Event name" })).not.toHaveAttribute("aria-invalid", "true");
   });
 
@@ -214,8 +237,12 @@ describe("NewTournamentForm", () => {
     fireEvent.click(within(card).getByRole("button", { name: "Save event" }));
 
     expect(within(card).getByRole("alert")).toHaveTextContent("Finish the fencers marked as missing details");
-    fireEvent.click(within(card).getByRole("button", { name: "1 fencer" }));
-    expect(within(card).getByRole("group", { name: "Alvarez, Maria" })).toHaveTextContent("Missing birth date, division");
+    // The list and the fencer open by themselves, with the empty fields marked.
+    const maria = within(card).getByRole("group", { name: "Alvarez, Maria" });
+    const division = within(maria).getByRole("textbox", { name: "Division" });
+    expect(division).toHaveAttribute("aria-invalid", "true");
+    expect(division).toHaveAccessibleDescription("Missing birth date, division");
+    expect(within(maria).getByRole("textbox", { name: "First name" })).not.toHaveAttribute("aria-invalid");
   });
 
   it("edits, removes and adds fencers by hand", () => {
