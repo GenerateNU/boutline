@@ -30,6 +30,7 @@ function BracketMatch({
         matched && "h-27 border-2 border-blue-vivid",
         !matched && live && "h-26.75 border-[1.5px] border-accent-green",
         !matched && !live && "h-26.5 border border-outline",
+        !matched && muted && "border-dashed",
         {
           "relative after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-obsidian/20":
             dimmed,
