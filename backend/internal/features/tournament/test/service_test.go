@@ -41,12 +41,11 @@ func apiError(t *testing.T, err error) (int, string) {
 	return model.Status, model.Detail
 }
 
-func createInput(name string, visibility tournament.TournamentVisibility, createdBy string) *tournament.TournamentCreateInput {
+func createInput(name string, visibility tournament.TournamentVisibility) *tournament.TournamentCreateInput {
 	return &tournament.TournamentCreateInput{
 		Body: tournament.TournamentCreateBody{
 			Name:       name,
 			Visibility: visibility,
-			CreatedBy:  createdBy,
 		},
 	}
 }
@@ -58,11 +57,10 @@ func ptr[T any](v T) *T { return &v }
 func TestCreateTournament(t *testing.T) {
 	t.Parallel()
 
-	creator := uuid.New().String()
-
 	tests := []struct {
 		name           string
 		input          *tournament.TournamentCreateInput
+		caller         Caller
 		wantName       string
 		wantVisibility tournament.TournamentVisibility
 		wantCode       int
@@ -70,33 +68,34 @@ func TestCreateTournament(t *testing.T) {
 	}{
 		{
 			name:           "trims the name and defaults to private",
-			input:          createInput("  spaced out  ", "", creator),
+			input:          createInput("  spaced out  ", ""),
 			wantName:       "spaced out",
 			wantVisibility: tournament.TournamentVisibilityPrivate,
 		},
 		{
 			name:           "keeps an explicit visibility",
-			input:          createInput("open bracket", tournament.TournamentVisibilityPublic, creator),
+			input:          createInput("open bracket", tournament.TournamentVisibilityPublic),
 			wantName:       "open bracket",
 			wantVisibility: tournament.TournamentVisibilityPublic,
 		},
 		{
 			name:       "rejects a name that is only whitespace",
-			input:      createInput("   ", "", creator),
+			input:      createInput("   ", ""),
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "name must not be blank",
 		},
 		{
 			name:       "rejects an unknown visibility",
-			input:      createInput("fine", tournament.TournamentVisibility("nope"), creator),
+			input:      createInput("fine", tournament.TournamentVisibility("nope")),
 			wantCode:   http.StatusBadRequest,
 			wantDetail: `unknown visibility "nope"`,
 		},
 		{
-			name:       "rejects a created_by that is not a uuid",
-			input:      createInput("fine", "", "not-a-uuid"),
-			wantCode:   http.StatusBadRequest,
-			wantDetail: "created_by must be a valid uuid",
+			name:       "refuses a caller who is not signed in",
+			input:      createInput("fine", ""),
+			caller:     CallerAnonymous,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "sign in to create a tournament",
 		},
 	}
 
@@ -107,7 +106,8 @@ func TestCreateTournament(t *testing.T) {
 			members := NewFakeTournamentUserRepository()
 			repo := NewFakeTournamentRepository()
 			repo.Members = members
-			out, err := tournament.NewTournamentService(repo, members).CreateTournament(t.Context(), tt.input)
+			out, err := tournament.NewTournamentService(repo, members).
+				CreateTournament(tt.caller.Context(t.Context()), tt.input)
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -125,10 +125,11 @@ func TestCreateTournament(t *testing.T) {
 			assert.Equal(t, tt.wantVisibility, out.Body.Visibility)
 			assert.Equal(t, tournament.TournamentStatusPending, out.Body.Status)
 			assert.Nil(t, out.Body.CompletedAt)
+			assert.Equal(t, TestAdminID.String(), out.Body.CreatedBy, "the signed-in caller should be the creator")
 			assert.Len(t, repo.Tournaments, 1)
 
 			assert.Len(t, members.Memberships, 1, "the creator should be the only member")
-			creatorMembership, err := members.GetTournamentUser(t.Context(), uuid.MustParse(out.Body.ID), uuid.MustParse(creator))
+			creatorMembership, err := members.GetTournamentUser(t.Context(), uuid.MustParse(out.Body.ID), TestAdminID)
 			require.NoError(t, err)
 			assert.Equal(t, tournamentuser.TournamentUserRoleAdmin, creatorMembership.Role)
 		})
@@ -138,12 +139,12 @@ func TestCreateTournament(t *testing.T) {
 func TestCreateTournamentGeneratesACode(t *testing.T) {
 	t.Parallel()
 
-	creator := uuid.New().String()
+	ctx := CallerAdmin.Context(t.Context())
 	service := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository())
 
-	first, err := service.CreateTournament(t.Context(), createInput("one", "", creator))
+	first, err := service.CreateTournament(ctx, createInput("one", ""))
 	require.NoError(t, err)
-	second, err := service.CreateTournament(t.Context(), createInput("two", "", creator))
+	second, err := service.CreateTournament(ctx, createInput("two", ""))
 	require.NoError(t, err)
 
 	assert.Len(t, first.Body.Code, tournament.TournamentCodeLength)
@@ -163,10 +164,9 @@ func TestCreateTournamentKeepsTheScheduledStart(t *testing.T) {
 	startTime := time.Now().UTC().Add(time.Hour)
 
 	out, err := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository()).
-		CreateTournament(t.Context(), &tournament.TournamentCreateInput{
+		CreateTournament(CallerAdmin.Context(t.Context()), &tournament.TournamentCreateInput{
 			Body: tournament.TournamentCreateBody{
 				Name:      "scheduled",
-				CreatedBy: uuid.New().String(),
 				StartTime: &startTime,
 			},
 		})
@@ -185,7 +185,7 @@ func TestCreateTournamentRejectsAnUnknownCreator(t *testing.T) {
 		errs.Public("created_by must reference an existing user", errs.ErrInvalidInput))
 
 	_, err := tournament.NewTournamentService(repo, NewFakeTournamentUserRepository()).
-		CreateTournament(t.Context(), createInput("orphan", "", uuid.New().String()))
+		CreateTournament(CallerAdmin.Context(t.Context()), createInput("orphan", ""))
 
 	code, detail := apiError(t, err)
 	assert.Equal(t, http.StatusBadRequest, code)
@@ -1296,12 +1296,12 @@ func TestTournamentLocation(t *testing.T) {
 func TestCreateTournamentStoresBlankLocationAsNull(t *testing.T) {
 	t.Parallel()
 
-	input := createInput("located", "", uuid.New().String())
+	input := createInput("located", "")
 	input.Body.City = "  "
 	input.Body.Country = ""
 
 	out, err := tournament.NewTournamentService(NewFakeTournamentRepository(), NewFakeTournamentUserRepository()).
-		CreateTournament(t.Context(), input)
+		CreateTournament(CallerAdmin.Context(t.Context()), input)
 
 	require.NoError(t, err)
 	assert.Nil(t, out.Body.City)

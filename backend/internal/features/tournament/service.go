@@ -11,6 +11,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournamentuser"
+	"boutline/internal/session"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -77,9 +78,9 @@ func (s *tournamentService) CreateTournament(
 			fmt.Sprintf("unknown visibility %q", visibility), errs.ErrInvalidInput))
 	}
 
-	createdBy, err := utils.ParseUUID(input.Body.CreatedBy, "created_by")
-	if err != nil {
-		return nil, errs.HumaError(err)
+	createdBy, ok := session.UserIDFrom(ctx)
+	if !ok {
+		return nil, errs.HumaError(errs.Public("sign in to create a tournament", errs.ErrForbidden))
 	}
 
 	tournament := &Tournament{

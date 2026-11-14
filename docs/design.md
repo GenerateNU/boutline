@@ -658,8 +658,9 @@ logged-in user reseat another tournament's pools.
 
 **Status:** Planned. Issue: #184.
 
-- `created_by` (tournament, scoring), `revoked_by` and the acting referee come from
-  `UserIDFrom`, not the request body. Today all three are client-supplied.
+- Scoring's `created_by`, `revoked_by` and the acting referee come from
+  `UserIDFrom`, not the request body. Today all three are client-supplied. A
+  tournament's `created_by` already comes from the session (§7.2).
 - `PATCH` and `DELETE /users/{id}` only for the caller's own ID (403 otherwise).
   Today any logged-in user can rename or delete any other user.
 - The referee screen drops `FALLBACK_SCORER_ID` (§5.3) and restores its
@@ -675,7 +676,8 @@ an admin still need that row backfilled, which is its own ticket.
   that tournament. An admin passes a referee check. Bout start and end and the
   scoring writes need `referee`. Every other write needs `admin`, except creating
   a tournament, which any signed-in user can do.
-- **Built:** creating a tournament writes its `created_by` user into
+- **Built:** creating a tournament records the signed-in caller as its
+  `created_by`, which the request body can't set, and writes them into
   `tournament_users` as `admin` in the same transaction. `tournament_users` alone
   decides who may act; `created_by` is read only to keep the creator an admin.
 - **Built:** `bout.RequireAssignedReferee(ctx, memberships, bout)` guards bout

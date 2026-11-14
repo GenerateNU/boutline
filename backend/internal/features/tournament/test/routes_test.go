@@ -46,52 +46,53 @@ func decodeBody(t *testing.T, raw []byte) map[string]any {
 func TestCreateEndpoint(t *testing.T) {
 	t.Parallel()
 
-	creator := uuid.New().String()
-
 	tests := []struct {
 		name              string
 		body              map[string]any
+		caller            Caller
 		wantStatus        int
 		wantFields        map[string]any
 		wantGeneratedCode bool
 	}{
 		{
-			name:       "creates a tournament and echoes the stored row",
-			body:       map[string]any{"name": "  from http  ", "created_by": creator},
+			name:       "creates a tournament as the signed-in caller and echoes the stored row",
+			body:       map[string]any{"name": "  from http  "},
 			wantStatus: http.StatusCreated,
 			wantFields: map[string]any{
 				"name":         "from http",
 				"visibility":   "private",
 				"status":       "pending",
-				"created_by":   creator,
+				"created_by":   TestAdminID.String(),
 				"completed_at": nil,
 			},
 			wantGeneratedCode: true,
 		},
 		{
 			name:       "rejects a blank name before the handler runs",
-			body:       map[string]any{"name": "", "created_by": creator},
+			body:       map[string]any{"name": ""},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
-			name:       "rejects a missing created_by",
-			body:       map[string]any{"name": "fine"},
-			wantStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name:       "rejects a created_by that is not a uuid",
-			body:       map[string]any{"name": "fine", "created_by": "not-a-uuid"},
+			name:       "refuses a client-supplied created_by",
+			body:       map[string]any{"name": "fine", "created_by": TestStrangerID.String()},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name:       "rejects a visibility outside the enum",
-			body:       map[string]any{"name": "fine", "visibility": "nope", "created_by": creator},
+			body:       map[string]any{"name": "fine", "visibility": "nope"},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name:       "refuses a client-supplied code",
-			body:       map[string]any{"name": "fine", "created_by": creator, "code": "CHOSEN"},
+			body:       map[string]any{"name": "fine", "code": "CHOSEN"},
 			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "refuses a caller who is not signed in",
+			body:       map[string]any{"name": "fine"},
+			caller:     CallerAnonymous,
+			wantStatus: http.StatusForbidden,
+			wantFields: map[string]any{"detail": "sign in to create a tournament"},
 		},
 	}
 
@@ -100,7 +101,7 @@ func TestCreateEndpoint(t *testing.T) {
 			t.Parallel()
 
 			api := newTestAPI(t)
-			resp := api.Post("/api/v1/tournaments", tt.body)
+			resp := api.PostCtx(tt.caller.Context(t.Context()), "/api/v1/tournaments", tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 
@@ -125,7 +126,7 @@ func TestCreateEndpoint(t *testing.T) {
 				require.Len(t, rows, 1, "the creator should be the only member")
 				member, ok := rows[0].(map[string]any)
 				require.True(t, ok)
-				assert.Equal(t, creator, member["user_id"])
+				assert.Equal(t, TestAdminID.String(), member["user_id"])
 				assert.Equal(t, "admin", member["role"])
 			}
 		})
@@ -707,7 +708,6 @@ func TestRemoveTournamentUserEndpoint(t *testing.T) {
 func TestLocationEndpoints(t *testing.T) {
 	t.Parallel()
 
-	creator := uuid.New().String()
 	located := withLocation(seeded("located", tournament.TournamentStatusPending), "Boston", "US")
 
 	tests := []struct {
@@ -722,7 +722,7 @@ func TestLocationEndpoints(t *testing.T) {
 			name:       "create echoes city and country",
 			method:     http.MethodPost,
 			path:       "/api/v1/tournaments",
-			body:       map[string]any{"name": "n", "created_by": creator, "city": " Boston ", "country": "US"},
+			body:       map[string]any{"name": "n", "city": " Boston ", "country": "US"},
 			wantStatus: http.StatusCreated,
 			wantFields: map[string]any{"city": "Boston", "country": "US"},
 		},
@@ -730,7 +730,7 @@ func TestLocationEndpoints(t *testing.T) {
 			name:       "create without a location returns nulls",
 			method:     http.MethodPost,
 			path:       "/api/v1/tournaments",
-			body:       map[string]any{"name": "n", "created_by": creator},
+			body:       map[string]any{"name": "n"},
 			wantStatus: http.StatusCreated,
 			wantFields: map[string]any{"city": nil, "country": nil},
 		},
@@ -738,7 +738,7 @@ func TestLocationEndpoints(t *testing.T) {
 			name:       "create rejects a lowercase country",
 			method:     http.MethodPost,
 			path:       "/api/v1/tournaments",
-			body:       map[string]any{"name": "n", "created_by": creator, "country": "us"},
+			body:       map[string]any{"name": "n", "country": "us"},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
