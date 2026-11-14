@@ -39,6 +39,10 @@ function typeInto(name: string, value: string) {
   fireEvent.change(box, { target: { value } });
 }
 
+function pressEnter(name: string) {
+  fireEvent.keyDown(screen.getByRole("searchbox", { name }), { key: "Enter" });
+}
+
 async function openSheet(visibility?: "public" | "private") {
   render(<FilterSheet visibility={visibility} />);
   await act(async () => {
@@ -169,5 +173,47 @@ describe("FilterSheet", () => {
     for (const name of hidden) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
+  });
+
+  it("commits typed Club text on Enter, applies it, and leaves the sheet open", async () => {
+    await openSheet();
+
+    typeInto("Club", "Unlisted Fencing Club");
+    pressEnter("Club");
+
+    expect(screen.getByText("Unlisted Fencing Club")).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Club" })).toHaveValue("");
+    expect(screen.getByText("Filter")).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show Tournaments" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/tournaments?club=Unlisted+Fencing+Club", {
+      scroll: false,
+    });
+  });
+
+  it("applies pending Club text on Show Tournaments without pressing Enter", async () => {
+    await openSheet();
+
+    typeInto("Club", "Pending Club");
+    fireEvent.click(screen.getByRole("button", { name: "Show Tournaments" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/tournaments?club=Pending+Club", { scroll: false });
+  });
+
+  it("does nothing when Enter is pressed in Country, which stays pick-only", async () => {
+    await openSheet();
+
+    typeInto("Country", "fran");
+    pressEnter("Country");
+
+    expect(screen.getByText("Filter")).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByRole("searchbox", { name: "Country" })).toHaveValue("fran");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show Tournaments" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/tournaments", { scroll: false });
   });
 });

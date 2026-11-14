@@ -23,7 +23,10 @@ function TournamentCard({ tournament, admin }: TournamentCardProps) {
   const meta = admin ? `Created ${formatShortDate(tournament.created_at)}` : location;
 
   return (
-    <Link href={`/tournaments/${tournament.id}`} className="block rounded-[12px]">
+    <Link
+      href={admin ? `/admin/tournaments/${tournament.id}` : `/tournaments/${tournament.id}`}
+      className="block rounded-[12px]"
+    >
       <Card
         orientation="horizontal"
         className="items-start gap-3 transition-colors hover:bg-blue-lightest"

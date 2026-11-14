@@ -157,14 +157,13 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 		if filter.EventID != nil && candidate.EventID != *filter.EventID {
 			continue
 		}
-		if filter.TournamentID != nil &&
-			(candidate.TournamentID == nil || *candidate.TournamentID != *filter.TournamentID) {
+		if filter.TournamentID != nil && candidate.TournamentID != *filter.TournamentID {
 			continue
 		}
 		if filter.Rating != nil && candidate.Rating != *filter.Rating {
 			continue
 		}
-		if filter.Team != nil && candidate.Team != *filter.Team {
+		if filter.Team != nil && !strings.Contains(strings.ToLower(candidate.Team), strings.ToLower(*filter.Team)) {
 			continue
 		}
 		if len(filter.IDs) > 0 && !slices.Contains(filter.IDs, candidate.ID) {
@@ -204,8 +203,7 @@ func (f *FakeCompetitorRepository) ListCompetitorTeams(
 	term := strings.ToLower(filter.Term)
 	counts := make(map[string]int64)
 	for _, candidate := range f.Competitors {
-		if filter.TournamentID != nil &&
-			(candidate.TournamentID == nil || *candidate.TournamentID != *filter.TournamentID) {
+		if filter.TournamentID != nil && candidate.TournamentID != *filter.TournamentID {
 			continue
 		}
 		if candidate.Team == "" {

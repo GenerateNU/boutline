@@ -25,9 +25,12 @@ interface SuggestionListProps {
 }
 
 interface FilterSearchFieldProps
-  extends Omit<React.ComponentProps<"input">, "type" | "children">,
+  extends Omit<React.ComponentProps<"input">, "type" | "children" | "onKeyDown">,
     SuggestionListProps {
   label: string;
+  // Opt in to free text. Enter commits the trimmed box contents as the filter
+  // value; omit it to keep the field pick-only.
+  onCommitText?: (text: string) => void;
 }
 
 function FilterSearchField({
@@ -38,8 +41,25 @@ function FilterSearchField({
   selected,
   onPick,
   noun,
+  onCommitText,
   ...inputProps
 }: FilterSearchFieldProps) {
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") {
+      return;
+    }
+    // Stop Enter from submitting the whole form
+    event.preventDefault();
+    // Enter doesn't mean submit if composing text (e.g. IME)
+    if (event.nativeEvent.isComposing) {
+      return;
+    }
+    const trimmed = event.currentTarget.value.trim();
+    if (onCommitText && trimmed) {
+      onCommitText(trimmed);
+    }
+  }
+
   return (
     <div data-slot="filter-search-field" className="flex flex-col gap-2">
       <p className="text-sm text-obsidian">{label}</p>
@@ -49,6 +69,7 @@ function FilterSearchField({
           aria-label={label}
           placeholder={`Search ${label.toLowerCase()}`}
           {...inputProps}
+          onKeyDown={handleKeyDown}
           className="h-5 flex-1 rounded-none border-0 px-0 text-obsidian shadow-none placeholder:text-neutral-secondary focus-visible:ring-0"
         />
         <SearchOutlined aria-hidden className="size-4.5 shrink-0 text-neutral-secondary" />

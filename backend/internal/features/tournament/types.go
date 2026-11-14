@@ -63,6 +63,14 @@ type TournamentIDInput struct {
 	ID string `path:"id" format:"uuid" doc:"Tournament ID"`
 }
 
+type TournamentRoleResponse struct {
+	Role *tournamentuser.TournamentUserRole `json:"role" enum:"referee,admin" doc:"The caller's role in this tournament; null when they hold none"`
+}
+
+type TournamentRoleOutput struct {
+	Body TournamentRoleResponse
+}
+
 type TournamentCodeInput struct {
 	Code string `path:"code" minLength:"6" doc:"Join code, case-insensitive"`
 }
@@ -91,7 +99,7 @@ type TournamentListInput struct {
 	StartFrom  time.Time            `query:"start_from" doc:"Inclusive lower bound on start_time (RFC3339); rows without a start_time are excluded when a bound is set"`
 	StartTo    time.Time            `query:"start_to" doc:"Exclusive upper bound on start_time (RFC3339); rows without a start_time are excluded when a bound is set"`
 	Visibility TournamentVisibility `query:"visibility" enum:"public,private" doc:"Filter by visibility; omit for all"`
-	Club       string               `query:"club" maxLength:"120" doc:"Only tournaments with a competitor whose primary or secondary club is exactly this"`
+	Club       string               `query:"club" maxLength:"120" doc:"Only tournaments with a competitor whose primary or secondary club contains this text; omit to return every tournament"`
 	Country    string               `query:"country" pattern:"^[A-Z]{2}$" doc:"Only tournaments in this country (exact ISO 3166-1 alpha-2 code)"`
 	Mine       bool                 `query:"mine" doc:"Only tournaments the signed-in caller created or is staff in (admin or referee); requires a signed-in caller"`
 }
@@ -151,6 +159,25 @@ func newTournamentUserResponse(membership tournamentuser.TournamentUser) Tournam
 	}
 }
 
+// The list's row: the membership plus what the list query joins in.
+type TournamentMemberResponse struct {
+	TournamentUserResponse
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	Occupied   bool   `json:"occupied" doc:"Running a pool or refereeing an active bout in this tournament"`
+	PoolNumber *int   `json:"pool_number" doc:"The unfinished pool they're running, else the next one they're assigned; null when none"`
+}
+
+func newTournamentMemberResponse(member tournamentuser.TournamentMember) TournamentMemberResponse {
+	return TournamentMemberResponse{
+		TournamentUserResponse: newTournamentUserResponse(member.TournamentUser),
+		FirstName:              member.FirstName,
+		LastName:               member.LastName,
+		Occupied:               member.Occupied,
+		PoolNumber:             member.PoolNumber,
+	}
+}
+
 type TournamentUserAddBody struct {
 	UserID string                            `json:"user_id" format:"uuid" doc:"User to add to the tournament"`
 	Role   tournamentuser.TournamentUserRole `json:"role" enum:"referee,admin" doc:"Role the user holds in this tournament"`
@@ -162,9 +189,11 @@ type TournamentUserAddInput struct {
 }
 
 type TournamentUserListInput struct {
-	TournamentID string `path:"id" format:"uuid" doc:"Tournament ID"`
-	Limit        int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
-	Offset       int    `query:"offset" default:"0" minimum:"0"`
+	TournamentID string                            `path:"id" format:"uuid" doc:"Tournament ID"`
+	Role         tournamentuser.TournamentUserRole `query:"role" enum:"referee,admin" doc:"Filter by role; omit for all"`
+	Query        string                            `query:"q" maxLength:"120" doc:"Fuzzy match against the member's full name; omit to return every member"`
+	Limit        int                               `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset       int                               `query:"offset" default:"0" minimum:"0"`
 }
 
 type TournamentUserUpdateRoleBody struct {
@@ -187,10 +216,10 @@ type TournamentUserOutput struct {
 }
 
 type TournamentUserListBody struct {
-	Data   []TournamentUserResponse `json:"data"`
-	Total  int64                    `json:"total" doc:"Members of this tournament"`
-	Limit  int                      `json:"limit"`
-	Offset int                      `json:"offset"`
+	Data   []TournamentMemberResponse `json:"data"`
+	Total  int64                      `json:"total" doc:"Members of this tournament matching the filters"`
+	Limit  int                        `json:"limit"`
+	Offset int                        `json:"offset"`
 }
 
 type TournamentUserListOutput struct {

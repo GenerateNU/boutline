@@ -24,7 +24,9 @@ describe("RefereeCard", () => {
     expect(items).toHaveLength(rows.length);
     rows.forEach((row, i) => {
       row.forEach((text) => expect(within(items[i]).getByText(text)).toBeInTheDocument());
-      expect(within(items[i]).getByRole("button", { name: "Remove" })).toBeInTheDocument();
+      expect(
+        within(items[i]).getByRole("button", { name: `Remove ${row[0]}` }),
+      ).toBeInTheDocument();
     });
   });
 });

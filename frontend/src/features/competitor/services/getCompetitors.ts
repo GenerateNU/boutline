@@ -16,7 +16,6 @@ export async function getCompetitors(
   if (query) {
     url.searchParams.set("q", query);
   }
-  // Unlike q's fuzzy name match, team must equal the club name exactly.
   if (team) {
     url.searchParams.set("team", team);
   }

@@ -148,7 +148,7 @@ how to test it.
   through the real app: routing, OpenAPI security and the auth middleware, plus
   DB-backed login, search and list-filter tests. Those skip without Postgres;
   `REQUIRE_DB=1` makes them fail instead, as CI does.
-- **Frontend:** Jest with Testing Library, 64 test files. They cover the proxy,
+- **Frontend:** Jest with Testing Library, 74 test files. They cover the proxy,
   `apiRequest`, the API services, auth actions, the search and filter components,
   pagination, pinning and the referee screen. No browser end-to-end tests yet.
 
@@ -219,10 +219,11 @@ is deleted.
 
 | Method | Path | |
 | --- | --- | --- |
-| POST | `/tournaments/{id}/users` | add `{user_id, role}`; 409 if already a member |
-| GET | `/tournaments/{id}/users` | list |
+| POST | `/tournaments/{id}/users` | add `{user_id, role}`; 409 if already a member, naming the role they hold (a person has one role per tournament; an admin can still referee a pool they're assigned to) |
+| GET | `/tournaments/{id}/users?role&q&limit&offset` | list; each member carries first and last name, `occupied` (running a started pool or an active bout here) and `pool_number` (that pool, else their next unfinished one; null if none). `q` is a fuzzy name search |
 | PATCH | `/tournaments/{id}/users/{user_id}` | change role |
 | DELETE | `/tournaments/{id}/users/{user_id}` | remove |
+| GET | `/tournaments/{id}/role` | the caller's role, `{"role": "admin" \| "referee" \| null}`; null when they're signed out, aren't on the staff, or the tournament is unknown. A public read: the token is used when sent |
 
 ### 2.4 Events
 
@@ -361,7 +362,7 @@ fencers don't need one.
 
 - `users`: `id`, `email` (unique, lowercased, validated with `net/mail`),
   `password` (bcrypt, 1–72 bytes, never returned), `first_name`, `last_name`.
-- `GET /users?q=` (fuzzy full-name search) and `GET /users/{id}` require a login.
+- `GET /users?q=` (fuzzy full-name search, also an email prefix) and `GET /users/{id}` require a login.
 - `PATCH /users/{id}` changes names only.
 - `DELETE /users/{id}` is a 409 if the user created a tournament, referees a bout
   or pool, or recorded a touch; memberships cascade.
@@ -424,6 +425,8 @@ different roles in different tournaments.
   lifetime, so page scripts never see it.
 - `src/proxy.ts` moves the cookie into the `Authorization` header on `/api/*`. It
   redirects `/admin/*` and `/…/referee` to `/login?next=…` when there is no cookie.
+- A server component that calls the backend itself (the dashboard's role lookup)
+  sends the cookie's token as `Authorization: Bearer`, the same as the `/api` proxy.
 
 ---
 
@@ -448,7 +451,7 @@ from the venue floor.
   sidebar's top left closes it.
 - **`/settings`**: Profile, Accessibility and Language, then Privacy Policy and
   Help, in two cards. None has a page yet, so the rows are labels only.
-- **Tabs** (tournament and event pages): a full-width obsidian row directly under
+- **Tabs** (tournament and event pages, and the admin tournament dashboard, §4.6): a full-width obsidian row directly under
   the global nav, like the tournaments date strip. Each tab has its own URL, but switching
   tabs replaces the history entry, so the browser's Back button leaves the page
   rather than stepping back through tabs. The exception is the active tab clicked
@@ -487,6 +490,8 @@ from the venue floor.
   sets `?club=`; Country offers only countries that have tournaments, from
   `GET /countries`, and sets `?country=` to the code. Suggestions appear only while
   typing, in a dropdown under the search bar, and picked values show as removable filter tags at the top of the sheet.
+  Club accepts either a picked suggestion or typed text committed with Enter; Country
+  is a local, `includes()`-filtered list and stays pick-only.
   Sections follow the Figma order: Country, Club, Distance, Tournament Status.
 - A "Create tournament" card links to the creation form when the viewer has a
   session cookie.
@@ -522,7 +527,8 @@ Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers. These
 replace the tournament's tabs rather than stacking under them.
 
 - **Fencers** (Completed): search, pagination, and a filter sheet with Fencer (sets
-  `?q=`) and Club (sets `?team=`) searches, each picked from a dropdown of matches. It lists every fencer in the tournament, since
+  `?q=`) and Club (sets `?team=`) searches, each accepting either a picked suggestion
+  from the dropdown or typed text committed with Enter. It lists every fencer in the tournament, since
   competitors don't belong to an event yet (§8.4). Rows link to a fencer page,
   which is placeholder text.
 - **Pooling** and **Tableau** (Placeholder): a bout list from a hardcoded fixture,
@@ -542,12 +548,37 @@ Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) ov
 the tournaments the caller created or is staff in (`GET /tournaments?mine=true`,
 which matches `created_by` or any `tournament_users` row, admin or referee; the
 `created_by` match keeps tournaments made before creators got an admin row),
-paginated. Cards show the created
-date instead of the location, then a thin vertical divider and the caller's role
-as plain text ("Admin" or "Referee", from the list's `role` field). Organizers see
-`pending` as "Scheduled" with the blue badge; public screens keep "Upcoming".
-`/admin` redirects here until the console (§10.7) exists. It switches to
-`GET /users/{me}/tournaments` in §10.7.
+paginated. Cards show the created date instead of the location, then a thin
+vertical divider and the caller's role as plain text ("Admin" or "Referee", from
+the list's `role` field), and link to the tournament's dashboard (§4.6), which
+only that tournament's admins can open; public `/tournaments` cards still link to
+the public page. Organizers see `pending` as "Scheduled" with the blue badge; public
+screens keep "Upcoming". `/admin` redirects here until the console (§10.7) exists.
+It switches to `GET /users/{me}/tournaments` in §10.7.
+
+### 4.6 Tournament dashboard (`/admin/tournaments/[id]`)
+
+**Status:** Partial.
+
+The organizer's page for one tournament, visible only to its admins. The page asks
+`GET /tournaments/{id}/role` (§2.3); anyone who isn't an admin, referees included,
+gets a 404. Signed-out visitors are redirected to login by the proxy (§3.3).
+
+Header, top to bottom: a "< All tournaments" link back to `/admin/tournaments`; a
+small gray "Tournament Management Dashboard" with the status badge on the right
+(Completed, In Progress or Scheduled); the uppercase tournament name; and the date
+range (the events' range, as on the Overview in §4.3) with a calendar icon and the
+location with a pin icon, each omitted when empty.
+
+Tabs: Fencers (the index page) · Referees · Events · Settings.
+
+- **Referees:** a searchable, paginated roster of the tournament's referees, from
+  `GET /tournaments/{id}/users?role=referee`. "Add Referees" opens a dialog that
+  searches users by name or email and adds one as referee, optionally to one of the
+  tournament's pools, then closes. Each row shows Occupied or Available and the
+  referee's pool (§10.3), and its Remove asks for confirmation first.
+- **Fencers**, **Events** and **Settings** (Planned): empty until a ticket defines
+  what they show.
 
 ---
 
@@ -984,8 +1015,16 @@ Fencing, adding staff, and checking fencers in on the day.
 
 ### 10.3 Staff
 
-**Status:** Planned. Issues: #16, #20.
+**Status:** Partial. Issues: #16, #20. The Referees tab is on the tournament
+dashboard (§4.6) and shown only to the tournament's admins, who hold the role that
+adding, removing and assigning pools need (§7.2). The rest is planned.
 
+- Add Referees can also pick a pool, from every event's pools labelled "Pool 1 ·
+  {event}" (one `/pool-sheets?event_id=` request per event); the referee is then
+  set on that pool with `PATCH /pools/{id}` (§11.2), even if they were already on
+  the staff.
+- Each row shows Occupied or Available and the referee's current pool (§2.3).
+- Not built: the creation-flow step.
 - The creation form's free-text "Admins" field (comma-separated emails) resolves
   emails to users and adds them as admins.
 - A Staff screen under the tournament for admins.
@@ -1065,7 +1104,8 @@ are placed into pools.
 
 Planned as a hub for the organizer's tools; until it exists, `/admin` redirects to
 the admin home (§4.5). The tournaments list switches to
-`GET /users/{me}/tournaments`.
+`GET /users/{me}/tournaments`. The tournament dashboard (§4.6) is the console's
+per-tournament page.
 
 On the day, the admin checks fencers in, starts the tournament, generates pools
 (which creates bouts, so it needs the tournament `active`), assigns referees, and

@@ -31,3 +31,13 @@ type TournamentUser struct {
 func (TournamentUser) TableName() string {
 	return "tournament_users"
 }
+
+// TournamentMember is a membership joined with the member's name, which is all
+// a listing exposes of the user, and what they're refereeing in the tournament.
+type TournamentMember struct {
+	TournamentUser `gorm:"embedded"`
+	FirstName      string
+	LastName       string
+	Occupied       bool
+	PoolNumber     *int
+}

@@ -37,3 +37,7 @@ export interface TournamentListResult {
   limit: number;
   offset: number;
 }
+
+export interface TournamentRoleResponse {
+  role: TournamentRole | null;
+}
