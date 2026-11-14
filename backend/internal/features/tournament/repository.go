@@ -13,9 +13,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// tournamentNameTrigramExpr must match the expression indexed by
+// tournamentNameSearchColumns must match the expression indexed by
 // idx_tournaments_name_trgm exactly, or the search falls back to a sequential scan.
-const tournamentNameTrigramExpr = "name"
+var tournamentNameSearchColumns = []string{"name"}
 
 type TournamentRepository interface {
 	CreateTournament(ctx context.Context, tournament *Tournament) error
@@ -234,21 +234,22 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 	if filter.Club != "" {
 		// Raw SQL: importing the competitor package here would be an import cycle.
 		// Joins through events because competitors.tournament_id is nullable.
-		query = query.Where(`EXISTS (
+		clubFragment, clubArgs := utils.SubstringPredicate(
+			[]string{"competitors.primary_club", "competitors.secondary_club"}, filter.Club)
+		query = query.Where(fmt.Sprintf(`EXISTS (
 			SELECT 1 FROM competitors
 			JOIN events ON events.id = competitors.event_id
 			WHERE events.tournament_id = tournaments.id
-			AND (competitors.primary_club = ? OR competitors.secondary_club = ?))`,
-			filter.Club, filter.Club)
+			AND %s)`, clubFragment), clubArgs...)
 	}
-	query = utils.TrigramMatch(query, tournamentNameTrigramExpr, filter.Term)
+	query = utils.TrigramMatch(query, tournamentNameSearchColumns, filter.Term)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count tournaments: %w", err)
 	}
 
-	query = utils.TrigramOrder(query, tournamentNameTrigramExpr, filter.Term, "created_at DESC", "id")
+	query = utils.TrigramOrder(query, tournamentNameSearchColumns, filter.Term, "created_at DESC", "id")
 
 	tournaments := make([]Tournament, 0, filter.Limit)
 	err := query.

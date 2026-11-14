@@ -20,7 +20,7 @@ import type {
   TournamentStatus,
   TournamentVisibility,
 } from "@/features/tournament/types/tournament";
-import { useSearchSuggestions } from "@/lib/hooks/use-search-suggestions";
+import { useFilterSearch } from "@/lib/hooks/use-filter-search";
 import { apiRequest } from "@/services/api-request";
 import type { TeamListResult } from "@/types/competitor";
 
@@ -50,12 +50,11 @@ function FilterSheet({ visibility }: FilterSheetProps) {
   const { searchParams, setFilters } = useTournamentFilters();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState("");
-  const [selectedClub, setSelectedClub] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
   const [countries, setCountries] = useState<Country[] | null>(null);
   const [countriesFailed, setCountriesFailed] = useState(false);
   const [countryQuery, setCountryQuery] = useState("");
-  const clubSearch = useSearchSuggestions(async (term) => {
+  const clubField = useFilterSearch(async (term) => {
     const query = new URLSearchParams({ limit: String(CLUB_RESULT_LIMIT), q: term });
     const result = await apiRequest<TeamListResult>(`/clubs?${query}`);
     return result.data.map(({ name }) => ({ value: name, label: name }));
@@ -88,10 +87,9 @@ function FilterSheet({ visibility }: FilterSheetProps) {
       onOpenChange={(next) => {
         if (next) {
           setStatus(searchParams.get("status") ?? "");
-          setSelectedClub(searchParams.get("club") ?? "");
+          clubField.reset(searchParams.get("club") ?? "");
           setSelectedCountry(searchParams.get("country") ?? "");
           setCountryQuery("");
-          clubSearch.clear();
           void loadCountries();
         }
         setOpen(next);
@@ -101,22 +99,21 @@ function FilterSheet({ visibility }: FilterSheetProps) {
       submitLabel="Show Tournaments"
       onReset={() => {
         setStatus("");
-        setSelectedClub("");
+        clubField.reset();
         setSelectedCountry("");
         setCountryQuery("");
-        clubSearch.clear();
       }}
       onSubmit={() => {
         setFilters({
           status,
-          club: selectedClub || undefined,
+          club: clubField.submitValue(),
           country: selectedCountry || undefined,
         });
         setOpen(false);
       }}
     >
       {/* Picking a suggestion empties its search box, so the picks show here until submitted. */}
-      {(selectedCountry || selectedClub) && (
+      {(selectedCountry || clubField.value) && (
         <div className="flex flex-wrap gap-2">
           {selectedCountry && (
             <Chip
@@ -126,9 +123,9 @@ function FilterSheet({ visibility }: FilterSheetProps) {
               {countryName(selectedCountry)}
             </Chip>
           )}
-          {selectedClub && (
-            <Chip onDismiss={() => setSelectedClub("")} dismissLabel={`Remove ${selectedClub}`}>
-              {selectedClub}
+          {clubField.value && (
+            <Chip onDismiss={() => clubField.reset()} dismissLabel={`Remove ${clubField.value}`}>
+              {clubField.value}
             </Chip>
           )}
         </div>
@@ -151,16 +148,15 @@ function FilterSheet({ visibility }: FilterSheetProps) {
 
       <FilterSearchField
         label="Club"
-        value={clubSearch.query}
-        onChange={(event) => clubSearch.change(event.target.value)}
-        suggestions={clubSearch.suggestions}
-        failed={clubSearch.failed}
-        loading={clubSearch.loading}
-        selected={selectedClub}
-        onPick={(name) => {
-          setSelectedClub(name);
-          clubSearch.clear();
-        }}
+        value={clubField.query}
+        onChange={(event) => clubField.change(event.target.value)}
+        suggestions={clubField.suggestions}
+        failed={clubField.failed}
+        loading={clubField.loading}
+        selected={clubField.value}
+        onPick={clubField.pick}
+        onCommitText={clubField.commitText}
+        maxLength={120}
         noun="clubs"
       />
 

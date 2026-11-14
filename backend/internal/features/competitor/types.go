@@ -124,7 +124,7 @@ type CompetitorListInput struct {
 	EventID      string `query:"eventId" format:"uuid" doc:"Only competitors in this event"`
 	TournamentID string `query:"tournament_id" doc:"Only competitors entered in this tournament"`
 	Rating       string `query:"rating" enum:"A,B,C,D,E,U" doc:"Only competitors with this rating"`
-	Team         string `query:"team" maxLength:"120" doc:"Only competitors on this team (exact match)"`
+	Team         string `query:"team" maxLength:"120" doc:"Only competitors whose team contains this text; omit to return every competitor"`
 }
 
 type CompetitorListBody struct {

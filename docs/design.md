@@ -487,6 +487,8 @@ from the venue floor.
   sets `?club=`; Country offers only countries that have tournaments, from
   `GET /countries`, and sets `?country=` to the code. Suggestions appear only while
   typing, in a dropdown under the search bar, and picked values show as removable filter tags at the top of the sheet.
+  Club accepts either a picked suggestion or typed text committed with Enter; Country
+  is a local, `includes()`-filtered list and stays pick-only.
   Sections follow the Figma order: Country, Club, Distance, Tournament Status.
 - A "Create tournament" card links to the creation form when the viewer has a
   session cookie.
@@ -522,7 +524,8 @@ Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers. These
 replace the tournament's tabs rather than stacking under them.
 
 - **Fencers** (Completed): search, pagination, and a filter sheet with Fencer (sets
-  `?q=`) and Club (sets `?team=`) searches, each picked from a dropdown of matches. It lists every fencer in the tournament, since
+  `?q=`) and Club (sets `?team=`) searches, each accepting either a picked suggestion
+  from the dropdown or typed text committed with Enter. It lists every fencer in the tournament, since
   competitors don't belong to an event yet (§8.4). Rows link to a fencer page,
   which is placeholder text.
 - **Pooling** and **Tableau** (Placeholder): a bout list from a hardcoded fixture,

@@ -14,9 +14,8 @@ import (
 )
 
 const (
-	competitorNameTrigramExpr = "first_name || ' ' || last_name"
-	competitorTeamTrigramExpr = "team"
-	competitorClubTrigramExpr = "club"
+	competitorTeamColumn = "team"
+	competitorClubColumn = "club"
 
 	// One row per club a competitor belongs to; a secondary club that repeats
 	// the primary is skipped so that competitor isn't counted twice.
@@ -25,6 +24,12 @@ const (
 		"UNION ALL SELECT secondary_club AS club FROM competitors " +
 		"WHERE secondary_club IS NOT NULL AND secondary_club <> '' " +
 		"AND secondary_club IS DISTINCT FROM primary_club"
+)
+
+var (
+	competitorNameSearchColumns = []string{"first_name", "last_name"}
+	competitorTeamSearchColumns = []string{competitorTeamColumn}
+	competitorClubSearchColumns = []string{competitorClubColumn}
 )
 
 type CompetitorRepository interface {
@@ -207,12 +212,12 @@ func (r *competitorRepository) ListCompetitors(
 		query = query.Where("rating = ?", string(*filter.Rating))
 	}
 	if filter.Team != nil {
-		query = query.Where("team = ?", *filter.Team)
+		query = utils.SubstringMatch(query, competitorTeamSearchColumns, *filter.Team)
 	}
 	if len(filter.IDs) > 0 {
 		query = query.Where("id IN ?", filter.IDs)
 	}
-	query = utils.TrigramMatch(query, competitorNameTrigramExpr, filter.Term)
+	query = utils.TrigramMatch(query, competitorNameSearchColumns, filter.Term)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -221,7 +226,7 @@ func (r *competitorRepository) ListCompetitors(
 
 	// With no term there is no relevance to rank by, so the roster falls back
 	// to alphabetical order rather than insertion order.
-	query = utils.TrigramOrder(query, competitorNameTrigramExpr, filter.Term, "last_name, first_name, id", "id")
+	query = utils.TrigramOrder(query, competitorNameSearchColumns, filter.Term, "last_name, first_name, id", "id")
 
 	competitors := make([]Competitor, 0, filter.Limit)
 
@@ -243,7 +248,7 @@ func (r *competitorRepository) ListCompetitorTeams(
 	ctx context.Context,
 	filter CompetitorTeamListFilter,
 ) ([]CompetitorTeamCount, int64, error) {
-	expr := competitorTeamTrigramExpr
+	column := competitorTeamColumn
 
 	// Built fresh rather than reused: chaining Find's Select/Group onto the
 	// same *gorm.DB used for the Distinct Count carries the Distinct clause
@@ -252,26 +257,26 @@ func (r *competitorRepository) ListCompetitorTeams(
 	var total int64
 	// team is "" for an unaffiliated competitor, which is not a club.
 	countQuery := utils.TrigramMatch(
-		r.db.WithContext(ctx).Model(&Competitor{}).Where("team <> ''"), expr, filter.Term)
+		r.db.WithContext(ctx).Model(&Competitor{}).Where("team <> ''"), competitorTeamSearchColumns, filter.Term)
 	if filter.TournamentID != nil {
 		countQuery = countQuery.Where("tournament_id = ?", *filter.TournamentID)
 	}
-	if err := countQuery.Distinct(expr).Count(&total).Error; err != nil {
+	if err := countQuery.Distinct(column).Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count competitor team list: %w", err)
 	}
 
 	var teams []CompetitorTeamCount
 	findQuery := utils.TrigramMatch(
-		r.db.WithContext(ctx).Model(&Competitor{}).Where("team <> ''"), expr, filter.Term)
+		r.db.WithContext(ctx).Model(&Competitor{}).Where("team <> ''"), competitorTeamSearchColumns, filter.Term)
 	if filter.TournamentID != nil {
 		findQuery = findQuery.Where("tournament_id = ?", *filter.TournamentID)
 	}
 	findQuery = findQuery.
-		Select(expr + " AS team, COUNT(*) AS count").
-		Group(expr)
+		Select(column + " AS team, COUNT(*) AS count").
+		Group(column)
 	// team is the GROUP BY key, so it's also the tiebreaker: id no longer
 	// identifies a row once rows are grouped.
-	findQuery = utils.TrigramOrder(findQuery, expr, filter.Term, expr, expr)
+	findQuery = utils.TrigramOrder(findQuery, competitorTeamSearchColumns, filter.Term, column, column)
 	err := findQuery.
 		Limit(filter.Limit).
 		Offset(filter.Offset).
@@ -292,20 +297,20 @@ func (r *competitorRepository) ListCompetitorClubs(
 	// ListCompetitorTeams.
 	clubs := func() *gorm.DB {
 		return utils.TrigramMatch(r.db.WithContext(ctx).Table("(?) AS clubs", r.db.Raw(competitorClubsSource)),
-			competitorClubTrigramExpr, filter.Term)
+			competitorClubSearchColumns, filter.Term)
 	}
 
 	var total int64
-	if err := clubs().Distinct(competitorClubTrigramExpr).Count(&total).Error; err != nil {
+	if err := clubs().Distinct(competitorClubColumn).Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count competitor club list: %w", err)
 	}
 
 	var found []CompetitorTeamCount
 	findQuery := clubs().
-		Select(competitorClubTrigramExpr + " AS team, COUNT(*) AS count").
-		Group(competitorClubTrigramExpr)
-	findQuery = utils.TrigramOrder(findQuery, competitorClubTrigramExpr, filter.Term,
-		competitorClubTrigramExpr, competitorClubTrigramExpr)
+		Select(competitorClubColumn + " AS team, COUNT(*) AS count").
+		Group(competitorClubColumn)
+	findQuery = utils.TrigramOrder(findQuery, competitorClubSearchColumns, filter.Term,
+		competitorClubColumn, competitorClubColumn)
 	err := findQuery.
 		Limit(filter.Limit).
 		Offset(filter.Offset).
