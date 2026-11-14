@@ -977,9 +977,16 @@ func TestVenueAndAuthorityEndpoints(t *testing.T) {
 func TestListEndpointMine(t *testing.T) {
 	t.Parallel()
 
-	own := seeded("own", tournament.TournamentStatusPending)
-	own.CreatedBy = TestAdminID
+	refereed := seeded("refereed", tournament.TournamentStatusPending)
 	theirs := seeded("theirs", tournament.TournamentStatusPending)
+
+	members := NewFakeTournamentUserRepository(
+		seededMembership(refereed.ID, TestAdminID, tournamentuser.TournamentUserRoleReferee),
+	)
+	repo := NewFakeTournamentRepository(refereed, theirs)
+	repo.Members = members
+	_, api := humatest.New(t)
+	tournament.RegisterTournamentService(api, tournament.NewTournamentService(repo, members))
 
 	tests := []struct {
 		name       string
@@ -987,10 +994,11 @@ func TestListEndpointMine(t *testing.T) {
 		query      string
 		wantStatus int
 		wantTotal  float64
+		wantRole   any
 	}{
-		{name: "signed in gets only their own", caller: CallerAdmin, query: "?mine=true", wantStatus: http.StatusOK, wantTotal: 1},
-		{name: "mine=false lists everything", caller: CallerAdmin, query: "?mine=false", wantStatus: http.StatusOK, wantTotal: 2},
-		{name: "anonymous without mine lists everything", caller: CallerAnonymous, query: "", wantStatus: http.StatusOK, wantTotal: 2},
+		{name: "signed in gets only the tournaments they are staff in", caller: CallerAdmin, query: "?mine=true", wantStatus: http.StatusOK, wantTotal: 1, wantRole: "referee"},
+		{name: "mine=false lists everything", caller: CallerAdmin, query: "?mine=false", wantStatus: http.StatusOK, wantTotal: 2, wantRole: "referee"},
+		{name: "anonymous without mine lists everything with no role", caller: CallerAnonymous, query: "", wantStatus: http.StatusOK, wantTotal: 2, wantRole: nil},
 		{name: "anonymous with mine is forbidden", caller: CallerAnonymous, query: "?mine=true", wantStatus: http.StatusForbidden},
 		{name: "rejects a non-boolean mine", caller: CallerAdmin, query: "?mine=maybe", wantStatus: http.StatusUnprocessableEntity},
 	}
@@ -999,12 +1007,17 @@ func TestListEndpointMine(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t, own, theirs).GetCtx(tt.caller.Context(t.Context()), "/api/v1/tournaments"+tt.query)
+			resp := api.GetCtx(tt.caller.Context(t.Context()), "/api/v1/tournaments"+tt.query)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
-			if tt.wantStatus == http.StatusOK {
-				assert.InDelta(t, tt.wantTotal, decodeBody(t, resp.Body.Bytes())["total"], 0)
+			if tt.wantStatus != http.StatusOK {
+				return
 			}
+			body := decodeBody(t, resp.Body.Bytes())
+			assert.InDelta(t, tt.wantTotal, body["total"], 0)
+			first := body["data"].([]any)[0].(map[string]any)
+			assert.Equal(t, "refereed", first["name"])
+			assert.Equal(t, tt.wantRole, first["role"])
 		})
 	}
 }

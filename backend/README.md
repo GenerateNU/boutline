@@ -100,7 +100,8 @@ make dev-seed    # or `make db-seed` from the repo root
 ```
 
 loads `seeds/seed.sql` into the dev database: five users, three tournaments
-(one each pending, active, and ended) with their memberships and events,
+(one each pending, active, and ended) with their memberships and events, a
+fourth bare pending tournament (Spring Regional) that Jordan Lee administers,
 twelve competitors, two pool stages (one active with two pools of four fencers, one upcoming),
 and bouts in every status. Every seeded account's password
 is `password123`. Every row has a fixed id and conflicts are skipped, so

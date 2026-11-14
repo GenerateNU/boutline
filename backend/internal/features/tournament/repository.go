@@ -92,7 +92,7 @@ type TournamentListFilter struct {
 	Visibility TournamentVisibility
 	Club       string
 	Country    string
-	CreatedBy  uuid.UUID
+	MemberID   uuid.UUID
 	Limit      int
 	Offset     int
 }
@@ -228,8 +228,11 @@ func (r *tournamentRepository) ListTournaments(ctx context.Context, filter Tourn
 	if filter.Country != "" {
 		query = query.Where("country = ?", filter.Country)
 	}
-	if filter.CreatedBy != uuid.Nil {
-		query = query.Where("created_by = ?", filter.CreatedBy)
+	if filter.MemberID != uuid.Nil {
+		query = query.Where(`EXISTS (
+			SELECT 1 FROM tournament_users
+			WHERE tournament_users.tournament_id = tournaments.id AND tournament_users.user_id = ?
+		)`, filter.MemberID)
 	}
 	if filter.Club != "" {
 		// Raw SQL: importing the competitor package here would be an import cycle.

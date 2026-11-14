@@ -114,6 +114,20 @@ describe("getTournaments", () => {
     expect(searchParams.get("visibility")).toBe(expected.visibility);
   });
 
+  it.each([
+    { name: "mine with a session", filters: { mine: true }, token: "tok", wantMine: "true", wantAuth: "Bearer tok" },
+    { name: "neither", filters: {}, token: undefined, wantMine: null, wantAuth: undefined },
+  ])("sends mine and the session for $name", async ({ filters, token, wantMine, wantAuth }) => {
+    const body = { data: [], total: 0, limit: 20, offset: 0 };
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => body });
+
+    await getTournaments(20, 0, filters, token);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(new URL(url as string).searchParams.get("mine")).toBe(wantMine);
+    expect((init.headers as Record<string, string>).Authorization).toBe(wantAuth);
+  });
+
   it("throws when the backend responds with an error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 

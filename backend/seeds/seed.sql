@@ -19,7 +19,8 @@ ON CONFLICT DO NOTHING;
 INSERT INTO tournaments (id, name, visibility, code, status, created_by, start_time, started_at, completed_at, created_at, updated_at, city, country) VALUES
   ('b0000000-0000-4000-8000-000000000001', 'Fall Open 2026',           'public',  'F7KQ2M', 'active',  'a0000000-0000-4000-8000-000000000001', now() - interval '3 hours',  now() - interval '3 hours',  NULL,                                          now() - interval '14 days', now(), 'Boston', 'US'),
   ('b0000000-0000-4000-8000-000000000002', 'Winter Classic 2026',      'private', 'W9TXH3', 'pending', 'a0000000-0000-4000-8000-000000000004', now() + interval '30 days',  NULL,                        NULL,                                          now() - interval '2 days',  now(), 'Toronto', 'CA'),
-  ('b0000000-0000-4000-8000-000000000003', 'Summer Invitational 2026', 'public',  'S4NPR8', 'ended',   'a0000000-0000-4000-8000-000000000001', now() - interval '90 days',  now() - interval '90 days',  now() - interval '90 days' + interval '9 hours', now() - interval '120 days', now(), 'Paris', 'FR')
+  ('b0000000-0000-4000-8000-000000000003', 'Summer Invitational 2026', 'public',  'S4NPR8', 'ended',   'a0000000-0000-4000-8000-000000000001', now() - interval '90 days',  now() - interval '90 days',  now() - interval '90 days' + interval '9 hours', now() - interval '120 days', now(), 'Paris', 'FR'),
+  ('b0000000-0000-4000-8000-00000000001a', 'Spring Regional 2027',     'public',  'J5RGN7', 'pending', 'a0000000-0000-4000-8000-000000000002', now() + interval '60 days',  NULL,                        NULL,                                          now() - interval '1 day',   now(), 'Providence', 'US')
 ON CONFLICT DO NOTHING;
 
 -- Bare tournaments with no events or competitors, solely to push the unfiltered
@@ -79,6 +80,8 @@ INSERT INTO tournament_users (user_id, tournament_id, role, created_at, updated_
 ON CONFLICT DO NOTHING;
 
 -- Casey has no memberships, to exercise a signed-in user with nothing to run.
+-- Jordan referees Fall Open and Winter Classic and runs Spring Regional, so their
+-- admin home shows both roles.
 INSERT INTO tournament_users (user_id, tournament_id, role, created_at, updated_at) VALUES
   ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'admin',   now(), now()),
   ('a0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000001', 'admin',   now(), now()),
@@ -87,7 +90,8 @@ INSERT INTO tournament_users (user_id, tournament_id, role, created_at, updated_
   ('a0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000002', 'admin',   now(), now()),
   ('a0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000002', 'referee', now(), now()),
   ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000003', 'admin',   now(), now()),
-  ('a0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003', 'referee', now(), now())
+  ('a0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003', 'referee', now(), now()),
+  ('a0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-00000000001a', 'admin',   now(), now())
 ON CONFLICT DO NOTHING;
 
 INSERT INTO events (id, tournament_id, name, status, start_time, started_at, completed_at, created_at, updated_at) VALUES

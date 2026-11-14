@@ -1,5 +1,6 @@
 export type TournamentVisibility = "private" | "public";
 export type TournamentStatus = "pending" | "active" | "ended";
+export type TournamentRole = "admin" | "referee";
 
 export interface Tournament {
   id: string;
@@ -15,6 +16,8 @@ export interface Tournament {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  // The signed-in caller's role; null when signed out or not staff.
+  role: TournamentRole | null;
 }
 
 export interface TournamentListFilters {
@@ -25,6 +28,7 @@ export interface TournamentListFilters {
   timeZone?: string;
   club?: string;
   country?: string;
+  mine?: boolean;
 }
 
 export interface TournamentListResult {

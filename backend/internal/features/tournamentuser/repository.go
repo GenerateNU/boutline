@@ -14,6 +14,7 @@ import (
 type TournamentUserRepository interface {
 	CreateTournamentUser(ctx context.Context, membership *TournamentUser) error
 	GetTournamentUser(ctx context.Context, tournamentID, userID uuid.UUID) (*TournamentUser, error)
+	ListRolesByUser(ctx context.Context, userID uuid.UUID, tournamentIDs []uuid.UUID) (map[uuid.UUID]TournamentUserRole, error)
 	ListUsersByTournament(ctx context.Context, tournamentID uuid.UUID, limit, offset int) ([]TournamentUser, error)
 	CountUsersByTournament(ctx context.Context, tournamentID uuid.UUID) (int64, error)
 	UpdateTournamentUserRole(ctx context.Context, tournamentID, userID uuid.UUID, role TournamentUserRole) error
@@ -120,6 +121,32 @@ func (r *tournamentUserRepository) GetTournamentUser(
 	}
 
 	return &membership, nil
+}
+
+func (r *tournamentUserRepository) ListRolesByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	tournamentIDs []uuid.UUID,
+) (map[uuid.UUID]TournamentUserRole, error) {
+	roles := make(map[uuid.UUID]TournamentUserRole, len(tournamentIDs))
+	if len(tournamentIDs) == 0 {
+		return roles, nil
+	}
+
+	var memberships []TournamentUser
+	err := r.db.WithContext(ctx).
+		Select("tournament_id", "role").
+		Where("user_id = ? AND tournament_id IN ?", userID, tournamentIDs).
+		Find(&memberships).Error
+	if err != nil {
+		return nil, fmt.Errorf("select roles of user %s: %w", userID, err)
+	}
+
+	for _, membership := range memberships {
+		roles[membership.TournamentID] = membership.Role
+	}
+
+	return roles, nil
 }
 
 func (r *tournamentUserRepository) CountUsersByTournament(

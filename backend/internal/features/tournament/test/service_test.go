@@ -1547,49 +1547,58 @@ func TestTournamentCreatorStaysAnAdmin(t *testing.T) {
 func TestListTournamentsMine(t *testing.T) {
 	t.Parallel()
 
-	own := seeded("own pending", tournament.TournamentStatusPending)
-	own.CreatedBy = TestAdminID
-	ownActive := seeded("own active", tournament.TournamentStatusActive)
-	ownActive.CreatedBy = TestAdminID
+	administered := seeded("administered", tournament.TournamentStatusPending)
+	refereed := seeded("refereed", tournament.TournamentStatusActive)
 	theirs := seeded("theirs", tournament.TournamentStatusPending)
-	theirs.CreatedBy = TestStrangerID
+	memberships := []tournamentuser.TournamentUser{
+		seededMembership(administered.ID, TestAdminID, tournamentuser.TournamentUserRoleAdmin),
+		seededMembership(refereed.ID, TestAdminID, tournamentuser.TournamentUserRoleReferee),
+		seededMembership(theirs.ID, TestStrangerID, tournamentuser.TournamentUserRoleAdmin),
+	}
 
+	// wantRoles holds the caller's role in each listed tournament, "" for none.
 	tests := []struct {
 		name      string
 		caller    Caller
 		input     *tournament.TournamentListInput
 		wantNames []string
+		wantRoles []string
 		wantCode  int
 	}{
 		{
-			name:      "signed in sees only their own",
+			name:      "mine lists every tournament the caller is staff in, with their role",
 			caller:    CallerAdmin,
 			input:     &tournament.TournamentListInput{Mine: true},
-			wantNames: []string{"own active", "own pending"},
+			wantNames: []string{"administered", "refereed"},
+			wantRoles: []string{"admin", "referee"},
 		},
 		{
 			name:      "another user sees only theirs",
 			caller:    CallerStranger,
 			input:     &tournament.TournamentListInput{Mine: true},
 			wantNames: []string{"theirs"},
+			wantRoles: []string{"admin"},
 		},
 		{
 			name:      "combines with the status filter",
 			caller:    CallerAdmin,
 			input:     &tournament.TournamentListInput{Mine: true, Status: tournament.TournamentStatusActive},
-			wantNames: []string{"own active"},
+			wantNames: []string{"refereed"},
+			wantRoles: []string{"referee"},
 		},
 		{
-			name:      "without mine everything is listed",
+			name:      "without mine everything is listed, with a role only where the caller has one",
 			caller:    CallerAdmin,
 			input:     &tournament.TournamentListInput{},
-			wantNames: []string{"own active", "own pending", "theirs"},
+			wantNames: []string{"administered", "refereed", "theirs"},
+			wantRoles: []string{"admin", "referee", ""},
 		},
 		{
-			name:      "anonymous without mine still lists",
+			name:      "anonymous without mine lists with no roles",
 			caller:    CallerAnonymous,
 			input:     &tournament.TournamentListInput{},
-			wantNames: []string{"own active", "own pending", "theirs"},
+			wantNames: []string{"administered", "refereed", "theirs"},
+			wantRoles: []string{"", "", ""},
 		},
 		{
 			name:     "anonymous with mine is forbidden",
@@ -1603,8 +1612,10 @@ func TestListTournamentsMine(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			service := tournament.NewTournamentService(
-				NewFakeTournamentRepository(own, ownActive, theirs), NewFakeTournamentUserRepository())
+			members := NewFakeTournamentUserRepository(memberships...)
+			repo := NewFakeTournamentRepository(administered, refereed, theirs)
+			repo.Members = members
+			service := tournament.NewTournamentService(repo, members)
 
 			out, err := service.ListTournaments(tt.caller.Context(t.Context()), tt.input)
 
@@ -1616,10 +1627,17 @@ func TestListTournamentsMine(t *testing.T) {
 			}
 			require.NoError(t, err)
 			names := make([]string, 0, len(out.Body.Data))
+			roles := make([]string, 0, len(out.Body.Data))
 			for _, row := range out.Body.Data {
 				names = append(names, row.Name)
+				role := ""
+				if row.Role != nil {
+					role = string(*row.Role)
+				}
+				roles = append(roles, role)
 			}
 			assert.Equal(t, tt.wantNames, names)
+			assert.Equal(t, tt.wantRoles, roles)
 			assert.Equal(t, int64(len(tt.wantNames)), out.Body.Total)
 		})
 	}

@@ -539,10 +539,13 @@ replace the tournament's tabs rather than stacking under them.
 Where login and signup land by default, behind the login gate. A solid-outlined
 "Create tournament" card linking to the creation form (§10.6), then "Manage
 Tournaments" with All / Completed / In Progress / Scheduled tabs (`?status=`) over
-every tournament (not yet only the caller's), paginated. Cards show the created
-date instead of the location. Organizers see `pending` as "Scheduled" with the blue
-badge; public screens keep "Upcoming". `/admin` redirects here until the console
-(§10.7) exists. It switches to `GET /users/{me}/tournaments` in §10.7.
+the tournaments the caller is staff in (`GET /tournaments?mine=true`, which matches
+any `tournament_users` row, admin or referee), paginated. Cards show the created
+date instead of the location, then a thin vertical divider and the caller's role
+as plain text ("Admin" or "Referee", from the list's `role` field). Organizers see
+`pending` as "Scheduled" with the blue badge; public screens keep "Upcoming".
+`/admin` redirects here until the console (§10.7) exists. It switches to
+`GET /users/{me}/tournaments` in §10.7.
 
 ---
 
