@@ -22,15 +22,18 @@ function TabNav({ label, basePath, tabs }: TabNavProps) {
   const root = basePath.replace(/\/+$/, "");
 
   return (
-    <NavigationBar
-      aria-label={label}
-      items={tabs.map(({ label, segment }) => {
-        const href = segment ? `${root}/${segment}` : basePath;
-        const active = segment === activeSegment;
-        // Tabs replace history so Back leaves the page; going up from a nested page (an event to Events) pushes.
-        return { label, href, active, replace: !(active && pathname !== href) };
-      })}
-    />
+    <div className="bg-obsidian shadow-md">
+      <NavigationBar
+        aria-label={label}
+        className="mx-auto max-w-mobile rounded-none"
+        items={tabs.map(({ label, segment }) => {
+          const href = segment ? `${root}/${segment}` : basePath;
+          const active = segment === activeSegment;
+          // Tabs replace history so Back leaves the page; going up from a nested page (an event to Events) pushes.
+          return { label, href, active, replace: !(active && pathname !== href) };
+        })}
+      />
+    </div>
   );
 }
 

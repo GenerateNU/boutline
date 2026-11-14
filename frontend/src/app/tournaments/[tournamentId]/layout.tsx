@@ -7,9 +7,9 @@ export default async function TournamentLayout({
   const { tournamentId } = await params;
 
   return (
-    <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 pt-10 pb-20">
+    <>
       {children}
       <PinsLinkButton tournamentId={tournamentId} />
-    </div>
+    </>
   );
 }
