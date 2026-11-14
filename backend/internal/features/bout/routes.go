@@ -58,6 +58,15 @@ func RegisterBoutService(api huma.API, service BoutService) {
 	}, service.UpdateBoutByID)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "claimBout",
+		Method:      http.MethodPost,
+		Path:        boutBasePath + "/{id}/claim",
+		Summary:     "Claim a bout as its referee",
+		Description: "Sets referee_id to the caller. The caller needs the referee role in the bout's tournament; the bout must be upcoming and unassigned or already the caller's.",
+		Tags:        []string{"Bouts"},
+	}, service.ClaimBout)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "startBout",
 		Method:      http.MethodPost,
 		Path:        boutBasePath + "/{id}/start",

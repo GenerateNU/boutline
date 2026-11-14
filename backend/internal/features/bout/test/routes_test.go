@@ -265,6 +265,63 @@ func TestLifecycleEndpoints(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, api.PostCtx(referee, base+"/start").Code)
 }
 
+func TestClaimEndpoint(t *testing.T) {
+	t.Parallel()
+
+	activeTournament := seededTournament(tournament.TournamentStatusActive)
+	unassigned := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
+	unassigned.RefereeID = nil
+	own := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
+	other := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
+	other.RefereeID = ptr(TestOtherRefereeID)
+	active := seededBout(bout.BoutStatusActive, activeTournament.ID)
+	active.RefereeID = nil
+	api := newTestAPI(t, NewFakeTournamentLookup(activeTournament), unassigned, own, other, active)
+
+	tests := []struct {
+		name     string
+		boutID   uuid.UUID
+		caller   uuid.UUID
+		wantCode int
+	}{
+		{"an unassigned bout", unassigned.ID, TestRefereeID, http.StatusOK},
+		{"a bout already the caller's", own.ID, TestRefereeID, http.StatusOK},
+		{"a bout assigned to another referee", other.ID, TestRefereeID, http.StatusConflict},
+		{"a bout that is not upcoming", active.ID, TestRefereeID, http.StatusConflict},
+		{"a non-member", unassigned.ID, uuid.New(), http.StatusForbidden},
+		{"an unknown bout", uuid.New(), TestRefereeID, http.StatusNotFound},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := api.PostCtx(asUser(t, tt.caller), "/api/v1/bouts/"+tt.boutID.String()+"/claim")
+
+			require.Equal(t, tt.wantCode, resp.Code, "body: %s", resp.Body)
+			if tt.wantCode == http.StatusOK {
+				assert.Equal(t, tt.caller.String(), decodeBody(t, resp.Body.Bytes())["referee_id"])
+			}
+		})
+	}
+}
+
+func TestClaimThenStartEndpoint(t *testing.T) {
+	t.Parallel()
+
+	activeTournament := seededTournament(tournament.TournamentStatusActive)
+	stored := seededBout(bout.BoutStatusUpcoming, activeTournament.ID)
+	stored.RefereeID = nil
+	api := newTestAPI(t, NewFakeTournamentLookup(activeTournament), stored)
+	base := "/api/v1/bouts/" + stored.ID.String()
+	caller := asUser(t, TestOtherRefereeID)
+
+	claimed := api.PostCtx(caller, base+"/claim")
+	require.Equal(t, http.StatusOK, claimed.Code, "body: %s", claimed.Body)
+
+	started := api.PostCtx(caller, base+"/start")
+	require.Equal(t, http.StatusOK, started.Code, "body: %s", started.Body)
+	assert.Equal(t, "active", decodeBody(t, started.Body.Bytes())["status"])
+}
+
 func TestDeleteEndpoint(t *testing.T) {
 	t.Parallel()
 

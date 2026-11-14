@@ -710,6 +710,91 @@ func TestStartBout(t *testing.T) {
 	})
 }
 
+func TestClaimBout(t *testing.T) {
+	t.Parallel()
+
+	const (
+		roleDetail     = "this requires the referee role in the tournament"
+		conflictDetail = "only an upcoming bout with no other referee can be claimed"
+	)
+	activeTournament := seededTournament(tournament.TournamentStatusActive)
+	tests := []struct {
+		name       string
+		status     bout.BoutStatus
+		assigned   *uuid.UUID // the bout's referee before the claim
+		noCaller   bool
+		caller     uuid.UUID // the zero id means TestAdminID
+		unknownID  bool
+		wantCode   int // 0 means allowed
+		wantDetail string
+	}{
+		{name: "a referee claims an unassigned bout", status: bout.BoutStatusUpcoming, caller: TestRefereeID},
+		{
+			name: "a referee re-claims their own bout", status: bout.BoutStatusUpcoming,
+			assigned: &TestRefereeID, caller: TestRefereeID,
+		},
+		{name: "an admin claims an unassigned bout", status: bout.BoutStatusUpcoming},
+		{
+			name: "a bout assigned to another referee", status: bout.BoutStatusUpcoming,
+			assigned: &TestOtherRefereeID, caller: TestRefereeID,
+			wantCode: http.StatusConflict, wantDetail: conflictDetail,
+		},
+		{
+			name: "an active bout", status: bout.BoutStatusActive, caller: TestRefereeID,
+			wantCode: http.StatusConflict, wantDetail: conflictDetail,
+		},
+		{
+			name: "an ended bout", status: bout.BoutStatusEnded, caller: TestRefereeID,
+			wantCode: http.StatusConflict, wantDetail: conflictDetail,
+		},
+		{
+			name: "a non-member", status: bout.BoutStatusUpcoming, caller: uuid.New(),
+			wantCode: http.StatusForbidden, wantDetail: roleDetail,
+		},
+		{
+			name: "no caller", status: bout.BoutStatusUpcoming, noCaller: true,
+			wantCode: http.StatusForbidden, wantDetail: roleDetail,
+		},
+		{name: "an unknown id", status: bout.BoutStatusUpcoming, unknownID: true, caller: TestRefereeID, wantCode: http.StatusNotFound},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			stored := seededBout(tt.status, activeTournament.ID)
+			stored.RefereeID = tt.assigned
+			repo := NewFakeBoutRepository(stored)
+			service := bout.NewBoutService(repo, NewFakeTournamentLookup(activeTournament), NewFakePoolLookup(nil), staffOf(activeTournament.ID))
+			id := stored.ID.String()
+			if tt.unknownID {
+				id = uuid.NewString()
+			}
+
+			out, err := service.ClaimBout(callerCtx(t, tt.noCaller, tt.caller), &bout.BoutIDInput{ID: id})
+
+			if tt.wantCode == 0 {
+				want := tt.caller
+				if want == uuid.Nil {
+					want = TestAdminID
+				}
+				require.NoError(t, err)
+				require.NotNil(t, out.Body.RefereeID)
+				assert.Equal(t, want.String(), *out.Body.RefereeID)
+				assert.Equal(t, &want, repo.Bouts[stored.ID].RefereeID)
+				return
+			}
+
+			code, detail := apiError(t, err)
+			assert.Equal(t, tt.wantCode, code)
+			if tt.wantDetail != "" {
+				assert.Equal(t, tt.wantDetail, detail)
+			}
+			assert.Equal(t, tt.assigned, repo.Bouts[stored.ID].RefereeID, "the stored referee is unchanged")
+		})
+	}
+}
+
 func TestEndBout(t *testing.T) {
 	t.Parallel()
 

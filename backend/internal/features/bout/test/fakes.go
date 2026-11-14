@@ -135,6 +135,22 @@ func (f *FakeBoutRepository) UpdateBoutByID(_ context.Context, id uuid.UUID, upd
 	return nil
 }
 
+func (f *FakeBoutRepository) ClaimBoutByID(_ context.Context, id, refereeID uuid.UUID) error {
+	stored, err := f.guard(id, bout.BoutEditableStatuses())
+	if err != nil {
+		return err
+	}
+
+	if stored.RefereeID != nil && *stored.RefereeID != refereeID {
+		return fmt.Errorf("claim bout %s: %w", id, errs.ErrConflict)
+	}
+
+	stored.RefereeID = &refereeID
+	f.save(id, stored)
+
+	return nil
+}
+
 func (f *FakeBoutRepository) TransitionBoutByID(
 	_ context.Context,
 	id uuid.UUID,
