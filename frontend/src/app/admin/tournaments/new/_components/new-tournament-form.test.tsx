@@ -4,7 +4,7 @@ import { EXAMPLE_COMPETITOR_IMPORT } from "@/lib/competitor-import/example-compe
 
 import { ImportedCompetitor } from "@/types/competitor-import";
 
-import { EMPTY_TOURNAMENT_DRAFT, newEventDraft } from "../tournament-draft-helpers";
+import { EMPTY_TOURNAMENT_DRAFT, newEventDraft, newFencerDraft } from "../tournament-draft-helpers";
 import { NewTournamentForm } from "./new-tournament-form";
 
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }) }));
@@ -34,8 +34,21 @@ const FILLED_EVENT = {
   qualifier: "No",
 };
 
-function saveDraft(events: ReturnType<typeof newEventDraft>[]) {
-  sessionStorage.setItem("tournament-creation-draft", JSON.stringify({ ...EMPTY_TOURNAMENT_DRAFT, events }));
+const DRAFT_KEY = "tournament-creation-draft:2";
+
+const SAVED_TOURNAMENT = {
+  ...EMPTY_TOURNAMENT_DRAFT,
+  name: "Northeastern Open",
+  location: "Boston, MA",
+  venue: "Cabot Center",
+  date: "2026-11-20",
+  time: "08:00",
+  authority: "USA Fencing",
+  saved: true,
+};
+
+function saveDraft(events: ReturnType<typeof newEventDraft>[], tournament = SAVED_TOURNAMENT) {
+  sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...tournament, events }));
 }
 
 // jsdom's File lacks text(), which the parser reads it with.
@@ -50,12 +63,12 @@ describe("NewTournamentForm", () => {
 
   it("restores the saved draft, events and fencers included", () => {
     sessionStorage.setItem(
-      "tournament-creation-draft",
+      DRAFT_KEY,
       JSON.stringify({
         ...EMPTY_TOURNAMENT_DRAFT,
         name: "Northeastern Open",
         authority: "FIE",
-        events: [newEventDraft("Y14 Foil", [MARIA]), newEventDraft("Div II Epee")],
+        events: [newEventDraft("Y14 Foil", [newFencerDraft(MARIA)]), newEventDraft("Div II Epee")],
       }),
     );
     render(<NewTournamentForm />);
@@ -64,7 +77,8 @@ describe("NewTournamentForm", () => {
     expect(screen.getByRole("combobox", { name: "Authority" })).toHaveTextContent("FIE");
     const first = screen.getByRole("group", { name: "Event 1" });
     expect(within(first).getByRole("textbox", { name: "Event name" })).toHaveValue("Y14 Foil");
-    expect(within(first).getByText("Alvarez, Maria")).toBeInTheDocument();
+    fireEvent.click(within(first).getByRole("button", { name: "1 fencer" }));
+    expect(within(first).getByRole("group", { name: "Alvarez, Maria" })).toHaveTextContent("Boston Fencing Club · C24");
     expect(screen.getByRole("group", { name: "Event 2" })).toHaveTextContent("No fencers yet");
   });
 
@@ -101,7 +115,7 @@ describe("NewTournamentForm", () => {
   });
 
   it("collapses a card to its name and fencer count, and expands it again", () => {
-    saveDraft([newEventDraft("Y14 Foil", [MARIA])]);
+    saveDraft([newEventDraft("Y14 Foil", [newFencerDraft(MARIA)])]);
     render(<NewTournamentForm />);
     const card = screen.getByRole("group", { name: "Event 1" });
     const toggle = within(card).getByRole("button", { expanded: true });
@@ -119,7 +133,7 @@ describe("NewTournamentForm", () => {
 
   it("reopens a collapsed, unfinished card instead of submitting", () => {
     sessionStorage.setItem(
-      "tournament-creation-draft",
+      DRAFT_KEY,
       JSON.stringify({
         ...EMPTY_TOURNAMENT_DRAFT,
         name: "Open",
@@ -167,5 +181,53 @@ describe("NewTournamentForm", () => {
     fireEvent.click(within(card).getByRole("button", { name: "Edit" }));
 
     expect(within(card).getByRole("textbox", { name: "Event name" })).toHaveValue("Y14 Foil");
+  });
+
+  it("only saves events once the tournament is saved", () => {
+    saveDraft([{ ...newEventDraft(), ...FILLED_EVENT }], { ...SAVED_TOURNAMENT, venue: "", saved: false });
+    render(<NewTournamentForm />);
+    const tournament = screen.getByRole("group", { name: "Tournament details" });
+    const saveEvent = within(screen.getByRole("group", { name: "Event 1" })).getByRole("button", { name: "Save event" });
+    expect(saveEvent).toBeDisabled();
+
+    fireEvent.click(within(tournament).getByRole("button", { name: "Save tournament" }));
+    expect(within(tournament).getByRole("textbox", { name: "Venue" })).toHaveAttribute("aria-invalid", "true");
+
+    fireEvent.change(within(tournament).getByRole("textbox", { name: "Venue" }), { target: { value: "Cabot Center" } });
+    fireEvent.click(within(tournament).getByRole("button", { name: "Save tournament" }));
+
+    expect(tournament).toHaveTextContent("Cabot Center · Boston, MA");
+    expect(saveEvent).toBeEnabled();
+  });
+
+  it("won't save an event while a fencer is missing details", () => {
+    saveDraft([{ ...newEventDraft(), ...FILLED_EVENT, fencers: [newFencerDraft(MARIA)] }]);
+    render(<NewTournamentForm />);
+    const card = screen.getByRole("group", { name: "Event 1" });
+
+    fireEvent.click(within(card).getByRole("button", { name: "Save event" }));
+
+    expect(within(card).getByRole("alert")).toHaveTextContent("Finish the fencers marked as missing details");
+    fireEvent.click(within(card).getByRole("button", { name: "1 fencer" }));
+    expect(within(card).getByRole("group", { name: "Alvarez, Maria" })).toHaveTextContent("Missing birth date, division");
+  });
+
+  it("edits, removes and adds fencers by hand", () => {
+    saveDraft([newEventDraft("Y14 Foil", [newFencerDraft(MARIA)])]);
+    render(<NewTournamentForm />);
+    const card = screen.getByRole("group", { name: "Event 1" });
+    fireEvent.click(within(card).getByRole("button", { name: "1 fencer" }));
+
+    fireEvent.click(within(card).getByRole("button", { name: "Edit Alvarez, Maria" }));
+    fireEvent.change(within(card).getByRole("textbox", { name: "First name" }), { target: { value: "Mia" } });
+    expect(within(card).getByRole("group", { name: "Alvarez, Mia" })).toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Remove Alvarez, Mia" }));
+    expect(card).toHaveTextContent("No fencers yet");
+
+    fireEvent.click(within(card).getByRole("button", { name: "Add fencer" }));
+    const added = within(card).getByRole("group", { name: "New fencer" });
+    expect(added).toHaveTextContent("Missing first name, last name, gender, birth date, division");
+    expect(within(added).getByRole("textbox", { name: "First name" })).toHaveValue("");
   });
 });

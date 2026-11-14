@@ -1,15 +1,53 @@
 import { CompetitorImportRow, ImportedCompetitor } from "@/types/competitor-import";
 
-import { EventDraft, TournamentDraft } from "./_types/tournament-draft";
+import { EventDraft, FencerDraft, TournamentDraft } from "./_types/tournament-draft";
 
 export const EVENT_TYPES = ["Individual"];
 export const EVENT_FORMATS = ["Pool to Direct Elimination"];
 
-export function newEventDraft(name = "", fencers: ImportedCompetitor[] = []): EventDraft {
+// Math.random rather than crypto.randomUUID, which is missing outside secure
+// contexts such as a phone opening the dev server by LAN IP.
+function draftId() {
+  return Math.random().toString(36).slice(2);
+}
+
+const BLANK_FENCER: ImportedCompetitor = {
+  firstName: "",
+  lastName: "",
+  memberNumber: "",
+  club: "",
+  division: "",
+  country: "",
+  birthdate: "",
+  gender: "",
+  rating: "U",
+  event: "",
+};
+
+export function newFencerDraft(competitor: ImportedCompetitor = BLANK_FENCER): FencerDraft {
+  return { ...competitor, id: draftId() };
+}
+
+// What POST /competitors requires, so a fencer missing any of it would fail on submit.
+const REQUIRED_FENCER_FIELDS = ["firstName", "lastName", "gender", "birthdate", "division"] as const;
+
+export type RequiredFencerField = (typeof REQUIRED_FENCER_FIELDS)[number];
+
+export const FENCER_FIELD_LABELS: Record<RequiredFencerField, string> = {
+  firstName: "first name",
+  lastName: "last name",
+  gender: "gender",
+  birthdate: "birth date",
+  division: "division",
+};
+
+export function missingFencerFields(fencer: FencerDraft): RequiredFencerField[] {
+  return REQUIRED_FENCER_FIELDS.filter((field) => fencer[field].trim() === "");
+}
+
+export function newEventDraft(name = "", fencers: FencerDraft[] = []): EventDraft {
   return {
-    // Math.random rather than crypto.randomUUID, which is missing outside secure
-    // contexts such as a phone opening the dev server by LAN IP.
-    id: Math.random().toString(36).slice(2),
+    id: draftId(),
     name,
     type: EVENT_TYPES[0],
     date: "",
@@ -44,6 +82,14 @@ export function missingEventFields(event: EventDraft): RequiredEventField[] {
   return REQUIRED_EVENT_FIELDS.filter((field) => event[field].trim() === "");
 }
 
+const REQUIRED_TOURNAMENT_FIELDS = ["name", "location", "venue", "date", "time", "authority"] as const;
+
+export type RequiredTournamentField = (typeof REQUIRED_TOURNAMENT_FIELDS)[number];
+
+export function missingTournamentFields(draft: TournamentDraft): RequiredTournamentField[] {
+  return REQUIRED_TOURNAMENT_FIELDS.filter((field) => draft[field].trim() === "");
+}
+
 export const EMPTY_TOURNAMENT_DRAFT: TournamentDraft = {
   name: "",
   location: "",
@@ -51,6 +97,7 @@ export const EMPTY_TOURNAMENT_DRAFT: TournamentDraft = {
   date: "",
   time: "",
   authority: "",
+  saved: false,
   events: [newEventDraft()],
 };
 
@@ -60,18 +107,19 @@ function eventKey(name: string) {
 
 // Sorts an upload's valid rows into event cards by their Event column. A card
 // whose name matches (ignoring case) gets that group in place of its fencers, so
-// uploading the same file twice doesn't double them. Rows without an event match
-// a card with no name. Any other group fills a blank card that has no fencers yet
-// (like the untouched first card), then gets a new card.
+// uploading the same file twice doesn't double them, and reopens if it was saved,
+// since the new fencers haven't been reviewed. Rows without an event match a card
+// with no name. Any other group fills a blank card that has no fencers yet (like
+// the untouched first card), then gets a new card.
 export function importFencers(events: EventDraft[], rows: CompetitorImportRow[]): EventDraft[] {
-  const groups = new Map<string, { name: string; fencers: ImportedCompetitor[] }>();
+  const groups = new Map<string, { name: string; fencers: FencerDraft[] }>();
   for (const row of rows) {
     if (row.status !== "valid") {
       continue;
     }
     const key = eventKey(row.competitor.event);
     const group = groups.get(key) ?? { name: row.competitor.event.trim(), fencers: [] };
-    group.fencers.push(row.competitor);
+    group.fencers.push(newFencerDraft(row.competitor));
     groups.set(key, group);
   }
 
@@ -81,7 +129,7 @@ export function importFencers(events: EventDraft[], rows: CompetitorImportRow[])
       return event;
     }
     groups.delete(eventKey(event.name));
-    return { ...event, fencers: group.fencers };
+    return { ...event, fencers: group.fencers, saved: false };
   });
 
   const unmatched = [...groups.values()];

@@ -1,6 +1,13 @@
 import { CompetitorImportRow, CompetitorImportStatus } from "@/types/competitor-import";
 
-import { formatRating, importFencers, missingEventFields, newEventDraft } from "./tournament-draft-helpers";
+import {
+  formatRating,
+  importFencers,
+  missingEventFields,
+  missingFencerFields,
+  newEventDraft,
+  newFencerDraft,
+} from "./tournament-draft-helpers";
 
 function row(firstName: string, event: string, status: CompetitorImportStatus = "valid"): CompetitorImportRow {
   return {
@@ -68,6 +75,20 @@ describe("importFencers", () => {
 
     expect(summarize(importFencers(once, [row("Ada", "Y14 Foil")]))).toEqual(["Y14 Foil: Ada"]);
   });
+
+  it("reopens a saved card whose fencers it replaces, and leaves other saved cards", () => {
+    const saved = [newEventDraft("Y14 Foil"), newEventDraft("Veteran Sabre")].map((event) => ({ ...event, saved: true }));
+
+    const [replaced, untouched] = importFencers(saved, [row("Ada", "Y14 Foil")]);
+
+    expect([replaced.saved, untouched.saved]).toEqual([false, true]);
+  });
+
+  it("gives every imported fencer its own id", () => {
+    const [event] = importFencers([newEventDraft()], [row("Ada", ""), row("Bea", "")]);
+
+    expect(new Set(event.fencers.map((fencer) => fencer.id)).size).toBe(2);
+  });
 });
 
 describe("missingEventFields", () => {
@@ -89,6 +110,19 @@ describe("missingEventFields", () => {
     },
   ])("$name", ({ patch, want }) => {
     expect(missingEventFields({ ...newEventDraft(), ...patch })).toEqual(want);
+  });
+});
+
+describe("missingFencerFields", () => {
+  it.each([
+    { name: "a blank fencer", patch: {}, want: ["firstName", "lastName", "gender", "birthdate", "division"] },
+    {
+      name: "a complete fencer",
+      patch: { firstName: "Ada", lastName: "Lovelace", gender: "F", birthdate: "2011-03-14", division: "New England" },
+      want: [],
+    },
+  ])("lists what POST /competitors still needs for $name", ({ patch, want }) => {
+    expect(missingFencerFields({ ...newFencerDraft(), ...patch })).toEqual(want);
   });
 });
 

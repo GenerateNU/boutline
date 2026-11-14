@@ -992,13 +992,23 @@ are placed into pools.
   card with a matching name (ignoring case) gets those fencers in place of its own,
   so a second upload doesn't double them. Other events fill a blank card that has no
   fencers yet, then get new cards. Each card lists its fencers in a toggle.
-- **Save event:** checks only that card's required fields, marking any that are
-  empty, then collapses the card to a summary until Edit reopens it.
-- **Collapsing:** each card's header toggles it down to its title, event name and
-  fencer count. Collapsed fields escape the browser's required check, so submit
-  reopens any unsaved card that is missing fields and names it instead.
+- **Saving:** the tournament details card has its own Save, and Save event stays
+  disabled until it is saved. Either Save checks only its own card (an event also
+  checks its fencers), marks empty fields with `aria-invalid`, then collapses the
+  card to a summary until Edit reopens it. An upload that replaces a saved card's
+  fencers reopens it for review.
+- **Fencers:** each is a card inside its event, showing name, club, rating and
+  member number, plus what it is still missing. First and last name, gender, birth
+  date and division are required, as `POST /competitors` requires them. While the
+  event is being edited, fencers can be edited, removed, or added by hand.
+- **Collapsing:** event cards and fencer lists use Radix Collapsible, animating
+  height and opacity (`animate-collapsible-down`/`-up`, off with reduced motion).
+  A collapsed card shows its title, event name and fencer count. Collapsed fields
+  escape the browser's required check, so submit reopens any unsaved card that is
+  missing fields or has incomplete fencers, and names it.
 - **Draft:** the whole form, events and fencers included, is kept in
-  sessionStorage, so a reload doesn't lose it.
+  sessionStorage under a versioned key (bumped when its shape changes), so a reload
+  doesn't lose it.
 - **Planned:** submit creates the tournament, then its events, then imports
   competitors and adds staff, showing per-row errors and landing on the new
   tournament (#252). Today submit clears the draft and returns to the admin home.

@@ -5,18 +5,15 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/primitives/button";
-import { SelectField } from "@/components/primitives/select-field";
-import { TextField } from "@/components/primitives/text-field";
 import { ImportDropzone } from "@/features/tournament/components/import-dropzone";
 import { parseCompetitorImport } from "@/lib/competitor-import/parse-competitor-import";
 import { pluralize } from "@/lib/pluralize";
 import { errorMessage } from "@/utils/error-message";
 
 import { useTournamentDraft } from "../_hooks/use-tournament-draft";
-import { missingEventFields } from "../tournament-draft-helpers";
+import { missingEventFields, missingFencerFields } from "../tournament-draft-helpers";
 import { EventDraftCard } from "./event-draft-card";
-
-const AUTHORITIES = ["askFRED", "USA Fencing", "FIE", "Other"];
+import { TournamentDetailsCard } from "./tournament-details-card";
 
 interface ImportResult {
   message: string;
@@ -25,7 +22,19 @@ interface ImportResult {
 
 function NewTournamentForm() {
   const router = useRouter();
-  const { draft, setField, addEvent, updateEvent, removeEvent, importRows, clear } = useTournamentDraft();
+  const {
+    draft,
+    setField,
+    setTournamentSaved,
+    addEvent,
+    updateEvent,
+    removeEvent,
+    addFencer,
+    updateFencer,
+    removeFencer,
+    importRows,
+    clear,
+  } = useTournamentDraft();
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -63,12 +72,17 @@ function NewTournamentForm() {
 
   // The browser only checks fields on the page, and a collapsed card's aren't,
   // so unsaved cards are checked here and reopened if they're missing anything.
-  // Submitting doesn't save anything yet (#252), so it only clears the draft.
+  // Saved cards were checked when saved. Submitting doesn't save anything yet
+  // (#252), so it only clears the draft.
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const incomplete = draft.events
       .map((draftEvent, index) => ({ draftEvent, title: `Event ${index + 1}` }))
-      .filter(({ draftEvent }) => !draftEvent.saved && missingEventFields(draftEvent).length > 0);
+      .filter(({ draftEvent }) => {
+        const hasMissingFields = missingEventFields(draftEvent).length > 0;
+        const hasIncompleteFencers = draftEvent.fencers.some((fencer) => missingFencerFields(fencer).length > 0);
+        return !draftEvent.saved && (hasMissingFields || hasIncompleteFencers);
+      });
     if (incomplete.length > 0) {
       setExpanded(incomplete.map(({ draftEvent }) => draftEvent.id), true);
       setSubmitError(`Finish ${incomplete.map(({ title }) => title).join(", ")} before creating the tournament.`);
@@ -90,49 +104,9 @@ function NewTournamentForm() {
         </p>
       ) : null}
 
-      <TextField
-        label="Name of tournament"
-        className="mt-3"
-        value={draft.name}
-        onChange={(change) => setField("name", change.target.value)}
-        required
-      />
-      <TextField
-        label="Location"
-        placeholder="City, State"
-        value={draft.location}
-        onChange={(change) => setField("location", change.target.value)}
-        required
-      />
-      <TextField
-        label="Venue"
-        value={draft.venue}
-        onChange={(change) => setField("venue", change.target.value)}
-        required
-      />
-      <div className="grid grid-cols-2 gap-3">
-        <TextField
-          label="Date"
-          type="date"
-          value={draft.date}
-          onChange={(change) => setField("date", change.target.value)}
-          required
-        />
-        <TextField
-          label="Time"
-          type="time"
-          value={draft.time}
-          onChange={(change) => setField("time", change.target.value)}
-          required
-        />
+      <div className="mt-3">
+        <TournamentDetailsCard draft={draft} onField={setField} onSavedChange={setTournamentSaved} />
       </div>
-      <SelectField
-        label="Authority"
-        options={AUTHORITIES}
-        value={draft.authority}
-        onValueChange={(authority) => setField("authority", authority)}
-        required
-      />
 
       <h2 className="mt-6 text-lg font-semibold text-obsidian">Events</h2>
       {draft.events.map((event, index) => (
@@ -141,9 +115,13 @@ function NewTournamentForm() {
           event={event}
           number={index + 1}
           expanded={!collapsed.has(event.id)}
-          onToggle={() => setExpanded([event.id], collapsed.has(event.id))}
+          tournamentSaved={draft.saved}
+          onExpandedChange={(expanded) => setExpanded([event.id], expanded)}
           onChange={(patch) => updateEvent(event.id, patch)}
           onRemove={draft.events.length > 1 ? () => removeEvent(event.id) : undefined}
+          onAddFencer={() => addFencer(event.id)}
+          onChangeFencer={(fencerId, patch) => updateFencer(event.id, fencerId, patch)}
+          onRemoveFencer={(fencerId) => removeFencer(event.id, fencerId)}
         />
       ))}
       <Button type="button" variant="outline" className="h-12 rounded-full" onClick={addEvent}>

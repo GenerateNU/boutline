@@ -1,51 +1,76 @@
+"use client";
+
+import AddOutlined from "@mui/icons-material/AddOutlined";
 import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
+import { useState } from "react";
 
+import { Button } from "@/components/primitives/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/primitives/collapsible";
 import { pluralize } from "@/lib/pluralize";
-import { ImportedCompetitor } from "@/types/competitor-import";
 
-import { formatRating } from "../tournament-draft-helpers";
-
-// The parser accepts a row with only a member number, so the name can be blank.
-function fencerName({ firstName, lastName, memberNumber }: ImportedCompetitor) {
-  return [lastName, firstName].filter(Boolean).join(", ") || `Member #${memberNumber}`;
-}
+import { FencerDraft } from "../_types/tournament-draft";
+import { FencerDraftCard } from "./fencer-draft-card";
 
 interface EventFencerListProps {
-  fencers: ImportedCompetitor[];
+  fencers: FencerDraft[];
+  // Fencers change only while their event is being edited, not once it's saved.
+  editable: boolean;
+  onAdd: () => void;
+  onChange: (fencerId: string, patch: Partial<FencerDraft>) => void;
+  onRemove: (fencerId: string) => void;
 }
 
-function EventFencerList({ fencers }: EventFencerListProps) {
+function EventFencerList({ fencers, editable, onAdd, onChange, onRemove }: EventFencerListProps) {
+  const [open, setOpen] = useState(false);
+
+  // Opens the list too, so a fencer added by hand is visible to fill in.
+  function handleAdd() {
+    setOpen(true);
+    onAdd();
+  }
+
+  const addButton = editable ? (
+    <Button type="button" variant="outline" size="sm" className="self-start rounded-full" onClick={handleAdd}>
+      <AddOutlined aria-hidden />
+      Add fencer
+    </Button>
+  ) : null;
+
   if (fencers.length === 0) {
     return (
-      <p className="text-xs text-neutral-secondary">
-        No fencers yet. Upload a CSV above to add them.
-      </p>
+      <div className="flex flex-col gap-2">
+        <p className="text-xs text-neutral-secondary">No fencers yet. Upload a CSV above or add one by hand.</p>
+        {addButton}
+      </div>
     );
   }
 
   return (
-    <details className="group/fencers rounded-md border border-outline">
-      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-medium text-obsidian">
+    <Collapsible open={open} onOpenChange={setOpen} className="rounded-md border border-outline">
+      <CollapsibleTrigger className="group/fencers flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-sm font-medium text-obsidian outline-none focus-visible:ring-3 focus-visible:ring-blue-lighter">
         {fencers.length} {pluralize(fencers.length, "fencer")}
         <ExpandMoreOutlined
           aria-hidden
-          className="size-4 text-neutral-secondary transition-transform group-open/fencers:rotate-180"
+          className="size-4 text-neutral-secondary transition-transform group-data-[state=open]/fencers:rotate-180"
         />
-      </summary>
-      <ul className="divide-y divide-outline border-t border-outline">
-        {fencers.map((fencer, index) => (
-          <li key={`${fencer.memberNumber}-${index}`} className="flex items-center gap-3 px-3 py-2 text-sm">
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-obsidian">{fencerName(fencer)}</span>
-              <span className="truncate text-xs text-neutral-secondary">
-                {fencer.club || "Unattached"}
-              </span>
-            </div>
-            <span className="font-mono text-xs text-neutral-secondary">{formatRating(fencer)}</span>
-          </li>
-        ))}
-      </ul>
-    </details>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="flex flex-col gap-3 border-t border-outline p-3">
+          <ul className="flex flex-col gap-2">
+            {fencers.map((fencer) => (
+              <FencerDraftCard
+                key={fencer.id}
+                fencer={fencer}
+                editable={editable}
+                onChange={(patch) => onChange(fencer.id, patch)}
+                onRemove={() => onRemove(fencer.id)}
+              />
+            ))}
+          </ul>
+          {addButton}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

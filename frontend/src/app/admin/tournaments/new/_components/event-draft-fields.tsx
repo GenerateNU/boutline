@@ -7,7 +7,13 @@ import { SelectField } from "@/components/primitives/select-field";
 import { TextField } from "@/components/primitives/text-field";
 
 import { EventDraft } from "../_types/tournament-draft";
-import { EVENT_FORMATS, EVENT_TYPES, missingEventFields, RequiredEventField } from "../tournament-draft-helpers";
+import {
+  EVENT_FORMATS,
+  EVENT_TYPES,
+  missingEventFields,
+  missingFencerFields,
+  RequiredEventField,
+} from "../tournament-draft-helpers";
 
 const WEAPONS = ["Foil", "Épée", "Sabre"];
 const GENDER_MIXES = ["Men", "Women", "Mixed"];
@@ -17,18 +23,25 @@ const QUALIFIER_OPTIONS = ["No", "Yes"];
 
 interface EventDraftFieldsProps {
   event: EventDraft;
+  // An event can only be saved once its tournament is.
+  canSave: boolean;
   onChange: (patch: Partial<EventDraft>) => void;
+  // The fencer list, shown above Save since saving covers the fencers too.
+  children: React.ReactNode;
 }
 
-function EventDraftFields({ event, onChange }: EventDraftFieldsProps) {
+function EventDraftFields({ event, canSave, onChange, children }: EventDraftFieldsProps) {
   const [attempted, setAttempted] = useState(false);
   // Recomputed from the event, so a field turns back to normal once it's filled.
   const invalid = new Set<RequiredEventField>(attempted ? missingEventFields(event) : []);
+  const hasIncompleteFencers = event.fencers.some((fencer) => missingFencerFields(fencer).length > 0);
+  const showFencerError = attempted && hasIncompleteFencers;
 
-  // Saving checks only this card. The browser's own required check runs for the
-  // whole form on submit, so a failed save marks the empty fields itself.
+  // Saving checks only this card and its fencers. The browser's own required
+  // check runs for the whole form on submit, so a failed save marks the empty
+  // fields itself; incomplete fencers already say what they're missing.
   function handleSave() {
-    if (missingEventFields(event).length > 0) {
+    if (missingEventFields(event).length > 0 || hasIncompleteFencers) {
       setAttempted(true);
       return;
     }
@@ -120,12 +133,21 @@ function EventDraftFields({ event, onChange }: EventDraftFieldsProps) {
         required
       />
 
+      {children}
       {invalid.size > 0 ? (
         <p role="alert" className="text-xs text-red-dark">
           Fill in the highlighted fields to save this event.
         </p>
       ) : null}
-      <Button type="button" variant="tonal" className="h-10 rounded-full" onClick={handleSave}>
+      {showFencerError ? (
+        <p role="alert" className="text-xs text-red-dark">
+          Finish the fencers marked as missing details to save this event.
+        </p>
+      ) : null}
+      {canSave ? null : (
+        <p className="text-xs text-neutral-secondary">Save the tournament details before saving an event.</p>
+      )}
+      <Button type="button" variant="tonal" className="h-10 rounded-full" disabled={!canSave} onClick={handleSave}>
         Save event
       </Button>
     </>
