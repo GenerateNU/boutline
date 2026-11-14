@@ -1,10 +1,15 @@
 import { Pagination } from "@/components/primitives/pagination";
-import { ActiveFilterChips } from "@/features/tournament/components/active-filter-chips";
+import {
+  ActiveFilterChips,
+  type ActiveFilter,
+} from "@/features/tournament/components/active-filter-chips";
 import { CalendarButton } from "@/features/tournament/components/calendar-button";
 import { FilterSheet } from "@/features/tournament/components/filter-sheet";
 import { SearchForm } from "@/features/tournament/components/search-form";
 import { TournamentCard } from "@/features/tournament/components/tournament-card";
+import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import { WeekStrip } from "@/features/tournament/components/week-strip";
+import { countryName } from "@/features/tournament/lib/country-name";
 import {
   parseTournamentFilters,
   TOURNAMENT_PAGE_SIZE,
@@ -36,6 +41,12 @@ async function TournamentBrowser({
     country,
   });
 
+  const activeFilters: ActiveFilter[] = [
+    { param: "status", label: status && statusLabels[status] },
+    { param: "club", label: club },
+    { param: "country", label: country && countryName(country) },
+  ].filter((filter): filter is ActiveFilter => Boolean(filter.label));
+
   return (
     <>
       <WeekStrip />
@@ -50,11 +61,11 @@ async function TournamentBrowser({
           <FilterSheet visibility={visibility} />
         </div>
 
-        <ActiveFilterChips status={status} club={club} country={country} />
+        <ActiveFilterChips filters={activeFilters} className="px-5 pb-2.5" />
 
         <div className="flex items-center justify-between px-6 py-1.25">
           <h1 className="text-xl font-semibold text-obsidian">Tournaments</h1>
-          <CalendarButton />
+          <CalendarButton submitLabel="Show Tournaments" />
         </div>
 
         {data.length === 0 && (

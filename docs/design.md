@@ -505,32 +505,50 @@ from the venue floor.
 
 Tabs: Overview · Fencers · Clubs · Events.
 
-- **Overview:** name, the date range (from its events, else `start_time`), and
-  Ongoing and Upcoming event cards. Location and organizer contact read "TBC" until
-  §10.1 adds them. An unknown ID is a 404.
-- **Fencers:** a searchable, paginated list of fencer cards (name, country · club,
-  rating), from `GET /competitors?tournament_id=`, each linking to the fencer's
-  page. The country is a placeholder showing US for everyone.
-- **Clubs:** a searchable, paginated table of clubs and their fencer counts, from
-  `GET /tournaments/{id}/teams`.
-- Fencer cards, club rows and each pool on an event's Pooling tab have a pin
-  button that does nothing yet; the dashboard tickets wire it to pinning (§6.3).
-- **Events:** every event grouped by start time, with an accent-insensitive name
-  search and a day strip that opens on today, the next day with events, or the
-  last one. The strip's calendar button is disabled.
+Hi-fi throughout: text uses the shared `Text` styles (C.3), searches are the hi-fi
+search bar with a clear button. Fencer and club rows keep their pin button, which does nothing until pinning lands (§6.3); event rows end in a chevron.
+
+- **Overview:** the uppercase name, the date range (from its events, else
+  `start_time`) and the location (venue, city, country), then an organizer row,
+  then Ongoing, Upcoming and Completed event cards with times like "9:00 AM" (UTC,
+  no label). Missing values show as placeholders: "Dates TBC", "Location TBC", and
+  "Organizer contact TBC" always, since no contact is stored. An unknown ID is a 404.
+- **Fencers:** the tournament name as the title, then search (suggesting fencer
+  names as you type), a filter sheet (Club, Weapon, Age Category, Rating Category,
+  Gender), removable filter chips, and a paginated list of fencer cards (name,
+  country · club, a rating badge like "A26") from
+  `GET /competitors?tournament_id=&q&team&rating`. The country is a placeholder
+  showing US for everyone. Only Club and Rating Category work; Weapon, Age and
+  Gender show as disabled controls under a "Greyed-out filters are coming soon."
+  note, since competitors don't store them, and set no URL param.
+- **Clubs:** the tournament name as the title, search suggesting Fencers and Clubs,
+  a filter button, and a paginated list of clubs with their fencer counts from
+  `GET /tournaments/{id}/teams`; each links to the Fencers tab filtered to that
+  club. The filter sheet's Fencer, Club and Weapon sections are all disabled
+  placeholders (same note), and its buttons just close it. There is no club
+  location: clubs store only a name.
+- **Events:** "< {name}" back to Overview, search, a filter sheet (Fencer, Club,
+  Weapon, Age Category, Gender, Event Status, Date, Event Type; all but Fencer and
+  Club filter on the page) with chips, a light week strip whose calendar icon opens an
+  inline month card under it (event days dotted; tapping a day picks it), and the day's events grouped under time headings. A day
+  picked with no events says so. Fencer and Club are disabled search fields under
+  the "coming soon" note. Each event card's second line is its competitor count
+  ("5 competitors"), the total from `GET /competitors?eventId=&limit=1` for each
+  event on the shown day.
 
 ### 4.4 Event page (`/tournaments/[id]/events/[eventId]`)
 
 **Status:** Partial.
 
-Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers. These
-replace the tournament's tabs rather than stacking under them.
+Tabs: Pools · Tableau · Fencers · Results (routes `pooling`, `tableau`, `fencers`,
+`results`). The page opens on Fencers. These replace the tournament's tabs rather
+than stacking under them, and a "< {tournament name}" link above the content leads
+back to the tournament.
 
-- **Fencers** (Completed): search, pagination, and a filter sheet with Fencer (sets
-  `?q=`) and Club (sets `?team=`) searches, each accepting either a picked suggestion
-  from the dropdown or typed text committed with Enter. It lists every fencer in the tournament, since
-  competitors don't belong to an event yet (§8.4). Rows link to a fencer page,
-  which is placeholder text.
+- **Fencers** (Completed): a "Fencers" heading and the same list as the tournament's
+  Fencers tab (search with suggestions, Club and Rating filters, chips, chevron
+  rows). It lists every fencer in the tournament, since competitors don't belong
+  to an event yet (§8.4). Rows link to a fencer page, which is placeholder text.
 - **Pooling** and **Tableau** (Placeholder): a bout list from a hardcoded fixture,
   the same for every event. Replaced in §11.6 and §12.5.
 - **Results** (Placeholder): static text. Replaced in §13.3.
@@ -1701,6 +1719,11 @@ browser, filter sheet) use Manrope (`font-manrope`), and the BOUTLINE wordmark u
 Special Gothic Expanded One (`font-wordmark`). Body and controls `text-sm`, metadata
 `text-xs text-muted-foreground`, at most `font-medium`. Sizes from `text-2xl` up are
 reserved for scores and bout banners. Referee scores go up to `text-9xl`.
+Page text uses the `Text` primitive (`textVariants` inside other primitives' slots):
+`title` (`text-xl font-semibold`, titles and time headings; uppercase where the
+design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
+`caption` (`text-xs font-medium text-neutral-secondary`, times and metadata) and
+`muted` (`text-sm text-neutral-secondary`, empty states).
 
 ### C.4 Shape and interaction
 - `--radius` 0.625rem, with `rounded-sm`…`rounded-xl` derived from it. List cards
@@ -1720,7 +1743,7 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
 - Primitives live in `src/components/primitives/`: shadcn-generated, restyled, with
   `cva` variants, `cn`, `data-slot`, and behavior from `radix-ui`.
 - The set includes the global nav, tab nav, section, list, card, chip (the filter
-  tag), label, button, segmented button, search bar, dropdown, text field,
+  tag), chip group, text, label, button, segmented button, search bar, dropdown, text field,
   select, date field, checkbox, radio, toggle, slider, calendar,
   dropzone and upload dialog, modal, filter sheet, pagination, toast, tooltip,
   progress indicators, a loading spinner, and a shimmering skeleton block.

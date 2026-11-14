@@ -1,5 +1,18 @@
 export type EventStatus = "upcoming" | "active" | "ended";
 export type EventFormat = "pool_then_direct_elimination";
+export type EventType = "individual" | "team";
+export type EventWeapon = "foil" | "epee" | "sabre";
+export type EventGender = "male" | "female" | "other";
+export type EventAgeCategory =
+  | "y8"
+  | "y10"
+  | "y12"
+  | "y14"
+  | "cadet"
+  | "junior"
+  | "senior"
+  | "veteran"
+  | "open";
 
 export interface TournamentEvent {
   id: string;
@@ -7,6 +20,10 @@ export interface TournamentEvent {
   format: EventFormat;
   name: string;
   status: EventStatus;
+  type: EventType | null;
+  weapon: EventWeapon | null;
+  gender: EventGender | null;
+  age_category: EventAgeCategory | null;
   start_time: string | null;
   started_at: string | null;
   completed_at: string | null;

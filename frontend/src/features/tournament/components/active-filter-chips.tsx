@@ -1,32 +1,30 @@
 "use client";
 
-import { Chip } from "@/components/primitives/chip";
-import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
-import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
-import { countryName } from "@/features/tournament/lib/country-name";
-import type { TournamentStatus } from "@/features/tournament/types/tournament";
+import { cn } from "cn";
 
-interface ActiveFilterChipsProps {
-  status?: TournamentStatus;
-  club?: string;
-  country?: string;
+import { Chip } from "@/components/primitives/chip";
+import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
+
+export interface ActiveFilter {
+  param: string;
+  label: string;
 }
 
-function ActiveFilterChips({ status, club, country }: ActiveFilterChipsProps) {
-  const { setFilters } = useTournamentFilters();
-  const chips = [
-    { param: "status", label: status && statusLabels[status] },
-    { param: "club", label: club },
-    { param: "country", label: country && countryName(country) },
-  ].filter((chip) => chip.label);
+interface ActiveFilterChipsProps {
+  filters: ActiveFilter[];
+  className?: string;
+}
 
-  if (chips.length === 0) {
+function ActiveFilterChips({ filters, className }: ActiveFilterChipsProps) {
+  const { setFilters } = useTournamentFilters();
+
+  if (filters.length === 0) {
     return null;
   }
 
   return (
-    <ul aria-label="Active filters" className="flex flex-wrap gap-2 px-5 pb-2.5">
-      {chips.map(({ param, label }) => (
+    <ul aria-label="Active filters" className={cn("flex flex-wrap gap-2", className)}>
+      {filters.map(({ param, label }) => (
         <li key={param}>
           <Chip
             onDismiss={() => setFilters({ [param]: undefined })}

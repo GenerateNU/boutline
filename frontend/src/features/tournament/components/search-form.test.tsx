@@ -1,14 +1,26 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
-import { SearchForm } from "@/features/tournament/components/search-form";
+import { SearchForm, type SearchFormProps } from "@/features/tournament/components/search-form";
+import { apiRequest } from "@/services/api-request";
 
 const replace = jest.fn();
+const push = jest.fn();
+const CURRENT_PARAMS = new URLSearchParams("q=summer");
 
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ replace }),
+  useRouter: () => ({ replace, push }),
   usePathname: () => "/tournaments",
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => CURRENT_PARAMS,
 }));
+jest.mock("../../../services/api-request", () => ({ apiRequest: jest.fn() }));
+
+const SUGGEST: SearchFormProps["suggest"] = {
+  tournamentId: "t1",
+  sources: [
+    { kind: "fencers", href: "/tournaments/t1/fencers" },
+    { kind: "clubs", href: "/tournaments/t1/clubs" },
+  ],
+};
 
 const PROPS = {
   action: "/tournaments",
@@ -20,6 +32,7 @@ describe("SearchForm", () => {
   beforeEach(() => {
     jest.useFakeTimers();
     replace.mockClear();
+    push.mockClear();
   });
 
   afterEach(() => {
@@ -63,5 +76,79 @@ describe("SearchForm", () => {
     rerender(<SearchForm {...PROPS} defaultValue="fall" />);
 
     expect(screen.getByRole("searchbox")).toHaveValue("fall");
+  });
+
+  it.each([
+    { defaultValue: "", clearVisible: false },
+    { defaultValue: "summer", clearVisible: true },
+  ])("clear button visible=$clearVisible for '$defaultValue'", ({ defaultValue, clearVisible }) => {
+    renderForm(defaultValue);
+
+    expect(screen.queryByRole("button", { name: "Clear search" }) !== null).toBe(clearVisible);
+  });
+
+  it("clears the box and removes q from the URL", () => {
+    renderForm("summer");
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+
+    expect(screen.getByRole("searchbox")).toHaveValue("");
+    expect(replace).toHaveBeenLastCalledWith("/tournaments", { scroll: false });
+  });
+
+  describe("suggestions", () => {
+    beforeEach(() => {
+      jest.mocked(apiRequest).mockImplementation(async (path: string) =>
+        path.startsWith("/competitors")
+          ? { data: [{ firstName: "Eric", lastName: "Kitagawa" }] }
+          : { data: [{ name: "Salle Nord" }] },
+      );
+    });
+
+    async function typeInto(suggest?: SearchFormProps["suggest"]) {
+      render(<SearchForm {...PROPS} suggest={suggest} />);
+      const input = screen.getByRole("searchbox");
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: "er" } });
+      await act(() => jest.advanceTimersByTimeAsync(300));
+    }
+
+    it("shows no dropdown without suggest", async () => {
+      await typeInto();
+
+      expect(screen.queryByText("Fencers")).not.toBeInTheDocument();
+      expect(apiRequest).not.toHaveBeenCalled();
+    });
+
+    it("lists a section per source with names from the API", async () => {
+      await typeInto(SUGGEST);
+
+      expect(screen.getByText("Fencers")).toBeInTheDocument();
+      expect(screen.getByText("Clubs")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Eric Kitagawa" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Salle Nord" })).toBeInTheDocument();
+      expect(apiRequest).toHaveBeenCalledWith("/competitors?limit=5&q=er&tournament_id=t1");
+      expect(apiRequest).toHaveBeenCalledWith("/tournaments/t1/teams?limit=5&q=er");
+    });
+
+    it.each([
+      { name: "Eric Kitagawa", href: "/tournaments/t1/fencers?q=Eric%20Kitagawa" },
+      { name: "Salle Nord", href: "/tournaments/t1/clubs?q=Salle%20Nord" },
+    ])("picking $name pushes $href and closes the dropdown", async ({ name, href }) => {
+      await typeInto(SUGGEST);
+
+      fireEvent.click(screen.getByRole("button", { name }));
+
+      expect(push).toHaveBeenCalledWith(href);
+      expect(screen.queryByText("Fencers")).not.toBeInTheDocument();
+    });
+
+    it("closes on Escape", async () => {
+      await typeInto(SUGGEST);
+
+      fireEvent.keyDown(screen.getByRole("searchbox"), { key: "Escape" });
+
+      expect(screen.queryByText("Fencers")).not.toBeInTheDocument();
+    });
   });
 });

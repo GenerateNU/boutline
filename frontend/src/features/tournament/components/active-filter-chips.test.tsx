@@ -12,11 +12,17 @@ jest.mock("next/navigation", () => ({
 }));
 jest.mock("../../../services/api-request", () => ({ apiRequest: jest.fn() }));
 
+const FILTERS = [
+  { param: "status", label: "In Progress" },
+  { param: "club", label: "Salle Nord" },
+  { param: "country", label: "France" },
+];
+
 describe("ActiveFilterChips", () => {
   beforeEach(() => replace.mockClear());
 
   it("renders nothing without filters", () => {
-    const { container } = render(<ActiveFilterChips />);
+    const { container } = render(<ActiveFilterChips filters={[]} />);
     expect(container).toBeEmptyDOMElement();
   });
 
@@ -25,7 +31,7 @@ describe("ActiveFilterChips", () => {
     ["Salle Nord", "/tournaments?status=active&country=FR&q=open"],
     ["France", "/tournaments?status=active&club=Salle+Nord&q=open"],
   ])("removes only the %s filter", (label, expected) => {
-    render(<ActiveFilterChips status="active" club="Salle Nord" country="FR" />);
+    render(<ActiveFilterChips filters={FILTERS} />);
 
     expect(screen.getByText(label)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: `Remove ${label}` }));

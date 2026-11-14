@@ -2,12 +2,18 @@ import type { CompetitorListResult } from "@/types/competitor";
 
 const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 
+interface CompetitorFilters {
+  query?: string;
+  team?: string;
+  rating?: string;
+  eventId?: string;
+}
+
 export async function getCompetitors(
   tournamentId: string,
   limit: number,
   offset: number,
-  query?: string,
-  team?: string,
+  { query, team, rating, eventId }: CompetitorFilters = {},
 ): Promise<CompetitorListResult> {
   const url = new URL("/api/v1/competitors", API_PROXY_TARGET);
   url.searchParams.set("tournament_id", tournamentId);
@@ -18,6 +24,12 @@ export async function getCompetitors(
   }
   if (team) {
     url.searchParams.set("team", team);
+  }
+  if (rating) {
+    url.searchParams.set("rating", rating);
+  }
+  if (eventId) {
+    url.searchParams.set("eventId", eventId);
   }
 
   const response = await fetch(url, { cache: "no-store" });

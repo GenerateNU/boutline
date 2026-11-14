@@ -11,7 +11,7 @@ jest.mock("next/navigation", () => ({
 }));
 
 async function pickOctober9() {
-  render(<CalendarButton />);
+  render(<CalendarButton submitLabel="Show Tournaments" />);
   await act(async () => {
     fireEvent.click(screen.getByRole("button", { name: "Calendar" }));
   });
@@ -41,7 +41,7 @@ describe("CalendarButton", () => {
   });
 
   it("keeps the selected day when it's clicked again", async () => {
-    render(<CalendarButton />);
+    render(<CalendarButton submitLabel="Show Tournaments" />);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Calendar" }));
     });
@@ -51,5 +51,52 @@ describe("CalendarButton", () => {
     });
 
     expect(replace.mock.calls[0][0]).toContain("date=2026-10-05");
+  });
+
+  it("marks event days with a dot and uses the given submit label", async () => {
+    render(<CalendarButton submitLabel="Show Events" eventDays={["2026-10-09"]} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Calendar" }));
+    });
+
+    const marked = screen.getByRole("button", { name: /October 9/ });
+    const unmarked = screen.getByRole("button", { name: /October 8/ });
+    expect(marked.querySelector("span")).toBeInTheDocument();
+    expect(unmarked.querySelector("span")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Events" })).toBeInTheDocument();
+  });
+
+  it("inline, opens a card in place and picks a tapped day straight away", async () => {
+    render(<CalendarButton inline eventDays={["2026-10-09"]} />);
+    const toggle = screen.getByRole("button", { name: "Calendar" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /October 9/ }));
+    });
+
+    expect(replace.mock.calls[0][0]).toContain("date=2026-10-09");
+    expect(screen.queryByRole("button", { name: /October 9/ })).not.toBeInTheDocument();
+  });
+
+  it("inline, closes again when the calendar button is tapped twice", async () => {
+    render(<CalendarButton inline />);
+    const toggle = screen.getByRole("button", { name: "Calendar" });
+
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(replace).not.toHaveBeenCalled();
   });
 });

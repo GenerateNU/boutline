@@ -1,18 +1,36 @@
-import { Section } from "@/components/primitives/section";
+import { notFound } from "next/navigation";
+
+import { BackButton } from "@/components/primitives/back-button";
+import { Text } from "@/components/primitives/text";
 import { EventCard } from "@/features/event/components/event-card";
+import { getCompetitors } from "@/features/competitor/services/getCompetitors";
+import { EventFilterSheet } from "@/features/event/components/event-filter-sheet";
+import {
+  eventFilterChips,
+  matchesEventFilters,
+  parseEventFilters,
+} from "@/features/event/lib/event-filters";
 import { getEvents } from "@/features/event/services/getEvents";
+import { ActiveFilterChips } from "@/features/tournament/components/active-filter-chips";
+import { CalendarButton } from "@/features/tournament/components/calendar-button";
 import { SearchForm } from "@/features/tournament/components/search-form";
+import { WeekStrip } from "@/features/tournament/components/week-strip";
+import { parseDateParam } from "@/features/tournament/lib/date-param";
+import { getTournament } from "@/features/tournament/services/getTournament";
 import {
   eventDay,
   eventDays,
-  formatDayLabel,
   formatTimeLabel,
   scheduleForDay,
   selectEventDay,
 } from "@/lib/event-schedule";
 import { readStringParam } from "@/lib/search-params";
 
-import { EventDateStrip } from "./_components/event-date-strip";
+// Only the total is needed, so ask for a single row.
+async function competitorCount(tournamentId: string, eventId: string) {
+  const { total } = await getCompetitors(tournamentId, 1, 0, { eventId });
+  return [eventId, total] as const;
+}
 
 export default async function EventsTab({
   params,
@@ -23,66 +41,76 @@ export default async function EventsTab({
   const [{ tournamentId }, query] = await Promise.all([params, searchParams]);
 
   const search = readStringParam(query, "q");
-  const requestedDay = readStringParam(query, "date") || undefined;
+  const requestedDay = readStringParam(query, "date");
+  const filters = parseEventFilters(query);
+  const chips = eventFilterChips(filters);
   const basePath = `/tournaments/${tournamentId}/events`;
 
-  const events = await getEvents(tournamentId);
+  const [tournament, events] = await Promise.all([
+    getTournament(tournamentId),
+    getEvents(tournamentId),
+  ]);
+  if (!tournament) {
+    notFound();
+  }
 
-  const days = eventDays(events);
-  const selectedDay = selectEventDay(
-    days,
-    requestedDay,
-    eventDay(new Date().toISOString()),
+  const filteredEvents = events.filter((event) => matchesEventFilters(event, filters));
+  const days = eventDays(filteredEvents);
+  // A picked day without events still shows, as empty, so the list matches the week strip.
+  const selectedDay = parseDateParam(requestedDay)
+    ? requestedDay
+    : selectEventDay(days, undefined, eventDay(new Date().toISOString()));
+  const groups = scheduleForDay(filteredEvents, selectedDay, search);
+  const shownEvents = groups.flatMap((group) => group.events);
+  const competitorCounts = new Map(
+    await Promise.all(shownEvents.map((event) => competitorCount(tournamentId, event.id))),
   );
-  const groups = scheduleForDay(events, selectedDay, search);
 
   function emptyMessage() {
-    if (!search) {
+    if (events.length === 0) {
       return "No events have been added to this tournament yet.";
     }
-    return selectedDay
-      ? `No events match “${search}” on ${formatDayLabel(selectedDay)}.`
-      : `No events match “${search}”.`;
+    return search || chips.length > 0
+      ? "No events match your search or filters."
+      : "No events on this day.";
   }
 
   return (
-    <section className="flex flex-col gap-4">
-      <h2 className="text-sm font-medium underline underline-offset-4">
-        All Events
-      </h2>
-      <SearchForm
-        action={basePath}
-        label="Search events"
-        placeholder="Enter Search Text"
-        defaultValue={search}
-      />
+    <div className="flex flex-col gap-4">
+      <BackButton href={`/tournaments/${tournamentId}`} className="self-start">
+        <Text as="h1" variant="title" className="uppercase">
+          {tournament.name}
+        </Text>
+      </BackButton>
 
-      {selectedDay && (
-        <EventDateStrip
-          basePath={basePath}
-          days={days}
-          selected={selectedDay}
-          search={search}
-        />
-      )}
+      <div className="flex items-center gap-2.5">
+        <SearchForm action={basePath} label="Search events" placeholder="Search events" defaultValue={search} />
+        <EventFilterSheet eventDays={days} />
+      </div>
+      <ActiveFilterChips filters={chips} />
 
-      {groups.length === 0 && (
-        <p className="text-sm text-muted-foreground">{emptyMessage()}</p>
-      )}
+      <div className="flex flex-wrap items-center gap-x-1 gap-y-3">
+        <div className="min-w-0 flex-1">
+          <WeekStrip surface="light" defaultDay={selectedDay ?? undefined} />
+        </div>
+        <CalendarButton inline defaultDay={selectedDay ?? undefined} eventDays={days} />
+      </div>
+
+      {groups.length === 0 && <Text variant="muted">{emptyMessage()}</Text>}
       {groups.map(({ startTime, events: grouped }) => (
-        <Section
-          key={startTime ?? "tbc"}
-          title={startTime ? formatTimeLabel(startTime) : "Time TBC"}
-        >
+        <section key={startTime ?? "tbc"} className="flex flex-col gap-3">
+          <Text as="h2" variant="title">
+            {startTime ? formatTimeLabel(startTime) : "Time TBC"}
+          </Text>
           <ul className="flex flex-col gap-3">
             {grouped.map((event) => (
               <li key={event.id}>
-                <EventCard event={event} />
+                <EventCard event={event} competitorCount={competitorCounts.get(event.id) ?? 0} />
               </li>
             ))}
           </ul>
-        </Section>
+        </section>
       ))}
-    </section>
+    </div>
   );
 }

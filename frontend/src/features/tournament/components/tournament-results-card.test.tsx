@@ -11,6 +11,7 @@ const TOURNAMENT: Tournament = {
   status: "ended",
   created_by: "u1",
   start_time: null,
+  venue: null,
   city: "Boston",
   country: "US",
   started_at: null,

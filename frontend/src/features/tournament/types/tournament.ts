@@ -9,6 +9,7 @@ export interface Tournament {
   status: TournamentStatus;
   created_by: string;
   start_time: string | null;
+  venue: string | null;
   city: string | null;
   country: string | null;
   started_at: string | null;

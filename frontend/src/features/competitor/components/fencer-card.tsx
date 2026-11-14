@@ -1,6 +1,7 @@
 import { MockCountry } from "@/app/tournaments/[tournamentId]/_components/mock-country";
 import { ListCard } from "@/components/primitives/list-card";
 import { RatingBadge } from "@/components/primitives/rating-badge";
+import { Text } from "@/components/primitives/text";
 import type { Competitor } from "@/types/competitor";
 
 interface FencerCardProps {
@@ -10,7 +11,7 @@ interface FencerCardProps {
 }
 
 function FencerCard({ competitor, pinned, onTogglePin }: FencerCardProps) {
-  const { id, eventId, tournamentId, firstName, lastName, rating, team } = competitor;
+  const { id, eventId, tournamentId, firstName, lastName, rating, ratingYear, team } = competitor;
   // A fencer not entered in a tournament yet has no page to link to.
   const href =
     tournamentId &&
@@ -20,11 +21,11 @@ function FencerCard({ competitor, pinned, onTogglePin }: FencerCardProps) {
     <ListCard
       title={`${firstName} ${lastName}`}
       description={
-        <p className="truncate uppercase">
+        <Text variant="caption" className="truncate uppercase">
           <MockCountry /> &middot; {team || "No club"}
-        </p>
+        </Text>
       }
-      badge={<RatingBadge tone={pinned ? "filled" : "subtle"}>{rating}</RatingBadge>}
+      badge={<RatingBadge tone={pinned ? "filled" : "subtle"}>{rating}{ratingYear}</RatingBadge>}
       href={href || undefined}
       pinned={pinned}
       onTogglePin={onTogglePin}

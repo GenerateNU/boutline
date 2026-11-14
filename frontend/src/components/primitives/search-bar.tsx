@@ -8,6 +8,7 @@ import { Input } from "@/components/primitives/input";
 
 interface SearchBarProps extends React.ComponentProps<"input"> {
   leading?: React.ReactNode;
+  icon?: React.ReactNode;
   trailing?: React.ReactNode;
   expanded?: boolean;
   children?: React.ReactNode;
@@ -16,6 +17,7 @@ interface SearchBarProps extends React.ComponentProps<"input"> {
 function SearchBar({
   className,
   leading,
+  icon = <SearchOutlined aria-hidden className="size-4 text-neutral-secondary" />,
   trailing,
   expanded,
   children,
@@ -40,10 +42,10 @@ function SearchBar({
         {leading}
         <Input
           type="text"
-          className="h-auto w-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-sm text-obsidian placeholder:text-neutral-muted focus-visible:ring-0"
+          className="h-auto w-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-sm text-obsidian placeholder:text-neutral-muted focus-visible:ring-0 [&::-webkit-search-cancel-button]:appearance-none"
           {...props}
         />
-        <SearchOutlined aria-hidden className="size-4 text-neutral-secondary" />
+        {icon}
         {trailing}
       </div>
       {open ? (
