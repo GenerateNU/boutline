@@ -266,7 +266,7 @@ func (s *boutService) UpdateBoutByID(ctx context.Context, input *BoutUpdateInput
 		return nil, errs.HumaError(err)
 	}
 
-	if _, err := s.loadAuthorized(ctx, id, requireBoutAdmin); err != nil {
+	if _, err := s.loadAuthorized(ctx, id, s.requireAdmin); err != nil {
 		return nil, errs.HumaError(err)
 	}
 
@@ -280,17 +280,25 @@ func (s *boutService) UpdateBoutByID(ctx context.Context, input *BoutUpdateInput
 func (s *boutService) loadAuthorized(
 	ctx context.Context,
 	id uuid.UUID,
-	authorize func(context.Context, tournamentuser.MembershipLookup, *Bout) error,
+	authorize func(context.Context, *Bout) error,
 ) (*Bout, error) {
 	bout, err := s.repo.GetBoutByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("get bout: %w", err)
 	}
-	if err := authorize(ctx, s.memberships, bout); err != nil {
+	if err := authorize(ctx, bout); err != nil {
 		return nil, fmt.Errorf("authorize bout: %w", err)
 	}
 
 	return bout, nil
+}
+
+func (s *boutService) requireAdmin(ctx context.Context, bout *Bout) error {
+	return tournamentuser.RequireRole(ctx, s.memberships, bout.TournamentID, tournamentuser.TournamentUserRoleAdmin)
+}
+
+func (s *boutService) requireAssignedReferee(ctx context.Context, bout *Bout) error {
+	return tournamentuser.RequireAssignedReferee(ctx, s.memberships, bout.TournamentID, bout.RefereeID)
 }
 
 func (s *boutService) boutUpdateFrom(ctx context.Context, id uuid.UUID, body BoutUpdateBody) (BoutUpdate, error) {
@@ -382,7 +390,7 @@ func (s *boutService) StartBout(ctx context.Context, input *BoutIDInput) (*BoutO
 		return nil, errs.HumaError(err)
 	}
 
-	bout, err := s.loadAuthorized(ctx, id, RequireAssignedReferee)
+	bout, err := s.loadAuthorized(ctx, id, s.requireAssignedReferee)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -412,7 +420,7 @@ func (s *boutService) EndBout(ctx context.Context, input *BoutIDInput) (*BoutOut
 		return nil, errs.HumaError(err)
 	}
 
-	if _, err := s.loadAuthorized(ctx, id, RequireAssignedReferee); err != nil {
+	if _, err := s.loadAuthorized(ctx, id, s.requireAssignedReferee); err != nil {
 		return nil, errs.HumaError(err)
 	}
 
@@ -432,7 +440,7 @@ func (s *boutService) DeleteBoutByID(ctx context.Context, input *BoutIDInput) (*
 		return nil, errs.HumaError(err)
 	}
 
-	if _, err := s.loadAuthorized(ctx, id, requireBoutAdmin); err != nil {
+	if _, err := s.loadAuthorized(ctx, id, s.requireAdmin); err != nil {
 		return nil, errs.HumaError(err)
 	}
 

@@ -186,8 +186,8 @@ name someone else. The creator can't be demoted
 or removed (409), so a tournament always keeps an admin.
 
 Bout start and end and the scoring writes go through
-`bout.RequireAssignedReferee` instead, which also requires the caller to be the
-bout's `referee_id`. An admin passes its role check but referees only the bouts
+`tournamentuser.RequireAssignedReferee` instead, which also requires the caller to
+be the bout's `referee_id`. An admin passes its role check but referees only the bouts
 they are assigned to.
 
 ## Layout

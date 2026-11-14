@@ -81,6 +81,12 @@ func TestCreateScoring(t *testing.T) {
 			wantPoints: 1,
 		},
 		{
+			name:       "lets an admin score a bout they are assigned to",
+			caller:     TestAdminID,
+			input:      createInput(creator, competitor, TestAdminBoutID.String(), 1),
+			wantPoints: 1,
+		},
+		{
 			name:     "refuses an admin who is not the bout's referee",
 			caller:   TestAdminID,
 			input:    createInput(creator, competitor, match, 1),
@@ -329,6 +335,7 @@ func TestUpdateScoringByID(t *testing.T) {
 	tests := []struct {
 		name           string
 		caller         uuid.UUID // uuid.Nil means no caller
+		bout           uuid.UUID // uuid.Nil means TestBoutID
 		seedRevoked    bool
 		body           scoring.ScoringUpdateBody
 		useUnknownID   bool
@@ -390,6 +397,13 @@ func TestUpdateScoringByID(t *testing.T) {
 			wantCode:     http.StatusNotFound,
 		},
 		{
+			name:       "lets an admin edit a score on a bout they are assigned to",
+			caller:     TestAdminID,
+			bout:       TestAdminBoutID,
+			body:       scoring.ScoringUpdateBody{Points: ptr(3)},
+			wantPoints: 3,
+		},
+		{
 			name:       "refuses an admin who is not the bout's referee",
 			caller:     TestAdminID,
 			body:       scoring.ScoringUpdateBody{Points: ptr(3)},
@@ -413,7 +427,11 @@ func TestUpdateScoringByID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			stored := seeded(1, TestBoutID)
+			match := TestBoutID
+			if tt.bout != uuid.Nil {
+				match = tt.bout
+			}
+			stored := seeded(1, match)
 			if tt.seedRevoked {
 				stored = seededRevoked(1, stored.BoutID)
 			}
@@ -465,12 +483,14 @@ func TestRevokeScoring(t *testing.T) {
 	tests := []struct {
 		name         string
 		caller       uuid.UUID // uuid.Nil means no caller
+		bout         uuid.UUID // uuid.Nil means TestBoutID
 		seedRevoked  bool
 		revokedBy    string
 		useUnknownID bool
 		wantCode     int
 	}{
 		{name: "marks the score as revoked", caller: TestRefereeID, revokedBy: referee},
+		{name: "lets an admin revoke a score on a bout they are assigned to", caller: TestAdminID, bout: TestAdminBoutID, revokedBy: referee},
 		{name: "refuses an admin who is not the bout's referee", caller: TestAdminID, revokedBy: referee, wantCode: http.StatusForbidden},
 		{name: "refuses a request with no caller", revokedBy: referee, wantCode: http.StatusForbidden},
 		{name: "refuses a caller outside the tournament", caller: TestOutsiderID, revokedBy: referee, wantCode: http.StatusForbidden},
@@ -500,7 +520,11 @@ func TestRevokeScoring(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			stored := seeded(1, TestBoutID)
+			match := TestBoutID
+			if tt.bout != uuid.Nil {
+				match = tt.bout
+			}
+			stored := seeded(1, match)
 			if tt.seedRevoked {
 				stored = seededRevoked(1, stored.BoutID)
 			}

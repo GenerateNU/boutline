@@ -680,8 +680,8 @@ an admin still need that row backfilled, which is its own ticket.
   `created_by`, which the request body can't set, and writes them into
   `tournament_users` as `admin` in the same transaction. `tournament_users` alone
   decides who may act; `created_by` is read only to keep the creator an admin.
-- **Built:** `bout.RequireAssignedReferee(ctx, memberships, bout)` guards bout
-  start and end and every scoring write. The caller needs the `referee` role and
+- **Built:** `tournamentuser.RequireAssignedReferee(ctx, memberships, tournamentID,
+  refereeID)` guards bout start and end and every scoring write. The caller needs the `referee` role and
   must be the bout's `referee_id`: 403 otherwise, and 409 while the bout has no
   referee. An admin passes the role check but still referees only the bouts they
   are assigned to.

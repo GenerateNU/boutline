@@ -55,7 +55,7 @@ func (s *scoringService) requireAssignedReferee(ctx context.Context, boutID uuid
 		return fmt.Errorf("get bout: %w", err)
 	}
 
-	return bout.RequireAssignedReferee(ctx, s.memberships, match)
+	return tournamentuser.RequireAssignedReferee(ctx, s.memberships, match.TournamentID, match.RefereeID)
 }
 
 func (s *scoringService) CreateScoring(

@@ -45,3 +45,26 @@ func RequireRole(
 
 	return nil
 }
+
+// RequireAssignedReferee refuses the caller unless they hold the referee role in
+// the tournament and are the bout's assigned referee, refereeID. The admin role
+// alone is not enough: an admin referees only the bouts they are assigned to.
+func RequireAssignedReferee(
+	ctx context.Context,
+	memberships MembershipLookup,
+	tournamentID uuid.UUID,
+	refereeID *uuid.UUID,
+) error {
+	if err := RequireRole(ctx, memberships, tournamentID, TournamentUserRoleReferee); err != nil {
+		return err
+	}
+
+	if refereeID == nil {
+		return errs.Public("a referee must be assigned to the bout first", errs.ErrConflict)
+	}
+	if caller, ok := session.UserIDFrom(ctx); !ok || caller != *refereeID {
+		return errs.Public("only the bout's assigned referee can start, score or end it", errs.ErrForbidden)
+	}
+
+	return nil
+}
