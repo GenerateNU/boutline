@@ -477,8 +477,9 @@ Tabs: Pooling · Fencers · Tableau · Results. The page opens on Fencers.
   searches the tournament's clubs. It lists every fencer in the tournament, since
   competitors don't belong to an event yet (§8.4). Rows link to a fencer page,
   which is placeholder text.
-- **Pooling** and **Tableau** (Placeholder): a bout list from a hardcoded fixture,
-  the same for every event. Replaced in §11.6 and §12.5.
+- **Tableau** (Partial): reads `GET /events/{id}/tableau`. See §12.5.
+- **Pooling** (Placeholder): a bout list from a hardcoded fixture, the same for
+  every event. Replaced in §11.6.
 - **Results** (Placeholder): static text. Replaced in §13.3.
 - **Bout page** (`…/bout/[boutId]`, Placeholder): two score tiles, a "Referee
   view" button and a touch log, from the fixture. Only its referee link reaches
@@ -1177,7 +1178,8 @@ once the event's pool stage has ended:
 
 ### 12.5 Tableau endpoint and tab
 
-**Status:** Planned. Issues: #156, #100, #168.
+**Status:** Partial. The endpoint and the tab's bracket and list views are built;
+the phone snap-to-round behavior (#168) is not. Issues: #156, #100, #168.
 
 - `GET /events/{id}/tableau` (public) returns every round from the bracket size
   down to the final, each with its bouts in slot order and each fencer's seed.
@@ -1194,8 +1196,9 @@ once the event's pool stage has ended:
   A bout whose fencer has no entry row is corrupt data and returns a 500.
 - The Tableau tab shows the bracket by round, with live scores on active bouts.
   Positions without a bout (byes, rounds not yet created) are drawn empty. On a
-  phone it snaps to one round at a time, with round tabs kept in sync (#168).
-  Today it is the shared fixture (§4.4).
+  phone it should snap to one round at a time, with round tabs kept in sync
+  (#168); today picking a round tab scrolls the bracket to that round. A list view
+  and a name/club search are built alongside the bracket.
 
 ---
 
