@@ -16,6 +16,7 @@ interface BoutCardProps {
 function BoutCard({ bout, title, nextLabel, href }: BoutCardProps) {
   const live = bout.status === "active";
   const [topTone, bottomTone] = pillTones(bout);
+  const muted = bout.status === "upcoming";
 
   return (
     <Link
@@ -30,10 +31,10 @@ function BoutCard({ bout, title, nextLabel, href }: BoutCardProps) {
         {title}
       </p>
       <div className="flex h-13 border-b border-outline">
-        <BracketFencerRow fencer={bout.top} score={bout.topScore} pillTone={topTone} />
+        <BracketFencerRow fencer={bout.top} score={bout.topScore} pillTone={topTone} muted={muted} />
       </div>
       <div className={cn("flex h-13", nextLabel && "border-b border-outline")}>
-        <BracketFencerRow fencer={bout.bottom} score={bout.bottomScore} pillTone={bottomTone} />
+        <BracketFencerRow fencer={bout.bottom} score={bout.bottomScore} pillTone={bottomTone} muted={muted} />
       </div>
       {nextLabel && (
         <p className="flex h-8 items-center gap-1 text-xs text-neutral-secondary">

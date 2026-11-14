@@ -11,7 +11,7 @@ function TbaBout({ dimmed = false }: TbaBoutProps) {
       role="group"
       aria-label="Bout to be announced"
       className={cn(
-        "w-full divide-y divide-muted-foreground/40 rounded-md border border-dashed border-foreground px-3 py-1 text-muted-foreground",
+        "w-full divide-y bg-card divide-muted-foreground/40 rounded-md border border-dashed border-foreground px-3 py-1 text-muted-foreground",
         {"opacity-40": dimmed}
       )}
     >

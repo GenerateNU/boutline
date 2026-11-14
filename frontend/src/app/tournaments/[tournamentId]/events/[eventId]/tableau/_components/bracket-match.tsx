@@ -15,6 +15,7 @@ interface BracketMatchProps {
 function BracketMatch({ bout, href, dimmed = false, matched = false }: BracketMatchProps) {
   const live = bout.status === "active";
   const [topTone, bottomTone] = pillTones(bout);
+  const muted = bout.status === "upcoming";
 
   return (
     <Link
@@ -29,8 +30,8 @@ function BracketMatch({ bout, href, dimmed = false, matched = false }: BracketMa
     >
       {live && <span className="sr-only">Live</span>}
       <div className="flex h-full flex-col divide-y divide-outline">
-        <BracketFencerRow fencer={bout.top} score={bout.topScore} pillTone={topTone} />
-        <BracketFencerRow fencer={bout.bottom} score={bout.bottomScore} pillTone={bottomTone} />
+        <BracketFencerRow fencer={bout.top} score={bout.topScore} pillTone={topTone} muted={muted} />
+        <BracketFencerRow fencer={bout.bottom} score={bout.bottomScore} pillTone={bottomTone} muted={muted} />
       </div>
     </Link>
   );

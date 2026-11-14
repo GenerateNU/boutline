@@ -54,11 +54,18 @@ describe("BracketMatch", () => {
     expect(screen.getByRole("link")).not.toHaveClass("border-accent-green");
   });
 
-  it.each(["active", "upcoming", "ended"] as const)("keeps both names dark on a %s bout", (status) => {
+  it.each(["active", "ended"] as const)("keeps both names dark on a %s bout", (status) => {
     renderMatch(bout(status, 1, 2));
 
     expect(screen.getByText("Maya Fencer")).toHaveClass("text-obsidian");
     expect(screen.getByText("Kenji Fencer")).toHaveClass("text-obsidian");
+  });
+
+  it("grays both names on a bout that hasn't been fenced", () => {
+    renderMatch(bout("upcoming"));
+
+    expect(screen.getByText("Maya Fencer")).toHaveClass("text-neutral-secondary");
+    expect(screen.getByText("Kenji Fencer")).toHaveClass("text-neutral-secondary");
   });
 
   it("outlines a search match in blue, even when the bout is live", () => {
