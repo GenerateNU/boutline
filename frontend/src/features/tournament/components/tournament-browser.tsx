@@ -4,7 +4,6 @@ import { CalendarButton } from "@/features/tournament/components/calendar-button
 import { FilterSheet } from "@/features/tournament/components/filter-sheet";
 import { SearchForm } from "@/features/tournament/components/search-form";
 import { TournamentCard } from "@/features/tournament/components/tournament-card";
-import { WeekStrip } from "@/features/tournament/components/week-strip";
 import {
   parseTournamentFilters,
   TOURNAMENT_PAGE_SIZE,
@@ -37,60 +36,57 @@ async function TournamentBrowser({
   });
 
   return (
-    <>
-      <WeekStrip />
-      <main className="mx-auto flex w-full max-w-mobile flex-1 flex-col bg-background pb-5 font-manrope">
-        <div className="flex items-center gap-2.5 px-5 pt-3.5 pb-2.5">
-          <SearchForm
-            action={basePath}
-            label="Search tournaments"
-            placeholder="Search tournaments and clubs"
-            defaultValue={search}
-          />
-          <FilterSheet visibility={visibility} />
-        </div>
+    <main className="mx-auto flex w-full max-w-mobile flex-1 flex-col bg-background pb-5 font-manrope">
+      <div className="flex items-center gap-2.5 px-5 pt-3.5 pb-2.5">
+        <SearchForm
+          action={basePath}
+          label="Search tournaments"
+          placeholder="Search tournaments and clubs"
+          defaultValue={search}
+        />
+        <FilterSheet visibility={visibility} />
+      </div>
 
-        <ActiveFilterChips status={status} club={club} country={country} />
+      <ActiveFilterChips status={status} club={club} country={country} />
 
-        <div className="flex items-center justify-between px-6 py-1.25">
-          <h1 className="text-xl font-semibold text-obsidian">Tournaments</h1>
-          <CalendarButton />
-        </div>
+      <div className="flex items-center justify-between px-6 py-1.25">
+        <h1 className="text-xl font-semibold text-obsidian">Tournaments</h1>
+        <CalendarButton />
+      </div>
 
-        {data.length === 0 && (
-          <p className="px-5 pt-2.5 text-sm text-neutral-secondary">
-            {search
-              ? `No tournaments match "${search}".`
-              : "No tournaments found."}
-          </p>
-        )}
+      {data.length === 0 && (
+        <p className="px-5 pt-2.5 text-sm text-neutral-secondary">
+          {search
+            ? `No tournaments match "${search}".`
+            : "No tournaments found."}
+        </p>
+      )}
 
-        <ul className="flex flex-col gap-5 px-5 pt-2.5">
-          {data.map((tournament) => (
-            <li key={tournament.id}>
-              <TournamentCard tournament={tournament} />
-            </li>
-          ))}
-        </ul>
+      <ul className="flex flex-col gap-5 px-5 pt-2.5">
+        {data.map((tournament) => (
+          <li key={tournament.id}>
+            <TournamentCard tournament={tournament} />
+          </li>
+        ))}
+      </ul>
 
-        <div className="px-5 pt-5">
-          <Pagination
-            total={total}
-            limit={limit}
-            offset={offset}
-            basePath={basePath}
-            params={{
-              q: search,
-              status,
-              club,
-              country,
-              date,
-              tz: date ? tz : undefined,
-            }}
-          />
-        </div>
-      </main>
-    </>
+      <div className="px-5 pt-5">
+        <Pagination
+          total={total}
+          limit={limit}
+          offset={offset}
+          basePath={basePath}
+          params={{
+            q: search,
+            status,
+            club,
+            country,
+            date,
+            tz: date ? tz : undefined,
+          }}
+        />
+      </div>
+    </main>
   );
 }
 
