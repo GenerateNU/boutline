@@ -1,4 +1,5 @@
 import SearchOutlined from "@mui/icons-material/SearchOutlined";
+import { useId } from "react";
 
 import {
   Dropdown,
@@ -44,6 +45,8 @@ function FilterSearchField({
   onCommitText,
   ...inputProps
 }: FilterSearchFieldProps) {
+  const generatedId = useId();
+  const inputId = inputProps.id ?? generatedId;
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key !== "Enter") {
       return;
@@ -63,17 +66,22 @@ function FilterSearchField({
   return (
     <div data-slot="filter-search-field" className="flex flex-col gap-2">
       <p className="text-sm text-obsidian">{label}</p>
-      <div className="flex items-center gap-3 rounded-[12px] border border-outline bg-background px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-ring">
+      {/* The input is only a line tall; making the whole box its label lets a click anywhere in it focus the input. */}
+      <label
+        htmlFor={inputId}
+        className="flex cursor-text items-center gap-3 rounded-[12px] border border-outline bg-background px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-ring"
+      >
         <Input
           type="search"
           aria-label={label}
           placeholder={`Search ${label.toLowerCase()}`}
           {...inputProps}
+          id={inputId}
           onKeyDown={handleKeyDown}
           className="h-5 flex-1 rounded-none border-0 px-0 text-obsidian shadow-none placeholder:text-neutral-secondary focus-visible:ring-0"
         />
         <SearchOutlined aria-hidden className="size-4.5 shrink-0 text-neutral-secondary" />
-      </div>
+      </label>
       <SuggestionList
         suggestions={suggestions}
         failed={failed}
