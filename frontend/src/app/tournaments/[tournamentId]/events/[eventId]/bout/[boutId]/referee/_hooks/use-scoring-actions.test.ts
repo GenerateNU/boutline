@@ -23,22 +23,22 @@ async function load(initial: Parameters<typeof installBackend>[0], status: BoutS
 }
 
 describe("useScoringActions", () => {
-  it("saves a touch and refreshes the history, ignoring a second tap while it saves", async () => {
+  it("runs actions in tap order and refreshes the history after each", async () => {
     const { result, live } = await load([]);
 
     act(() => {
       result.current.submit({ kind: "touch", competitorId: BEN.id });
       result.current.submit({ kind: "touch", competitorId: ALICE.id });
     });
-    expect(result.current.pending).toEqual([{ kind: "touch", competitorId: BEN.id }]);
+    expect(result.current.pending).toHaveLength(2);
     await settle();
 
-    expect(live().map((score) => score.competitor_id)).toEqual([BEN.id]);
-    expect(result.current.scores.map((score) => score.competitor_id)).toEqual([BEN.id]);
-    expect(result.current.history.map((entry) => entry.competitor_id)).toEqual([BEN.id]);
+    expect(live().map((score) => score.competitor_id)).toEqual([BEN.id, ALICE.id]);
+    expect(result.current.scores.map((score) => score.competitor_id)).toEqual([BEN.id, ALICE.id]);
+    expect(result.current.history.map((entry) => entry.competitor_id)).toEqual([ALICE.id, BEN.id]);
     expect(result.current.pending).toEqual([]);
     expect(result.current.error).toBeNull();
-    expect(result.current.scoreVersion).toBe(1);
+    expect(result.current.scoreVersion).toBe(2);
   });
 
   it.each([
@@ -60,12 +60,13 @@ describe("useScoringActions", () => {
     expect(revokedInHistory).toEqual([revoked]);
   });
 
-  it("a failure reloads from the server and exposes the error", async () => {
+  it("a failure drops the actions queued behind it, reloads from the server and exposes the error", async () => {
     const { result, backend, live } = await load([{ id: 1, competitor_id: BEN.id, points: 1 }]);
 
     backend.failNextCreate = true;
     act(() => {
       result.current.submit({ kind: "touch", competitorId: ALICE.id });
+      result.current.submit({ kind: "undo" });
     });
     await settle();
 
@@ -74,7 +75,7 @@ describe("useScoringActions", () => {
     expect(result.current.scores.map((score) => score.id)).toEqual([1]);
     expect(result.current.history.map((entry) => entry.id)).toEqual([1]);
     expect(live()).toHaveLength(1);
-    expect(result.current.scoreVersion).toBe(3);
+    expect(result.current.scoreVersion).toBe(4);
   });
 
   it("starts an upcoming bout", async () => {

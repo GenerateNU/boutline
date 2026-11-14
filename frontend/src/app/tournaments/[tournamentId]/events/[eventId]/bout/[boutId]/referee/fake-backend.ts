@@ -25,6 +25,11 @@ export interface FakeBackend {
   failNextEnd: boolean;
   // While set, history responses wait for it, to mimic a slow history fetch.
   historyGate: Promise<void> | null;
+  // While true, every request fails as if the network were down.
+  offline: boolean;
+  // Saves the next touch, then drops the connection before the response arrives.
+  loseNextCreateResponse: boolean;
+  failHistory: boolean;
 }
 
 export interface BackendOptions {
@@ -49,6 +54,9 @@ export function installBackend(
     failNextCreate: false,
     failNextEnd: false,
     historyGate: null,
+    offline: false,
+    loseNextCreateResponse: false,
+    failHistory: false,
   };
   const boutBody = () => ({
     id: BOUT_ID,
@@ -63,6 +71,9 @@ export function installBackend(
   global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const body = init?.body ? JSON.parse(String(init.body)) : null;
+    if (backend.offline) {
+      throw new TypeError("Failed to fetch");
+    }
 
     if (url === `/api/v1/bouts/${BOUT_ID}` && init?.method === "PATCH") {
       backend.refereeId = body.referee_id ?? backend.refereeId;
@@ -106,6 +117,9 @@ export function installBackend(
     }
     if (url.startsWith(`/api/v1/scoring/match/${BOUT_ID}/history`)) {
       await backend.historyGate;
+      if (backend.failHistory) {
+        return reply(500, { detail: "history unavailable" });
+      }
       let running: [number, number] = [0, 0];
       // Like the real endpoint: a revoked touch shows the score it produced, but later touches skip it.
       const data = [...backend.scores].sort((a, b) => a.id - b.id).map((score) => {
@@ -144,6 +158,11 @@ export function installBackend(
         created_at: RECORDED_AT,
       };
       backend.scores.push(created);
+      if (backend.loseNextCreateResponse) {
+        backend.loseNextCreateResponse = false;
+        backend.offline = true;
+        throw new TypeError("Failed to fetch");
+      }
       return reply(201, created);
     }
     const revoke = url.match(/^\/api\/v1\/scoring\/(\d+)\/revoke$/);

@@ -6,6 +6,7 @@ import { Section } from "@/components/primitives/section";
 import { useBoutScoring } from "../_hooks/use-bout-scoring";
 import { competitorIdsOf } from "../tally-helper";
 
+import { OutOfSyncBanner } from "./out-of-sync-banner";
 import { PhaseControls } from "./phase-controls";
 import { PhaseHeader } from "./phase-header";
 import { ScoreHistory } from "./score-history";
@@ -31,6 +32,9 @@ export function Scoreboard({ boutId }: ScoreboardProps) {
     touch,
     undo,
     confirm,
+    outOfSync,
+    retrySync,
+    historyFailed,
   } = useBoutScoring(boutId);
 
   if (!matchup || !tally || !phase) {
@@ -94,13 +98,14 @@ export function Scoreboard({ boutId }: ScoreboardProps) {
             Assign a referee to this bout before scoring.
           </p>
         )} */}
+        {outOfSync && <OutOfSyncBanner onRetry={retrySync} />}
         {error && (
           <p role="alert" className="text-sm text-destructive">
             {error}
           </p>
         )}
       </Section>
-      <ScoreHistory rows={history} nameOf={nameOf} />
+      <ScoreHistory rows={history} failed={historyFailed} nameOf={nameOf} />
     </>
   );
 }

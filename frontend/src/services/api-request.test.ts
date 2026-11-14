@@ -8,6 +8,16 @@ function respondWith(status: number, body: unknown) {
   })) as unknown as typeof fetch;
 }
 
+// A fetch that never answers, and rejects once its signal aborts, like a hung connection.
+function hangUntilAborted() {
+  global.fetch = jest.fn(
+    (_input: RequestInfo | URL, init?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      }),
+  ) as unknown as typeof fetch;
+}
+
 describe("apiRequest", () => {
   it("returns the parsed body on success", async () => {
     respondWith(200, { id: "b1" });
@@ -72,5 +82,44 @@ describe("apiRequest", () => {
 
     const sent = (global.fetch as jest.Mock).mock.calls[0][1].headers as Headers;
     expect(Object.fromEntries(sent.entries())).toEqual(expected);
+  });
+
+  it("gives up on a hung request after the timeout", async () => {
+    jest.useFakeTimers();
+    hangUntilAborted();
+
+    const request = apiRequest("/anything");
+    jest.advanceTimersByTime(10_000);
+
+    await expect(request).rejects.toThrow("The server took too long to respond");
+    jest.useRealTimers();
+  });
+
+  it("gives up when the response body stalls past the timeout", async () => {
+    jest.useFakeTimers();
+    global.fetch = jest.fn(async (_input: RequestInfo | URL, init?: RequestInit) => ({
+      ok: true,
+      status: 200,
+      json: () =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+        }),
+    })) as unknown as typeof fetch;
+
+    const rejected = expect(apiRequest("/anything")).rejects.toThrow("The server took too long to respond");
+    await jest.advanceTimersByTimeAsync(10_000);
+
+    await rejected;
+    jest.useRealTimers();
+  });
+
+  it("uses the caller's signal instead of the timeout", async () => {
+    hangUntilAborted();
+    const controller = new AbortController();
+
+    const request = apiRequest("/anything", { signal: controller.signal });
+    controller.abort(new Error("cancelled"));
+
+    await expect(request).rejects.toThrow("cancelled");
   });
 });
