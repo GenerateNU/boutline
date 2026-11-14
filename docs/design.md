@@ -1293,9 +1293,11 @@ with `buildPool` (`pooling/_fixtures/build-pool.ts`).
   has a Bouts | Standings toggle that shows the V/D grid or the standings table (# ·
   Fencer · V · V/M · TS · TR · Ind, by place, names as "Last, First"), and a View
   pool link. Pool pins are not built yet (§6.3).
-- **Filter sheet** (Planned): a filter button beside the search opens Fencer and
-  Club search, Pool Status and Pool Number chips, and Sort by Pool Number, Start
-  time or Strip, with Clear All and Show pools.
+- **Filter sheet:** a filter button beside the search opens the shared
+  `FilterSheetDialog`. Fencer and Club suggest names from the pools as you type, and
+  a pick shows as a removable chip; then Pool Status and Pool Number chips, and Sort
+  by Pool Number, Start time or Strip, with Clear All and Show pools. The button
+  shows its pressed look while filters are applied.
 - **Pool page** (Planned): a back button to the list, the status pill and fencer count, and
   the V/D grid (`V5` / `D3` cells). Below it sits the standings table. Tapping a
   bout cell outlines it in navy and swaps the standings for "Showing the bout you
@@ -1756,7 +1758,9 @@ reserved for scores and bout banners. Referee scores go up to `text-9xl`.
   whose search sections are a label above a `FilterSearchField` whose suggestions show
   in a `Dropdown` of `DropdownOption` rows while typing; picked values show as
   removable tags at the top until submitted. Other sections are a Distance slider and
-  rows of outline chips, then a full-width Clear All and a filled submit. The toast is
+  rows of outline chips (`ChipGroup` / `ChipGroupItem`), then a full-width Clear All
+  and a filled submit. `triggerActive` gives the trigger its pressed look while
+  filters are applied. The toast is
   a single obsidian row with white `text-sm`, a leading icon, an `accent-green`
   action, and no close button.
 - The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and `navigation-item`.

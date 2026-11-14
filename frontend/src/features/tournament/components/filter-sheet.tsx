@@ -1,16 +1,11 @@
 "use client";
 
-import { cn } from "cn";
 import { useState } from "react";
 
-import { buttonVariants } from "@/components/primitives/button";
 import { Chip } from "@/components/primitives/chip";
+import { ChipGroup, ChipGroupItem } from "@/components/primitives/chip-group";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
-import {
-  SegmentedButton,
-  SegmentedButtonItem,
-} from "@/components/primitives/segmented-button";
 import { Slider } from "@/components/primitives/slider";
 import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
@@ -28,10 +23,6 @@ const MAX_DISTANCE = 100;
 const STATUS_ORDER: TournamentStatus[] = ["ended", "active", "pending"];
 
 const CLUB_RESULT_LIMIT = 10;
-const CHIP_CLASS_NAME = cn(
-  buttonVariants({ variant: "outline", size: "sm" }),
-  "flex-none rounded-lg first:border-l data-[state=on]:bg-blue data-[state=on]:text-white data-[state=on]:hover:bg-blue-dark",
-);
 
 interface Country {
   code: string;
@@ -169,36 +160,12 @@ function FilterSheet({ visibility }: FilterSheetProps) {
 
       <ChipGroup label="Tournament Status" value={status} onValueChange={setStatus}>
         {STATUS_ORDER.map((value) => (
-          <SegmentedButtonItem key={value} value={value} className={cn(CHIP_CLASS_NAME, "flex-1")}>
+          <ChipGroupItem key={value} value={value} className="flex-1">
             {statusLabels[value]}
-          </SegmentedButtonItem>
+          </ChipGroupItem>
         ))}
       </ChipGroup>
     </FilterSheetDialog>
-  );
-}
-
-interface ChipGroupProps {
-  label: string;
-  value: string;
-  onValueChange: (value: string) => void;
-  children: React.ReactNode;
-}
-
-function ChipGroup({ label, value, onValueChange, children }: ChipGroupProps) {
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="text-sm text-obsidian">{label}</p>
-      <SegmentedButton
-        type="single"
-        aria-label={label}
-        value={value}
-        onValueChange={onValueChange}
-        className="flex gap-3 overflow-visible rounded-none border-0 shadow-none"
-      >
-        {children}
-      </SegmentedButton>
-    </div>
   );
 }
 

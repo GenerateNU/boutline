@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
-
 import { SearchBar } from "@/components/primitives/search-bar";
 
-import { filterPools } from "../_services/filter-pools";
+import { usePoolFilters } from "../_hooks/use-pool-filters";
 import { noPoolsMessage } from "../_services/no-pools-message";
 import type { PoolBoard } from "../_types/pool-board";
 
 import { PoolCard } from "./pool-card";
+import { PoolFilterSheet } from "./pool-filter-sheet";
 
 interface PoolListProps {
   pools: PoolBoard[];
@@ -16,18 +15,21 @@ interface PoolListProps {
 }
 
 export function PoolList({ pools, poolingPath }: PoolListProps) {
-  const [search, setSearch] = useState("");
-  const matches = filterPools(pools, search);
+  const { search, setSearch, filters, setFilters, matches, options } = usePoolFilters(pools);
 
   return (
     <div className="flex flex-col gap-6 font-manrope">
-      <SearchBar
-        type="search"
-        aria-label="Search pools"
-        placeholder="Search pools"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-      />
+      <div className="flex gap-2">
+        <SearchBar
+          type="search"
+          aria-label="Search pools"
+          placeholder="Search pools"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          className="flex-1"
+        />
+        <PoolFilterSheet filters={filters} options={options} onApply={setFilters} />
+      </div>
       {matches.length > 0 ? (
         <ul aria-label="Pools" className="flex flex-col gap-6">
           {matches.map((pool) => (
@@ -37,7 +39,7 @@ export function PoolList({ pools, poolingPath }: PoolListProps) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-neutral-secondary">{noPoolsMessage(search)}</p>
+        <p className="text-sm text-neutral-secondary">{noPoolsMessage(search, filters)}</p>
       )}
     </div>
   );

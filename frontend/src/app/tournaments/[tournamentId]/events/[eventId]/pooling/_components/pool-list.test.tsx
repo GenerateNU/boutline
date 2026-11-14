@@ -57,6 +57,21 @@ function renderList(query: string) {
   fireEvent.change(screen.getByRole("searchbox", { name: "Search pools" }), { target: { value: query } });
 }
 
+function openFilterSheet() {
+  fireEvent.click(screen.getByRole("button", { name: /^Filter pools/ }));
+  return screen.getByRole("dialog", { name: "Filter" });
+}
+
+function applyFilter(choose: (sheet: HTMLElement) => void) {
+  const sheet = openFilterSheet();
+  choose(sheet);
+  fireEvent.click(within(sheet).getByRole("button", { name: "Show pools" }));
+}
+
+function chip(sheet: HTMLElement, name: string) {
+  return within(sheet).getByRole("radio", { name });
+}
+
 describe("PoolList", () => {
   it.each([
     { query: "", all: poolTitles },
@@ -74,5 +89,76 @@ describe("PoolList", () => {
 
     expect(screen.getByText('No pools match "zzz".')).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Pools" })).not.toBeInTheDocument();
+  });
+
+  it("filters by status and flags the trigger", () => {
+    renderList("");
+
+    applyFilter((sheet) => fireEvent.click(chip(sheet, "Completed")));
+
+    expect(titles()).toEqual([poolTitles[1]]);
+    expect(screen.getByRole("button", { name: "Filter pools (filters applied)" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("filters by pool number", () => {
+    renderList("");
+
+    applyFilter((sheet) => fireEvent.click(chip(sheet, "Pool 3")));
+
+    expect(titles()).toEqual([poolTitles[2]]);
+  });
+
+  it.each([
+    { field: "Fencer", query: "zoe", pick: "Zoe Kim", pools: [poolTitles[3]] },
+    { field: "Club", query: "cambridge", pick: "Cambridge FC", pools: [poolTitles[1], poolTitles[2], poolTitles[3]] },
+  ])("filters by a picked $field", ({ field, query, pick, pools }) => {
+    renderList("");
+
+    applyFilter((sheet) => {
+      fireEvent.change(within(sheet).getByRole("searchbox", { name: field }), { target: { value: query } });
+      fireEvent.click(within(sheet).getByRole("button", { name: pick }));
+      expect(within(sheet).getByRole("button", { name: `Remove ${pick}` })).toBeInTheDocument();
+    });
+
+    expect(titles()).toEqual(pools);
+  });
+
+  it.each([
+    { sort: "Strip", order: [3, 0, 1, 2] },
+    { sort: "Start time", order: [0, 1, 3, 2] },
+  ])("sorts by $sort", ({ sort, order }) => {
+    renderList("");
+
+    applyFilter((sheet) => fireEvent.click(chip(sheet, sort)));
+
+    expect(titles()).toEqual(order.map((index) => poolTitles[index]));
+  });
+
+  it("discards a draft that was never applied", () => {
+    renderList("");
+    const sheet = openFilterSheet();
+    fireEvent.click(chip(sheet, "Completed"));
+
+    fireEvent.click(within(sheet).getByRole("button", { name: "Close" }));
+
+    expect(titles()).toEqual(poolTitles);
+    expect(screen.getByRole("button", { name: "Filter pools" })).toBeInTheDocument();
+  });
+
+  it("clears every applied filter", () => {
+    renderList("");
+    applyFilter((sheet) => fireEvent.click(chip(sheet, "Completed")));
+
+    applyFilter((sheet) => fireEvent.click(within(sheet).getByRole("button", { name: "Clear All" })));
+
+    expect(titles()).toEqual(poolTitles);
+  });
+
+  it("explains when a search and filters match nothing", () => {
+    renderList("zzz");
+
+    applyFilter((sheet) => fireEvent.click(chip(sheet, "Completed")));
+
+    expect(screen.getByText('No pools match "zzz" with these filters.')).toBeInTheDocument();
   });
 });
