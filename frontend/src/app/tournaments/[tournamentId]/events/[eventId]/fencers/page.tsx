@@ -22,8 +22,8 @@ export default async function EventFencersTab({
   const { offset, search, team, rating, gender } = parseFencerFilters(query);
   const basePath = `/tournaments/${tournamentId}/events/${eventId}/fencers`;
 
-  // The backend has no event roster yet, so this lists the whole tournament.
   const { data, total, limit } = await getCompetitors(tournamentId, FENCER_PAGE_SIZE, offset, {
+    eventId,
     query: search,
     team,
     rating,
@@ -34,10 +34,6 @@ export default async function EventFencersTab({
 
   return (
     <Section title="Fencers">
-      <p className="text-sm text-muted-foreground">
-        Showing every fencer in this tournament — event entries aren&apos;t tracked yet.
-      </p>
-
       <div className="flex items-center gap-2">
         <SearchForm
           action={basePath}
@@ -62,7 +58,7 @@ export default async function EventFencersTab({
             ? `No fencers match “${search}”.`
             : hasFilters
               ? "No fencers match these filters."
-              : "No fencers have entered this tournament yet."}
+              : "No fencers have entered this event yet."}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">

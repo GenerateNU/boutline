@@ -32,6 +32,16 @@ describe("getCompetitors", () => {
   });
 
   it.each([
+    { name: "no event", eventId: undefined, wantEventId: null },
+    { name: "an event", eventId: "e-1", wantEventId: "e-1" },
+  ])("requests the page with $name", async ({ eventId, wantEventId }) => {
+    await getCompetitors("t-1", 20, 0, { eventId });
+
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get("eventId")).toBe(wantEventId);
+  });
+
+  it.each([
     { name: "no team", team: undefined, wantTeam: null },
     { name: "an empty team", team: "", wantTeam: null },
     { name: "a team", team: "Boston Blade Club", wantTeam: "Boston Blade Club" },
