@@ -6,6 +6,7 @@ import { poolTitle } from "../../_services/pool-title";
 import { PoolBouts } from "./pool-bouts";
 
 const fencersPath = "/tournaments/t/events/e/fencers";
+const boutsPath = "/tournaments/t/events/e/bout";
 const pool = buildPool({
   number: 1,
   strip: "Strip 3",
@@ -21,8 +22,8 @@ const pool = buildPool({
   ],
 });
 
-function renderBouts() {
-  render(<PoolBouts pool={pool} fencersPath={fencersPath} />);
+function renderBouts(canReferee = false) {
+  render(<PoolBouts pool={pool} fencersPath={fencersPath} boutsPath={boutsPath} canReferee={canReferee} />);
 }
 
 function tap(name: string) {
@@ -83,5 +84,16 @@ describe("PoolBouts", () => {
     tap("Wang, Yan vs Lee, Caitlin");
 
     expect(within(card()!).getByRole("link", { name: "Yan Wang" })).toHaveAttribute("href", fencersPath);
+  });
+
+  it.each([
+    ["staff", true, `${boutsPath}/pool-1-bout-1/referee`],
+    ["spectators", false, null],
+  ])("links the tapped bout to the referee screen for %s only", (_, canReferee, href) => {
+    renderBouts(canReferee);
+    tap("Wang, Yan vs Lee, Caitlin");
+
+    const link = within(card()!).queryByRole("link", { name: "Referee bout" });
+    expect(link?.getAttribute("href") ?? null).toBe(href);
   });
 });

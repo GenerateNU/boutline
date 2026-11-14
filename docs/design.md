@@ -1370,7 +1370,8 @@ with `buildPool` (`pooling/_fixtures/build-pool.ts`).
   bout cell outlines it in navy and swaps the standings for "Showing the bout you
   tapped" and a bout card: Bout N of M, "Pool bout", an All bouts link, winner and
   loser rows with V/D tiles and scores, Status / Pool / Strip, and links to both
-  fencers.
+  fencers. For the tournament's staff (any role from `GET /tournaments/{id}/role`)
+  the card ends in a "Referee bout" button to that bout's referee screen (§5.1).
 - Club short codes and fencer country are not shown yet, since the data has neither.
 
 ---
