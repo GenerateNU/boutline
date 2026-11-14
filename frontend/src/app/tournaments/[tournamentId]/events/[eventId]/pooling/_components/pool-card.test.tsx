@@ -1,5 +1,4 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { useState } from "react";
 
 import { poolBoards } from "../_services/pools";
 
@@ -7,23 +6,16 @@ import { PoolCard } from "./pool-card";
 
 const poolingPath = "/tournaments/t/events/e/pooling";
 
-function OpenableCard() {
-  const [open, setOpen] = useState(true);
-  return <PoolCard pool={poolBoards[0]} poolingPath={poolingPath} open={open} onOpenChange={setOpen} />;
-}
-
 function renderCard() {
-  render(<OpenableCard />);
-  return screen.getByRole("button", { name: "Pool 1 · Strip 3" });
+  render(<PoolCard pool={poolBoards[0]} poolingPath={poolingPath} />);
 }
 
 describe("PoolCard", () => {
-  it("renders open with the title, status and bouts table", () => {
-    const trigger = renderCard();
+  it("renders the title, status and bouts table", () => {
+    renderCard();
 
     expect(screen.getByRole("heading", { name: "Pool 1 · Strip 3" })).toBeInTheDocument();
     expect(screen.getByText("In Progress")).toBeInTheDocument();
-    expect(trigger).toHaveAttribute("aria-expanded", "true");
     expect(within(screen.getByRole("row", { name: /Wang, Yan/ })).getByRole("cell", { name: "V5" })).toBeInTheDocument();
   });
 
@@ -34,18 +26,6 @@ describe("PoolCard", () => {
 
     expect(screen.getByRole("columnheader", { name: "Place" })).toBeInTheDocument();
     expect(screen.queryByRole("cell", { name: "V5" })).not.toBeInTheDocument();
-  });
-
-  it("collapses to just the header", () => {
-    const trigger = renderCard();
-
-    fireEvent.click(trigger);
-
-    expect(trigger).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByRole("heading", { name: "Pool 1 · Strip 3" })).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "View pool" })).not.toBeInTheDocument();
   });
 
   it("links to the pool page", () => {

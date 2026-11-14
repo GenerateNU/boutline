@@ -27,33 +27,10 @@ describe("PoolList", () => {
     expect(titles()).toEqual(all);
   });
 
-  it("collapses every card, then expands them all again", () => {
-    renderList("");
-    const expandedStates = () =>
-      screen
-        .getAllByRole("button", { name: /^Pool \d · Strip \d$/ })
-        .map((trigger) => trigger.getAttribute("aria-expanded"));
-
-    fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
-    expect(expandedStates()).toEqual(["false", "false", "false", "false"]);
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Expand all" }));
-    expect(expandedStates()).toEqual(["true", "true", "true", "true"]);
-  });
-
-  it("offers Expand all once every card is collapsed by hand", () => {
-    renderList("strip 4");
-
-    fireEvent.click(screen.getByRole("button", { name: "Pool 2 · Strip 4" }));
-
-    expect(screen.getByRole("button", { name: "Expand all" })).toBeInTheDocument();
-  });
-
   it("explains when nothing matches", () => {
     renderList("zzz");
 
     expect(screen.getByText('No pools match "zzz".')).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Collapse all" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Pools" })).not.toBeInTheDocument();
   });
 });

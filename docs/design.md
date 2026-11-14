@@ -1248,10 +1248,10 @@ results, stored on the DE entry (§12.1).
 placeholder data (`pooling/_services/pools.ts`) unless marked Planned. Wiring them
 to the API (§11.3) remains.
 
-- **Pool list:** a "Search pools" field. Each pool is a collapsible card, collapsed
-  one at a time or with Collapse all / Expand all. A card has a Bouts | Standings
-  toggle that shows the V/D grid or the standings table (# · Fencer · V · V/M · TS ·
-  TR · Ind, by place), and a View pool link. Pool pins are not built yet (§6.3).
+- **Pool list:** a "Search pools" field above a card per pool, always open. A card
+  has a Bouts | Standings toggle that shows the V/D grid or the standings table (# ·
+  Fencer · V · V/M · TS · TR · Ind, by place, names as "Last, First"), and a View
+  pool link. Pool pins are not built yet (§6.3).
 - **Filter sheet** (Planned): a filter button beside the search opens Fencer and
   Club search, Pool Status and Pool Number chips, and Sort by Pool Number, Start
   time or Strip, with Clear All and Show pools.
