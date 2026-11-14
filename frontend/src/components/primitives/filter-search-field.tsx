@@ -25,9 +25,12 @@ interface SuggestionListProps {
 }
 
 interface FilterSearchFieldProps
-  extends Omit<React.ComponentProps<"input">, "type" | "children">,
+  extends Omit<React.ComponentProps<"input">, "type" | "children" | "onKeyDown">,
     SuggestionListProps {
   label: string;
+  // Opt in to free text. Enter commits the trimmed box contents as the filter
+  // value; omit it to keep the field pick-only.
+  onCommitText?: (text: string) => void;
 }
 
 function FilterSearchField({
@@ -38,6 +41,7 @@ function FilterSearchField({
   selected,
   onPick,
   noun,
+  onCommitText,
   ...inputProps
 }: FilterSearchFieldProps) {
   return (
@@ -49,6 +53,19 @@ function FilterSearchField({
           aria-label={label}
           placeholder={`Search ${label.toLowerCase()}`}
           {...inputProps}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") {
+              return;
+            }
+            // A single-line input inside the sheet's <form> implicitly
+            // submits it on Enter, so this always blocks that regardless of
+            // whether the field accepts free text.
+            event.preventDefault();
+            const trimmed = event.currentTarget.value.trim();
+            if (onCommitText && trimmed) {
+              onCommitText(trimmed);
+            }
+          }}
           className="h-5 flex-1 rounded-none border-0 px-0 text-obsidian shadow-none placeholder:text-neutral-secondary focus-visible:ring-0"
         />
         <SearchOutlined aria-hidden className="size-4.5 shrink-0 text-neutral-secondary" />

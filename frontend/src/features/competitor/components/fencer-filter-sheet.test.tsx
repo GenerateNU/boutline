@@ -144,4 +144,33 @@ describe("FencerFilterSheet", () => {
 
     expect(screen.getByText(want)).toBeInTheDocument();
   });
+
+  it.each([
+    { field: "Club", param: "team" },
+    { field: "Fencer", param: "q" },
+  ])(
+    "pressing Enter in $field commits the typed text, clears the box and keeps the sheet open",
+    async ({ field, param }) => {
+      await openSheet();
+
+      await search("bos", field);
+      fireEvent.keyDown(screen.getByRole("searchbox", { name: field }), { key: "Enter" });
+
+      expect(screen.getByRole("searchbox", { name: field })).toHaveValue("");
+      expect(screen.queryByRole("button", { name: "Boston Blade Club" })).not.toBeInTheDocument();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
+      expect(replace).toHaveBeenLastCalledWith(`/fencers?${param}=bos`, { scroll: false });
+    },
+  );
+
+  it("applies typed Club text on Show Fencers without pressing Enter", async () => {
+    await openSheet();
+
+    await search("bos");
+    fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/fencers?team=bos", { scroll: false });
+  });
 });
