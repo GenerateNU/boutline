@@ -9,9 +9,53 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/pool"
 	"boutline/internal/features/poolstage"
+	"boutline/internal/features/tournamentuser"
+	tournamentusertest "boutline/internal/features/tournamentuser/test"
+	"boutline/internal/session"
 
 	"github.com/google/uuid"
 )
+
+var (
+	TestTournamentID = uuid.New()
+	TestAdminID      = uuid.New()
+	TestRefereeID    = uuid.New()
+)
+
+// NewTestMemberships seeds an admin and a referee of TestTournamentID.
+func NewTestMemberships() *tournamentusertest.FakeMembershipLookup {
+	return tournamentusertest.NewFakeMembershipLookup(
+		tournamentuser.TournamentUser{
+			UserID: TestAdminID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleAdmin,
+		},
+		tournamentuser.TournamentUser{
+			UserID: TestRefereeID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleReferee,
+		},
+	)
+}
+
+// Caller picks who a request runs as; the zero value is the tournament admin.
+type Caller int
+
+const (
+	CallerAdmin Caller = iota
+	CallerNone
+	CallerStranger
+	CallerReferee
+)
+
+func (c Caller) Context(ctx context.Context) context.Context {
+	switch c {
+	case CallerNone:
+		return ctx
+	case CallerStranger:
+		return session.WithUserID(ctx, uuid.New())
+	case CallerReferee:
+		return session.WithUserID(ctx, TestRefereeID)
+	default:
+		return session.WithUserID(ctx, TestAdminID)
+	}
+}
 
 var _ pool.PoolRepository = (*FakePoolRepository)(nil)
 
@@ -25,14 +69,16 @@ type FakePoolRepository struct {
 
 func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
 	pools := make(map[uuid.UUID]pool.Pool, len(seed))
+	tournaments := make(map[uuid.UUID]uuid.UUID, len(seed))
 	for _, seeded := range seed {
 		pools[seeded.ID] = seeded
+		tournaments[seeded.ID] = TestTournamentID
 	}
 
 	return &FakePoolRepository{
 		Pools:       pools,
 		WithBouts:   map[uuid.UUID]bool{},
-		Tournaments: map[uuid.UUID]uuid.UUID{},
+		Tournaments: tournaments,
 		OpenBouts:   map[uuid.UUID]int64{},
 	}
 }
@@ -224,6 +270,7 @@ func (f *FakePoolRepository) DeletePoolByID(_ context.Context, id uuid.UUID) err
 	}
 
 	delete(f.Pools, id)
+	delete(f.Tournaments, id)
 
 	return nil
 }
@@ -255,4 +302,16 @@ func (f *FakePoolStageLookup) GetPoolStageByID(_ context.Context, id uuid.UUID) 
 	}
 
 	return &found, nil
+}
+
+func (f *FakePoolStageLookup) GetPoolStageTournamentID(_ context.Context, id uuid.UUID) (uuid.UUID, error) {
+	if f.Err != nil {
+		return uuid.Nil, f.Err
+	}
+
+	if _, ok := f.PoolStages[id]; !ok {
+		return uuid.Nil, fmt.Errorf("select pool stage %s tournament: %w", id, errs.ErrNotFound)
+	}
+
+	return TestTournamentID, nil
 }

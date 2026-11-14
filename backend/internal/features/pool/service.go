@@ -8,6 +8,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/poolstage"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -27,6 +28,7 @@ const (
 // PoolStageLookup is the subset of the PoolStageRepository interface needed here.
 type PoolStageLookup interface {
 	GetPoolStageByID(ctx context.Context, id uuid.UUID) (*poolstage.PoolStage, error)
+	GetPoolStageTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 }
 
 type PoolService interface {
@@ -40,12 +42,27 @@ type PoolService interface {
 }
 
 type poolService struct {
-	repo       PoolRepository
-	poolStages PoolStageLookup
+	repo        PoolRepository
+	poolStages  PoolStageLookup
+	memberships tournamentuser.MembershipLookup
 }
 
-func NewPoolService(repo PoolRepository, poolStages PoolStageLookup) PoolService {
-	return &poolService{repo: repo, poolStages: poolStages}
+func NewPoolService(
+	repo PoolRepository,
+	poolStages PoolStageLookup,
+	memberships tournamentuser.MembershipLookup,
+) PoolService {
+	return &poolService{repo: repo, poolStages: poolStages, memberships: memberships}
+}
+
+// requirePoolAdmin 404s a missing pool before refusing a caller who isn't an admin of its tournament.
+func (s *poolService) requirePoolAdmin(ctx context.Context, id uuid.UUID) error {
+	tournamentID, err := s.repo.GetPoolTournamentID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("get pool tournament: %w", err)
+	}
+
+	return tournamentuser.RequireRole(ctx, s.memberships, tournamentID, tournamentuser.TournamentUserRoleAdmin)
 }
 
 func (s *poolService) CreatePool(ctx context.Context, input *PoolCreateInput) (*PoolOutput, error) {
@@ -64,6 +81,13 @@ func (s *poolService) CreatePool(ctx context.Context, input *PoolCreateInput) (*
 				"pool_stage_id must reference an existing pool stage", errs.ErrInvalidInput))
 		}
 		return nil, errs.HumaError(fmt.Errorf("get pool stage: %w", err))
+	}
+	tournamentID, err := s.poolStages.GetPoolStageTournamentID(ctx, poolStageID)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("get pool stage tournament: %w", err))
+	}
+	if err := tournamentuser.RequireRole(ctx, s.memberships, tournamentID, tournamentuser.TournamentUserRoleAdmin); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("create pool: %w", err))
 	}
 
 	pool := &Pool{
@@ -152,6 +176,10 @@ func (s *poolService) UpdatePoolByID(ctx context.Context, input *PoolUpdateInput
 		return nil, errs.HumaError(errs.Public("provide at least one field to update", errs.ErrInvalidInput))
 	}
 
+	if err := s.requirePoolAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("update pool: %w", err))
+	}
+
 	if err := s.repo.UpdatePoolByID(ctx, id, update); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("update pool: %w", err))
 	}
@@ -170,6 +198,10 @@ func (s *poolService) DeletePoolByID(ctx context.Context, input *PoolIDInput) (*
 		return nil, errs.HumaError(err)
 	}
 
+	if err := s.requirePoolAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("delete pool: %w", err))
+	}
+
 	if err := s.repo.DeletePoolByID(ctx, id); err != nil {
 		return nil, errs.HumaError(fmt.Errorf("delete pool: %w", err))
 	}
@@ -181,6 +213,10 @@ func (s *poolService) StartPool(ctx context.Context, input *PoolIDInput) (*PoolO
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+
+	if err := s.requirePoolAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("start pool: %w", err))
 	}
 
 	pool, err := s.repo.GetPoolByID(ctx, id)
@@ -213,6 +249,10 @@ func (s *poolService) EndPool(ctx context.Context, input *PoolIDInput) (*PoolOut
 	id, err := utils.ParseUUID(input.ID, "id")
 	if err != nil {
 		return nil, errs.HumaError(err)
+	}
+
+	if err := s.requirePoolAdmin(ctx, id); err != nil {
+		return nil, errs.HumaError(fmt.Errorf("end pool: %w", err))
 	}
 
 	pool, err := s.repo.GetPoolByID(ctx, id)

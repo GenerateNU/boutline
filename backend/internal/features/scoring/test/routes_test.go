@@ -20,7 +20,7 @@ func newTestAPI(t *testing.T, seed ...scoring.Scoring) humatest.TestAPI {
 
 	_, api := humatest.New(t)
 	scoring.RegisterScoringService(api,
-		scoring.NewScoringService(NewFakeScoringRepository(seed...), NewFakeBoutLookup()))
+		scoring.NewScoringService(NewFakeScoringRepository(seed...), NewTestBouts(), NewTestMemberships()))
 
 	return api
 }
@@ -63,16 +63,18 @@ func TestCreateEndpoint(t *testing.T) {
 
 	creator := uuid.New().String()
 	competitor := uuid.New().String()
-	match := uuid.New().String()
+	match := TestBoutID.String()
 
 	tests := []struct {
 		name       string
+		caller     uuid.UUID // uuid.Nil means no caller
 		body       map[string]any
 		wantStatus int
 		wantFields map[string]any
 	}{
 		{
-			name: "creates a score and echoes the stored row",
+			name:   "creates a score and echoes the stored row",
+			caller: TestRefereeID,
 			body: map[string]any{
 				"created_by": creator, "competitor_id": competitor, "bout_id": match, "points": 2,
 			},
@@ -87,12 +89,44 @@ func TestCreateEndpoint(t *testing.T) {
 			},
 		},
 		{
-			name: "defaults points to 1 when omitted",
+			name:   "defaults points to 1 when omitted",
+			caller: TestRefereeID,
 			body: map[string]any{
 				"created_by": creator, "competitor_id": competitor, "bout_id": match,
 			},
 			wantStatus: http.StatusCreated,
 			wantFields: map[string]any{"points": float64(1)},
+		},
+		{
+			name:   "lets an admin score",
+			caller: TestAdminID,
+			body: map[string]any{
+				"created_by": creator, "competitor_id": competitor, "bout_id": match,
+			},
+			wantStatus: http.StatusCreated,
+		},
+		{
+			name: "refuses a request with no caller",
+			body: map[string]any{
+				"created_by": creator, "competitor_id": competitor, "bout_id": match,
+			},
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:   "refuses a caller outside the tournament",
+			caller: TestOutsiderID,
+			body: map[string]any{
+				"created_by": creator, "competitor_id": competitor, "bout_id": match,
+			},
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:   "reports an unknown bout as not found",
+			caller: TestRefereeID,
+			body: map[string]any{
+				"created_by": creator, "competitor_id": competitor, "bout_id": uuid.NewString(),
+			},
+			wantStatus: http.StatusNotFound,
 		},
 		{
 			name: "rejects points below 1 before the handler runs",
@@ -132,9 +166,14 @@ func TestCreateEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t).Post("/api/v1/scoring", tt.body)
+			api := newTestAPI(t)
+			resp := api.PostCtx(callerCtx(t, tt.caller), "/api/v1/scoring", tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+			if tt.wantStatus == http.StatusForbidden {
+				stored := decodeBody(t, api.Get("/api/v1/scoring/match/"+match).Body.Bytes())
+				assert.Empty(t, stored["data"])
+			}
 
 			body := decodeBody(t, resp.Body.Bytes())
 			for field, want := range tt.wantFields {
@@ -241,12 +280,13 @@ func TestListEndpoint(t *testing.T) {
 func TestUpdateEndpoint(t *testing.T) {
 	t.Parallel()
 
-	stored := seeded(1, uuid.New())
-	revoked := seededRevoked(2, uuid.New())
+	stored := seeded(1, TestBoutID)
+	revoked := seededRevoked(2, TestBoutID)
 	newCompetitor := uuid.New().String()
 
 	tests := []struct {
 		name       string
+		caller     uuid.UUID // uuid.Nil means no caller
 		id         int64
 		body       map[string]any
 		wantStatus int
@@ -254,6 +294,7 @@ func TestUpdateEndpoint(t *testing.T) {
 	}{
 		{
 			name:       "patches only the fields present in the body",
+			caller:     TestRefereeID,
 			id:         1,
 			body:       map[string]any{"points": 3},
 			wantStatus: http.StatusOK,
@@ -264,6 +305,7 @@ func TestUpdateEndpoint(t *testing.T) {
 		},
 		{
 			name:       "reassigns the competitor",
+			caller:     TestRefereeID,
 			id:         1,
 			body:       map[string]any{"competitor_id": newCompetitor},
 			wantStatus: http.StatusOK,
@@ -289,6 +331,7 @@ func TestUpdateEndpoint(t *testing.T) {
 		},
 		{
 			name:       "rejects an empty patch",
+			caller:     TestRefereeID,
 			id:         1,
 			body:       map[string]any{},
 			wantStatus: http.StatusBadRequest,
@@ -296,16 +339,38 @@ func TestUpdateEndpoint(t *testing.T) {
 		},
 		{
 			name:       "reports an unknown id as not found",
+			caller:     TestRefereeID,
 			id:         999,
 			body:       map[string]any{"points": 2},
 			wantStatus: http.StatusNotFound,
 		},
 		{
 			name:       "refuses to edit a revoked score",
+			caller:     TestRefereeID,
 			id:         2,
 			body:       map[string]any{"points": 2},
 			wantStatus: http.StatusConflict,
 			wantFields: map[string]any{"detail": "score has been revoked and can no longer be edited"},
+		},
+		{
+			name:       "lets an admin edit",
+			caller:     TestAdminID,
+			id:         1,
+			body:       map[string]any{"points": 3},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "refuses a request with no caller",
+			id:         1,
+			body:       map[string]any{"points": 3},
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:       "refuses a caller outside the tournament",
+			caller:     TestOutsiderID,
+			id:         1,
+			body:       map[string]any{"points": 3},
+			wantStatus: http.StatusForbidden,
 		},
 	}
 
@@ -313,10 +378,14 @@ func TestUpdateEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t, stored, revoked).
-				Patch("/api/v1/scoring/"+strconv.FormatInt(tt.id, 10), tt.body)
+			api := newTestAPI(t, stored, revoked)
+			resp := api.PatchCtx(callerCtx(t, tt.caller), "/api/v1/scoring/"+strconv.FormatInt(tt.id, 10), tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+			if tt.wantStatus == http.StatusForbidden {
+				after := decodeBody(t, api.Get("/api/v1/scoring/1").Body.Bytes())
+				assert.InDelta(t, stored.Points, after["points"], 0)
+			}
 
 			body := decodeBody(t, resp.Body.Bytes())
 			for field, want := range tt.wantFields {
@@ -333,13 +402,18 @@ func TestRevokeEndpoint(t *testing.T) {
 
 	tests := []struct {
 		name       string
+		caller     uuid.UUID // uuid.Nil means no caller
 		path       string
 		body       map[string]any
 		wantStatus int
 	}{
+		{name: "revokes the score", caller: TestRefereeID, path: "1", body: map[string]any{"revoked_by": referee}, wantStatus: http.StatusOK},
+		{name: "lets an admin revoke", caller: TestAdminID, path: "1", body: map[string]any{"revoked_by": referee}, wantStatus: http.StatusOK},
+		{name: "refuses a request with no caller", path: "1", body: map[string]any{"revoked_by": referee}, wantStatus: http.StatusForbidden},
+		{name: "refuses a caller outside the tournament", caller: TestOutsiderID, path: "1", body: map[string]any{"revoked_by": referee}, wantStatus: http.StatusForbidden},
 		{name: "rejects a missing revoked_by", path: "1", body: map[string]any{}, wantStatus: http.StatusUnprocessableEntity},
 		{name: "rejects a revoked_by that is not a uuid", path: "1", body: map[string]any{"revoked_by": "nope"}, wantStatus: http.StatusUnprocessableEntity},
-		{name: "reports an unknown id as not found", path: "999", body: map[string]any{"revoked_by": referee}, wantStatus: http.StatusNotFound},
+		{name: "reports an unknown id as not found", caller: TestRefereeID, path: "999", body: map[string]any{"revoked_by": referee}, wantStatus: http.StatusNotFound},
 		{name: "rejects an id below the minimum", path: "0", body: map[string]any{"revoked_by": referee}, wantStatus: http.StatusUnprocessableEntity},
 	}
 
@@ -347,10 +421,14 @@ func TestRevokeEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t, seeded(1, uuid.New())).
-				Post("/api/v1/scoring/"+tt.path+"/revoke", tt.body)
+			api := newTestAPI(t, seeded(1, TestBoutID))
+			resp := api.PostCtx(callerCtx(t, tt.caller), "/api/v1/scoring/"+tt.path+"/revoke", tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+			if tt.wantStatus == http.StatusForbidden {
+				after := decodeBody(t, api.Get("/api/v1/scoring/1").Body.Bytes())
+				assert.Nil(t, after["revoked_at"])
+			}
 		})
 	}
 }
@@ -358,22 +436,23 @@ func TestRevokeEndpoint(t *testing.T) {
 func TestRevokeLifecycle(t *testing.T) {
 	t.Parallel()
 
-	match := uuid.New()
+	match := TestBoutID
 	stored := seeded(1, match)
 	api := newTestAPI(t, stored)
+	ctx := callerCtx(t, TestRefereeID)
 	referee := uuid.New().String()
 
-	revoked := api.Post("/api/v1/scoring/1/revoke", map[string]any{"revoked_by": referee})
+	revoked := api.PostCtx(ctx, "/api/v1/scoring/1/revoke", map[string]any{"revoked_by": referee})
 	require.Equal(t, http.StatusOK, revoked.Code, "body: %s", revoked.Body)
 
 	revokedBody := decodeBody(t, revoked.Body.Bytes())
 	assert.NotNil(t, revokedBody["revoked_at"])
 	assert.Equal(t, referee, revokedBody["revoked_by"])
 
-	again := api.Post("/api/v1/scoring/1/revoke", map[string]any{"revoked_by": referee})
+	again := api.PostCtx(ctx, "/api/v1/scoring/1/revoke", map[string]any{"revoked_by": referee})
 	assert.Equal(t, http.StatusConflict, again.Code)
 
-	edit := api.Patch("/api/v1/scoring/1", map[string]any{"points": 5})
+	edit := api.PatchCtx(ctx, "/api/v1/scoring/1", map[string]any{"points": 5})
 	require.Equal(t, http.StatusConflict, edit.Code, "body: %s", edit.Body)
 	assert.Equal(t, "score has been revoked and can no longer be edited",
 		decodeBody(t, edit.Body.Bytes())["detail"])
@@ -393,7 +472,7 @@ func TestHistoryEndpoint(t *testing.T) {
 
 	_, api := humatest.New(t)
 	scoring.RegisterScoringService(api,
-		scoring.NewScoringService(NewFakeScoringRepository(seed...), NewFakeBoutLookup(match)))
+		scoring.NewScoringService(NewFakeScoringRepository(seed...), NewFakeBoutLookup(match), NewTestMemberships()))
 
 	base := "/api/v1/scoring/match/"
 

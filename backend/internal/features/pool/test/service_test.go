@@ -56,6 +56,7 @@ func TestCreatePool(t *testing.T) {
 		wantCode    int
 		wantDetail  string
 		wantReferee *string
+		caller      Caller
 	}{
 		{
 			name:   "creates a pool without a referee",
@@ -120,6 +121,30 @@ func TestCreatePool(t *testing.T) {
 			wantCode:   http.StatusInternalServerError,
 			wantDetail: "internal server error",
 		},
+		{
+			name:       "refuses a caller who is not signed in",
+			lookup:     NewFakePoolStageLookup(stage),
+			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1},
+			caller:     CallerNone,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
+		{
+			name:       "refuses a caller outside the tournament",
+			lookup:     NewFakePoolStageLookup(stage),
+			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1},
+			caller:     CallerStranger,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
+		{
+			name:       "refuses a referee",
+			lookup:     NewFakePoolStageLookup(stage),
+			body:       pool.PoolCreateBody{PoolStageID: stage.ID.String(), Number: 1},
+			caller:     CallerReferee,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
 	}
 
 	for _, tt := range tests {
@@ -127,8 +152,8 @@ func TestCreatePool(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakePoolRepository(tt.existing...)
-			out, err := pool.NewPoolService(repo, tt.lookup).
-				CreatePool(t.Context(), &pool.PoolCreateInput{Body: tt.body})
+			out, err := pool.NewPoolService(repo, tt.lookup, NewTestMemberships()).
+				CreatePool(tt.caller.Context(t.Context()), &pool.PoolCreateInput{Body: tt.body})
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -191,7 +216,7 @@ func TestListPools(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			out, err := pool.NewPoolService(NewFakePoolRepository(mixed...), NewFakePoolStageLookup()).
+			out, err := pool.NewPoolService(NewFakePoolRepository(mixed...), NewFakePoolStageLookup(), NewTestMemberships()).
 				ListPools(t.Context(), tt.input)
 
 			if tt.wantCode != 0 {
@@ -223,6 +248,7 @@ func TestUpdatePoolByID(t *testing.T) {
 		name       string
 		id         string
 		body       pool.PoolUpdateBody
+		caller     Caller
 		wantCode   int
 		wantDetail string
 	}{
@@ -270,6 +296,30 @@ func TestUpdatePoolByID(t *testing.T) {
 			body:     pool.PoolUpdateBody{RefereeID: ptr(referee.String())},
 			wantCode: http.StatusNotFound,
 		},
+		{
+			name:       "refuses a caller who is not signed in",
+			id:         stored.ID.String(),
+			body:       pool.PoolUpdateBody{RefereeID: ptr(referee.String())},
+			caller:     CallerNone,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
+		{
+			name:       "refuses a caller outside the tournament",
+			id:         stored.ID.String(),
+			body:       pool.PoolUpdateBody{RefereeID: ptr(referee.String())},
+			caller:     CallerStranger,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
+		{
+			name:       "refuses a referee",
+			id:         stored.ID.String(),
+			body:       pool.PoolUpdateBody{RefereeID: ptr(referee.String())},
+			caller:     CallerReferee,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
 	}
 
 	for _, tt := range tests {
@@ -277,8 +327,8 @@ func TestUpdatePoolByID(t *testing.T) {
 			t.Parallel()
 
 			repo := NewFakePoolRepository(stored, sibling)
-			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
-				UpdatePoolByID(t.Context(), &pool.PoolUpdateInput{ID: tt.id, Body: tt.body})
+			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup(), NewTestMemberships()).
+				UpdatePoolByID(tt.caller.Context(t.Context()), &pool.PoolUpdateInput{ID: tt.id, Body: tt.body})
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -322,6 +372,7 @@ func TestDeletePoolByID(t *testing.T) {
 		hasBouts   bool
 		unknownID  bool
 		badID      bool
+		caller     Caller
 		wantCode   int
 		wantDetail string
 	}{
@@ -343,6 +394,24 @@ func TestDeletePoolByID(t *testing.T) {
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "id must be a valid uuid",
 		},
+		{
+			name:       "refuses a caller who is not signed in",
+			caller:     CallerNone,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
+		{
+			name:       "refuses a caller outside the tournament",
+			caller:     CallerStranger,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
+		{
+			name:       "refuses a referee",
+			caller:     CallerReferee,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
 	}
 
 	for _, tt := range tests {
@@ -361,8 +430,8 @@ func TestDeletePoolByID(t *testing.T) {
 				id = "not-a-uuid"
 			}
 
-			_, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
-				DeletePoolByID(t.Context(), &pool.PoolIDInput{ID: id})
+			_, err := pool.NewPoolService(repo, NewFakePoolStageLookup(), NewTestMemberships()).
+				DeletePoolByID(tt.caller.Context(t.Context()), &pool.PoolIDInput{ID: id})
 
 			if tt.wantCode == 0 {
 				require.NoError(t, err)
@@ -387,7 +456,7 @@ func TestPoolRepositoryFailureIsNotAClientError(t *testing.T) {
 	repo := NewFakePoolRepository()
 	repo.Err = errors.New("connection refused")
 
-	_, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
+	_, err := pool.NewPoolService(repo, NewFakePoolStageLookup(), NewTestMemberships()).
 		ListPools(t.Context(), &pool.PoolListInput{})
 
 	code, detail := apiError(t, err)
@@ -403,6 +472,7 @@ func TestStartPool(t *testing.T) {
 		arrange    func(p *pool.Pool, stage *poolstage.PoolStage)
 		stageErr   error
 		repoErr    error
+		caller     Caller
 		id         string
 		wantCode   int
 		wantDetail string
@@ -457,6 +527,24 @@ func TestStartPool(t *testing.T) {
 			wantCode:   http.StatusInternalServerError,
 			wantDetail: "internal server error",
 		},
+		{
+			name:       "refuses a caller who is not signed in",
+			caller:     CallerNone,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
+		{
+			name:       "refuses a caller outside the tournament",
+			caller:     CallerStranger,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
+		{
+			name:       "refuses a referee",
+			caller:     CallerReferee,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
 	}
 
 	for _, tt := range tests {
@@ -481,7 +569,7 @@ func TestStartPool(t *testing.T) {
 				id = tt.id
 			}
 
-			out, err := pool.NewPoolService(repo, lookup).StartPool(t.Context(), &pool.PoolIDInput{ID: id})
+			out, err := pool.NewPoolService(repo, lookup, NewTestMemberships()).StartPool(tt.caller.Context(t.Context()), &pool.PoolIDInput{ID: id})
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -511,6 +599,7 @@ func TestEndPool(t *testing.T) {
 		arrange    func(p *pool.Pool)
 		openBouts  int64
 		repoErr    error
+		caller     Caller
 		id         string
 		wantCode   int
 		wantDetail string
@@ -553,6 +642,24 @@ func TestEndPool(t *testing.T) {
 			wantCode:   http.StatusInternalServerError,
 			wantDetail: "internal server error",
 		},
+		{
+			name:       "refuses a caller who is not signed in",
+			caller:     CallerNone,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
+		{
+			name:       "refuses a caller outside the tournament",
+			caller:     CallerStranger,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
+		{
+			name:       "refuses a referee",
+			caller:     CallerReferee,
+			wantCode:   http.StatusForbidden,
+			wantDetail: "this requires the admin role in the tournament",
+		},
 	}
 
 	for _, tt := range tests {
@@ -574,8 +681,8 @@ func TestEndPool(t *testing.T) {
 				id = tt.id
 			}
 
-			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup()).
-				EndPool(t.Context(), &pool.PoolIDInput{ID: id})
+			out, err := pool.NewPoolService(repo, NewFakePoolStageLookup(), NewTestMemberships()).
+				EndPool(tt.caller.Context(t.Context()), &pool.PoolIDInput{ID: id})
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"boutline/internal/features/poolstage"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -12,7 +13,11 @@ import (
 const poolBasePath = "/api/v1/pools"
 
 func RegisterPoolRoutes(api huma.API, params *types.ServiceParams) {
-	RegisterPoolService(api, NewPoolService(NewPoolRepository(params.DB), poolstage.NewPoolStageRepository(params.DB)))
+	RegisterPoolService(api, NewPoolService(
+		NewPoolRepository(params.DB),
+		poolstage.NewPoolStageRepository(params.DB),
+		tournamentuser.NewTournamentUserRepository(params.DB),
+	))
 }
 
 func RegisterPoolService(api huma.API, service PoolService) {

@@ -252,9 +252,8 @@ are not a table of their own; a club is the set of distinct `team` values.
 - `GET /competitors?q&tournament_id&rating&team&ids`: fuzzy name search,
   alphabetical when there is no `q`, exact `team` match.
 - `GET /competitors/{id}`, and `PATCH /competitors/{id}` (an empty `team` clears it).
-- `DELETE /competitors/{id}`: 403 unless the caller created the row, created the
-  tournament, or is its admin; 409 once the competitor has fenced a bout. This is
-  the only route that checks the caller today.
+- `DELETE /competitors/{id}`: tournament admins only (§7.2); 409 once the
+  competitor has fenced a bout.
 - `GET /tournaments/{id}/teams?q`: the tournament's clubs with a fencer count each,
   fuzzy-searchable, leaving out fencers with no club.
 - `GET /clubs?q&limit&offset`: every club across all tournaments, built from
@@ -395,7 +394,7 @@ different roles in different tournaments.
 - The auth middleware makes reads public and every other method require
   `Authorization: Bearer <token>`. An operation can override this; `GET /users`
   and `GET /users/{id}` require a token. Handlers read the verified ID with
-  `user.UserIDFrom`.
+  `session.UserIDFrom`.
 - `JWT_SECRET` must be at least 32 bytes. A built-in dev secret is allowed only
   when `APP_ENVIRONMENT=dev`.
 
@@ -620,10 +619,14 @@ logged-in user reseat another tournament's pools.
 
 ### 7.2 Role checks
 
-**Status:** Planned. Issue: #4.
+**Status:** Partial. Issue: #4. The role helper runs on every mutating route; the
+rest of this section is planned.
 
-- An authorization helper, `requireRole(tournamentID, admin|referee)`, runs on every
-  mutating route. Today only competitor delete checks the caller.
+- **Built:** `tournamentuser.RequireRole(ctx, memberships, tournamentID, role)`
+  runs on every mutating route and returns 403 unless the caller holds the role in
+  that tournament. An admin passes a referee check. Bout start and end and the
+  scoring writes need `referee`. Every other write needs `admin`, except creating
+  a tournament, which any signed-in user can do.
 - The creator becomes an `admin` member automatically on create (today they don't).
 - Starting, scoring and ending a bout requires the `referee` role and being the
   bout's assigned referee (open question in §D).

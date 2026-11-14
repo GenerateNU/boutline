@@ -5,6 +5,7 @@ import (
 
 	"boutline/internal/features/pool"
 	"boutline/internal/features/tournament"
+	"boutline/internal/features/tournamentuser"
 	"boutline/internal/types"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -17,6 +18,7 @@ func RegisterBoutRoutes(api huma.API, params *types.ServiceParams) {
 		NewBoutRepository(params.DB),
 		tournament.NewTournamentRepository(params.DB),
 		pool.NewPoolRepository(params.DB),
+		tournamentuser.NewTournamentUserRepository(params.DB),
 	))
 }
 

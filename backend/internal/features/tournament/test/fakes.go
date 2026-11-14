@@ -10,9 +10,48 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
+	"boutline/internal/session"
 
 	"github.com/google/uuid"
 )
+
+var (
+	TestAdminID    = uuid.New()
+	TestRefereeID  = uuid.New()
+	TestStrangerID = uuid.New()
+)
+
+// Caller is who a request runs as. The zero value is the admin, so a test that
+// does not care about authorization still passes the role check.
+type Caller int
+
+const (
+	CallerAdmin Caller = iota
+	CallerReferee
+	CallerStranger
+	CallerAnonymous
+)
+
+func (c Caller) Context(ctx context.Context) context.Context {
+	switch c {
+	case CallerReferee:
+		return session.WithUserID(ctx, TestRefereeID)
+	case CallerStranger:
+		return session.WithUserID(ctx, TestStrangerID)
+	case CallerAnonymous:
+		return ctx
+	default:
+		return session.WithUserID(ctx, TestAdminID)
+	}
+}
+
+// Staff is the admin and the referee of a tournament, to seed the membership fake with.
+func Staff(tournamentID uuid.UUID) []tournamentuser.TournamentUser {
+	return []tournamentuser.TournamentUser{
+		{TournamentID: tournamentID, UserID: TestAdminID, Role: tournamentuser.TournamentUserRoleAdmin},
+		{TournamentID: tournamentID, UserID: TestRefereeID, Role: tournamentuser.TournamentUserRoleReferee},
+	}
+}
 
 var _ tournament.TournamentRepository = (*FakeTournamentRepository)(nil)
 

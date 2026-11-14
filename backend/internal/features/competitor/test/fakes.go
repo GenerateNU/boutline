@@ -12,6 +12,7 @@ import (
 	"boutline/internal/features/event"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
+	tournamentusertest "boutline/internal/features/tournamentuser/test"
 
 	"github.com/google/uuid"
 )
@@ -39,11 +40,17 @@ func NewTestService(repo competitor.CompetitorRepository) competitor.CompetitorS
 		FakeTournamentLookup{
 			TestTournamentID: {ID: TestTournamentID, CreatedBy: TestCreatorID},
 		},
-		FakeTournamentMembershipLookup{
-			{UserID: TestAdminID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleAdmin},
-			{UserID: TestRefereeID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleReferee},
-			{UserID: TestOtherAdminID, TournamentID: uuid.New(), Role: tournamentuser.TournamentUserRoleAdmin},
-		})
+		tournamentusertest.NewFakeMembershipLookup(
+			tournamentuser.TournamentUser{
+				UserID: TestAdminID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleAdmin,
+			},
+			tournamentuser.TournamentUser{
+				UserID: TestRefereeID, TournamentID: TestTournamentID, Role: tournamentuser.TournamentUserRoleReferee,
+			},
+			tournamentuser.TournamentUser{
+				UserID: TestOtherAdminID, TournamentID: uuid.New(), Role: tournamentuser.TournamentUserRoleAdmin,
+			},
+		))
 }
 
 var _ competitor.CompetitorRepository = (*FakeCompetitorRepository)(nil)
@@ -332,22 +339,6 @@ func (f FakeTournamentLookup) GetTournamentByID(
 		return nil, fmt.Errorf("select tournament %s: %w", id, errs.ErrNotFound)
 	}
 	return &found, nil
-}
-
-var _ competitor.TournamentMembershipLookup = FakeTournamentMembershipLookup(nil)
-
-type FakeTournamentMembershipLookup []tournamentuser.TournamentUser
-
-func (f FakeTournamentMembershipLookup) GetTournamentUser(
-	_ context.Context,
-	tournamentID, userID uuid.UUID,
-) (*tournamentuser.TournamentUser, error) {
-	for _, member := range f {
-		if member.TournamentID == tournamentID && member.UserID == userID {
-			return &member, nil
-		}
-	}
-	return nil, fmt.Errorf("select tournament user %s/%s: %w", tournamentID, userID, errs.ErrNotFound)
 }
 
 // emptyToNil mirrors real repository; stores NULL for a cleared field.

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -56,6 +57,11 @@ func apiError(t *testing.T, err error) (int, string) {
 	var model *huma.ErrorModel
 	require.ErrorAs(t, err, &model)
 	return model.Status, model.Detail
+}
+
+func adminCtx(t *testing.T) context.Context {
+	t.Helper()
+	return session.WithUserID(t.Context(), TestAdminID)
 }
 
 func ptr[T any](v T) *T { return &v }
@@ -151,7 +157,7 @@ func TestCreateCompetitor(t *testing.T) {
 			t.Parallel()
 			repo := NewFakeCompetitorRepository()
 			out, err := NewTestService(repo).
-				CreateCompetitor(t.Context(), &competitor.CompetitorCreateInput{Body: tt.body})
+				CreateCompetitor(adminCtx(t), &competitor.CompetitorCreateInput{Body: tt.body})
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -181,7 +187,7 @@ func TestCreateCompetitorStoresNewFields(t *testing.T) {
 	})
 
 	out, err := NewTestService(NewFakeCompetitorRepository()).
-		CreateCompetitor(t.Context(), &competitor.CompetitorCreateInput{Body: body})
+		CreateCompetitor(adminCtx(t), &competitor.CompetitorCreateInput{Body: body})
 	require.NoError(t, err)
 
 	assert.Equal(t, testEventID.String(), out.Body.EventID)
@@ -198,7 +204,7 @@ func TestCreateCompetitorTagsTheEventsTournament(t *testing.T) {
 	t.Parallel()
 	repo := NewFakeCompetitorRepository()
 	out, err := NewTestService(repo).
-		CreateCompetitor(t.Context(), &competitor.CompetitorCreateInput{Body: validCreateBody()})
+		CreateCompetitor(adminCtx(t), &competitor.CompetitorCreateInput{Body: validCreateBody()})
 	require.NoError(t, err)
 
 	require.Equal(t, TestTournamentID.String(), out.Body.TournamentID)
@@ -210,7 +216,7 @@ func TestCreateCompetitorTagsTheEventsTournament(t *testing.T) {
 func TestCreateCompetitorRejectsAnUnknownEvent(t *testing.T) {
 	t.Parallel()
 	repo := NewFakeCompetitorRepository()
-	_, err := NewTestService(repo).CreateCompetitor(t.Context(),
+	_, err := NewTestService(repo).CreateCompetitor(adminCtx(t),
 		&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
 			b.EventID = uuid.New().String()
 		})})
@@ -228,7 +234,7 @@ func TestCreateCompetitorMemberNumber(t *testing.T) {
 	t.Run("rejects a duplicate member number in the same event", func(t *testing.T) {
 		t.Parallel()
 		repo := NewFakeCompetitorRepository(existing)
-		_, err := NewTestService(repo).CreateCompetitor(t.Context(),
+		_, err := NewTestService(repo).CreateCompetitor(adminCtx(t),
 			&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
 				b.MemberNumber = "100123"
 			})})
@@ -241,7 +247,7 @@ func TestCreateCompetitorMemberNumber(t *testing.T) {
 	t.Run("allows the same member number in a different event", func(t *testing.T) {
 		t.Parallel()
 		repo := NewFakeCompetitorRepository(existing)
-		_, err := NewTestService(repo).CreateCompetitor(t.Context(),
+		_, err := NewTestService(repo).CreateCompetitor(adminCtx(t),
 			&competitor.CompetitorCreateInput{Body: withCreate(func(b *competitor.CompetitorCreateBody) {
 				b.EventID = otherTestEventID.String()
 				b.MemberNumber = "100123"
@@ -255,7 +261,7 @@ func TestCreateCompetitorMemberNumber(t *testing.T) {
 		repo := NewFakeCompetitorRepository()
 		service := NewTestService(repo)
 		for range 2 {
-			_, err := service.CreateCompetitor(t.Context(),
+			_, err := service.CreateCompetitor(adminCtx(t),
 				&competitor.CompetitorCreateInput{Body: validCreateBody()})
 			require.NoError(t, err)
 		}
@@ -532,7 +538,7 @@ func TestUpdateCompetitorByID(t *testing.T) {
 			t.Parallel()
 			repo := NewFakeCompetitorRepository(tt.seed...)
 			out, err := NewTestService(repo).UpdateCompetitorByID(
-				t.Context(), &competitor.CompetitorUpdateInput{ID: tt.id, Body: tt.body})
+				adminCtx(t), &competitor.CompetitorUpdateInput{ID: tt.id, Body: tt.body})
 
 			if tt.wantCode != 0 {
 				code, detail := apiError(t, err)
@@ -563,7 +569,7 @@ func TestUpdateCompetitorNewFields(t *testing.T) {
 	) {
 		t.Helper()
 		return NewTestService(NewFakeCompetitorRepository(seed...)).UpdateCompetitorByID(
-			t.Context(), &competitor.CompetitorUpdateInput{ID: stored.ID.String(), Body: body})
+			adminCtx(t), &competitor.CompetitorUpdateInput{ID: stored.ID.String(), Body: body})
 	}
 
 	t.Run("changes gender, birthdate, and division", func(t *testing.T) {
@@ -700,7 +706,7 @@ func TestListCompetitorsWithQuery(t *testing.T) {
 func TestDeleteCompetitor(t *testing.T) {
 	t.Parallel()
 
-	const forbidden = "only the competitor's owner or the tournament's creator or admins can delete this competitor"
+	const forbidden = "this requires the admin role in the tournament"
 	const fenced = "a competitor who has fenced a bout cannot be deleted"
 
 	owned := func(owner uuid.UUID) competitor.Competitor {
@@ -724,22 +730,25 @@ func TestDeleteCompetitor(t *testing.T) {
 		wantStatus int
 		wantDetail string
 	}{
-		{name: "owner deletes their own competitor", caller: ptr(TestRefereeID), stored: owned(TestRefereeID)},
-		{
-			name: "tournament creator deletes an owned competitor", caller: ptr(TestCreatorID),
-			stored: owned(TestRefereeID),
-		},
 		{name: "tournament admin deletes an unowned competitor", caller: ptr(TestAdminID), stored: unowned},
 		{
-			name: "owner deletes a competitor with no tournament", caller: ptr(TestRefereeID),
-			stored: ownedNoTournament,
+			name: "owner who is not an admin is refused", caller: ptr(TestRefereeID), stored: owned(TestRefereeID),
+			wantStatus: http.StatusForbidden, wantDetail: forbidden,
+		},
+		{
+			name: "tournament creator who is not an admin is refused", caller: ptr(TestCreatorID),
+			stored: owned(TestRefereeID), wantStatus: http.StatusForbidden, wantDetail: forbidden,
+		},
+		{
+			name: "owner of a competitor with no tournament is refused", caller: ptr(TestRefereeID),
+			stored: ownedNoTournament, wantStatus: http.StatusForbidden, wantDetail: forbidden,
 		},
 		{
 			name: "referee is refused", caller: ptr(TestRefereeID), stored: unowned,
 			wantStatus: http.StatusForbidden, wantDetail: forbidden,
 		},
 		{
-			name: "unrelated user is refused", caller: ptr(uuid.New()), stored: unowned,
+			name: "non-member is refused", caller: ptr(uuid.New()), stored: unowned,
 			wantStatus: http.StatusForbidden, wantDetail: forbidden,
 		},
 		{
@@ -751,7 +760,7 @@ func TestDeleteCompetitor(t *testing.T) {
 			wantStatus: http.StatusForbidden, wantDetail: forbidden,
 		},
 		{
-			name: "nobody can delete an unowned competitor with no tournament", caller: ptr(TestAdminID),
+			name: "nobody can delete a competitor with no tournament", caller: ptr(TestAdminID),
 			stored: noTournament, wantStatus: http.StatusForbidden, wantDetail: forbidden,
 		},
 		{
@@ -759,8 +768,8 @@ func TestDeleteCompetitor(t *testing.T) {
 			id: uuid.New().String(), wantStatus: http.StatusNotFound, wantDetail: "not found",
 		},
 		{
-			name: "refuses a competitor who has fenced a bout", caller: ptr(TestRefereeID),
-			stored:     owned(TestRefereeID),
+			name: "refuses a competitor who has fenced a bout", caller: ptr(TestAdminID),
+			stored:     unowned,
 			deleteErr:  fmt.Errorf("delete competitor: %w", errs.ErrConflict),
 			wantStatus: http.StatusConflict, wantDetail: fenced,
 		},
@@ -795,16 +804,20 @@ func TestDeleteCompetitor(t *testing.T) {
 	}
 }
 
-func TestCreateCompetitorRecordsOwner(t *testing.T) {
+func TestCreateCompetitorRequiresAdmin(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		caller    *uuid.UUID
-		wantOwner *uuid.UUID
+		name       string
+		caller     *uuid.UUID
+		wantStatus int
+		wantOwner  *uuid.UUID
 	}{
-		{name: "the caller becomes the owner", caller: ptr(TestRefereeID), wantOwner: ptr(TestRefereeID)},
-		{name: "no caller leaves it unowned"},
+		{name: "the admin becomes the owner", caller: ptr(TestAdminID), wantOwner: ptr(TestAdminID)},
+		{name: "no caller is refused", wantStatus: http.StatusForbidden},
+		{name: "non-member is refused", caller: ptr(uuid.New()), wantStatus: http.StatusForbidden},
+		{name: "referee is refused", caller: ptr(TestRefereeID), wantStatus: http.StatusForbidden},
+		{name: "admin of another tournament is refused", caller: ptr(TestOtherAdminID), wantStatus: http.StatusForbidden},
 	}
 
 	for _, tt := range tests {
@@ -820,11 +833,71 @@ func TestCreateCompetitorRecordsOwner(t *testing.T) {
 				Body: validCreateBody(),
 			})
 
+			if tt.wantStatus != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantStatus, code)
+				assert.Equal(t, "this requires the admin role in the tournament", detail)
+				assert.Empty(t, repo.Competitors)
+				return
+			}
 			require.NoError(t, err)
 			require.Len(t, repo.Competitors, 1)
 			for _, stored := range repo.Competitors {
 				assert.Equal(t, tt.wantOwner, stored.UserID)
 			}
+		})
+	}
+}
+
+func TestUpdateCompetitorRequiresAdmin(t *testing.T) {
+	t.Parallel()
+	stored := seeded("Lee", "Kiefer", competitor.RatingB, "NU Fencing")
+	noTournament := competitor.Competitor{
+		ID: uuid.New(), FirstName: "Lee", LastName: "Kiefer", Rating: competitor.RatingB,
+	}
+
+	tests := []struct {
+		name       string
+		caller     *uuid.UUID
+		stored     competitor.Competitor
+		wantStatus int
+	}{
+		{name: "admin updates", caller: ptr(TestAdminID), stored: stored, wantStatus: http.StatusOK},
+		{name: "no caller is refused", stored: stored, wantStatus: http.StatusForbidden},
+		{name: "non-member is refused", caller: ptr(uuid.New()), stored: stored, wantStatus: http.StatusForbidden},
+		{name: "referee is refused", caller: ptr(TestRefereeID), stored: stored, wantStatus: http.StatusForbidden},
+		{
+			name: "admin of another tournament is refused", caller: ptr(TestOtherAdminID), stored: stored,
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name: "competitor with no tournament is refused", caller: ptr(TestAdminID), stored: noTournament,
+			wantStatus: http.StatusForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			repo := NewFakeCompetitorRepository(tt.stored)
+			ctx := t.Context()
+			if tt.caller != nil {
+				ctx = session.WithUserID(ctx, *tt.caller)
+			}
+
+			_, err := NewTestService(repo).UpdateCompetitorByID(ctx, &competitor.CompetitorUpdateInput{
+				ID: tt.stored.ID.String(), Body: competitor.CompetitorUpdateBody{Rating: ptr("A")},
+			})
+
+			if tt.wantStatus == http.StatusOK {
+				require.NoError(t, err)
+				assert.Equal(t, competitor.RatingA, repo.Competitors[tt.stored.ID].Rating)
+				return
+			}
+			code, detail := apiError(t, err)
+			assert.Equal(t, tt.wantStatus, code)
+			assert.Equal(t, "this requires the admin role in the tournament", detail)
+			assert.Equal(t, tt.stored.Rating, repo.Competitors[tt.stored.ID].Rating)
 		})
 	}
 }

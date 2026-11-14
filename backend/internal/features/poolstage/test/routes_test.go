@@ -17,7 +17,7 @@ func newTestAPI(t *testing.T, repo *FakePoolStageRepository, events *FakeEventLo
 	t.Helper()
 
 	_, api := humatest.New(t)
-	poolstage.RegisterPoolStageService(api, poolstage.NewPoolStageService(repo, events))
+	poolstage.RegisterPoolStageService(api, poolstage.NewPoolStageService(repo, events, NewTestMemberships()))
 
 	return api
 }
@@ -31,6 +31,15 @@ func decodeBody(t *testing.T, raw []byte) map[string]any {
 	return body
 }
 
+var forbiddenCallers = []struct {
+	name   string
+	caller Caller
+}{
+	{"refuses a caller with no session", CallerNone},
+	{"refuses a caller outside the tournament", CallerNonMember},
+	{"refuses a referee", CallerReferee},
+}
+
 func TestCreateEndpoint(t *testing.T) {
 	t.Parallel()
 
@@ -39,6 +48,7 @@ func TestCreateEndpoint(t *testing.T) {
 	tests := []struct {
 		name       string
 		body       map[string]any
+		caller     Caller
 		wantStatus int
 		wantFields map[string]any
 	}{
@@ -68,16 +78,38 @@ func TestCreateEndpoint(t *testing.T) {
 			},
 			wantStatus: http.StatusUnprocessableEntity,
 		},
+		{
+			name:       "refuses a caller with no session",
+			body:       map[string]any{"event_id": parent.ID.String(), "max_competitor_per_pool": 6},
+			caller:     CallerNone,
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:       "refuses a caller outside the tournament",
+			body:       map[string]any{"event_id": parent.ID.String(), "max_competitor_per_pool": 6},
+			caller:     CallerNonMember,
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:       "refuses a referee",
+			body:       map[string]any{"event_id": parent.ID.String(), "max_competitor_per_pool": 6},
+			caller:     CallerReferee,
+			wantStatus: http.StatusForbidden,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			resp := newTestAPI(t, NewFakePoolStageRepository(), NewFakeEventLookup(parent)).
-				Post("/api/v1/pool-stages", tt.body)
+			repo := NewFakePoolStageRepository()
+			resp := newTestAPI(t, repo, NewFakeEventLookup(parent)).
+				PostCtx(tt.caller.Context(t.Context()), "/api/v1/pool-stages", tt.body)
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
+			if tt.wantStatus == http.StatusForbidden {
+				assert.Empty(t, repo.PoolStages)
+			}
 
 			body := decodeBody(t, resp.Body.Bytes())
 			for field, want := range tt.wantFields {
@@ -150,7 +182,7 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 		t.Parallel()
 
 		resp := newTestAPI(t, NewFakePoolStageRepository(stored), NewFakeEventLookup()).
-			Patch(base+stored.ID.String(), map[string]any{"max_competitor_per_pool": 4})
+			PatchCtx(CallerAdmin.Context(t.Context()), base+stored.ID.String(), map[string]any{"max_competitor_per_pool": 4})
 
 		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 
@@ -162,10 +194,30 @@ func TestGetAndUpdateEndpoint(t *testing.T) {
 		t.Parallel()
 
 		resp := newTestAPI(t, NewFakePoolStageRepository(stored), NewFakeEventLookup()).
-			Patch(base+stored.ID.String(), map[string]any{"max_competitor_per_pool": 1})
+			PatchCtx(CallerAdmin.Context(t.Context()), base+stored.ID.String(), map[string]any{"max_competitor_per_pool": 1})
 
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
+}
+
+func TestUpdateEndpointRefusesNonAdmins(t *testing.T) {
+	t.Parallel()
+
+	stored := seededPoolStage(poolstage.PoolStageStatusUpcoming, uuid.New())
+
+	for _, tt := range forbiddenCallers {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakePoolStageRepository(stored)
+			resp := newTestAPI(t, repo, NewFakeEventLookup()).PatchCtx(
+				tt.caller.Context(t.Context()), "/api/v1/pool-stages/"+stored.ID.String(),
+				map[string]any{"max_competitor_per_pool": 4})
+
+			assert.Equal(t, http.StatusForbidden, resp.Code, "body: %s", resp.Body)
+			assert.Equal(t, stored.MaxCompetitorPerPool, repo.PoolStages[stored.ID].MaxCompetitorPerPool)
+		})
+	}
 }
 
 func TestLifecycleEndpoints(t *testing.T) {
@@ -176,18 +228,49 @@ func TestLifecycleEndpoints(t *testing.T) {
 	repo.PoolCounts[stored.ID] = PoolCount{Total: 2}
 	api := newTestAPI(t, repo, NewFakeEventLookup())
 	base := "/api/v1/pool-stages/" + stored.ID.String()
+	ctx := CallerAdmin.Context(t.Context())
 
-	started := api.Post(base + "/start")
+	started := api.PostCtx(ctx, base+"/start")
 	require.Equal(t, http.StatusOK, started.Code, "body: %s", started.Body)
 	startedBody := decodeBody(t, started.Body.Bytes())
 	assert.Equal(t, "active", startedBody["status"])
 	assert.NotNil(t, startedBody["started_at"])
 
-	ended := api.Post(base + "/end")
+	ended := api.PostCtx(ctx, base+"/end")
 	require.Equal(t, http.StatusOK, ended.Code, "body: %s", ended.Body)
 	endedBody := decodeBody(t, ended.Body.Bytes())
 	assert.Equal(t, "ended", endedBody["status"])
 	assert.NotNil(t, endedBody["completed_at"])
+}
+
+func TestLifecycleEndpointsRefuseNonAdmins(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		action string
+		status poolstage.PoolStageStatus
+	}{
+		{"start", poolstage.PoolStageStatusUpcoming},
+		{"end", poolstage.PoolStageStatusActive},
+	}
+
+	for _, action := range tests {
+		for _, tt := range forbiddenCallers {
+			t.Run(action.action+" "+tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				stored := seededPoolStage(action.status, uuid.New())
+				repo := NewFakePoolStageRepository(stored)
+				repo.PoolCounts[stored.ID] = PoolCount{Total: 2}
+
+				resp := newTestAPI(t, repo, NewFakeEventLookup()).PostCtx(
+					tt.caller.Context(t.Context()), "/api/v1/pool-stages/"+stored.ID.String()+"/"+action.action)
+
+				assert.Equal(t, http.StatusForbidden, resp.Code, "body: %s", resp.Body)
+				assert.Equal(t, action.status, repo.PoolStages[stored.ID].Status)
+			})
+		}
+	}
 }
 
 func TestDeleteEndpoint(t *testing.T) {
@@ -197,10 +280,31 @@ func TestDeleteEndpoint(t *testing.T) {
 	api := newTestAPI(t, NewFakePoolStageRepository(stored), NewFakeEventLookup())
 	base := "/api/v1/pool-stages/" + stored.ID.String()
 
-	deleted := api.Delete(base)
+	ctx := CallerAdmin.Context(t.Context())
+
+	deleted := api.DeleteCtx(ctx, base)
 	require.Equal(t, http.StatusNoContent, deleted.Code, "body: %s", deleted.Body)
 	assert.Empty(t, deleted.Body.String())
 
 	assert.Equal(t, http.StatusNotFound, api.Get(base).Code)
-	assert.Equal(t, http.StatusNotFound, api.Delete(base).Code)
+	assert.Equal(t, http.StatusNotFound, api.DeleteCtx(ctx, base).Code)
+}
+
+func TestDeleteEndpointRefusesNonAdmins(t *testing.T) {
+	t.Parallel()
+
+	stored := seededPoolStage(poolstage.PoolStageStatusUpcoming, uuid.New())
+
+	for _, tt := range forbiddenCallers {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakePoolStageRepository(stored)
+			resp := newTestAPI(t, repo, NewFakeEventLookup()).
+				DeleteCtx(tt.caller.Context(t.Context()), "/api/v1/pool-stages/"+stored.ID.String())
+
+			assert.Equal(t, http.StatusForbidden, resp.Code, "body: %s", resp.Body)
+			assert.Contains(t, repo.PoolStages, stored.ID)
+		})
+	}
 }
