@@ -238,6 +238,15 @@ func (s *directEliminationService) StartDirectElimination(
 		return nil, errs.HumaError(fmt.Errorf("start direct elimination: %w", err))
 	}
 
+	entries, err := s.repo.CountDirectEliminationEntries(ctx, id)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("start direct elimination: %w", err))
+	}
+	if entries == 0 {
+		return nil, errs.HumaError(fmt.Errorf("start direct elimination: %w",
+			errs.Public("the tableau must be drawn before the direct elimination can start", errs.ErrConflict)))
+	}
+
 	startedAt := time.Now().UTC()
 
 	err = s.repo.TransitionDirectEliminationByID(ctx, id, DirectEliminationTransition{

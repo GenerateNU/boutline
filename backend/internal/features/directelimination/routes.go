@@ -71,7 +71,7 @@ func RegisterDirectEliminationService(api huma.API, service DirectEliminationSer
 		Method:      http.MethodPost,
 		Path:        directEliminationBasePath + "/{id}/start",
 		Summary:     "Start a direct elimination round",
-		Description: "Moves an upcoming round to active and records started_at.",
+		Description: "Moves an upcoming round to active and records started_at. The tableau must be drawn first.",
 		Tags:        []string{"Direct Eliminations"},
 	}, service.StartDirectElimination)
 
