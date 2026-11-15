@@ -1,4 +1,4 @@
-import { ApiError } from "@/services/api-request";
+import { ApiError, problemMessage } from "@/services/api-request";
 
 const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
 
@@ -32,7 +32,13 @@ export async function serverRequest<T>(
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
   if (!response.ok) {
-    throw new ApiError(`Request failed with status ${response.status}`, response.status);
+    let body: unknown = null;
+    try {
+      body = await response.json();
+    } catch {
+      // No JSON body (e.g. a proxy error page); problemMessage falls back to the status.
+    }
+    throw new ApiError(`GET ${path}: ${problemMessage(body, response.status)}`, response.status);
   }
   return response.json();
 }

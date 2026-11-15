@@ -23,11 +23,11 @@ describe("serverRequest", () => {
   });
 
   it("throws an ApiError with the status when the backend responds with an error", async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 404 });
+    fetchMock.mockResolvedValue({ ok: false, status: 404, json: async () => ({ detail: "event not found" }) });
 
     const request = serverRequest("/events/missing/tableau");
 
-    await expect(request).rejects.toThrow("Request failed with status 404");
+    await expect(request).rejects.toThrow("GET /events/missing/tableau: event not found");
     await expect(request).rejects.toMatchObject({ status: 404 });
     await expect(request).rejects.toBeInstanceOf(ApiError);
   });

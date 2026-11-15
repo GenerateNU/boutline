@@ -38,6 +38,9 @@ async function DirectEliminationSection({
     <Section title="Direct elimination">
       <EventStatusBadge status={directElimination.status} />
       {drawn && <p className="text-sm text-neutral-secondary">Tableau drawn.</p>}
+      {!canManage && !drawn && (
+        <p className="text-sm text-neutral-secondary">Waiting for an admin to draw the tableau.</p>
+      )}
       {canDraw && (
         <GenerateTableauForm
           directEliminationId={directElimination.id}
