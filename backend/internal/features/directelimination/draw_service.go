@@ -67,6 +67,11 @@ func (s *drawService) GenerateDirectElimination(
 
 	var response DirectEliminationDrawResponse
 	err = s.repo.WithLockedDirectElimination(ctx, id, func(repo DrawRepository, de LockedDirectElimination) error {
+		// A PATCH may have moved the DE to another tournament between the role check and the lock.
+		if de.TournamentID != tournamentID {
+			return errs.Public("the direct elimination moved to another tournament; try again", errs.ErrConflict)
+		}
+
 		var err error
 		response, err = s.draw(ctx, repo, id, de, input.Body)
 		return err

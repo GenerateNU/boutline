@@ -135,6 +135,14 @@ func TestGenerateDirectEliminationErrors(t *testing.T) {
 			wantStatus: http.StatusForbidden, wantMessage: "this requires the admin role in the tournament",
 		},
 		{
+			name: "moved to another tournament after the role check", fencers: 12,
+			setup: func(s *generateScenario) {
+				s.repo.staleTournamentIDs = map[uuid.UUID]uuid.UUID{generateDEID: generateTournamentID}
+				s.lockedDE(func(de *directelimination.LockedDirectElimination) { de.TournamentID = uuid.New() })
+			},
+			wantStatus: http.StatusConflict, wantMessage: "the direct elimination moved to another tournament; try again",
+		},
+		{
 			name: "direct elimination active", fencers: 12,
 			setup: func(s *generateScenario) {
 				s.lockedDE(func(de *directelimination.LockedDirectElimination) {
