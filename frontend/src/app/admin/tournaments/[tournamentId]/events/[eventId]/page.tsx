@@ -4,6 +4,7 @@ import { EventStatusBadge } from "@/features/event/components/event-status-badge
 
 import { EndPoolStageButton } from "@/features/pool-stage/components/end-pool-stage-button";
 import { getEventPoolStage } from "@/features/pool-stage/services/get-event-pool-stage";
+import { getTournamentRole } from "@/features/tournament/services/getTournamentRole";
 
 import { DirectEliminationSection } from "./_components/direct-elimination-section";
 
@@ -11,7 +12,12 @@ export default async function AdminEventPage({
   params,
 }: PageProps<"/admin/tournaments/[tournamentId]/events/[eventId]">) {
   const { tournamentId, eventId } = await params;
-  const poolStage = await getEventPoolStage(eventId);
+  const [poolStage, role] = await Promise.all([
+    getEventPoolStage(eventId),
+    getTournamentRole(tournamentId),
+  ]);
+  // The layout lets referees in to look; the backend refuses them anyway, so this only hides buttons they can't use.
+  const canManage = role === "admin";
 
   return (
     <div className="flex flex-col gap-10">
@@ -21,14 +27,22 @@ export default async function AdminEventPage({
         {poolStage ? (
           <>
             <EventStatusBadge status={poolStage.status} />
-            {poolStage.status === "active" && <EndPoolStageButton poolStageId={poolStage.id} />}
+            {canManage && poolStage.status === "active" && (
+              <EndPoolStageButton poolStageId={poolStage.id} />
+            )}
           </>
         ) : (
           <p className="text-sm text-neutral-secondary">This event has no pool stage.</p>
         )}
       </Section>
 
-      {poolStage?.status === "ended" && <DirectEliminationSection tournamentId={tournamentId} eventId={eventId} />}
+      {poolStage?.status === "ended" && (
+        <DirectEliminationSection
+          tournamentId={tournamentId}
+          eventId={eventId}
+          canManage={canManage}
+        />
+      )}
     </div>
   );
 }

@@ -37,6 +37,6 @@ describe("getTableauDrawn", () => {
   it("throws when the backend responds with an error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 
-    await expect(getTableauDrawn("e1")).rejects.toThrow("get tableau: 500");
+    await expect(getTableauDrawn("e1")).rejects.toThrow("Request failed with status 500");
   });
 });
