@@ -44,6 +44,6 @@ describe("getEventDirectElimination", () => {
   it("throws when the backend responds with an error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 
-    await expect(getEventDirectElimination("e1")).rejects.toThrow("list direct eliminations: 500");
+    await expect(getEventDirectElimination("e1")).rejects.toThrow("Request failed with status 500");
   });
 });

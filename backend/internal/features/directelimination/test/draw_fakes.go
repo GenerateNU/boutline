@@ -22,6 +22,22 @@ type fakeDrawRepository struct {
 	poolStage    *poolstage.PoolStage
 	standFencers []pool.PoolSheetFencerRow
 	standBouts   []pool.PoolSheetBoutRow
+	// staleTournamentIDs is what the unlocked read returns instead of the locked row's
+	// tournament, standing in for a move between the role check and the lock.
+	staleTournamentIDs map[uuid.UUID]uuid.UUID
+}
+
+func (f *fakeDrawRepository) GetDirectEliminationTournamentID(_ context.Context, id uuid.UUID) (uuid.UUID, error) {
+	if stale, ok := f.staleTournamentIDs[id]; ok {
+		return stale, nil
+	}
+
+	de, ok := f.locked[id]
+	if !ok {
+		return uuid.Nil, fmt.Errorf("select direct elimination %s tournament: %w", id, errs.ErrNotFound)
+	}
+
+	return de.TournamentID, nil
 }
 
 func (f *fakeDrawRepository) WithLockedDirectElimination(

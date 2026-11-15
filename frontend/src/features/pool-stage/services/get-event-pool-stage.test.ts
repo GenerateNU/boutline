@@ -44,6 +44,6 @@ describe("getEventPoolStage", () => {
   it("throws when the backend responds with an error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 
-    await expect(getEventPoolStage("e1")).rejects.toThrow("list pool stages: 500");
+    await expect(getEventPoolStage("e1")).rejects.toThrow("Request failed with status 500");
   });
 });

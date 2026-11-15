@@ -6,7 +6,7 @@ import { useTransition } from "react";
 import { Button } from "@/components/primitives/button";
 import { useToast } from "@/components/primitives/toast";
 import { apiRequest } from "@/services/api-request";
-import type { DirectElimination } from "@/types/direct-elimination";
+import { DirectElimination } from "@/types/direct-elimination";
 import { errorMessage } from "@/utils/error-message";
 
 interface CreateDirectEliminationButtonProps {

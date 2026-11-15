@@ -29,6 +29,6 @@ describe("getPool", () => {
   it("throws on any other error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 
-    await expect(getPool("p1")).rejects.toThrow("get pool sheet: 500");
+    await expect(getPool("p1")).rejects.toThrow("Request failed with status 500");
   });
 });

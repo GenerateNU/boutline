@@ -1,24 +1,13 @@
-import type { PoolBoard, PoolBoardList } from "../_types/pool-board";
-
-// Not apiRequest: it fetches the relative path /api/v1/..., which only resolves in the browser. Server
-// Components fetch Node-side, so this hits the backend directly, like getEvents.
-const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
+import { serverRequest } from "@/services/server-request";
+import { PoolBoard, PoolBoardList } from "../_types/pool-board";
 
 // The backend's maximum page size.
 const POOL_FETCH_LIMIT = 100;
 
-async function getPoolPage(eventId: string, offset: number): Promise<PoolBoardList> {
-  const url = new URL("/api/v1/pool-sheets", API_PROXY_TARGET);
-  url.searchParams.set("event_id", eventId);
-  url.searchParams.set("limit", String(POOL_FETCH_LIMIT));
-  url.searchParams.set("offset", String(offset));
-
-  const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`list pool sheets: ${response.status}`);
-  }
-
-  return response.json();
+function getPoolPage(eventId: string, offset: number): Promise<PoolBoardList> {
+  return serverRequest<PoolBoardList>("/pool-sheets", {
+    params: { event_id: eventId, limit: POOL_FETCH_LIMIT, offset },
+  });
 }
 
 export async function getEventPools(eventId: string): Promise<PoolBoard[]> {

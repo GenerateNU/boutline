@@ -14,6 +14,8 @@ import (
 )
 
 type DrawRepository interface {
+	// GetDirectEliminationTournamentID reads without a lock, for the role check before the draw takes one.
+	GetDirectEliminationTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	WithLockedDirectElimination(
 		ctx context.Context,
 		id uuid.UUID,
@@ -35,6 +37,10 @@ type drawRepository struct {
 
 func NewDrawRepository(db *gorm.DB) DrawRepository {
 	return &drawRepository{db: db}
+}
+
+func (r *drawRepository) GetDirectEliminationTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	return NewDirectEliminationRepository(r.db).GetDirectEliminationTournamentID(ctx, id)
 }
 
 // WithLockedDirectElimination runs fn in one transaction holding the direct elimination

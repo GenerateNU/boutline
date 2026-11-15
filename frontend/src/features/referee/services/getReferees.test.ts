@@ -42,6 +42,6 @@ describe("getReferees", () => {
   it("throws when the backend responds with an error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 
-    await expect(getReferees("t-1", 20, 0)).rejects.toThrow("list referees: 500");
+    await expect(getReferees("t-1", 20, 0)).rejects.toThrow("Request failed with status 500");
   });
 });

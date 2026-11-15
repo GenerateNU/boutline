@@ -1,4 +1,4 @@
-import type { ListResponse } from "@/types/list-response";
+import { ListResponse } from "@/types/list-response";
 
 export type PoolStageStatus = "upcoming" | "active" | "ended";
 

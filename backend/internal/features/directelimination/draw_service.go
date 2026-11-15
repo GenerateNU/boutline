@@ -54,8 +54,24 @@ func (s *drawService) GenerateDirectElimination(
 		return nil, errs.HumaError(err)
 	}
 
+	// The role check runs before the lock, so a refused caller never holds it and the
+	// membership lookup never needs a second connection while the transaction holds one.
+	tournamentID, err := s.repo.GetDirectEliminationTournamentID(ctx, id)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("generate direct elimination: %w", err))
+	}
+	err = tournamentuser.RequireRole(ctx, s.memberships, tournamentID, tournamentuser.TournamentUserRoleAdmin)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("generate direct elimination: %w", err))
+	}
+
 	var response DirectEliminationDrawResponse
 	err = s.repo.WithLockedDirectElimination(ctx, id, func(repo DrawRepository, de LockedDirectElimination) error {
+		// A PATCH may have moved the DE to another tournament between the role check and the lock.
+		if de.TournamentID != tournamentID {
+			return errs.Public("the direct elimination moved to another tournament; try again", errs.ErrConflict)
+		}
+
 		var err error
 		response, err = s.draw(ctx, repo, id, de, input.Body)
 		return err
@@ -74,7 +90,7 @@ func (s *drawService) draw(
 	de LockedDirectElimination,
 	body DirectEliminationGenerateBody,
 ) (DirectEliminationDrawResponse, error) {
-	stage, err := s.checkDrawable(ctx, repo, id, de)
+	stage, err := checkDrawable(ctx, repo, id, de)
 	if err != nil {
 		return DirectEliminationDrawResponse{}, err
 	}
@@ -124,17 +140,12 @@ func (s *drawService) draw(
 
 // checkDrawable runs the draw's preconditions in the order a client should hear about them
 // and returns the ended pool stage that seeds the tableau.
-func (s *drawService) checkDrawable(
+func checkDrawable(
 	ctx context.Context,
 	repo DrawRepository,
 	id uuid.UUID,
 	de LockedDirectElimination,
 ) (*poolstage.PoolStage, error) {
-	err := tournamentuser.RequireRole(ctx, s.memberships, de.TournamentID, tournamentuser.TournamentUserRoleAdmin)
-	if err != nil {
-		return nil, err
-	}
-
 	if de.Status != DirectEliminationStatusUpcoming {
 		return nil, errs.Public("only an upcoming direct elimination can be drawn", errs.ErrConflict)
 	}
