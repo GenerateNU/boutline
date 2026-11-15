@@ -1,6 +1,5 @@
-import type { CompetitorListResult } from "@/types/competitor";
-
-const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
+import { serverRequest } from "@/services/server-request";
+import { CompetitorListResult } from "@/types/competitor";
 
 interface CompetitorFilters {
   eventId?: string;
@@ -10,37 +9,13 @@ interface CompetitorFilters {
   gender?: string;
 }
 
-export async function getCompetitors(
+export function getCompetitors(
   tournamentId: string,
   limit: number,
   offset: number,
-  filters: CompetitorFilters = {},
+  { eventId, query, team, rating, gender }: CompetitorFilters = {},
 ): Promise<CompetitorListResult> {
-  const { eventId, query, team, rating, gender } = filters;
-  const url = new URL("/api/v1/competitors", API_PROXY_TARGET);
-  url.searchParams.set("tournament_id", tournamentId);
-  url.searchParams.set("limit", String(limit));
-  url.searchParams.set("offset", String(offset));
-  if (eventId) {
-    url.searchParams.set("eventId", eventId);
-  }
-  if (query) {
-    url.searchParams.set("q", query);
-  }
-  if (team) {
-    url.searchParams.set("team", team);
-  }
-  if (rating) {
-    url.searchParams.set("rating", rating);
-  }
-  if (gender) {
-    url.searchParams.set("gender", gender);
-  }
-
-  const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`list competitors: ${response.status}`);
-  }
-
-  return response.json();
+  return serverRequest<CompetitorListResult>("/competitors", {
+    params: { tournament_id: tournamentId, limit, offset, eventId, q: query, team, rating, gender },
+  });
 }

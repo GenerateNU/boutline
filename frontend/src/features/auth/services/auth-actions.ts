@@ -1,16 +1,15 @@
 "use server";
 
-import type { AuthResponse, AuthResult } from "@/features/auth/types/auth";
+import { AuthResponse, AuthResult } from "@/features/auth/types/auth";
 import { clearSessionToken, setSessionToken } from "@/features/auth/services/session";
 import { problemMessage } from "@/services/api-request";
+import { serverURL } from "@/services/server-request";
 
-
-const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
-
+// Not serverRequest: a failed login is a result to show, not an error to throw.
 async function authenticate(path: "login" | "signup", body: object): Promise<AuthResult> {
   let response: Response;
   try {
-    response = await fetch(new URL(`/api/v1/auth/${path}`, API_PROXY_TARGET), {
+    response = await fetch(serverURL(`/auth/${path}`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

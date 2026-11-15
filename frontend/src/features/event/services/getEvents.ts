@@ -1,26 +1,13 @@
-import type { EventListResult, TournamentEvent } from "@/features/event/types/event";
-
-// Not apiRequest: it fetches the relative path /api/v1/..., which only resolves
-// in the browser. Server Components fetch Node-side, where a relative URL
-// throws, so this hits the backend directly instead of going through the /api
-// rewrite in next.config.ts.
-const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
+import { EventListResult, TournamentEvent } from "@/features/event/types/event";
+import { serverRequest } from "@/services/server-request";
 
 // The backend's maximum page size.
 const EVENT_FETCH_LIMIT = 100;
 
-async function getEventPage(tournamentId: string, offset: number): Promise<EventListResult> {
-  const url = new URL("/api/v1/events", API_PROXY_TARGET);
-  url.searchParams.set("tournament_id", tournamentId);
-  url.searchParams.set("limit", String(EVENT_FETCH_LIMIT));
-  url.searchParams.set("offset", String(offset));
-
-  const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`list events: ${response.status}`);
-  }
-
-  return response.json();
+function getEventPage(tournamentId: string, offset: number): Promise<EventListResult> {
+  return serverRequest<EventListResult>("/events", {
+    params: { tournament_id: tournamentId, limit: EVENT_FETCH_LIMIT, offset },
+  });
 }
 
 // Every event in the tournament. The backend orders pages by creation time,

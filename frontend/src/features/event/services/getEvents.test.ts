@@ -47,6 +47,6 @@ describe("getEvents", () => {
   it("throws when the backend responds with an error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 
-    await expect(getEvents("t1")).rejects.toThrow("list events: 500");
+    await expect(getEvents("t1")).rejects.toThrow("Request failed with status 500");
   });
 });
