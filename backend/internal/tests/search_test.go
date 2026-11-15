@@ -11,9 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// searchTestUserID need not exist in the database -- no route under test
-// checks the caller's existence, only that the bearer token is valid.
-var searchTestUserID = uuid.MustParse("c0000000-0000-4000-8000-000000000001")
+// searchTestUserID is seeded Casey Nguyen, who holds no staff role: the auth
+// middleware requires the caller to exist, and the routes under test need
+// nothing beyond that.
+var searchTestUserID = uuid.MustParse("a0000000-0000-4000-8000-000000000005")
 
 // Exercises the fuzzy search endpoints against seeds/seed.sql's rows over a
 // real Postgres connection, so a GIN-index/pg_trgm mistake that a

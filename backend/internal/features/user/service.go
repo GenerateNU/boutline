@@ -9,6 +9,7 @@ import (
 
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
+	"boutline/internal/session"
 	"boutline/internal/utils"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -25,6 +26,7 @@ type UserService interface {
 	Signup(ctx context.Context, input *UserSignupInput) (*UserAuthOutput, error)
 	Login(ctx context.Context, input *UserLoginInput) (*UserAuthOutput, error)
 	GetUserByID(ctx context.Context, input *UserIDInput) (*UserOutput, error)
+	GetCurrentUser(ctx context.Context, input *struct{}) (*UserOutput, error)
 	ListUsers(ctx context.Context, input *UserListInput) (*UserListOutput, error)
 	UpdateUserByID(ctx context.Context, input *UserUpdateInput) (*UserOutput, error)
 	DeleteUser(ctx context.Context, input *UserIDInput) (*struct{}, error)
@@ -118,6 +120,25 @@ func (s *userService) GetUserByID(ctx context.Context, input *UserIDInput) (*Use
 	user, err := s.repo.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("get user: %w", err))
+	}
+
+	return &UserOutput{Body: newUserResponse(*user)}, nil
+}
+
+func (s *userService) GetCurrentUser(ctx context.Context, _ *struct{}) (*UserOutput, error) {
+	id, ok := session.UserIDFrom(ctx)
+	if !ok {
+		return nil, huma.Error401Unauthorized("unauthorized")
+	}
+
+	user, err := s.repo.GetUserByID(ctx, id)
+	if err != nil {
+		// The middleware checked this user a moment ago, so a miss here means
+		// they were deleted since; only a 401 tells the client to sign out.
+		if errors.Is(err, errs.ErrNotFound) {
+			return nil, huma.Error401Unauthorized("unauthorized")
+		}
+		return nil, errs.HumaError(fmt.Errorf("get current user: %w", err))
 	}
 
 	return &UserOutput{Body: newUserResponse(*user)}, nil

@@ -39,6 +39,15 @@ func RegisterUserService(api huma.API, service UserService) {
 	}, service.Login)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "getCurrentUser",
+		Method:      http.MethodGet,
+		Path:        authBasePath + "/me",
+		Summary:     "Get the user the bearer token belongs to",
+		Tags:        []string{"Auth"},
+		Security:    UserBearerSecurity(),
+	}, service.GetCurrentUser)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "listUsers",
 		Method:      http.MethodGet,
 		Path:        userBasePath,

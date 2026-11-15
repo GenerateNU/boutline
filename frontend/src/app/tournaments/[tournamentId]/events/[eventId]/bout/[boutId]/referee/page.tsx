@@ -1,3 +1,5 @@
+import { SessionWatcher } from "@/features/auth/components/session-watcher";
+
 import { Scoreboard } from "./_components/scoreboard";
 
 interface RefereeViewPageProps
@@ -6,5 +8,10 @@ interface RefereeViewPageProps
 export default async function RefereeViewPage({ params }: RefereeViewPageProps) {
   const { boutId } = await params;
 
-  return <Scoreboard boutId={boutId} />;
+  return (
+    <>
+      <SessionWatcher />
+      <Scoreboard boutId={boutId} />
+    </>
+  );
 }
