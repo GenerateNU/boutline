@@ -10,7 +10,7 @@ import { Button } from "@/components/primitives/button";
 import { useDayDrag } from "@/features/tournament/hooks/use-day-drag";
 import { useToday } from "@/features/tournament/hooks/use-today";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
-import { ALL_DATES, parseDateParam } from "@/features/tournament/lib/date-param";
+import { parseDateParam } from "@/features/tournament/lib/date-param";
 
 const VISIBLE_DAYS = 5;
 
@@ -56,7 +56,8 @@ interface WeekStripProps {
   defaultDay?: string;
   // Dark sits under the navbar on /tournaments; light sits in page content.
   surface?: StripSurface;
-  // Tapping the selected day clears it, so the page shows every date.
+  // No day is selected until one is tapped, and tapping the selected day clears it,
+  // so the page shows every date.
   deselectable?: boolean;
 }
 
@@ -65,19 +66,19 @@ function WeekStrip({ defaultDay, surface = "dark", deselectable = false }: WeekS
   const dateParam = searchParams.get("date");
   const today = useToday();
   const anchor = parseDateParam(dateParam) ?? parseDateParam(defaultDay) ?? today;
-  const selected = dateParam === ALL_DATES ? undefined : anchor;
+  const selected = deselectable ? parseDateParam(dateParam) : anchor;
   const [pagedStart, setPagedStart] = useState<Date>();
   const start = pagedStart ?? anchor;
 
-  // The server falls back to today in ?tz= (else UTC) when the URL has no valid date. Once
-  // the browser knows its own today, write that into the URL so the list matches
-  // the local day the strip shows.
+  // A strip that always has a day shows today when the URL has none. Once the
+  // browser knows its own today, write that into the URL so the page lists the
+  // day the strip shows.
   const selectToday = useEffectEvent((day: Date) => setDate(day));
   useEffect(() => {
-    if (today && !defaultDay && dateParam !== ALL_DATES && !parseDateParam(dateParam)) {
+    if (today && !deselectable && !defaultDay && !parseDateParam(dateParam)) {
       selectToday(today);
     }
-  }, [dateParam, defaultDay, today]);
+  }, [dateParam, defaultDay, deselectable, today]);
 
   // One page of days either side of the visible one, revealed while dragging.
   const days = start

@@ -134,16 +134,20 @@ describe("WeekStrip", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Nov 11" }));
 
-    expect(replace).toHaveBeenCalledWith("/tournaments?date=all&q=foil", { scroll: false });
+    expect(replace).toHaveBeenCalledWith("/tournaments?q=foil", { scroll: false });
     expect(visibleDays()).toEqual(current);
   });
 
-  describe("with no day selected", () => {
+  describe("on a deselectable strip with no date", () => {
     beforeEach(() => {
-      mockSearch = "date=all";
+      mockSearch = "";
     });
 
-    it("presses no day and leaves the URL alone", () => {
+    it.each([
+      { name: "missing", search: "" },
+      { name: "invalid", search: "date=2026-02-31" },
+    ])("presses no day and leaves the URL alone when the date is $name", ({ search }) => {
+      mockSearch = search;
       render(<WeekStrip deselectable />);
 
       expect(screen.queryAllByRole("button", { pressed: true, hidden: true })).toHaveLength(0);
