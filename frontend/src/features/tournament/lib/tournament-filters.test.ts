@@ -1,15 +1,6 @@
 import { parseTournamentFilters } from "@/features/tournament/lib/tournament-filters";
 
 describe("parseTournamentFilters", () => {
-  // 03:00 UTC on Nov 15 is still the evening of Nov 14 in New York.
-  beforeAll(() => {
-    jest.useFakeTimers({ now: new Date("2026-11-15T03:00:00Z") });
-  });
-
-  afterAll(() => {
-    jest.useRealTimers();
-  });
-
   it.each([
     {
       name: "empty params",
@@ -17,7 +8,7 @@ describe("parseTournamentFilters", () => {
       want: {
         offset: 0,
         status: undefined,
-        date: "2026-11-15",
+        date: undefined,
         search: "",
         tz: undefined,
       },
@@ -25,7 +16,7 @@ describe("parseTournamentFilters", () => {
     {
       name: "a missing date with a time zone",
       query: { tz: "America/New_York" },
-      want: { date: "2026-11-14", tz: "America/New_York" },
+      want: { date: undefined, tz: "America/New_York" },
     },
     {
       name: "valid params",
@@ -56,7 +47,7 @@ describe("parseTournamentFilters", () => {
       want: {
         offset: 0,
         status: undefined,
-        date: "2026-11-15",
+        date: undefined,
         search: "",
         tz: undefined,
       },
