@@ -1087,7 +1087,8 @@ name, club and rating.
   checks ratings and birthdates, finds duplicates by member number, and caps
   uploads at 2 MiB and 5000 rows, with tests.
 - **Sample:** the creation form's dropzone says it takes only `.csv` and opens a
-  sample CSV in a dialog. The sample is the valid rows of #80's example upload
+  sample CSV in a dialog, whose Download Sample CSV button saves it as
+  `sample-competitors.csv`. The sample is the valid rows of #80's example upload
   (`example-competitor-import.ts`), and a parser test keeps every row of it valid.
 - **Autofill:** the creation form's dropzone runs the parser and sorts valid rows
   into event cards (§10.6). Rejected files and parse errors show inline.

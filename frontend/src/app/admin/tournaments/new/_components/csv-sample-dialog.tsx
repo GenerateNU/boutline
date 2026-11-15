@@ -1,7 +1,13 @@
 "use client";
 
-import { Modal } from "@/components/primitives/modal";
+import FileDownloadOutlined from "@mui/icons-material/FileDownloadOutlined";
+
+import { Button } from "@/components/primitives/button";
+import { Modal, ModalFooter } from "@/components/primitives/modal";
 import { EXAMPLE_COMPETITOR_IMPORT } from "@/lib/competitor-import/example-competitor-import";
+
+// A data URI rather than a Blob URL, so there is no object URL to create and revoke.
+const SAMPLE_CSV_HREF = `data:text/csv;charset=utf-8,${encodeURIComponent(EXAMPLE_COMPETITOR_IMPORT)}`;
 
 interface CsvSampleDialogProps {
   open: boolean;
@@ -20,6 +26,14 @@ function CsvSampleDialog({ open, onOpenChange }: CsvSampleDialogProps) {
       <pre className="max-h-80 overflow-auto rounded-md bg-surface p-3 font-mono text-xs text-obsidian">
         {EXAMPLE_COMPETITOR_IMPORT}
       </pre>
+      <ModalFooter className="grid-cols-1">
+        <Button asChild>
+          <a href={SAMPLE_CSV_HREF} download="sample-competitors.csv">
+            <FileDownloadOutlined aria-hidden />
+            Download Sample CSV
+          </a>
+        </Button>
+      </ModalFooter>
     </Modal>
   );
 }
