@@ -5,7 +5,8 @@ import { DirectElimination, DirectEliminationListResult } from "@/types/direct-e
 export async function getEventDirectElimination(
   eventId: string,
 ): Promise<DirectElimination | null> {
-  const query = new URLSearchParams({ event_id: eventId, limit: "1" });
-  const { data } = await serverRequest<DirectEliminationListResult>(`/direct-eliminations?${query}`);
+  const { data } = await serverRequest<DirectEliminationListResult>("/direct-eliminations", {
+    params: { event_id: eventId, limit: 1 },
+  });
   return data[0] ?? null;
 }
