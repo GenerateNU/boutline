@@ -9,7 +9,7 @@ const push = jest.fn();
 const TABLEAU_HREF = "/tournaments/t-1/events/e-1/tableau";
 
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-jest.mock("../../../../../../../services/api-request", () => ({ apiRequest: jest.fn() }));
+jest.mock("../../../../../../../../services/api-request", () => ({ apiRequest: jest.fn() }));
 
 const apiRequestMock = jest.mocked(apiRequest);
 

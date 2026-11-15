@@ -488,9 +488,9 @@ from the venue floor.
 
 - A server-rendered list of public tournaments with a status badge (Upcoming /
   Active / Ended), empty states, and Previous/Next pagination, 20 per page.
-- **Loading:** the date strip stays live above a skeleton of the rest of the
-  page (search bar, title, five shimmering card placeholders) until the list
-  arrives.
+- **Loading:** the date strip, search bar, filter, active filter chips, title and
+  calendar button render for real over five shimmering card placeholders until
+  the list arrives.
 - **Search:** a plain GET form that works without JS; with JS it updates `?q=`
   after a 300 ms debounce.
 - **Dates:** five day tabs in a dark row under the global nav, with paging. No
@@ -530,6 +530,10 @@ Tabs: Overview · Fencers · Clubs · Events.
 Hi-fi throughout: text uses the shared `Text` styles (C.3), searches are the hi-fi
 search bar with a clear button. Fencer and club rows keep their pin button, which does nothing until pinning lands (§6.3); event rows end in a chevron.
 
+- **Loading:** each tab has its own skeleton under the tabs. Fixed text and
+  controls that need no fetched data (the Overview's event card titles, search
+  bars, the fencer and club filter buttons) render for real; the tournament name,
+  dates, cards and rows shimmer.
 - **Overview:** the uppercase name, the date range (from its events, else
   `start_time`) and the location (venue, city, country), then an organizer row,
   then Ongoing, Upcoming and Completed event cards with times like "9:00 AM" (UTC,
@@ -565,6 +569,11 @@ Tabs: Pools · Tableau · Fencers · Results (routes `pooling`, `tableau`, `fenc
 than stacking under them, and a "< {tournament name}" link above the content leads
 back to the tournament.
 
+- **Loading:** entering an event shows the event tabs with the tournament link
+  shimmering, since that boundary covers every tab. Each tab then has its own
+  skeleton, with fixed headings, labels, column headers and
+  controls drawn for real (controls that would act on unloaded data are disabled).
+  The fencer and bout pages are placeholders and have none.
 - **Fencers** (Completed): a "Fencers" heading over the same list as the
   tournament's Fencers tab (both use `FencerBrowser`): search, pagination, and a filter sheet with Club (sets
   `?team=`, a search accepting either a picked suggestion from the dropdown or typed
@@ -602,6 +611,8 @@ the list's `role` field), and link to the tournament's dashboard (§4.6), which
 only that tournament's staff can open; public `/tournaments` cards still link to
 the public page. Organizers see `pending` as "Scheduled" with the blue badge; public
 screens keep "Upcoming". `/admin` redirects here until the console (§10.7) exists.
+While the list loads, the Create tournament card, the heading and the status tabs
+(with the URL's status selected) render for real over five shimmering cards.
 
 ### 4.6 Tournament dashboard (`/admin/tournaments/[id]`)
 
@@ -609,6 +620,11 @@ screens keep "Upcoming". `/admin` redirects here until the console (§10.7) exis
 
 The staff page for one tournament, visible to its admins and referees. The page
 asks `GET /tournaments/{id}/role` (§2.3); anyone without a role gets a 404.
+While it loads, the "< All tournaments" link, the caption and the tabs render for
+real, with the name, status badge, dates and location shimmering. The dashboard
+sits in an `(dashboard)` route group so that boundary covers its layout without
+covering the list or the creation form. Referees and an event's admin page have
+their own skeletons.
 Referees see the same tabs read-only: the controls that change the tournament
 are hidden, and the backend refuses those writes anyway. Signed-out visitors are
 redirected to login by the proxy (§3.3).
@@ -646,6 +662,10 @@ so it is built to survive double taps, slow networks and failed requests.
 ### 5.1 Referee screen (`…/bout/[boutId]/referee`)
 
 **Status:** Completed.
+
+Until the bout loads, the screen shows the not-started layout: its section titles,
+"First to" and a disabled "Start match" render for real, while the target score,
+the fencers and the history shimmer.
 
 | Phase | When | Referee sees |
 | --- | --- | --- |
@@ -712,7 +732,8 @@ whether `boutIds` should become `clubIds` and `poolIds` is open.
 **Status:** Completed.
 
 `/pinned` is "View Pins": a Back link, then tabs All / Fencers / Clubs / Pools, as
-in the Figma, with loading, empty and error states. All lists Fencers, Clubs and
+in the Figma, with a skeleton while loading (the tab labels and headings real, the
+rows shimmering), empty and error states. All lists Fencers, Clubs and
 Pools in that order, under black sentence-case headings.
 
 - A fencer card is a light blue card with the name, country · club and rating,
@@ -1854,11 +1875,25 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
 - The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and `navigation-item`.
   `global-nav` renders `navbar` as its header. `navigation-bar` is the obsidian row of
   `navigation-item` tabs, and `tab-nav` renders it with the active tab taken from the
-  route; from `lg` it sits inside `navbar` rather than below it. The logo takes its tone from the text colour (`text-white` or `text-blue`).
-- Fetched content shows `Loading` until it arrives: a route's `loading.tsx` sits
-  under its tab bar, and client fetches render it in place of their first result.
-  `/tournaments` shows a `Skeleton` layout of the page instead (§4.2). `Skeleton`
-  shimmers with `motion-safe:` and stays flat when reduced motion is on.
+  URL path (so a loading screen above the layout marks the same tab); from `lg` it sits inside `navbar` rather than below it. The logo takes its tone from the text colour (`text-white` or `text-blue`).
+- Fetched content shows a skeleton of its page until it arrives. Only what depends
+  on the response shimmers as `Skeleton` blocks; fixed headings, labels, tabs,
+  static cards and controls that need no fetched data render for real, so nothing
+  but the data changes when it lands.
+  - Each fetching route segment has its own `loading.tsx`, under its tab bar. A
+    layout that fetches gets its boundary one level up, which draws its tabs too
+    (the dashboard's `(dashboard)` group, the event shell in `events/loading.tsx`).
+  - Route groups and in-page `Suspense` keep a fallback off pages it doesn't fit:
+    `/tournaments` and `/admin/tournaments` use `Suspense`, and an event's fencer
+    list sits in `fencers/(list)`. Client fetches render their skeleton in place.
+  - No `loading.tsx` sits beside a tabbed layout, where it would wrap every tab:
+    a tab switch shows the nearest fallback the browser already has until the new
+    tab's own arrives, so the tournament Overview's lives in `(sections)/(overview)`.
+  - A skeleton's first child is a screen-reader-only `role="status"` "Loading …"
+    label; the blocks are `aria-hidden`. `Skeleton` shimmers with `motion-safe:`
+    and stays flat when reduced motion is on.
+  - The `Loading` spinner is left for inline waits, such as `FilterSearchField`
+    suggestions.
 - A component used by one route stays in that route's `_components/` until a second
   route needs it.
 

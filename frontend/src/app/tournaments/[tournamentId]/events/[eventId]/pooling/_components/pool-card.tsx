@@ -21,7 +21,7 @@ interface PoolCardProps {
   poolingPath: string;
 }
 
-const viewItemClass =
+export const VIEW_ITEM_CLASS =
   "h-9 border-blue bg-card py-0 text-blue data-[state=on]:bg-blue data-[state=on]:text-white";
 
 export function PoolCard({ pool, poolingPath }: PoolCardProps) {
@@ -43,10 +43,10 @@ export function PoolCard({ pool, poolingPath }: PoolCardProps) {
         aria-label={`${title} view`}
         className="flex w-full rounded-md border-blue"
       >
-        <SegmentedButtonItem value="bouts" className={viewItemClass}>
+        <SegmentedButtonItem value="bouts" className={VIEW_ITEM_CLASS}>
           Bouts
         </SegmentedButtonItem>
-        <SegmentedButtonItem value="standings" className={viewItemClass}>
+        <SegmentedButtonItem value="standings" className={VIEW_ITEM_CLASS}>
           Standings
         </SegmentedButtonItem>
       </SegmentedButton>

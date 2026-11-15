@@ -10,8 +10,8 @@ const refresh = jest.fn();
 const onOpenChange = jest.fn();
 
 jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
-jest.mock("../../../../../../services/api-request", () => ({
-  ...jest.requireActual("../../../../../../services/api-request"),
+jest.mock("../../../../../../../services/api-request", () => ({
+  ...jest.requireActual("../../../../../../../services/api-request"),
   apiRequest: jest.fn(),
 }));
 

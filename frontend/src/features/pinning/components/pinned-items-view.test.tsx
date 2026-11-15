@@ -104,12 +104,13 @@ describe("PinnedItemsView", () => {
     expect(screen.queryByText(hides)).not.toBeInTheDocument();
   });
 
-  it("shows the loader until the pins arrive", async () => {
+  it("shows a skeleton until the pins arrive", async () => {
     seed({ fencerIds: ["f1"], boutIds: [], poolIds: [] });
     global.fetch = jest.fn(() => new Promise(() => {})) as jest.Mock;
     render(<PinnedItemsView />);
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Loading");
+    expect(await screen.findByRole("status")).toHaveTextContent("Loading pins");
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
   });
 
   it("shows the error when loading fails", async () => {
