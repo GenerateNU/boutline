@@ -10,12 +10,16 @@ async function runExpiry(navigate: (href: string) => void) {
     // Still leave: the proxy deletes the dead cookie on the next protected request.
   }
   navigate(`/login?${new URLSearchParams({ next })}`);
-  // Reset only once navigation has started, so a straggling 401 doesn't log out twice.
-  pendingExpiry = null;
 }
 
 // Several requests can 401 at once; they share one logout and one redirect.
 export function expireSession(navigate: (href: string) => void) {
   pendingExpiry ??= runExpiry(navigate);
   return pendingExpiry;
+}
+
+// router.replace returns before the old page unmounts, so a 401 in that window must
+// still find the run; SessionWatcher resets it only once it unmounts.
+export function resetSessionExpiry() {
+  pendingExpiry = null;
 }

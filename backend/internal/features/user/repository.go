@@ -99,7 +99,7 @@ func (r *userRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, 
 // rather than loading the row and its password hash.
 func (r *userRepository) UserExists(ctx context.Context, id uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&User{}).Where("id = ?", id).Limit(1).Count(&count).Error
+	err := r.db.WithContext(ctx).Model(&User{}).Where("id = ?", id).Count(&count).Error
 	if err != nil {
 		return false, fmt.Errorf("check user %s exists: %w", id, err)
 	}

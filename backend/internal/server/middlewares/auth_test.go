@@ -1,6 +1,7 @@
 package middlewares_test
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"net/http"
@@ -78,6 +79,7 @@ func TestAuthMiddleware(t *testing.T) {
 		authorization string
 		lookupErr     error
 		protected     int
+		public        int    // 200 when unset
 		wantCaller    string // echoed whenever the response is a 200
 		wantLookups   int
 	}{
@@ -111,7 +113,7 @@ func TestAuthMiddleware(t *testing.T) {
 		{
 			name:          "valid token with a failing lookup",
 			authorization: bearer(tokens, known), lookupErr: errors.New("db down"),
-			protected: http.StatusInternalServerError, wantCaller: "anonymous", wantLookups: 1,
+			protected: http.StatusInternalServerError, public: http.StatusInternalServerError, wantLookups: 1,
 		},
 	}
 
@@ -119,7 +121,7 @@ func TestAuthMiddleware(t *testing.T) {
 		for _, route := range []struct {
 			path string
 			want int
-		}{{"/protected", tt.protected}, {"/public", http.StatusOK}} {
+		}{{"/protected", tt.protected}, {"/public", cmp.Or(tt.public, http.StatusOK)}} {
 			t.Run(tt.name+" "+route.path, func(t *testing.T) {
 				t.Parallel()
 

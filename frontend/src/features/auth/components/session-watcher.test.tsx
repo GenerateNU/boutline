@@ -118,6 +118,19 @@ describe("SessionWatcher", () => {
     expect(logout).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores a 401 that arrives after the redirect started but before it unmounts", async () => {
+    respondWith(401);
+    render(<SessionWatcher />);
+
+    await apiRequest("/a").catch(() => undefined);
+    await waitFor(() => expect(replace).toHaveBeenCalledTimes(1));
+    await apiRequest("/b").catch(() => undefined);
+    await settle();
+
+    expect(logout).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenCalledTimes(1);
+  });
+
   it("stops reacting after it unmounts", async () => {
     respondWith(401);
     const { unmount } = render(<SessionWatcher />);

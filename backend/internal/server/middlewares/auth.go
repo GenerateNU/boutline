@@ -31,8 +31,9 @@ type UserLookup interface {
 // ID on the request context for handlers to read with session.UserIDFrom. A
 // public operation still reads a token when one is sent, so it can show
 // signed-in callers more; a bad token or a missing user there just leaves the
-// request anonymous. A failed user lookup is a 500 on a protected operation,
-// never a 401, so an outage cannot look like a signed-out session.
+// request anonymous. A failed user lookup is a 500 on every operation, never a
+// 401, so an outage cannot look like a signed-out session, and a public read
+// cannot quietly answer a signed-in caller with the anonymous view.
 func NewAuthMiddleware(
 	api huma.API,
 	tokens *user.UserTokenManager,
@@ -41,11 +42,9 @@ func NewAuthMiddleware(
 	return func(ctx huma.Context, next func(huma.Context)) {
 		userID, err := authenticate(ctx, tokens, users)
 
-		if !requiresAuth(ctx.Operation()) {
+		if !requiresAuth(ctx.Operation()) && !errors.Is(err, errLookupFailed) {
 			if err == nil {
 				ctx = huma.WithContext(ctx, session.WithUserID(ctx.Context(), userID))
-			} else if errors.Is(err, errLookupFailed) {
-				slog.Warn("serve anonymously after failed user lookup", "err", err, "path", ctx.URL().Path)
 			}
 			next(ctx)
 			return

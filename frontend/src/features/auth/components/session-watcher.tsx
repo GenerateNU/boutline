@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-import { expireSession } from "@/features/auth/services/session-expiry";
+import { expireSession, resetSessionExpiry } from "@/features/auth/services/session-expiry";
 import { AuthUser } from "@/features/auth/types/auth";
 import { apiRequest, onUnauthorized } from "@/services/api-request";
 
@@ -44,6 +44,7 @@ export function SessionWatcher() {
       window.removeEventListener("focus", checkSession);
       document.removeEventListener("visibilitychange", checkWhenVisible);
       unregister();
+      resetSessionExpiry();
     };
   }, [router]);
 
