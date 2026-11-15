@@ -2,6 +2,9 @@ import { format, isValid, parse } from "date-fns";
 
 const DATE_PARAM_FORMAT = "yyyy-MM-dd";
 
+// The ?date= value for "no day selected". A missing date can't carry that, since it means today.
+export const ALL_DATES = "all";
+
 export function parseDateParam(value: string | null | undefined): Date | undefined {
   if (!value) {
     return undefined;

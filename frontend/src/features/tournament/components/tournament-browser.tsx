@@ -6,6 +6,7 @@ import { SearchForm } from "@/features/tournament/components/search-form";
 import { TournamentCard } from "@/features/tournament/components/tournament-card";
 import { statusLabels } from "@/features/tournament/components/tournament-status-badge";
 import { countryName } from "@/features/tournament/lib/country-name";
+import { ALL_DATES } from "@/features/tournament/lib/date-param";
 import {
   parseTournamentFilters,
   TOURNAMENT_PAGE_SIZE,
@@ -89,7 +90,7 @@ async function TournamentBrowser({
             status,
             club,
             country,
-            date,
+            date: date ?? ALL_DATES,
             tz: date ? tz : undefined,
           }}
         />

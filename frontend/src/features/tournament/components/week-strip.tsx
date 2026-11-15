@@ -10,7 +10,7 @@ import { Button } from "@/components/primitives/button";
 import { useDayDrag } from "@/features/tournament/hooks/use-day-drag";
 import { useToday } from "@/features/tournament/hooks/use-today";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
-import { parseDateParam } from "@/features/tournament/lib/date-param";
+import { ALL_DATES, parseDateParam } from "@/features/tournament/lib/date-param";
 
 const VISIBLE_DAYS = 5;
 
@@ -56,22 +56,25 @@ interface WeekStripProps {
   defaultDay?: string;
   // Dark sits under the navbar on /tournaments; light sits in page content.
   surface?: StripSurface;
+  // Tapping the selected day clears it, so the page shows every date.
+  deselectable?: boolean;
 }
 
-function WeekStrip({ defaultDay, surface = "dark" }: WeekStripProps) {
-  const { searchParams, setDate } = useTournamentFilters();
+function WeekStrip({ defaultDay, surface = "dark", deselectable = false }: WeekStripProps) {
+  const { searchParams, setDate, clearDate } = useTournamentFilters();
   const dateParam = searchParams.get("date");
   const today = useToday();
-  const selected = parseDateParam(dateParam) ?? parseDateParam(defaultDay) ?? today;
+  const anchor = parseDateParam(dateParam) ?? parseDateParam(defaultDay) ?? today;
+  const selected = dateParam === ALL_DATES ? undefined : anchor;
   const [pagedStart, setPagedStart] = useState<Date>();
-  const start = pagedStart ?? selected;
+  const start = pagedStart ?? anchor;
 
   // The server falls back to today in ?tz= (else UTC) when the URL has no valid date. Once
   // the browser knows its own today, write that into the URL so the list matches
   // the local day the strip shows.
   const selectToday = useEffectEvent((day: Date) => setDate(day));
   useEffect(() => {
-    if (today && !defaultDay && !parseDateParam(dateParam)) {
+    if (today && !defaultDay && dateParam !== ALL_DATES && !parseDateParam(dateParam)) {
       selectToday(today);
     }
   }, [dateParam, defaultDay, today]);
@@ -82,23 +85,31 @@ function WeekStrip({ defaultDay, surface = "dark" }: WeekStripProps) {
     : [];
 
   // Turning the page also selects its first day, so the selection stays leftmost.
+  // With no day selected it only moves the strip, keeping every date listed.
   function page(step: number) {
     if (start) {
       const pageStart = addDays(start, step);
       setPagedStart(pageStart);
-      setDate(pageStart);
+      if (selected) {
+        setDate(pageStart);
+      }
     }
   }
 
   const { rowRef, rowStyle, trackHandlers } = useDayDrag(VISIBLE_DAYS, page);
 
-  // Tapping the selected day again keeps it selected rather than clearing it.
+  // Tapping the selected day again clears it when the strip is deselectable, else keeps it.
   function select(day: Date) {
-    if (selected && isSameDay(day, selected)) {
+    const tappedSelected = selected !== undefined && isSameDay(day, selected);
+    if (tappedSelected && !deselectable) {
       return;
     }
     setPagedStart(start);
-    setDate(day);
+    if (tappedSelected) {
+      clearDate();
+    } else {
+      setDate(day);
+    }
   }
 
   return (

@@ -3,7 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useTransition } from "react";
 
-import { formatDateParam } from "@/features/tournament/lib/date-param";
+import { ALL_DATES, formatDateParam } from "@/features/tournament/lib/date-param";
 
 function useTournamentFilters() {
   const router = useRouter();
@@ -41,7 +41,11 @@ function useTournamentFilters() {
     });
   }
 
-  return { searchParams, setFilters, setDate, isPending };
+  function clearDate() {
+    setFilters({ date: ALL_DATES, tz: undefined });
+  }
+
+  return { searchParams, setFilters, setDate, clearDate, isPending };
 }
 
 export { useTournamentFilters };

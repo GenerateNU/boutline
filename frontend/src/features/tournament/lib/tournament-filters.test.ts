@@ -61,6 +61,11 @@ describe("parseTournamentFilters", () => {
         tz: undefined,
       },
     },
+    {
+      name: "a deselected date",
+      query: { date: "all", tz: "America/New_York" },
+      want: { date: undefined },
+    },
   ])("parses $name", ({ query, want }) => {
     expect(parseTournamentFilters(query)).toMatchObject(want);
   });
