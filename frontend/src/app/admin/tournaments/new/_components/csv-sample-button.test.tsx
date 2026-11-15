@@ -11,4 +11,16 @@ describe("CsvSampleButton", () => {
 
     expect(screen.getByRole("dialog", { name: "Sample CSV" })).toHaveTextContent("Last Name,First Name,Member #,Club");
   });
+
+  it("offers the sample as a CSV file download", () => {
+    render(<CsvSampleButton />);
+    fireEvent.click(screen.getByRole("button", { name: "View sample CSV" }));
+
+    const link = screen.getByRole("link", { name: "Download Sample CSV" });
+
+    expect(link).toHaveAttribute("download", "sample-competitors.csv");
+    expect(decodeURIComponent(link.getAttribute("href") ?? "")).toMatch(
+      /^data:text\/csv;charset=utf-8,Last Name,First Name,Member #,Club/,
+    );
+  });
 });
