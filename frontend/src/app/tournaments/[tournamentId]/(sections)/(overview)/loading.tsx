@@ -6,7 +6,9 @@ const LABEL_WIDTHS = ["w-40", "w-52", "w-44"];
 const SECTION_TITLES = ["Ongoing Events", "Upcoming Events", "Completed Events"];
 const ROW_COUNT = 2;
 
-export default function TournamentSectionLoading() {
+// A route group, so this skeleton covers only the Overview. At the (sections) level it
+// would also stand in for the other tabs until their own skeleton arrived.
+export default function OverviewTabLoading() {
   return (
     <div className="flex flex-col gap-4">
       <span role="status" className="sr-only">

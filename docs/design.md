@@ -1874,6 +1874,9 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
   - Route groups and in-page `Suspense` keep a fallback off pages it doesn't fit:
     `/tournaments` and `/admin/tournaments` use `Suspense`, and an event's fencer
     list sits in `fencers/(list)`. Client fetches render their skeleton in place.
+  - No `loading.tsx` sits beside a tabbed layout, where it would wrap every tab:
+    a tab switch shows the nearest fallback the browser already has until the new
+    tab's own arrives, so the tournament Overview's lives in `(sections)/(overview)`.
   - A skeleton's first child is a screen-reader-only `role="status"` "Loading …"
     label; the blocks are `aria-hidden`. `Skeleton` shimmers with `motion-safe:`
     and stays flat when reduced motion is on.

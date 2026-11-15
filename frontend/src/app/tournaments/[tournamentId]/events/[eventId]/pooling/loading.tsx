@@ -1,14 +1,16 @@
+// A client component, since a server one can't hand PoolSearch an onChange handler.
+"use client";
+
 import { Button } from "@/components/primitives/button";
 import { SegmentedButton, SegmentedButtonItem } from "@/components/primitives/segmented-button";
 import { Skeleton } from "@/components/primitives/skeleton";
 
+import { VIEW_ITEM_CLASS } from "./_components/pool-card";
 import { PoolSearch } from "./_components/pool-search";
 import { PoolTableSkeleton } from "./_components/pool-table-skeleton";
 
 const CARD_COUNT = 2;
 const NO_OPTIONS = { fencers: [], clubs: [], poolNumbers: [] };
-const VIEW_ITEM_CLASS =
-  "h-9 border-blue bg-card py-0 text-blue data-[state=on]:bg-blue data-[state=on]:text-white";
 
 function ignoreChange() {}
 
