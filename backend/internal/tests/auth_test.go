@@ -98,11 +98,10 @@ func TestAuthMiddleware(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 		},
 		{
-			name:       "protected route with a valid token reaches validation",
-			route:      "/api/v1/users/not-a-uuid",
+			name:       "the current-user route without a token is unauthorized",
+			route:      "/api/v1/auth/me",
 			method:     testkit.GET,
-			headers:    valid,
-			wantStatus: http.StatusUnprocessableEntity,
+			wantStatus: http.StatusUnauthorized,
 		},
 		{
 			name:       "reads are public by default",
@@ -123,14 +122,6 @@ func TestAuthMiddleware(t *testing.T) {
 			method:     testkit.PATCH,
 			body:       map[string]any{},
 			wantStatus: http.StatusUnauthorized,
-		},
-		{
-			name:       "a protected write with a valid token reaches validation",
-			route:      "/api/v1/tournaments/not-a-uuid",
-			method:     testkit.PATCH,
-			headers:    valid,
-			body:       map[string]any{},
-			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name:       "login is public but still validates its body",
@@ -229,6 +220,39 @@ func TestAuthLoginAgainstRealDatabase(t *testing.T) {
 	})
 }
 
+// A token only counts while its user still exists: a deleted user's token is
+// rejected on a protected route and ignored on a public one.
+func TestAuthMiddlewareUserExistenceAgainstRealDatabase(t *testing.T) {
+	app := testkit.GetDBTestApp(t)
+	seeded := authHeaders(t, uuid.MustParse(alexMorgan))
+	deleted := authHeaders(t, uuid.New())
+
+	tests := []struct {
+		name       string
+		route      string
+		method     testkit.HTTPMethod
+		headers    map[string]string
+		body       any
+		wantStatus int
+	}{
+		{name: "a seeded user's token reaches the current-user route", route: "/api/v1/auth/me", method: testkit.GET, headers: seeded, wantStatus: http.StatusOK},
+		{name: "a token for a missing user is unauthorized on the current-user route", route: "/api/v1/auth/me", method: testkit.GET, headers: deleted, wantStatus: http.StatusUnauthorized},
+		{name: "a token for a missing user is ignored on a public read", route: "/api/v1/tournaments/not-a-uuid", method: testkit.GET, headers: deleted, wantStatus: http.StatusUnprocessableEntity},
+		{name: "a seeded user's token reaches validation on a protected write", route: "/api/v1/tournaments/not-a-uuid", method: testkit.PATCH, headers: seeded, body: map[string]any{}, wantStatus: http.StatusUnprocessableEntity},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := testkit.New(t).
+				Request(testkit.Request{App: app, Route: tt.route, Method: tt.method, Headers: tt.headers, Body: tt.body}).
+				AssertStatus(tt.wantStatus)
+			if tt.wantStatus == http.StatusOK {
+				response.AssertField("email", "alex.morgan@boutline.dev")
+			}
+		})
+	}
+}
+
 // The middleware reads each operation's Security, so the spec at /openapi.json
 // has to show the same requirement or /docs would mislabel what needs a token.
 //
@@ -252,6 +276,7 @@ func TestOpenAPISecurityMatchesMiddleware(t *testing.T) {
 		{name: "a read is public by default", path: "/api/v1/tournaments", method: "get", wantBearer: false},
 		{name: "a read can opt in to a token", path: "/api/v1/users/{id}", method: "get", wantBearer: true},
 		{name: "a write can opt out of a token", path: "/api/v1/auth/login", method: "post", wantBearer: false},
+		{name: "the current-user read requires a token", path: "/api/v1/auth/me", method: "get", wantBearer: true},
 	}
 
 	for _, tt := range tests {

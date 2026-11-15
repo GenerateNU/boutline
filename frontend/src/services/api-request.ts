@@ -23,6 +23,19 @@ export class ApiError extends Error {
   }
 }
 
+// A hook so the auth feature can react to a dead session without src/services importing
+// features (auth-actions imports problemMessage from here, so a direct import would cycle).
+let unauthorizedHandler: (() => void) | undefined;
+
+export function onUnauthorized(handler: () => void) {
+  unauthorizedHandler = handler;
+  return () => {
+    if (unauthorizedHandler === handler) {
+      unauthorizedHandler = undefined;
+    }
+  };
+}
+
 // Paths are relative to /api/v1, which Next proxies to the backend (see next.config.ts).
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
@@ -38,6 +51,9 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     body = await response.json();
   } catch {
     // No JSON body (e.g. a proxy error page); problemMessage falls back to the status.
+  }
+  if (response.status === 401) {
+    unauthorizedHandler?.();
   }
   if (!response.ok) {
     throw new ApiError(problemMessage(body, response.status), response.status);

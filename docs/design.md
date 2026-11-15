@@ -405,6 +405,11 @@ different roles in different tournaments.
   `Authorization: Bearer <token>`. An operation can override this; `GET /users`
   and `GET /users/{id}` require a token. Handlers read the verified ID with
   `session.UserIDFrom`.
+- The middleware also checks the token's user still exists, so a deleted account's
+  token stops working at once: a 401 where a token is required, anonymous on a
+  public read. A failed lookup is a 500, never a 401, so a database outage doesn't
+  sign anyone out.
+- `GET /api/v1/auth/me` requires a token and returns the caller.
 - `JWT_SECRET` must be at least 32 bytes. A built-in dev secret is allowed only
   when `APP_ENVIRONMENT=dev`.
 
@@ -425,6 +430,12 @@ different roles in different tournaments.
   lifetime, so page scripts never see it.
 - `src/proxy.ts` moves the cookie into the `Authorization` header on `/api/*`. It
   redirects `/admin/*` and `/…/referee` to `/login?next=…` when there is no cookie.
+  On a GET to those pages it also checks the cookie with `/auth/me`; a 401 deletes
+  the cookie and redirects the same way. Any other failure lets the page load.
+- **Automatic logout:** on `/admin/*` and the referee screen, a 401 from any
+  `/api` call, or from `/auth/me` when the tab regains focus, signs out once and
+  goes to `/login?next=…`. Drafts stay; another account signing in next clears
+  them. Only a 401 counts, so an unreachable backend never signs anyone out.
 - A server component that calls the backend itself (the dashboard's role lookup)
   sends the cookie's token as `Authorization: Bearer`, the same as the `/api` proxy.
 

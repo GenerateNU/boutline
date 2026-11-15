@@ -41,7 +41,7 @@ func CreateApp(cfg *config.Configuration, db *gorm.DB, redisClient *redis.Client
 	// Huma copies the middleware chain onto each operation as it registers, so
 	// this must come before SetUpRoutes or no route would be protected.
 	tokens := user.NewUserTokenManager(cfg.JWTSecret, user.UserTokenTTL)
-	api.UseMiddleware(middlewares.NewAuthMiddleware(api, tokens))
+	api.UseMiddleware(middlewares.NewAuthMiddleware(api, tokens, user.NewUserRepository(db)))
 
 	routers.SetUpRoutes(app, types.RouteParams{
 		API:       api,

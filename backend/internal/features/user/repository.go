@@ -21,6 +21,7 @@ var userNameSearchColumns = []string{"first_name", "last_name"}
 type UserRepository interface {
 	SignupUser(ctx context.Context, user *User) error
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
+	UserExists(ctx context.Context, id uuid.UUID) (bool, error)
 	LoginUser(ctx context.Context, email string) (*User, error)
 	ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error)
 	UpdateUserByID(ctx context.Context, id uuid.UUID, update UserUpdate) error
@@ -92,6 +93,18 @@ func (r *userRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, 
 	}
 
 	return &user, nil
+}
+
+// UserExists runs on every authenticated request, so it reads the key alone
+// rather than loading the row and its password hash.
+func (r *userRepository) UserExists(ctx context.Context, id uuid.UUID) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&User{}).Where("id = ?", id).Count(&count).Error
+	if err != nil {
+		return false, fmt.Errorf("check user %s exists: %w", id, err)
+	}
+
+	return count > 0, nil
 }
 
 func (r *userRepository) LoginUser(ctx context.Context, email string) (*User, error) {
