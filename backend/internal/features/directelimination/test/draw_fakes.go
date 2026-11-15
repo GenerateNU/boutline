@@ -24,6 +24,15 @@ type fakeDrawRepository struct {
 	standBouts   []pool.PoolSheetBoutRow
 }
 
+func (f *fakeDrawRepository) GetDirectEliminationTournamentID(_ context.Context, id uuid.UUID) (uuid.UUID, error) {
+	de, ok := f.locked[id]
+	if !ok {
+		return uuid.Nil, fmt.Errorf("select direct elimination %s tournament: %w", id, errs.ErrNotFound)
+	}
+
+	return de.TournamentID, nil
+}
+
 func (f *fakeDrawRepository) WithLockedDirectElimination(
 	_ context.Context,
 	id uuid.UUID,
