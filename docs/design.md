@@ -616,7 +616,8 @@ Tabs: Fencers (the index page) · Referees · Events · Settings.
   tournament's pools, then closes. Each row shows Occupied or Available and the
   referee's pool (§10.3), and its Remove asks for confirmation first. Add Referees
   and Remove are admin-only.
-- **Fencers**, **Events** and **Settings** (Planned): empty until a ticket defines
+- **Fencers**, **Events** and **Settings** (Planned): a "coming soon" line over a
+  static `Skeleton` layout (a roster, event cards, a form) until a ticket defines
   what they show.
 
 ---
