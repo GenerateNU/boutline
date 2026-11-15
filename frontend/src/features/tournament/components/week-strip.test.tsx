@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 
 import { WeekStrip } from "@/features/tournament/components/week-strip";
 
@@ -126,6 +126,56 @@ describe("WeekStrip", () => {
 
     expect(screen.getByRole("button", { name: "Nov 11" })).toHaveAttribute("aria-pressed", "true");
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("clears the selected day when a deselectable strip's day is tapped again", () => {
+    mockSearch = "date=2026-11-11&tz=America/New_York&q=foil";
+    render(<WeekStrip deselectable />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Nov 11" }));
+
+    expect(replace).toHaveBeenCalledWith("/tournaments?q=foil", { scroll: false });
+    expect(visibleDays()).toEqual(current);
+  });
+
+  describe("on a deselectable strip with no date", () => {
+    beforeEach(() => {
+      mockSearch = "";
+    });
+
+    it.each([
+      { name: "missing", search: "" },
+      { name: "invalid", search: "date=2026-02-31" },
+    ])("presses no day and leaves the URL alone when the date is $name", ({ search }) => {
+      mockSearch = search;
+      render(<WeekStrip deselectable />);
+
+      expect(screen.queryAllByRole("button", { pressed: true, hidden: true })).toHaveLength(0);
+      expect(visibleDays()[0]).toBe(format(new Date(), "MMM d"));
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it("turns the page without selecting a day", () => {
+      render(<WeekStrip deselectable />);
+      const later = addDays(new Date(), 5);
+
+      fireEvent.click(screen.getByRole("button", { name: "Later days" }));
+
+      expect(visibleDays()[0]).toBe(format(later, "MMM d"));
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it("selects a tapped day", () => {
+      render(<WeekStrip deselectable />);
+      const tomorrow = addDays(new Date(), 1);
+
+      fireEvent.click(screen.getByRole("button", { name: format(tomorrow, "MMM d") }));
+
+      expect(replace).toHaveBeenCalledWith(
+        expect.stringContaining(`date=${format(tomorrow, "yyyy-MM-dd")}`),
+        { scroll: false },
+      );
+    });
   });
 
   it.each([

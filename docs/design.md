@@ -482,15 +482,15 @@ from the venue floor.
   arrives.
 - **Search:** a plain GET form that works without JS; with JS it updates `?q=`
   after a 300 ms debounce.
-- **Dates:** five day tabs in a dark row under the global nav, with paging. A
-  day is always selected: tapping the selected day keeps it, and a missing or
-  invalid `?date=` falls back to today. The server uses today in `?tz=` (else
-  UTC), then the strip rewrites the URL to the browser's own today and zone. The
-  strip opens with the selected day leftmost.
+- **Dates:** five day tabs in a dark row under the global nav, with paging. No
+  day is selected by default: with no valid `?date=`, the list has no date
+  filter and shows tournaments on every date, and the strip opens on today.
+  Tapping a day selects it; tapping the selected day again deselects it and
+  drops `?date=`. The strip opens with the selected day leftmost.
   Dragging the row locks to the previous, current or next five days: past a
   quarter of its width it turns the page, otherwise it springs back. Turning a
-  page, by drag or chevron, selects its first day; tapping a day selects it
-  without moving the strip. The icon beside the title opens a Calendar pop-up
+  page, by drag or chevron, selects its first day (with no day selected it only
+  moves the strip); tapping a day selects it without moving the strip. The icon beside the title opens a Calendar pop-up
   (month and year steppers); picking a day and pressing Show Tournaments applies
   it. Both filter by `start_time`.
 - **Active filters:** each applied Status, Club or Country filter shows as a

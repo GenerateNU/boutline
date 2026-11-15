@@ -41,7 +41,11 @@ function useTournamentFilters() {
     });
   }
 
-  return { searchParams, setFilters, setDate, isPending };
+  function clearDate() {
+    setFilters({ date: undefined, tz: undefined });
+  }
+
+  return { searchParams, setFilters, setDate, clearDate, isPending };
 }
 
 export { useTournamentFilters };

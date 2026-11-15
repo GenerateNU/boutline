@@ -12,7 +12,7 @@ export default async function TournamentsPage({
 }: PageProps<"/tournaments">) {
   return (
     <>
-      <WeekStrip />
+      <WeekStrip deselectable />
       <Suspense fallback={<TournamentBrowserSkeleton />}>
         <TournamentBrowser
           basePath="/tournaments"

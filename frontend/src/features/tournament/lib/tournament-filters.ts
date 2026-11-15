@@ -1,8 +1,4 @@
-import {
-  formatDateParam,
-  parseDateParam,
-  todayDateParam,
-} from "@/features/tournament/lib/date-param";
+import { formatDateParam, parseDateParam } from "@/features/tournament/lib/date-param";
 import type { TournamentStatus } from "@/features/tournament/types/tournament";
 import { readOffsetParam, type SearchParams, readStringParam } from "@/lib/search-params";
 
@@ -20,8 +16,8 @@ export function parseTournamentFilters(query: SearchParams) {
   return {
     offset: readOffsetParam(query),
     status: STATUSES.find((status) => status === query.status),
-    // A day is always selected, so a missing or invalid one means today.
-    date: day ? formatDateParam(day) : todayDateParam(tz),
+    // No day selected, or an invalid one, lists every date.
+    date: day ? formatDateParam(day) : undefined,
     search: readStringParam(query, "q"),
     tz,
     // Values the backend would reject are dropped, since a 422 would break the page.
