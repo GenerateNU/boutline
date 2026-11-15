@@ -2,30 +2,14 @@ import { poolStandings } from "../_services/pool-standings";
 import { poolTitle } from "../_services/pool-title";
 import type { PoolBoard } from "../_types/pool-board";
 
-const statColumns = ["V", "V/M", "TS", "TR", "Ind"];
-const headerCell = "px-2 py-2 text-xs font-medium text-neutral-secondary";
+import { PoolStandingsHead } from "./pool-standings-head";
 
 export function PoolStandingsTable({ pool }: { pool: PoolBoard }) {
   return (
     <div className="overflow-hidden rounded-[12px] border border-outline bg-card">
       <table className="w-full border-collapse">
         <caption className="sr-only">{`${poolTitle(pool)} standings`}</caption>
-        <thead>
-          <tr className="bg-blue-lightest">
-            <th scope="col" className={`${headerCell} text-left`}>
-              <span aria-hidden>#</span>
-              <span className="sr-only">Place</span>
-            </th>
-            <th scope="col" className={`${headerCell} text-left`}>
-              Fencer
-            </th>
-            {statColumns.map((label) => (
-              <th key={label} scope="col" className={`${headerCell} text-center`}>
-                {label}
-              </th>
-            ))}
-          </tr>
-        </thead>
+        <PoolStandingsHead />
         <tbody className="divide-y divide-outline">
           {poolStandings(pool).map((row) => (
             <tr key={row.competitorId}>

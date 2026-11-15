@@ -1,8 +1,8 @@
 "use client";
 
-import { Loading } from "@/components/primitives/loading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/primitives/tabs";
 import { FencerCard } from "@/features/competitor/components/fencer-card";
+import { PinnedItemsSkeleton } from "@/features/pinning/components/pinned-items-skeleton";
 import { usePinnedFencers } from "@/features/pinning/hooks/use-pinned-fencers";
 import type { Competitor } from "@/types/competitor";
 
@@ -73,7 +73,7 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
     );
   }
   if (!fencers) {
-    return <Loading />;
+    return <PinnedItemsSkeleton />;
   }
 
   return (

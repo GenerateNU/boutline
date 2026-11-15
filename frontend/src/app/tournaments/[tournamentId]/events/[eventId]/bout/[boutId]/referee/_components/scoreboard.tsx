@@ -1,6 +1,5 @@
 "use client";
 
-import { Loading } from "@/components/primitives/loading";
 import { Section } from "@/components/primitives/section";
 
 import { useBoutScoring } from "../_hooks/use-bout-scoring";
@@ -10,6 +9,7 @@ import { PhaseControls } from "./phase-controls";
 import { PhaseHeader } from "./phase-header";
 import { ScoreHistory } from "./score-history";
 import { ScorePanel } from "./score-panel";
+import { ScoreboardSkeleton } from "./scoreboard-skeleton";
 
 interface ScoreboardProps {
   boutId: string;
@@ -34,17 +34,16 @@ export function Scoreboard({ boutId }: ScoreboardProps) {
   } = useBoutScoring(boutId);
 
   if (!matchup || !tally || !phase) {
-    return (
-      <Section title="Referee view">
-        {error ? (
+    if (error) {
+      return (
+        <Section title="Referee view">
           <p role="alert" className="text-sm text-muted-foreground">
             {error}
           </p>
-        ) : (
-          <Loading />
-        )}
-      </Section>
-    );
+        </Section>
+      );
+    }
+    return <ScoreboardSkeleton />;
   }
 
   const names = new Map(

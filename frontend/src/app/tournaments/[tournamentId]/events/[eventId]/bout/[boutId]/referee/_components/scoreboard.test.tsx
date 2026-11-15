@@ -158,9 +158,9 @@ describe("Scoreboard", () => {
     installBackend([]);
     render(<Scoreboard boutId={BOUT_ID} />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("Loading");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading bout");
     await screen.findByLabelText("Alice Chen score");
-    expect(screen.queryByText("Loading")).not.toBeInTheDocument();
+    expect(screen.queryByText("Loading bout")).not.toBeInTheDocument();
   });
 
   it("explains which field failed when the bout id is rejected", async () => {
