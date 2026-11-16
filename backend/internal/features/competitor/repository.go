@@ -219,9 +219,7 @@ func (r *competitorRepository) ListCompetitors(
 		query = query.Where("gender = ?", string(*filter.Gender))
 	}
 	if filter.Weapon != nil || filter.AgeCategory != nil {
-		// A semi-join subquery, not a Joins: events also has a gender column, and
-		// competitors/events share id, created_at, updated_at, so joining would make
-		// the existing gender/id/ORDER BY clauses ambiguous and break Find's column mapping.
+		// sub-query because events table has weapon and age
 		events := r.db.WithContext(ctx).Model(&event.Event{}).Select("id")
 		if filter.Weapon != nil {
 			events = events.Where("weapon = ?", string(*filter.Weapon))

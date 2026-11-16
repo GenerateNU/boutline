@@ -22,8 +22,7 @@ const SUGGESTION_LIMIT = 10;
 
 interface FencerFilterSheetProps {
   tournamentId: string;
-  // An event has one weapon and one age category, so filtering by either only
-  // means something across a whole tournament.
+  // Used to decide if weapon and age category filters should be shown
   scope: "tournament" | "event";
 }
 
@@ -43,9 +42,7 @@ function FencerFilterSheet({ tournamentId, scope }: FencerFilterSheetProps) {
     return result.data.map(({ name }) => ({ value: name, label: name }));
   });
 
-  const activeTags = [
-    { name: "Club", value: clubField.value, clear: () => clubField.reset() },
-    ...(scope === "tournament"
+  const tournamentOnlyTags = (scope === "tournament"
       ? [
           {
             name: "Weapon",
@@ -58,7 +55,11 @@ function FencerFilterSheet({ tournamentId, scope }: FencerFilterSheetProps) {
             clear: () => setAgeCategory(""),
           },
         ]
-      : []),
+      : [])
+
+  const activeTags = [
+    { name: "Club", value: clubField.value, clear: () => clubField.reset() },
+    ...tournamentOnlyTags,
     { name: "Rating", value: rating && optionLabel(RATING_OPTIONS, rating), clear: () => setRating("") },
     { name: "Gender", value: gender && optionLabel(GENDER_OPTIONS, gender), clear: () => setGender("") },
   ].filter((tag) => tag.value);
