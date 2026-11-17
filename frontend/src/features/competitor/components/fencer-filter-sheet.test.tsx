@@ -258,4 +258,13 @@ describe("FencerFilterSheet", () => {
     expect(screen.queryByRole("radio", { name: "Foil" })).not.toBeInTheDocument();
     expect(document.querySelector('select[name="ageCategory"]')).not.toBeInTheDocument();
   });
+
+  it("scope=event strips weapon and ageCategory from the URL on submit", async () => {
+    currentParams = new URLSearchParams("team=Salle+Nord&weapon=foil&ageCategory=y10");
+    await openSheet("event");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/fencers?team=Salle+Nord", { scroll: false });
+  });
 });

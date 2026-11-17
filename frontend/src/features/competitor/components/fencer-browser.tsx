@@ -44,7 +44,11 @@ function emptyMessage({ search, hasFilters, eventId }: EmptyMessageInput) {
 
 // The searchable, filterable fencer list shared by the tournament and event Fencers tabs.
 async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerBrowserProps) {
-  const { offset, search, team, rating, gender, weapon, ageCategory } = parseFencerFilters(query);
+  const filters = parseFencerFilters(query);
+  const { offset, search, team, rating, gender } = filters;
+  // An event has one weapon and age category, so those filters only mean something tournament-wide.
+  const weapon = eventId ? undefined : filters.weapon;
+  const ageCategory = eventId ? undefined : filters.ageCategory;
 
   const { data, total, limit } = await getCompetitors(tournamentId, FENCER_PAGE_SIZE, offset, {
     eventId,

@@ -72,8 +72,9 @@ function FencerFilterSheet({ tournamentId, scope }: FencerFilterSheetProps) {
         // "Show Fencers" throws the unsaved picks away.
         if (next) {
           clubField.reset(searchParams.get("team") ?? "");
-          setWeapon(searchParams.get("weapon") ?? "");
-          setAgeCategory(searchParams.get("ageCategory") ?? "");
+          // At event scope these stay empty, so submitting strips any stale params from the URL.
+          setWeapon(scope === "tournament" ? (searchParams.get("weapon") ?? "") : "");
+          setAgeCategory(scope === "tournament" ? (searchParams.get("ageCategory") ?? "") : "");
           setRating(searchParams.get("rating") ?? "");
           setGender(searchParams.get("gender") ?? "");
         }
