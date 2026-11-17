@@ -8,12 +8,6 @@ export interface EventTimeGroup {
 // Every formatter uses UTC so a day label matches eventDay(), which slices the
 // UTC ISO string. Formatting in local time could put a late-evening event on
 // the next or previous day.
-const DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "UTC",
-});
-
 const LONG_DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
   month: "long",
   day: "numeric",
@@ -24,7 +18,6 @@ const TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
   minute: "2-digit",
   timeZone: "UTC",
-  timeZoneName: "short",
 });
 
 // Turns a "YYYY-MM-DD" day key back into a Date so the formatters can label it.
@@ -70,15 +63,6 @@ export function selectEventDay(
   return days.find((day) => day >= today) ?? days[days.length - 1] ?? null;
 }
 
-// The `size` days shown in the date strip, centred on the selected day but
-// shifted inward at either end so the strip is always full.
-export function dayWindow(days: string[], selected: string, size: number): string[] {
-  const maxStart = Math.max(0, days.length - size);
-  const centred = days.indexOf(selected) - Math.floor(size / 2);
-  const start = Math.min(Math.max(0, centred), maxStart);
-  return days.slice(start, start + size);
-}
-
 // Events on `day` whose name matches `search`, grouped by start time.
 // Events with no start time match every day. Sorting first means the Map's insertion order is already the display order.
 export function scheduleForDay(
@@ -106,10 +90,6 @@ export function eventsWithStatus(
   return events.filter((event) => event.status === status).sort(byStartThenName);
 }
 
-export function formatDayLabel(day: string): string {
-  return DAY_FORMAT.format(utcMidnight(day));
-}
-
 // "October 12" for a one-day tournament, "October 12 – October 14" otherwise.
 // Uses the tournament's own start time if no event has been scheduled yet.
 export function formatEventDateRange(
@@ -126,6 +106,7 @@ export function formatEventDateRange(
   return first === last ? format(first) : `${format(first)} – ${format(last)}`;
 }
 
+// The UTC clock time without a zone label, e.g. "9:00 AM".
 export function formatTimeLabel(startTime: string): string {
   return TIME_FORMAT.format(new Date(startTime));
 }

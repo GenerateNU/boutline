@@ -1,15 +1,23 @@
 "use client";
 
-import FilterAltOutlined from "@mui/icons-material/FilterAltOutlined";
 import { useState } from "react";
 
 import { Chip } from "@/components/primitives/chip";
+import { ChipGroup, ChipGroupItem, ChipGroupOptions } from "@/components/primitives/chip-group";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
+import { SelectField } from "@/components/primitives/select-field";
+import { Text } from "@/components/primitives/text";
+import {
+  GENDER_OPTIONS,
+  RATING_OPTIONS,
+  optionLabel,
+} from "@/features/competitor/lib/fencer-filters";
+import { AGE_OPTIONS, WEAPON_OPTIONS } from "@/features/event/lib/event-filters";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
-import { useSearchSuggestions } from "@/lib/hooks/use-search-suggestions";
+import { useFilterSearch } from "@/lib/hooks/use-filter-search";
 import { apiRequest } from "@/services/api-request";
-import type { CompetitorListResult, TeamListResult } from "@/types/competitor";
+import type { TeamListResult } from "@/types/competitor";
 
 const SUGGESTION_LIMIT = 10;
 
@@ -20,22 +28,10 @@ interface FencerFilterSheetProps {
 function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
   const { searchParams, setFilters } = useTournamentFilters();
   const [open, setOpen] = useState(false);
-  const [selectedFencer, setSelectedFencer] = useState("");
-  const [selectedClub, setSelectedClub] = useState("");
+  const [rating, setRating] = useState("");
+  const [gender, setGender] = useState("");
 
-  const fencerSearch = useSearchSuggestions(async (term) => {
-    const query = new URLSearchParams({
-      tournament_id: tournamentId,
-      limit: String(SUGGESTION_LIMIT),
-      q: term,
-    });
-    const result = await apiRequest<CompetitorListResult>(`/competitors?${query}`);
-    return result.data.map(({ firstName, lastName }) => {
-      const name = `${firstName} ${lastName}`;
-      return { value: name, label: name };
-    });
-  });
-  const clubSearch = useSearchSuggestions(async (term) => {
+  const clubField = useFilterSearch(async (term) => {
     const query = new URLSearchParams({ limit: String(SUGGESTION_LIMIT), q: term });
     const result = await apiRequest<TeamListResult>(
       `/tournaments/${encodeURIComponent(tournamentId)}/teams?${query}`,
@@ -50,74 +46,93 @@ function FencerFilterSheet({ tournamentId }: FencerFilterSheetProps) {
         // Each open starts from the filters in the URL, so closing without
         // "Show Fencers" throws the unsaved picks away.
         if (next) {
-          setSelectedFencer(searchParams.get("q") ?? "");
-          setSelectedClub(searchParams.get("team") ?? "");
-          fencerSearch.clear();
-          clubSearch.clear();
+          clubField.reset(searchParams.get("team") ?? "");
+          setRating(searchParams.get("rating") ?? "");
+          setGender(searchParams.get("gender") ?? "");
         }
         setOpen(next);
       }}
       triggerLabel="Filter fencers"
-      triggerIcon={<FilterAltOutlined className="size-5! text-brand" />}
       description="Narrow the fencer list"
       submitLabel="Show Fencers"
       onReset={() => {
-        setSelectedFencer("");
-        setSelectedClub("");
-        fencerSearch.clear();
-        clubSearch.clear();
+        clubField.reset();
+        setRating("");
+        setGender("");
       }}
       onSubmit={() => {
-        setFilters({ q: selectedFencer || undefined, team: selectedClub || undefined });
+        setFilters({ team: clubField.submitValue(), rating, gender });
         setOpen(false);
       }}
     >
-      {(selectedFencer || selectedClub) && (
+      {(clubField.value || rating || gender) && (
         <div className="flex flex-wrap gap-2">
-          {selectedFencer && (
-            <Chip onDismiss={() => setSelectedFencer("")} dismissLabel={`Remove ${selectedFencer}`}>
-              {selectedFencer}
+          {clubField.value && (
+            <Chip
+              onDismiss={() => clubField.reset()}
+              dismissLabel={`Remove Club: ${clubField.value}`}
+            >
+              Club: {clubField.value}
             </Chip>
           )}
-          {selectedClub && (
-            <Chip onDismiss={() => setSelectedClub("")} dismissLabel={`Remove ${selectedClub}`}>
-              {selectedClub}
+          {rating && (
+            <Chip
+              onDismiss={() => setRating("")}
+              dismissLabel={`Remove Rating: ${optionLabel(RATING_OPTIONS, rating)}`}
+            >
+              Rating: {optionLabel(RATING_OPTIONS, rating)}
+            </Chip>
+          )}
+          {gender && (
+            <Chip
+              onDismiss={() => setGender("")}
+              dismissLabel={`Remove Gender: ${optionLabel(GENDER_OPTIONS, gender)}`}
+            >
+              Gender: {optionLabel(GENDER_OPTIONS, gender)}
             </Chip>
           )}
         </div>
       )}
 
-      <FilterSearchField
-        label="Fencer"
-        value={fencerSearch.query}
-        onChange={(event) => fencerSearch.change(event.target.value)}
-        suggestions={fencerSearch.suggestions}
-        failed={fencerSearch.failed}
-        loading={fencerSearch.loading}
-        selected={selectedFencer}
-        onPick={(name) => {
-          setSelectedFencer(name);
-          fencerSearch.clear();
-        }}
-        noun="fencers"
-      />
+      <Text variant="caption">Greyed-out filters are coming soon.</Text>
 
-      {/* The fencer list's team filter is an exact match, so a club has to
-          be picked from these fuzzy matches rather than typed in. */}
       <FilterSearchField
         label="Club"
-        value={clubSearch.query}
-        onChange={(event) => clubSearch.change(event.target.value)}
-        suggestions={clubSearch.suggestions}
-        failed={clubSearch.failed}
-        loading={clubSearch.loading}
-        selected={selectedClub}
-        onPick={(name) => {
-          setSelectedClub(name);
-          clubSearch.clear();
-        }}
+        value={clubField.query}
+        onChange={(event) => clubField.change(event.target.value)}
+        suggestions={clubField.suggestions}
+        failed={clubField.failed}
+        loading={clubField.loading}
+        selected={clubField.value}
+        onPick={clubField.pick}
+        onCommitText={clubField.commitText}
+        maxLength={120}
         noun="clubs"
       />
+
+      {/* Weapon and age live on events, which the fencer list can't filter by yet. */}
+      <ChipGroup label="Weapon" disabled>
+        <ChipGroupOptions options={WEAPON_OPTIONS} />
+      </ChipGroup>
+
+      <SelectField label="Age Category" placeholder="Select age" options={AGE_OPTIONS} disabled />
+
+      <SelectField
+        label="Rating"
+        name="rating"
+        placeholder="Select rating"
+        options={RATING_OPTIONS}
+        value={rating}
+        onValueChange={setRating}
+      />
+
+      <ChipGroup label="Gender" value={gender} onValueChange={setGender}>
+        {GENDER_OPTIONS.map(({ value, label }) => (
+          <ChipGroupItem key={value} value={value} className="flex-1">
+            {label}
+          </ChipGroupItem>
+        ))}
+      </ChipGroup>
     </FilterSheetDialog>
   );
 }

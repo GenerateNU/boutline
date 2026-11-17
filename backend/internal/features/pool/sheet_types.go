@@ -79,7 +79,11 @@ type PoolSheetListOutput struct {
 }
 
 func newPoolSheetResponse(pool PoolSheetPoolRow, fencers []PoolSheetFencerRow, bouts []PoolSheetBoutRow) PoolSheetResponse {
-	standings := poolStandings(fencers, bouts)
+	competitorIDs := make([]uuid.UUID, 0, len(fencers))
+	for _, fencer := range fencers {
+		competitorIDs = append(competitorIDs, fencer.CompetitorID)
+	}
+	standings := RankPoolFencers(competitorIDs, bouts)
 
 	wireFencers := make([]PoolSheetFencer, 0, len(fencers))
 	for _, fencer := range fencers {

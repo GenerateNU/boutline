@@ -60,7 +60,7 @@ describe("PinnedItemsView", () => {
   });
 
   it("links a pinned fencer to their page", async () => {
-    seed({ fencerIds: ["f1"], boutIds: [] });
+    seed({ fencerIds: ["f1"], boutIds: [], poolIds: [] });
     render(<PinnedItemsView />);
 
     expect(await screen.findByRole("link", { name: /Ann Smith/ })).toHaveAttribute(
@@ -70,7 +70,7 @@ describe("PinnedItemsView", () => {
   });
 
   it("tapping the pin unpins the fencer", async () => {
-    seed({ fencerIds: ["f1"], boutIds: [] });
+    seed({ fencerIds: ["f1"], boutIds: [], poolIds: [] });
     render(<PinnedItemsView />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Unpin Ann Smith" }));
@@ -83,7 +83,7 @@ describe("PinnedItemsView", () => {
     { name: "only that tournament's pins", tournamentId: "t1", wantCara: false },
     { name: "every pin without a tournament", tournamentId: undefined, wantCara: true },
   ])("shows $name", async ({ tournamentId, wantCara }) => {
-    seed({ fencerIds: ["f1", "f3"], boutIds: [] });
+    seed({ fencerIds: ["f1", "f3"], boutIds: [], poolIds: [] });
     render(<PinnedItemsView tournamentId={tournamentId} />);
 
     expect(await screen.findByRole("link", { name: /Ann Smith/ })).toBeInTheDocument();
@@ -104,16 +104,17 @@ describe("PinnedItemsView", () => {
     expect(screen.queryByText(hides)).not.toBeInTheDocument();
   });
 
-  it("shows the loader until the pins arrive", async () => {
-    seed({ fencerIds: ["f1"], boutIds: [] });
+  it("shows a skeleton until the pins arrive", async () => {
+    seed({ fencerIds: ["f1"], boutIds: [], poolIds: [] });
     global.fetch = jest.fn(() => new Promise(() => {})) as jest.Mock;
     render(<PinnedItemsView />);
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Loading");
+    expect(await screen.findByRole("status")).toHaveTextContent("Loading pins");
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
   });
 
   it("shows the error when loading fails", async () => {
-    seed({ fencerIds: ["f1"], boutIds: [] });
+    seed({ fencerIds: ["f1"], boutIds: [], poolIds: [] });
     global.fetch = jest.fn().mockRejectedValue(new Error("Network down"));
     render(<PinnedItemsView />);
 

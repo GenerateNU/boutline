@@ -1,11 +1,42 @@
 package pool
 
-import "github.com/google/uuid"
+import (
+	"bytes"
+	"cmp"
+	"slices"
 
-func poolStandings(fencers []PoolSheetFencerRow, bouts []PoolSheetBoutRow) map[uuid.UUID]PoolStanding {
-	standings := make(map[uuid.UUID]PoolStanding, len(fencers))
-	for _, fencer := range fencers {
-		standings[fencer.CompetitorID] = PoolStanding{}
+	"github.com/google/uuid"
+)
+
+type StageRank struct {
+	CompetitorID uuid.UUID
+	Standing     PoolStanding
+}
+
+// RankPoolStage ranks every fencer across a stage's pools; Standing.Place is stage-wide and shared on ties.
+func RankPoolStage(competitorIDs []uuid.UUID, bouts []PoolSheetBoutRow) []StageRank {
+	standings := RankPoolFencers(competitorIDs, bouts)
+	ranks := make([]StageRank, 0, len(standings))
+	for id, standing := range standings {
+		ranks = append(ranks, StageRank{CompetitorID: id, Standing: standing})
+	}
+
+	slices.SortFunc(ranks, func(a, b StageRank) int {
+		return cmp.Or(
+			cmp.Compare(a.Standing.Place, b.Standing.Place),
+			bytes.Compare(a.CompetitorID[:], b.CompetitorID[:]),
+		)
+	})
+
+	return ranks
+}
+
+// RankPoolFencers ranks one pool, or a whole stage when given every pool's bouts at
+// once: each fencer's tally only reads their own bouts (FIE o.73 general ranking).
+func RankPoolFencers(competitorIDs []uuid.UUID, bouts []PoolSheetBoutRow) map[uuid.UUID]PoolStanding {
+	standings := make(map[uuid.UUID]PoolStanding, len(competitorIDs))
+	for _, id := range competitorIDs {
+		standings[id] = PoolStanding{}
 	}
 
 	for _, bout := range bouts {

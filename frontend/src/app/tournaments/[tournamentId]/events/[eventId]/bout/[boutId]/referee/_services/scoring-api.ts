@@ -13,11 +13,8 @@ export function startBout(boutId: string) {
   return apiRequest<Bout>(`/bouts/${boutId}/start`, { method: "POST" });
 }
 
-export function assignReferee(boutId: string, refereeId: string) {
-  return apiRequest<Bout>(`/bouts/${boutId}`, {
-    method: "PATCH",
-    body: JSON.stringify({ referee_id: refereeId }),
-  });
+export function claimBout(boutId: string) {
+  return apiRequest<Bout>(`/bouts/${boutId}/claim`, { method: "POST" });
 }
 
 export function endBout(boutId: string) {

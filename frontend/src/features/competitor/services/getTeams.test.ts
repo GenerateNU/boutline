@@ -29,6 +29,6 @@ describe("getTeams", () => {
   it("throws when the backend responds with an error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 
-    await expect(getTeams("t-1", 20, 0)).rejects.toThrow("list teams: 500");
+    await expect(getTeams("t-1", 20, 0)).rejects.toThrow("Request failed with status 500");
   });
 });

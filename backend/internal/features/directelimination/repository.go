@@ -2,6 +2,7 @@ package directelimination
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -15,6 +16,7 @@ import (
 type DirectEliminationRepository interface {
 	CreateDirectElimination(ctx context.Context, de *DirectElimination) error
 	GetDirectEliminationByID(ctx context.Context, id uuid.UUID) (*DirectElimination, error)
+	GetDirectEliminationTournamentID(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	ListDirectElimination(ctx context.Context, filter DirectEliminationListFilter) ([]DirectElimination, int64, error)
 	UpdateDirectEliminationByID(ctx context.Context, id uuid.UUID, edit DirectEliminationEdit) error
 	TransitionDirectEliminationByID(ctx context.Context, id uuid.UUID, transition DirectEliminationTransition) error
@@ -102,6 +104,29 @@ func (r *directEliminationRepository) GetDirectEliminationByID(
 	}
 
 	return &de, nil
+}
+
+func (r *directEliminationRepository) GetDirectEliminationTournamentID(
+	ctx context.Context,
+	id uuid.UUID,
+) (uuid.UUID, error) {
+	var tournamentID uuid.UUID
+
+	err := r.db.WithContext(ctx).
+		Table("direct_eliminations").
+		Select("events.tournament_id").
+		Joins("JOIN events ON events.id = direct_eliminations.event_id").
+		Where("direct_eliminations.id = ?", id).
+		Row().
+		Scan(&tournamentID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return uuid.Nil, fmt.Errorf("select direct elimination %s tournament: %w", id, errs.ErrNotFound)
+		}
+		return uuid.Nil, fmt.Errorf("select direct elimination %s tournament: %w", id, err)
+	}
+
+	return tournamentID, nil
 }
 
 func (r *directEliminationRepository) ListDirectElimination(

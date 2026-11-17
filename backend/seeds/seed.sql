@@ -19,7 +19,8 @@ ON CONFLICT DO NOTHING;
 INSERT INTO tournaments (id, name, visibility, code, status, created_by, start_time, started_at, completed_at, created_at, updated_at, city, country) VALUES
   ('b0000000-0000-4000-8000-000000000001', 'Fall Open 2026',           'public',  'F7KQ2M', 'active',  'a0000000-0000-4000-8000-000000000001', now() - interval '3 hours',  now() - interval '3 hours',  NULL,                                          now() - interval '14 days', now(), 'Boston', 'US'),
   ('b0000000-0000-4000-8000-000000000002', 'Winter Classic 2026',      'private', 'W9TXH3', 'pending', 'a0000000-0000-4000-8000-000000000004', now() + interval '30 days',  NULL,                        NULL,                                          now() - interval '2 days',  now(), 'Toronto', 'CA'),
-  ('b0000000-0000-4000-8000-000000000003', 'Summer Invitational 2026', 'public',  'S4NPR8', 'ended',   'a0000000-0000-4000-8000-000000000001', now() - interval '90 days',  now() - interval '90 days',  now() - interval '90 days' + interval '9 hours', now() - interval '120 days', now(), 'Paris', 'FR')
+  ('b0000000-0000-4000-8000-000000000003', 'Summer Invitational 2026', 'public',  'S4NPR8', 'ended',   'a0000000-0000-4000-8000-000000000001', now() - interval '90 days',  now() - interval '90 days',  now() - interval '90 days' + interval '9 hours', now() - interval '120 days', now(), 'Paris', 'FR'),
+  ('b0000000-0000-4000-8000-00000000001a', 'Spring Regional 2027',     'public',  'J5RGN7', 'pending', 'a0000000-0000-4000-8000-000000000002', now() + interval '60 days',  NULL,                        NULL,                                          now() - interval '1 day',   now(), 'Providence', 'US')
 ON CONFLICT DO NOTHING;
 
 -- Bare tournaments with no events or competitors, solely to push the unfiltered
@@ -51,7 +52,36 @@ INSERT INTO tournaments (id, name, visibility, code, status, created_by, start_t
   ('b0000000-0000-4000-8000-000000000019', 'Pagination Fixture 22', 'public', 'P0FX22', 'pending', 'a0000000-0000-4000-8000-000000000001', NULL, NULL, NULL, now() - interval '200 days' + interval '22 hours', now())
 ON CONFLICT DO NOTHING;
 
+-- The fixtures' creator is their admin, matching what creating a tournament
+-- through the API now does (#4), so they can be edited in dev.
+INSERT INTO tournament_users (user_id, tournament_id, role, created_at, updated_at) VALUES
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000004', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000005', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000006', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000007', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000008', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000009', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-00000000000a', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-00000000000b', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-00000000000c', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-00000000000d', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-00000000000e', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-00000000000f', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000010', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000011', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000012', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000013', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000014', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000015', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000016', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000017', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000018', 'admin',now(), now()),
+  ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000019', 'admin',now(), now())
+ON CONFLICT DO NOTHING;
+
 -- Casey has no memberships, to exercise a signed-in user with nothing to run.
+-- Jordan referees Fall Open and Winter Classic and runs Spring Regional, so their
+-- admin home shows both roles.
 INSERT INTO tournament_users (user_id, tournament_id, role, created_at, updated_at) VALUES
   ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'admin',   now(), now()),
   ('a0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000001', 'admin',   now(), now()),
@@ -60,7 +90,8 @@ INSERT INTO tournament_users (user_id, tournament_id, role, created_at, updated_
   ('a0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000002', 'admin',   now(), now()),
   ('a0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000002', 'referee', now(), now()),
   ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000003', 'admin',   now(), now()),
-  ('a0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003', 'referee', now(), now())
+  ('a0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003', 'referee', now(), now()),
+  ('a0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-00000000001a', 'admin',   now(), now())
 ON CONFLICT DO NOTHING;
 
 INSERT INTO events (id, tournament_id, name, status, start_time, started_at, completed_at, created_at, updated_at) VALUES
@@ -71,14 +102,13 @@ INSERT INTO events (id, tournament_id, name, status, start_time, started_at, com
 ON CONFLICT DO NOTHING;
 
 -- Competitors are entered in an event and tagged with that event's
--- tournament, except Priya, Diego, and Marcus, left untagged to
--- exercise competitors with no tournament yet. Grace lists Allez Fencing as
--- both clubs, so /clubs must still count her once.
+-- tournament. Grace lists Allez Fencing as both clubs, so /clubs
+-- must still count her once.
 INSERT INTO competitors (id, event_id, tournament_id, first_name, last_name, rating, team, gender, birthdate, division, created_at, updated_at, primary_club, secondary_club) VALUES
   ('d0000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Maya', 'Chen', 'A', 'Boston Fencing Club', 'F', '1998-04-12', 'Massachusetts', now(), now(), 'Boston Fencing Club', NULL),
   ('d0000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Liam', 'O''Brien', 'B', 'Northeastern Fencing', 'M', '2001-09-03', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
-  ('d0000000-0000-4000-8000-000000000003', 'c0000000-0000-4000-8000-000000000001', NULL, 'Priya', 'Patel', 'C', 'Cambridge FC', 'F', '1995-01-27', 'New York', now(), now(), 'Cambridge FC', NULL),
-  ('d0000000-0000-4000-8000-000000000004', 'c0000000-0000-4000-8000-000000000001', NULL, 'Diego', 'Martinez', 'U', '', 'M', '2003-06-18', 'California', now(), now(), NULL, NULL),
+  ('d0000000-0000-4000-8000-000000000003', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Priya', 'Patel', 'C', 'Cambridge FC', 'F', '1995-01-27', 'New York', now(), now(), 'Cambridge FC', NULL),
+  ('d0000000-0000-4000-8000-000000000004', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Diego', 'Martinez', 'U', '', 'M', '2003-06-18', 'California', now(), now(), NULL, NULL),
   ('d0000000-0000-4000-8000-000000000005', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Hana', 'Sato', 'A', 'Northeastern Fencing', 'F', '1999-11-30', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
   ('d0000000-0000-4000-8000-000000000006', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Noah', 'Williams', 'D', 'Boston Fencing Club', 'O', '2000-02-14', 'Connecticut', now(), now(), 'Boston Fencing Club', NULL),
   ('d0000000-0000-4000-8000-000000000007', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Amara', 'Okafor', 'B', 'Cambridge FC', 'F', '1997-07-08', 'New Jersey', now(), now(), 'Cambridge FC', NULL),
@@ -114,7 +144,7 @@ INSERT INTO competitors (id, event_id, tournament_id, first_name, last_name, rat
   ('d0000000-0000-4000-8000-000000000009', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Sofia', 'Rossi', 'C', 'Boston Fencing Club', 'F', '1996-03-05', 'New York', now(), now(), 'Boston Fencing Club', NULL),
   ('d0000000-0000-4000-8000-000000000010', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Kenji', 'Tanaka', 'U', 'Northeastern Fencing', 'M', '2002-08-16', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),
   ('d0000000-0000-4000-8000-000000000011', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Leila', 'Haddad', 'D', 'Cambridge FC', 'F', '1994-10-09', 'Rhode Island', now(), now(), 'Cambridge FC', NULL),
-  ('d0000000-0000-4000-8000-000000000012', 'c0000000-0000-4000-8000-000000000003', NULL, 'Marcus', 'Johnson', 'B', '', 'M', '1993-05-25', 'Texas', now(), now(), NULL, NULL),
+  ('d0000000-0000-4000-8000-000000000012', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Marcus', 'Johnson', 'B', '', 'M', '1993-05-25', 'Texas', now(), now(), NULL, NULL),
   ('d0000000-0000-4000-8000-000000000013', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Maya', 'Chen', 'A', 'Boston Fencing Club', 'F', '1998-04-12', 'Massachusetts', now(), now(), 'Boston Fencing Club', NULL),
   ('d0000000-0000-4000-8000-000000000014', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Kenji', 'Tanaka', 'U', 'Northeastern Fencing', 'M', '2002-08-16', 'Massachusetts', now(), now(), 'Northeastern Fencing', 'Tokyo Fencing Club'),
   ('d0000000-0000-4000-8000-000000000015', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Hana', 'Sato', 'A', 'Northeastern Fencing', 'F', '1999-11-30', 'Massachusetts', now(), now(), 'Northeastern Fencing', NULL),

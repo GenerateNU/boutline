@@ -158,9 +158,9 @@ describe("Scoreboard", () => {
     installBackend([]);
     render(<Scoreboard boutId={BOUT_ID} />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("Loading");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading bout");
     await screen.findByLabelText("Alice Chen score");
-    expect(screen.queryByText("Loading")).not.toBeInTheDocument();
+    expect(screen.queryByText("Loading bout")).not.toBeInTheDocument();
   });
 
   it("explains which field failed when the bout id is rejected", async () => {
@@ -323,7 +323,7 @@ describe("Scoreboard", () => {
 
   it.each([
     { name: "the assigned referee", refereeId: REFEREE_ID, expected: REFEREE_ID },
-    { name: "the seeded fallback user when no referee is assigned", refereeId: null, expected: "a0000000-0000-4000-8000-000000000001" },
+    { name: "the signed-in referee claiming an unassigned bout", refereeId: null, expected: REFEREE_ID },
   ])("starts an upcoming bout refereed by $name", async ({ refereeId, expected }) => {
     const { backend } = installBackend([], { status: "upcoming", refereeId });
     render(<Scoreboard boutId={BOUT_ID} />);

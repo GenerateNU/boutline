@@ -1,4 +1,4 @@
-import { apiRequest } from "./api-request";
+import { ApiError, apiRequest, onUnauthorized } from "./api-request";
 
 function respondWith(status: number, body: unknown) {
   global.fetch = jest.fn(async () => ({
@@ -13,6 +13,22 @@ describe("apiRequest", () => {
     respondWith(200, { id: "b1" });
 
     await expect(apiRequest("/bouts/b1")).resolves.toEqual({ id: "b1" });
+  });
+
+  it("resolves to undefined on a 204 with no body", async () => {
+    respondWith(204, undefined);
+
+    await expect(apiRequest("/competitors/c1", { method: "DELETE" })).resolves.toBeUndefined();
+  });
+
+  it("rejects with the response status on the error", async () => {
+    respondWith(404, { detail: "not found" });
+
+    await expect(apiRequest("/events/e1")).rejects.toMatchObject({
+      status: 404,
+      message: "not found",
+    });
+    await expect(apiRequest("/events/e1")).rejects.toBeInstanceOf(ApiError);
   });
 
   it.each([
@@ -45,6 +61,7 @@ describe("apiRequest", () => {
     respondWith(status, body);
 
     await expect(apiRequest("/anything")).rejects.toThrow(message);
+    await expect(apiRequest("/anything")).rejects.toMatchObject({ status });
   });
 
   it.each<{ name: string; headers: HeadersInit | undefined; expected: Record<string, string> }>([
@@ -72,5 +89,58 @@ describe("apiRequest", () => {
 
     const sent = (global.fetch as jest.Mock).mock.calls[0][1].headers as Headers;
     expect(Object.fromEntries(sent.entries())).toEqual(expected);
+  });
+
+  describe("onUnauthorized", () => {
+    it.each([
+      { status: 401, calls: 1 },
+      { status: 403, calls: 0 },
+      { status: 404, calls: 0 },
+      { status: 500, calls: 0 },
+      { status: 200, calls: 0 },
+    ])("runs the handler $calls time(s) on a $status", async ({ status, calls }) => {
+      const handler = jest.fn();
+      const unregister = onUnauthorized(handler);
+      respondWith(status, {});
+
+      await apiRequest("/anything").catch(() => undefined);
+
+      expect(handler).toHaveBeenCalledTimes(calls);
+      unregister();
+    });
+
+    it("still rejects with the 401 ApiError", async () => {
+      const unregister = onUnauthorized(jest.fn());
+      respondWith(401, { detail: "unauthorized" });
+
+      await expect(apiRequest("/auth/me")).rejects.toMatchObject({ status: 401 });
+      await expect(apiRequest("/auth/me")).rejects.toBeInstanceOf(ApiError);
+      unregister();
+    });
+
+    it("stops running once unregistered", async () => {
+      const handler = jest.fn();
+      onUnauthorized(handler)();
+      respondWith(401, {});
+
+      await apiRequest("/anything").catch(() => undefined);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("keeps a replacing handler when the replaced one unregisters", async () => {
+      const first = jest.fn();
+      const second = jest.fn();
+      const unregisterFirst = onUnauthorized(first);
+      const unregisterSecond = onUnauthorized(second);
+      unregisterFirst();
+      respondWith(401, {});
+
+      await apiRequest("/anything").catch(() => undefined);
+
+      expect(first).not.toHaveBeenCalled();
+      expect(second).toHaveBeenCalledTimes(1);
+      unregisterSecond();
+    });
   });
 });

@@ -12,13 +12,13 @@ func competitorID(n int) uuid.UUID {
 	return uuid.MustParse(fmt.Sprintf("d0000000-0000-4000-8000-%012d", n))
 }
 
-func fencersOf(ns ...int) []PoolSheetFencerRow {
-	rows := make([]PoolSheetFencerRow, 0, len(ns))
-	for i, n := range ns {
-		rows = append(rows, PoolSheetFencerRow{CompetitorID: competitorID(n), Position: i + 1})
+func fencersOf(ns ...int) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(ns))
+	for _, n := range ns {
+		ids = append(ids, competitorID(n))
 	}
 
-	return rows
+	return ids
 }
 
 func boutOf(status string, c1, score1, c2, score2 int) PoolSheetBoutRow {
@@ -48,12 +48,12 @@ func standingOf(place, victories, matches, scored, received int) PoolStanding {
 	return standing
 }
 
-func TestPoolStandings(t *testing.T) {
+func TestRankPoolFencers(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name    string
-		fencers []PoolSheetFencerRow
+		fencers []uuid.UUID
 		bouts   []PoolSheetBoutRow
 		want    map[int]PoolStanding
 	}{
@@ -154,13 +154,48 @@ func TestPoolStandings(t *testing.T) {
 				1: standingOf(1, 1, 1, 5, 1),
 			},
 		},
+		{
+			name:    "fencers from two pools interleave by exact ratio, then indicator",
+			fencers: fencersOf(1, 2, 3, 4, 5, 6, 7),
+			bouts: []PoolSheetBoutRow{
+				boutOf("ended", 1, 5, 2, 0),
+				boutOf("ended", 1, 5, 3, 1),
+				boutOf("ended", 4, 5, 1, 4),
+				boutOf("ended", 5, 5, 6, 0),
+				boutOf("ended", 7, 5, 5, 3),
+			},
+			want: map[int]PoolStanding{
+				7: standingOf(1, 1, 1, 5, 3),
+				4: standingOf(2, 1, 1, 5, 4),
+				1: standingOf(3, 2, 3, 14, 6),
+				5: standingOf(4, 1, 2, 8, 5),
+				3: standingOf(5, 0, 1, 1, 5),
+				2: standingOf(6, 0, 1, 0, 5),
+				6: standingOf(6, 0, 1, 0, 5),
+			},
+		},
+		{
+			name:    "a full tie across pools shares a place and the next place is skipped",
+			fencers: fencersOf(1, 2, 3, 4, 5),
+			bouts: []PoolSheetBoutRow{
+				boutOf("ended", 1, 5, 2, 0),
+				boutOf("ended", 3, 5, 4, 0),
+			},
+			want: map[int]PoolStanding{
+				1: standingOf(1, 1, 1, 5, 0),
+				3: standingOf(1, 1, 1, 5, 0),
+				5: standingOf(3, 0, 0, 0, 0),
+				2: standingOf(4, 0, 1, 0, 5),
+				4: standingOf(4, 0, 1, 0, 5),
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := poolStandings(tt.fencers, tt.bouts)
+			got := RankPoolFencers(tt.fencers, tt.bouts)
 
 			assert.Len(t, got, len(tt.want))
 			for n, want := range tt.want {
@@ -192,6 +227,73 @@ func TestPoolSheetWinnerID(t *testing.T) {
 			t.Parallel()
 
 			assert.Equal(t, tt.want, poolSheetWinnerID(tt.bout))
+		})
+	}
+}
+
+func TestRankPoolStage(t *testing.T) {
+	t.Parallel()
+
+	type placed struct{ competitor, place int }
+
+	tests := []struct {
+		name    string
+		fencers []uuid.UUID
+		bouts   []PoolSheetBoutRow
+		want    []placed
+	}{
+		{
+			name:    "pools of different sizes are ranked by victory ratio, not victory count",
+			fencers: fencersOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+			bouts: []PoolSheetBoutRow{
+				boutOf("ended", 1, 5, 2, 0),
+				boutOf("ended", 1, 5, 3, 0),
+				boutOf("ended", 4, 5, 1, 0),
+				boutOf("ended", 5, 5, 6, 0),
+				boutOf("ended", 5, 5, 7, 0),
+				boutOf("ended", 5, 5, 8, 0),
+				boutOf("ended", 9, 5, 5, 0),
+				boutOf("ended", 10, 5, 5, 0),
+				boutOf("ended", 11, 5, 5, 0),
+			},
+			want: []placed{
+				{4, 1}, {9, 1}, {10, 1}, {11, 1},
+				{1, 5},
+				{5, 6},
+				{2, 7}, {3, 7}, {6, 7}, {7, 7}, {8, 7},
+			},
+		},
+		{
+			name:    "an exact tie shares a place and the next place skips",
+			fencers: fencersOf(1, 2, 3, 4),
+			bouts: []PoolSheetBoutRow{
+				boutOf("ended", 1, 5, 2, 0),
+				boutOf("ended", 3, 5, 4, 0),
+			},
+			want: []placed{{1, 1}, {3, 1}, {2, 3}, {4, 3}},
+		},
+		{
+			name:    "equal places are ordered by competitor id whatever the input order",
+			fencers: fencersOf(3, 1, 2),
+			want:    []placed{{1, 1}, {2, 1}, {3, 1}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := RankPoolStage(tt.fencers, tt.bouts)
+
+			gotPlaced := make([]placed, 0, len(got))
+			for _, rank := range got {
+				for n := 1; n <= len(tt.fencers); n++ {
+					if competitorID(n) == rank.CompetitorID {
+						gotPlaced = append(gotPlaced, placed{n, rank.Standing.Place})
+					}
+				}
+			}
+			assert.Equal(t, tt.want, gotPlaced)
 		})
 	}
 }

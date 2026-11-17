@@ -1,46 +1,77 @@
 package middlewares
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
 
 	"boutline/internal/features/user"
+	"boutline/internal/session"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
 )
 
-var errMissingBearerToken = errors.New("missing bearer token")
+var (
+	errMissingBearerToken = errors.New("missing bearer token")
+	errUserNotFound       = errors.New("token user no longer exists")
+	errLookupFailed       = errors.New("look up token user")
+)
 
-// NewAuthMiddleware requires a valid bearer token on every operation
-// requiresAuth selects, and puts the verified user ID on the request context
-// for handlers to read with user.UserIDFrom. A public operation still reads a
-// token when one is sent, so it can show signed-in callers more; a bad token
-// there just leaves the request anonymous.
-func NewAuthMiddleware(api huma.API, tokens *user.UserTokenManager) func(huma.Context, func(huma.Context)) {
+// UserLookup is how the middleware checks that a token's user still exists.
+type UserLookup interface {
+	UserExists(ctx context.Context, id uuid.UUID) (bool, error)
+}
+
+// NewAuthMiddleware requires a valid bearer token, for a user that still
+// exists, on every operation requiresAuth selects, and puts the verified user
+// ID on the request context for handlers to read with session.UserIDFrom. A
+// public operation still reads a token when one is sent, so it can show
+// signed-in callers more; a bad token or a missing user there just leaves the
+// request anonymous. A failed user lookup is a 500 on every operation, never a
+// 401, so an outage cannot look like a signed-out session, and a public read
+// cannot quietly answer a signed-in caller with the anonymous view.
+func NewAuthMiddleware(
+	api huma.API,
+	tokens *user.UserTokenManager,
+	users UserLookup,
+) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
-		if !requiresAuth(ctx.Operation()) {
-			if userID, err := authenticate(ctx, tokens); err == nil {
-				ctx = huma.WithContext(ctx, user.WithUserID(ctx.Context(), userID))
+		userID, err := authenticate(ctx, tokens, users)
+
+		if !requiresAuth(ctx.Operation()) && !errors.Is(err, errLookupFailed) {
+			if err == nil {
+				ctx = huma.WithContext(ctx, session.WithUserID(ctx.Context(), userID))
 			}
 			next(ctx)
 			return
 		}
 
-		userID, err := authenticate(ctx, tokens)
 		if err != nil {
-			// The reason stays in the log; the client only learns it was rejected.
-			slog.Warn("reject request", "err", err, "path", ctx.URL().Path)
-			ctx.SetHeader("WWW-Authenticate", "Bearer")
-			if err := huma.WriteErr(api, ctx, http.StatusUnauthorized, "unauthorized"); err != nil {
-				slog.Error("write unauthorized response", "err", err)
-			}
+			rejectRequest(api, ctx, err)
 			return
 		}
 
-		next(huma.WithContext(ctx, user.WithUserID(ctx.Context(), userID)))
+		next(huma.WithContext(ctx, session.WithUserID(ctx.Context(), userID)))
+	}
+}
+
+func rejectRequest(api huma.API, ctx huma.Context, cause error) {
+	status, detail := http.StatusUnauthorized, "unauthorized"
+	if errors.Is(cause, errLookupFailed) {
+		status, detail = http.StatusInternalServerError, "internal server error"
+		slog.Error("reject request", "err", cause, "path", ctx.URL().Path)
+	} else {
+		// The reason stays in the log; the client only learns it was rejected.
+		slog.Warn("reject request", "err", cause, "path", ctx.URL().Path)
+		ctx.SetHeader("WWW-Authenticate", "Bearer")
+	}
+
+	if err := huma.WriteErr(api, ctx, status, detail); err != nil {
+		slog.Error("write rejection response", "err", err)
 	}
 }
 
@@ -66,12 +97,27 @@ func requiresAuth(op *huma.Operation) bool {
 	return op.Security == nil || len(op.Security) > 0
 }
 
-func authenticate(ctx huma.Context, tokens *user.UserTokenManager) (uuid.UUID, error) {
+// authenticate parses the token before looking the user up, so a bad token
+// never costs a database round trip.
+func authenticate(ctx huma.Context, tokens *user.UserTokenManager, users UserLookup) (uuid.UUID, error) {
 	scheme, token, found := strings.Cut(ctx.Header("Authorization"), " ")
 	token = strings.TrimSpace(token)
 	if !found || !strings.EqualFold(scheme, "Bearer") || token == "" {
 		return uuid.Nil, errMissingBearerToken
 	}
 
-	return tokens.ParseToken(token)
+	userID, err := tokens.ParseToken(token)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	exists, err := users.UserExists(ctx.Context(), userID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("%w: %w", errLookupFailed, err)
+	}
+	if !exists {
+		return uuid.Nil, errUserNotFound
+	}
+
+	return userID, nil
 }

@@ -15,13 +15,15 @@ export default async function TournamentSectionsLayout({
   const { tournamentId } = await params;
 
   return (
-    <div className="flex flex-col gap-10">
+    <>
       <TabNav
         label="Tournament sections"
         basePath={`/tournaments/${tournamentId}`}
         tabs={TABS}
       />
-      {children}
-    </div>
+      <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 pt-10 pb-20 font-manrope">
+        {children}
+      </div>
+    </>
   );
 }

@@ -5,7 +5,7 @@ import { StatusTabs } from "@/features/tournament/components/status-tabs";
 describe("StatusTabs", () => {
   it.each([
     [undefined, "All"],
-    ["pending", "Upcoming"],
+    ["pending", "Scheduled"],
     ["active", "In Progress"],
     ["ended", "Completed"],
   ] as const)("marks the %s tab as current", (status, label) => {
@@ -18,7 +18,7 @@ describe("StatusTabs", () => {
     ["All", "/admin/tournaments"],
     ["Completed", "/admin/tournaments?status=ended"],
     ["In Progress", "/admin/tournaments?status=active"],
-    ["Upcoming", "/admin/tournaments?status=pending"],
+    ["Scheduled", "/admin/tournaments?status=pending"],
   ])("links %s to %s", (label, href) => {
     render(<StatusTabs basePath="/admin/tournaments" />);
 

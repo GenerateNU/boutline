@@ -21,7 +21,7 @@ describe("getCompetitors", () => {
     { name: "an empty query", query: "", wantQuery: null },
     { name: "a query", query: "chen", wantQuery: "chen" },
   ])("requests the tournament's page with $name", async ({ query, wantQuery }) => {
-    await getCompetitors("t-1", 20, 40, query);
+    await getCompetitors("t-1", 20, 40, { query });
 
     const url = new URL(fetchMock.mock.calls[0][0] as string);
     expect(url.pathname).toBe("/api/v1/competitors");
@@ -32,19 +32,49 @@ describe("getCompetitors", () => {
   });
 
   it.each([
+    { name: "no event", eventId: undefined, wantEventId: null },
+    { name: "an event", eventId: "e-1", wantEventId: "e-1" },
+  ])("requests the page with $name", async ({ eventId, wantEventId }) => {
+    await getCompetitors("t-1", 20, 0, { eventId });
+
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get("eventId")).toBe(wantEventId);
+  });
+
+  it.each([
     { name: "no team", team: undefined, wantTeam: null },
     { name: "an empty team", team: "", wantTeam: null },
     { name: "a team", team: "Boston Blade Club", wantTeam: "Boston Blade Club" },
   ])("requests the page with $name", async ({ team, wantTeam }) => {
-    await getCompetitors("t-1", 20, 0, undefined, team);
+    await getCompetitors("t-1", 20, 0, { team });
 
     const url = new URL(fetchMock.mock.calls[0][0] as string);
     expect(url.searchParams.get("team")).toBe(wantTeam);
   });
 
+  it.each([
+    { name: "no rating", rating: undefined, wantRating: null },
+    { name: "a rating", rating: "A", wantRating: "A" },
+  ])("requests the page with $name", async ({ rating, wantRating }) => {
+    await getCompetitors("t-1", 20, 0, { rating });
+
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get("rating")).toBe(wantRating);
+  });
+
+  it.each([
+    { name: "no gender", gender: undefined, wantGender: null },
+    { name: "a gender", gender: "F", wantGender: "F" },
+  ])("requests the page with $name", async ({ gender, wantGender }) => {
+    await getCompetitors("t-1", 20, 0, { gender });
+
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get("gender")).toBe(wantGender);
+  });
+
   it("throws when the backend responds with an error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 
-    await expect(getCompetitors("t-1", 20, 0)).rejects.toThrow("list competitors: 500");
+    await expect(getCompetitors("t-1", 20, 0)).rejects.toThrow("Request failed with status 500");
   });
 });

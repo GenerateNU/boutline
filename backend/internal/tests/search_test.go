@@ -11,9 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// searchTestUserID need not exist in the database -- no route under test
-// checks the caller's existence, only that the bearer token is valid.
-var searchTestUserID = uuid.MustParse("c0000000-0000-4000-8000-000000000001")
+// searchTestUserID is seeded Casey Nguyen, who holds no staff role: the auth
+// middleware requires the caller to exist, and the routes under test need
+// nothing beyond that.
+var searchTestUserID = uuid.MustParse("a0000000-0000-4000-8000-000000000005")
 
 // Exercises the fuzzy search endpoints against seeds/seed.sql's rows over a
 // real Postgres connection, so a GIN-index/pg_trgm mistake that a
@@ -43,6 +44,14 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			wantStatus:  http.StatusOK,
 			wantField:   "lastName",
 			wantContain: "Lee",
+		},
+		{
+			name:        "users list matches an email prefix",
+			route:       "/api/v1/users",
+			query:       map[string]string{"q": "casey.nguyen@"}, // seeded: Casey Nguyen
+			wantStatus:  http.StatusOK,
+			wantField:   "lastName",
+			wantContain: "Nguyen",
 		},
 		{
 			name:        "competitors list tolerates a typo in q",
@@ -91,6 +100,14 @@ func TestSearchAgainstRealDatabase(t *testing.T) {
 			wantStatus:  http.StatusOK,
 			wantField:   "name",
 			wantContain: "Fall Open 2026",
+		},
+		{
+			name:        "competitors list matches a single-character q against the last name",
+			route:       "/api/v1/competitors",
+			query:       map[string]string{"q": "w", "tournament_id": fallOpen2026}, // seeded: Noah Williams; pins the fix for anchoring the LIKE pattern to the full concatenated name, which could never match a surname
+			wantStatus:  http.StatusOK,
+			wantField:   "lastName",
+			wantContain: "Williams",
 		},
 	}
 

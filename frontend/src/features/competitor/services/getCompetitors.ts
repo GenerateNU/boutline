@@ -1,30 +1,21 @@
-import type { CompetitorListResult } from "@/types/competitor";
+import { serverRequest } from "@/services/server-request";
+import { CompetitorListResult } from "@/types/competitor";
 
-const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8000";
+interface CompetitorFilters {
+  eventId?: string;
+  query?: string;
+  team?: string;
+  rating?: string;
+  gender?: string;
+}
 
-export async function getCompetitors(
+export function getCompetitors(
   tournamentId: string,
   limit: number,
   offset: number,
-  query?: string,
-  team?: string,
+  { eventId, query, team, rating, gender }: CompetitorFilters = {},
 ): Promise<CompetitorListResult> {
-  const url = new URL("/api/v1/competitors", API_PROXY_TARGET);
-  url.searchParams.set("tournament_id", tournamentId);
-  url.searchParams.set("limit", String(limit));
-  url.searchParams.set("offset", String(offset));
-  if (query) {
-    url.searchParams.set("q", query);
-  }
-  // Unlike q's fuzzy name match, team must equal the club name exactly.
-  if (team) {
-    url.searchParams.set("team", team);
-  }
-
-  const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`list competitors: ${response.status}`);
-  }
-
-  return response.json();
+  return serverRequest<CompetitorListResult>("/competitors", {
+    params: { tournament_id: tournamentId, limit, offset, eventId, q: query, team, rating, gender },
+  });
 }

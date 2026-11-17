@@ -14,13 +14,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// userNameTrigramExpr must match the migration's indexed expression exactly,
+// userNameSearchColumns must match the migration's indexed expression exactly,
 // or the GIN trigram index on users won't be used.
-const userNameTrigramExpr = "first_name || ' ' || last_name"
+var userNameSearchColumns = []string{"first_name", "last_name"}
 
 type UserRepository interface {
 	SignupUser(ctx context.Context, user *User) error
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
+	UserExists(ctx context.Context, id uuid.UUID) (bool, error)
 	LoginUser(ctx context.Context, email string) (*User, error)
 	ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error)
 	UpdateUserByID(ctx context.Context, id uuid.UUID, update UserUpdate) error
@@ -94,6 +95,18 @@ func (r *userRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, 
 	return &user, nil
 }
 
+// UserExists runs on every authenticated request, so it reads the key alone
+// rather than loading the row and its password hash.
+func (r *userRepository) UserExists(ctx context.Context, id uuid.UUID) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&User{}).Where("id = ?", id).Count(&count).Error
+	if err != nil {
+		return false, fmt.Errorf("check user %s exists: %w", id, err)
+	}
+
+	return count > 0, nil
+}
+
 func (r *userRepository) LoginUser(ctx context.Context, email string) (*User, error) {
 	var user User
 	// all emails are normalized
@@ -131,14 +144,19 @@ func (r *userRepository) UpdateUserByID(ctx context.Context, id uuid.UUID, updat
 
 func (r *userRepository) ListUsers(ctx context.Context, filter UserListFilter) ([]User, int64, error) {
 	// TODO: apply other filters once decided
-	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&User{}), userNameTrigramExpr, filter.Term)
+	query := utils.TrigramMatch(r.db.WithContext(ctx).Model(&User{}), userNameSearchColumns, filter.Term)
+	// Also match an email starting with the term. Or applies to the whole WHERE,
+	// so any filter added here later must be grouped with the name match.
+	if emailMatch, emailArgs := utils.PrefixPredicate([]string{"email"}, filter.Term); emailMatch != "" {
+		query = query.Or(emailMatch, emailArgs...)
+	}
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count users: %w", err)
 	}
 
-	query = utils.TrigramOrder(query, userNameTrigramExpr, filter.Term, "created_at DESC", "id")
+	query = utils.TrigramOrder(query, userNameSearchColumns, filter.Term, "created_at DESC", "id")
 
 	users := make([]User, 0, filter.Limit)
 	// Avoid pulling password ever, makes it harder to leak

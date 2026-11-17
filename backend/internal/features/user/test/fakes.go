@@ -72,6 +72,16 @@ func (f *FakeUserRepository) GetUserByID(_ context.Context, id uuid.UUID) (*user
 	return &found, nil
 }
 
+func (f *FakeUserRepository) UserExists(_ context.Context, id uuid.UUID) (bool, error) {
+	if f.Err != nil {
+		return false, f.Err
+	}
+
+	_, ok := f.Users[id]
+
+	return ok, nil
+}
+
 func (f *FakeUserRepository) LoginUser(_ context.Context, email string) (*user.User, error) {
 	if f.Err != nil {
 		return nil, f.Err
@@ -100,7 +110,7 @@ func (f *FakeUserRepository) ListUsers(
 	matched := make([]user.User, 0, len(f.Users))
 	for _, candidate := range f.Users {
 		name := strings.ToLower(candidate.FirstName + " " + candidate.LastName)
-		if strings.Contains(name, term) {
+		if strings.Contains(name, term) || strings.HasPrefix(candidate.Email, term) {
 			matched = append(matched, candidate)
 		}
 	}

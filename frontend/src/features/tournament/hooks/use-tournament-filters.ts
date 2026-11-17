@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { useRef, useTransition } from "react";
 
 import { formatDateParam } from "@/features/tournament/lib/date-param";
 
@@ -10,9 +10,12 @@ function useTournamentFilters() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const committed = searchParams.toString();
+  const pending = useRef<{ from: string; params: URLSearchParams } | null>(null);
 
   function setFilters(changes: Record<string, string | undefined>) {
-    const params = new URLSearchParams(searchParams);
+    const base = pending.current?.from === committed ? pending.current.params : searchParams;
+    const params = new URLSearchParams(base);
     params.delete("offset");
     for (const [key, value] of Object.entries(changes)) {
       if (value) {
@@ -21,6 +24,8 @@ function useTournamentFilters() {
         params.delete(key);
       }
     }
+    pending.current = { from: committed, params };
+
     const query = params.toString();
     startTransition(() => {
       router.replace(query ? `${pathname}?${query}` : pathname, {
@@ -29,14 +34,18 @@ function useTournamentFilters() {
     });
   }
 
-  function setDate(day: Date | undefined) {
+  function setDate(day: Date) {
     setFilters({
-      date: day ? formatDateParam(day) : undefined,
-      tz: day ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined,
+      date: formatDateParam(day),
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
   }
 
-  return { searchParams, setFilters, setDate, isPending };
+  function clearDate() {
+    setFilters({ date: undefined, tz: undefined });
+  }
+
+  return { searchParams, setFilters, setDate, clearDate, isPending };
 }
 
 export { useTournamentFilters };

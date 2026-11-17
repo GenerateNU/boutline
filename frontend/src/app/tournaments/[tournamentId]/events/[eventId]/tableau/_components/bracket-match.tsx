@@ -1,0 +1,60 @@
+import Link from "next/link";
+import { cn } from "cn";
+
+import type { TableauBout } from "../../_types/tableau";
+import { BracketFencerRow } from "./bracket-fencer-row";
+import { pillTones } from "./bout-pill-tones";
+
+interface BracketMatchProps {
+  bout: TableauBout;
+  href: string;
+  dimmed: boolean; // true when it doesn't match a search
+  matched?: boolean; // true when it matches a non-empty search
+}
+
+function BracketMatch({
+  bout,
+  href,
+  dimmed = false,
+  matched = false,
+}: BracketMatchProps) {
+  const live = bout.status === "active";
+  const [topTone, bottomTone] = pillTones(bout);
+  const muted = bout.status === "upcoming";
+
+  return (
+    <Link
+      href={href}
+      data-matched={matched || undefined}
+      className={cn(
+        "block w-full rounded-lg bg-card px-3 shadow-md transition-colors hover:bg-muted",
+        matched && "h-27 border-2 border-blue-vivid",
+        !matched && live && "h-26.75 border-[1.5px] border-accent-green",
+        !matched && !live && "h-26.5 border border-outline",
+        !matched && muted && "border-dashed",
+        {
+          "relative after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-obsidian/20":
+            dimmed,
+        },
+      )}
+    >
+      {live && <span className="sr-only">Live</span>}
+      <div className="flex h-full flex-col divide-y divide-outline">
+        <BracketFencerRow
+          fencer={bout.top}
+          score={bout.topScore}
+          pillTone={topTone}
+          muted={muted}
+        />
+        <BracketFencerRow
+          fencer={bout.bottom}
+          score={bout.bottomScore}
+          pillTone={bottomTone}
+          muted={muted}
+        />
+      </div>
+    </Link>
+  );
+}
+
+export { BracketMatch };

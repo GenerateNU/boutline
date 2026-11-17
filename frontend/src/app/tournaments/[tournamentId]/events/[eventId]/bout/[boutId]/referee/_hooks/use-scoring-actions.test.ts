@@ -1,8 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 
-import { BoutStatus } from "@/types/bout";
-
-import { ALICE, BEN, BOUT_ID, installBackend, settle } from "../fake-backend";
+import { ALICE, BEN, BOUT_ID, BackendOptions, REFEREE_ID, installBackend, settle } from "../fake-backend";
 
 import { useMatchup } from "./use-matchup";
 import { useScoreHistory } from "./use-score-history";
@@ -15,8 +13,8 @@ function useHarness() {
   return { history, matchup, scores, ...queue };
 }
 
-async function load(initial: Parameters<typeof installBackend>[0], status: BoutStatus = "active") {
-  const installed = installBackend(initial, { status });
+async function load(initial: Parameters<typeof installBackend>[0], options: BackendOptions = { status: "active" }) {
+  const installed = installBackend(initial, options);
   const hook = renderHook(useHarness);
   await waitFor(() => expect(hook.result.current.matchup).not.toBeNull());
   return { ...installed, ...hook };
@@ -78,13 +76,41 @@ describe("useScoringActions", () => {
   });
 
   it("starts an upcoming bout", async () => {
-    const { result, backend } = await load([], "upcoming");
+    const { result, backend } = await load([], { status: "upcoming" });
 
     act(() => result.current.submit({ kind: "start" }));
     await settle();
 
     expect(backend.status).toBe("active");
     expect(result.current.matchup?.bout.status).toBe("active");
+  });
+
+  it("claims an unassigned upcoming bout, starts it, and scores as the claimer", async () => {
+    const { result, backend, live } = await load([], { status: "upcoming", refereeId: null });
+
+    act(() => result.current.submit({ kind: "start" }));
+    await settle();
+
+    expect(backend.refereeId).toBe(REFEREE_ID);
+    expect(backend.status).toBe("active");
+    expect(result.current.matchup?.bout.referee_id).toBe(REFEREE_ID);
+
+    act(() => result.current.submit({ kind: "touch", competitorId: ALICE.id }));
+    await settle();
+
+    expect(live()[0].created_by).toBe(REFEREE_ID);
+  });
+
+  it("shows the refusal when another referee claimed the bout first", async () => {
+    const { result, backend } = await load([], { status: "upcoming", refereeId: null });
+
+    backend.refereeId = "other-referee";
+    act(() => result.current.submit({ kind: "start" }));
+    await settle();
+
+    expect(result.current.error).toBe("only an upcoming bout with no other referee can be claimed");
+    expect(backend.status).toBe("upcoming");
+    expect(result.current.matchup?.bout.referee_id).toBe("other-referee");
   });
 
   it("ends an active bout whose score is unchanged", async () => {

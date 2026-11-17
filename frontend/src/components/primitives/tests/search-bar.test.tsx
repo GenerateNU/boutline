@@ -18,4 +18,18 @@ describe("SearchBar", () => {
 
     expect(screen.queryByText("Eric Kitagawa") !== null).toBe(visible);
   });
+
+  // jsdom doesn't move focus on a label click, so check what the browser relies on: the box labels the input.
+  it.each([
+    { name: "a generated id", id: undefined },
+    { name: "the caller's id", id: "pool-search" },
+  ])("makes its whole box the input's label with $name", ({ id }) => {
+    render(<SearchBar aria-label="Search" id={id} leading={<button type="button">Back</button>} />);
+    const input = screen.getByRole("textbox", { name: "Search" });
+
+    expect(input.closest("label")?.control).toBe(input);
+    if (id) {
+      expect(input).toHaveAttribute("id", id);
+    }
+  });
 });

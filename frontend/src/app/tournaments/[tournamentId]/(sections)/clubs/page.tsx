@@ -1,8 +1,12 @@
+import { notFound } from "next/navigation";
+
 import { Pagination } from "@/components/primitives/pagination";
-import { Section } from "@/components/primitives/section";
+import { Text } from "@/components/primitives/text";
 import { ClubCard } from "@/features/competitor/components/club-card";
+import { ClubFilterSheet } from "@/features/competitor/components/club-filter-sheet";
 import { getTeams } from "@/features/competitor/services/getTeams";
 import { SearchForm } from "@/features/tournament/components/search-form";
+import { getTournament } from "@/features/tournament/services/getTournament";
 import { readOffsetParam, readStringParam } from "@/lib/search-params";
 
 const PAGE_SIZE = 20;
@@ -17,33 +21,52 @@ export default async function ClubsTab({
   const offset = readOffsetParam(query);
   const basePath = `/tournaments/${tournamentId}/clubs`;
 
-  const { data, total, limit } = await getTeams(
-    tournamentId,
-    PAGE_SIZE,
-    offset,
-    search,
-  );
+  const [tournament, { data, total, limit }] = await Promise.all([
+    getTournament(tournamentId),
+    getTeams(tournamentId, PAGE_SIZE, offset, search),
+  ]);
+  if (!tournament) {
+    notFound();
+  }
 
   return (
-    <Section title="Clubs">
-      <SearchForm
-        action={basePath}
-        label="Search clubs"
-        placeholder="e.g. Boston Fencing Club"
-        defaultValue={search}
-      />
+    <div className="flex flex-col gap-4">
+      <Text as="h1" variant="title" className="uppercase">
+        {tournament.name}
+      </Text>
+
+      <div className="flex items-center gap-2.5">
+        <SearchForm
+          action={basePath}
+          label="Search clubs"
+          placeholder="Search clubs"
+          defaultValue={search}
+          suggest={{
+            tournamentId,
+            sources: [
+              { kind: "fencers", href: `/tournaments/${tournamentId}/fencers` },
+              { kind: "clubs", href: basePath },
+            ],
+          }}
+        />
+        <ClubFilterSheet />
+      </div>
 
       {data.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <Text variant="muted">
           {search
             ? `No clubs match “${search}”.`
             : "No clubs are competing in this tournament yet."}
-        </p>
+        </Text>
       ) : (
         <ul className="flex flex-col gap-3">
           {data.map((team) => (
             <li key={team.name}>
-              <ClubCard team={team} pinned={false} />
+              <ClubCard
+                team={team}
+                href={`/tournaments/${tournamentId}/fencers?team=${encodeURIComponent(team.name)}`}
+                pinned={false}
+              />
             </li>
           ))}
         </ul>
@@ -56,6 +79,6 @@ export default async function ClubsTab({
         basePath={basePath}
         params={{ q: search }}
       />
-    </Section>
+    </div>
   );
 }

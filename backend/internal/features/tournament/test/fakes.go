@@ -10,16 +10,56 @@ import (
 	"boutline/internal/errs"
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/tournamentuser"
+	"boutline/internal/session"
 
 	"github.com/google/uuid"
 )
+
+var (
+	TestAdminID    = uuid.New()
+	TestRefereeID  = uuid.New()
+	TestStrangerID = uuid.New()
+)
+
+// Caller is who a request runs as. The zero value is the admin, so a test that
+// does not care about authorization still passes the role check.
+type Caller int
+
+const (
+	CallerAdmin Caller = iota
+	CallerReferee
+	CallerStranger
+	CallerAnonymous
+)
+
+func (c Caller) Context(ctx context.Context) context.Context {
+	switch c {
+	case CallerReferee:
+		return session.WithUserID(ctx, TestRefereeID)
+	case CallerStranger:
+		return session.WithUserID(ctx, TestStrangerID)
+	case CallerAnonymous:
+		return ctx
+	default:
+		return session.WithUserID(ctx, TestAdminID)
+	}
+}
+
+// Staff is the admin and the referee of a tournament, to seed the membership fake with.
+func Staff(tournamentID uuid.UUID) []tournamentuser.TournamentUser {
+	return []tournamentuser.TournamentUser{
+		{TournamentID: tournamentID, UserID: TestAdminID, Role: tournamentuser.TournamentUserRoleAdmin},
+		{TournamentID: tournamentID, UserID: TestRefereeID, Role: tournamentuser.TournamentUserRoleReferee},
+	}
+}
 
 var _ tournament.TournamentRepository = (*FakeTournamentRepository)(nil)
 
 type FakeTournamentRepository struct {
 	Tournaments map[uuid.UUID]tournament.Tournament
-	Clubs       map[uuid.UUID][]string // clubs of each tournament's competitors, for the club filter
-	Err         error                  // when set, every method fails with it
+	Clubs       map[uuid.UUID][]string        // clubs of each tournament's competitors, for the club filter
+	Members     *FakeTournamentUserRepository // when set, a create writes its memberships here, as the real one does
+	Err         error                         // when set, every method fails with it
 }
 
 func NewFakeTournamentRepository(seed ...tournament.Tournament) *FakeTournamentRepository {
@@ -45,6 +85,13 @@ func (f *FakeTournamentRepository) CreateTournament(_ context.Context, toCreate 
 	toCreate.ID = uuid.New()
 	toCreate.CreatedAt = time.Now()
 	toCreate.UpdatedAt = toCreate.CreatedAt
+	for i := range toCreate.Memberships {
+		membership := &toCreate.Memberships[i]
+		membership.TournamentID = toCreate.ID
+		if f.Members != nil {
+			f.Members.Memberships[keyOf(membership.TournamentID, membership.UserID)] = *membership
+		}
+	}
 	f.Tournaments[toCreate.ID] = *toCreate
 
 	return nil
@@ -105,7 +152,11 @@ func (f *FakeTournamentRepository) ListTournaments(
 		if filter.Country != "" && (candidate.Country == nil || *candidate.Country != filter.Country) {
 			continue
 		}
-		if filter.Club != "" && !slices.Contains(f.Clubs[candidate.ID], filter.Club) {
+		if filter.AssociatedUserID != uuid.Nil && candidate.CreatedBy != filter.AssociatedUserID &&
+			!f.hasMember(candidate.ID, filter.AssociatedUserID) {
+			continue
+		}
+		if filter.Club != "" && !clubsContain(f.Clubs[candidate.ID], filter.Club) {
 			continue
 		}
 		if !strings.Contains(strings.ToLower(candidate.Name), term) {
@@ -129,6 +180,26 @@ func (f *FakeTournamentRepository) ListTournaments(
 	}
 
 	return matched, total, nil
+}
+
+func (f *FakeTournamentRepository) hasMember(tournamentID, userID uuid.UUID) bool {
+	if f.Members == nil {
+		return false
+	}
+	_, ok := f.Members.Memberships[keyOf(tournamentID, userID)]
+	return ok
+}
+
+// clubsContain approximates trigram word similarity with a case-insensitive
+// substring scan, since the fake has no pg_trgm to match against.
+func clubsContain(clubs []string, term string) bool {
+	term = strings.ToLower(term)
+	for _, club := range clubs {
+		if strings.Contains(strings.ToLower(club), term) {
+			return true
+		}
+	}
+	return false
 }
 
 func (f *FakeTournamentRepository) UpdateTournamentByID(
@@ -155,6 +226,12 @@ func (f *FakeTournamentRepository) UpdateTournamentByID(
 	}
 	if update.Country != nil {
 		stored.Country = nilIfEmpty(*update.Country)
+	}
+	if update.Venue != nil {
+		stored.Venue = nilIfEmpty(*update.Venue)
+	}
+	if update.SanctioningAuthority != nil {
+		stored.SanctioningAuthority = update.SanctioningAuthority
 	}
 
 	f.save(id, stored)
@@ -268,7 +345,9 @@ type membershipKey struct {
 type FakeTournamentUserRepository struct {
 	Memberships map[membershipKey]tournamentuser.TournamentUser
 	Tournaments map[uuid.UUID]tournament.Tournament
-	Err         error
+	// Names holds {first, last} per user id, standing in for the users table.
+	Names map[uuid.UUID][2]string
+	Err   error
 }
 
 func NewFakeTournamentUserRepository(seed ...tournamentuser.TournamentUser) *FakeTournamentUserRepository {
@@ -280,6 +359,7 @@ func NewFakeTournamentUserRepository(seed ...tournamentuser.TournamentUser) *Fak
 	return &FakeTournamentUserRepository{
 		Memberships: memberships,
 		Tournaments: map[uuid.UUID]tournament.Tournament{},
+		Names:       map[uuid.UUID][2]string{},
 	}
 }
 
@@ -323,56 +403,73 @@ func (f *FakeTournamentUserRepository) GetTournamentUser(
 	return &found, nil
 }
 
-func (f *FakeTournamentUserRepository) ListUsersByTournament(
+func (f *FakeTournamentUserRepository) ListRolesByUser(
 	_ context.Context,
-	tournamentID uuid.UUID,
-	limit, offset int,
-) ([]tournamentuser.TournamentUser, error) {
+	userID uuid.UUID,
+	tournamentIDs []uuid.UUID,
+) (map[uuid.UUID]tournamentuser.TournamentUserRole, error) {
 	if f.Err != nil {
 		return nil, f.Err
 	}
 
-	matched := make([]tournamentuser.TournamentUser, 0, len(f.Memberships))
-	for _, candidate := range f.Memberships {
-		if candidate.TournamentID == tournamentID {
-			matched = append(matched, candidate)
+	roles := map[uuid.UUID]tournamentuser.TournamentUserRole{}
+	for _, tournamentID := range tournamentIDs {
+		if membership, ok := f.Memberships[keyOf(tournamentID, userID)]; ok {
+			roles[tournamentID] = membership.Role
 		}
+	}
+
+	return roles, nil
+}
+
+func (f *FakeTournamentUserRepository) ListMembersByTournament(
+	_ context.Context,
+	tournamentID uuid.UUID,
+	filter tournamentuser.TournamentUserFilter,
+) ([]tournamentuser.TournamentMember, int64, error) {
+	if f.Err != nil {
+		return nil, 0, f.Err
+	}
+
+	term := strings.ToLower(filter.Term)
+	matched := make([]tournamentuser.TournamentMember, 0, len(f.Memberships))
+	for _, candidate := range f.Memberships {
+		if candidate.TournamentID != tournamentID {
+			continue
+		}
+		if filter.Role != "" && candidate.Role != filter.Role {
+			continue
+		}
+
+		name := f.Names[candidate.UserID]
+		if !strings.Contains(strings.ToLower(name[0]+" "+name[1]), term) {
+			continue
+		}
+
+		matched = append(matched, tournamentuser.TournamentMember{
+			TournamentUser: candidate,
+			FirstName:      name[0],
+			LastName:       name[1],
+		})
 	}
 
 	// Ordered by user id, not the repository's created_at, so that iterating a
 	// map still yields the same page on every run.
-	slices.SortFunc(matched, func(a, b tournamentuser.TournamentUser) int {
+	slices.SortFunc(matched, func(a, b tournamentuser.TournamentMember) int {
 		return strings.Compare(a.UserID.String(), b.UserID.String())
 	})
 
-	if offset >= len(matched) {
-		return []tournamentuser.TournamentUser{}, nil
+	total := int64(len(matched))
+	if filter.Offset >= len(matched) {
+		return []tournamentuser.TournamentMember{}, total, nil
 	}
 
-	matched = matched[offset:]
-	if limit < len(matched) {
-		matched = matched[:limit]
+	matched = matched[filter.Offset:]
+	if filter.Limit < len(matched) {
+		matched = matched[:filter.Limit]
 	}
 
-	return matched, nil
-}
-
-func (f *FakeTournamentUserRepository) CountUsersByTournament(
-	_ context.Context,
-	tournamentID uuid.UUID,
-) (int64, error) {
-	if f.Err != nil {
-		return 0, f.Err
-	}
-
-	var total int64
-	for _, candidate := range f.Memberships {
-		if candidate.TournamentID == tournamentID {
-			total++
-		}
-	}
-
-	return total, nil
+	return matched, total, nil
 }
 
 func (f *FakeTournamentUserRepository) ListTournamentsByUser(

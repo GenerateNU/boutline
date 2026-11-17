@@ -18,6 +18,7 @@ type BoutRepository interface {
 	GetBoutByID(ctx context.Context, id uuid.UUID) (*Bout, error)
 	ListBouts(ctx context.Context, filter BoutListFilter) ([]Bout, int64, error)
 	UpdateBoutByID(ctx context.Context, id uuid.UUID, update BoutUpdate) error
+	ClaimBoutByID(ctx context.Context, id, refereeID uuid.UUID) error
 	TransitionBoutByID(ctx context.Context, id uuid.UUID, transition BoutTransition) error
 	DeleteBoutByID(ctx context.Context, id uuid.UUID) error
 }
@@ -230,6 +231,27 @@ func (r *boutRepository) updateByID(
 			return err
 		}
 		return fmt.Errorf("update bout %s: %w", id, errs.ErrConflict)
+	}
+
+	return nil
+}
+
+// The conditional WHERE is the race guard: of two referees claiming at once, only one matches.
+func (r *boutRepository) ClaimBoutByID(ctx context.Context, id, refereeID uuid.UUID) error {
+	result := r.db.WithContext(ctx).Model(&Bout{}).
+		Where("id = ?", id).
+		Where("status IN ?", BoutEditableStatuses()).
+		Where("referee_id IS NULL OR referee_id = ?", refereeID).
+		Update("referee_id", refereeID)
+	if result.Error != nil {
+		return translateBoutWriteError(fmt.Sprintf("claim bout %s", id), result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		if _, err := r.GetBoutByID(ctx, id); err != nil {
+			return err
+		}
+		return fmt.Errorf("claim bout %s: %w", id, errs.ErrConflict)
 	}
 
 	return nil

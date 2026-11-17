@@ -64,11 +64,15 @@ export function installBackend(
     const url = String(input);
     const body = init?.body ? JSON.parse(String(init.body)) : null;
 
-    if (url === `/api/v1/bouts/${BOUT_ID}` && init?.method === "PATCH") {
-      backend.refereeId = body.referee_id ?? backend.refereeId;
+    if (url === `/api/v1/bouts/${BOUT_ID}`) {
       return reply(200, boutBody());
     }
-    if (url === `/api/v1/bouts/${BOUT_ID}`) {
+    if (url === `/api/v1/bouts/${BOUT_ID}/claim`) {
+      if (backend.status !== "upcoming" || (backend.refereeId && backend.refereeId !== REFEREE_ID)) {
+        return reply(409, { detail: "only an upcoming bout with no other referee can be claimed" });
+      }
+      // REFEREE_ID stands in for the signed-in caller.
+      backend.refereeId = REFEREE_ID;
       return reply(200, boutBody());
     }
     if (url === `/api/v1/bouts/${BOUT_ID}/start`) {

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"boutline/internal/features/tournament"
 	"boutline/internal/features/user"
+	"boutline/internal/session"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -389,6 +391,7 @@ func TestListUsersWithQuery(t *testing.T) {
 	seed := []user.User{
 		seeded("ada@example.com", "Ada", "Lovelace"),
 		seeded("grace@example.com", "Grace", "Hopper"),
+		seeded("xyz.ref@example.com", "Bo", "Li"),
 	}
 
 	tests := []struct {
@@ -400,6 +403,27 @@ func TestListUsersWithQuery(t *testing.T) {
 		wantOffset int
 	}{
 		{
+			name:       "matches an email prefix that is not in the name",
+			input:      &user.UserListInput{Query: "xyz.r"},
+			wantEmails: []string{"xyz.ref@example.com"},
+			wantTotal:  1,
+			wantLimit:  user.UserDefaultPageSize,
+		},
+		{
+			name:       "an uppercase term matches an email prefix",
+			input:      &user.UserListInput{Query: "XYZ.REF@"},
+			wantEmails: []string{"xyz.ref@example.com"},
+			wantTotal:  1,
+			wantLimit:  user.UserDefaultPageSize,
+		},
+		{
+			name:       "a term matching neither name nor email gives an empty page",
+			input:      &user.UserListInput{Query: "zzzz"},
+			wantEmails: []string{},
+			wantTotal:  0,
+			wantLimit:  user.UserDefaultPageSize,
+		},
+		{
 			name:       "matches on first and last name",
 			input:      &user.UserListInput{Query: "lovelace"},
 			wantEmails: []string{"ada@example.com"},
@@ -409,8 +433,8 @@ func TestListUsersWithQuery(t *testing.T) {
 		{
 			name:       "a blank term matches every user",
 			input:      &user.UserListInput{Query: "   "},
-			wantEmails: []string{"ada@example.com", "grace@example.com"},
-			wantTotal:  2,
+			wantEmails: []string{"ada@example.com", "grace@example.com", "xyz.ref@example.com"},
+			wantTotal:  3,
 			wantLimit:  user.UserDefaultPageSize,
 		},
 		{
@@ -596,4 +620,67 @@ func TestListTournamentsByUser(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, status)
 		assert.Equal(t, "id must be a valid uuid", detail)
 	})
+}
+
+func TestGetCurrentUser(t *testing.T) {
+	t.Parallel()
+
+	stored := seeded("alex@example.com", "Alex", "Morgan")
+
+	tests := []struct {
+		name       string
+		ctx        func(t *testing.T) context.Context
+		repoErr    error
+		wantCode   int
+		wantDetail string
+	}{
+		{
+			name: "an existing caller gets their own user",
+			ctx:  func(t *testing.T) context.Context { return session.WithUserID(t.Context(), stored.ID) },
+		},
+		{
+			name:       "a deleted caller is unauthorized",
+			ctx:        func(t *testing.T) context.Context { return session.WithUserID(t.Context(), uuid.New()) },
+			wantCode:   http.StatusUnauthorized,
+			wantDetail: "unauthorized",
+		},
+		{
+			name:       "no caller on the context is unauthorized",
+			ctx:        func(t *testing.T) context.Context { return t.Context() },
+			wantCode:   http.StatusUnauthorized,
+			wantDetail: "unauthorized",
+		},
+		{
+			name:       "a repository failure is a 500, never a 401",
+			ctx:        func(t *testing.T) context.Context { return session.WithUserID(t.Context(), stored.ID) },
+			repoErr:    errors.New("connection refused"),
+			wantCode:   http.StatusInternalServerError,
+			wantDetail: "internal server error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakeUserRepository(stored)
+			repo.Err = tt.repoErr
+
+			out, err := user.NewUserService(repo, newTestTokens()).GetCurrentUser(tt.ctx(t), &struct{}{})
+
+			if tt.wantCode != 0 {
+				code, detail := apiError(t, err)
+				assert.Equal(t, tt.wantCode, code)
+				assert.Equal(t, tt.wantDetail, detail)
+				assert.Nil(t, out)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, stored.ID.String(), out.Body.ID)
+			assert.Equal(t, "alex@example.com", out.Body.Email)
+			assert.Equal(t, "Alex", out.Body.FirstName)
+			assert.Equal(t, "Morgan", out.Body.LastName)
+		})
+	}
 }
