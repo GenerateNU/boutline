@@ -1,5 +1,10 @@
+import { Suspense } from "react";
+
 import { BackButton } from "@/components/primitives/back-button";
+import { Skeleton } from "@/components/primitives/skeleton";
 import { TabNav } from "@/components/primitives/tab-nav";
+
+import { TournamentHeading } from "./_components/tournament-heading";
 
 const TABS = [
   { label: "Overview", segment: null },
@@ -26,6 +31,10 @@ export default async function TournamentSectionsLayout({
         <BackButton href="/tournaments" className="self-start">
           All tournaments
         </BackButton>
+        {/* Drawn here rather than by each tab, so switching tabs keeps the name instead of shimmering it. */}
+        <Suspense fallback={<Skeleton className="h-7 w-2/3" />}>
+          <TournamentHeading tournamentId={tournamentId} />
+        </Suspense>
         {children}
       </div>
     </>

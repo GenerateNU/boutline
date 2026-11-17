@@ -31,9 +31,6 @@ export default async function ClubsTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <Text as="h1" variant="title" className="uppercase">
-        {tournament.name}
-      </Text>
 
       <div className="flex items-center gap-2.5">
         <SearchForm

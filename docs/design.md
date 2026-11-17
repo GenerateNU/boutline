@@ -531,34 +531,36 @@ from the venue floor.
 **Status:** Completed, with fields filled in by §10.1.
 
 Tabs: Overview · Fencers · Clubs · Events. Every tab opens with an "< All
-tournaments" back button to `/tournaments`, drawn by the tabs' layout.
+tournaments" back button to `/tournaments` and the uppercase tournament name, both
+drawn by the tabs' layout, so switching tabs never redraws them.
 
 Hi-fi throughout: text uses the shared `Text` styles (C.3), searches are the hi-fi
 search bar with a clear button. Fencer and club rows keep their pin button, which does nothing until pinning lands (§6.3); event rows end in a chevron.
 
 - **Loading:** each tab has its own skeleton under the tabs. Fixed text and
   controls that need no fetched data (the Overview's event card titles, search
-  bars, the fencer and club filter buttons) render for real; the tournament name,
-  dates, cards and rows shimmer.
-- **Overview:** the uppercase name, the date range (from its events, else
+  bars, the fencer and club filter buttons) render for real; dates, cards and rows
+  shimmer. The name shimmers only on the first visit, in its own `Suspense` in the
+  layout.
+- **Overview:** a card with the date range (from its events, else
   `start_time`) and the location (venue, city, country), then an organizer row,
   then Ongoing, Upcoming and Completed event cards with times like "9:00 AM" (UTC,
   no label). Missing values show as placeholders: "Dates TBC", "Location TBC", and
   "Organizer contact TBC" always, since no contact is stored. An unknown ID is a 404.
-- **Fencers:** the tournament name as the title, then search (suggesting fencer
+- **Fencers:** search (suggesting fencer
   names as you type), the fencer filter sheet (Club, Rating, Gender; see §4.4, plus
   Weapon and Age Category as disabled "coming soon" placeholders),
   removable chips, and a paginated list of fencer cards (name, country · club, a
   rating badge like "A26") from `GET /competitors?tournament_id=&q&team&rating&gender`.
   The country is a placeholder showing US for everyone.
-- **Clubs:** the tournament name as the title, search suggesting Fencers and Clubs,
+- **Clubs:** search suggesting Fencers and Clubs,
   and a paginated list of clubs from `GET /tournaments/{id}/teams`; each links to
   the Fencers tab filtered to that club. Its filter sheet's Fencer, Club and Weapon
   sections are disabled "coming soon" placeholders, since the clubs API only searches
   by name. Each row's second line
   reads "US · Location TBC", as the design's "US · Boston, MA": clubs store no
   location yet.
-- **Events:** the tournament name as the title, search, a filter sheet (Weapon, Age
+- **Events:** search, a filter sheet (Weapon, Age
   Category, Gender, Event Status, Date, Event Type, all filtered on the page) with
   `Name: Value` chips, a light week strip whose calendar icon opens an
   inline month card under it (event days dotted; tapping a day picks it), and the day's events grouped under time headings. A day

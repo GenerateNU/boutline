@@ -76,9 +76,6 @@ export default async function EventsTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <Text as="h1" variant="title" className="uppercase">
-        {tournament.name}
-      </Text>
 
       <div className="flex items-center gap-2.5">
         <SearchForm action={basePath} label="Search events" placeholder="Search events" defaultValue={search} />

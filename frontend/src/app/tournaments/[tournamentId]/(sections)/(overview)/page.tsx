@@ -28,7 +28,7 @@ export default async function OverviewTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <TournamentInfoCard name={tournament.name} dates={dates} location={location || null} />
+      <TournamentInfoCard dates={dates} location={location || null} />
       <EventListCard
         title="Ongoing Events"
         events={eventsWithStatus(events, "active")}
