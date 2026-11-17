@@ -8,13 +8,12 @@ import { Skeleton } from "@/components/primitives/skeleton";
 
 export default function TableauTabLoading() {
   return (
-    <div className="relative isolate -mx-4 h-[calc(100dvh-10.5rem)] overflow-clip bg-fencing-white px-4 pt-4">
+    <div className="relative isolate -mx-4 h-[calc(100dvh-12.5rem)] overflow-clip bg-fencing-white px-4 pt-4">
       <span role="status" className="sr-only">
         Loading tableau
       </span>
       <Background version={7} />
       <div className="flex h-full flex-col">
-        <Skeleton className="mb-2 h-8 w-40 shrink-0" />
         <div className="flex shrink-0 items-center gap-3 pb-4">
           <label className="flex h-11.5 min-w-0 flex-1 items-center gap-2 rounded-[12px] border border-outline bg-background px-4 shadow-sm">
             <Input

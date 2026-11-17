@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { BackButton } from "@/components/primitives/back-button";
 import { getEvents } from "@/features/event/services/getEvents";
 import { TournamentInfoCard } from "@/features/tournament/components/tournament-info-card";
 import { getTournament } from "@/features/tournament/services/getTournament";
@@ -28,6 +29,9 @@ export default async function OverviewTab({
 
   return (
     <div className="flex flex-col gap-4">
+      <BackButton href="/tournaments" className="self-start">
+        All tournaments
+      </BackButton>
       <TournamentInfoCard name={tournament.name} dates={dates} location={location || null} />
       <EventListCard
         title="Ongoing Events"

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { TabPageOnly } from "@/components/primitives/tab-page-only";
 import { getEvents } from "@/features/event/services/getEvents";
 import { getTournament } from "@/features/tournament/services/getTournament";
 import { getTournamentRole } from "@/features/tournament/services/getTournamentRole";
@@ -26,10 +27,12 @@ export default async function TournamentDashboardLayout({
 
   return (
     <>
-      <DashboardHeader
-        tournament={tournament}
-        dates={formatEventDateRange(events, tournament.start_time)}
-      />
+      <TabPageOnly basePath={`/admin/tournaments/${tournamentId}`}>
+        <DashboardHeader
+          tournament={tournament}
+          dates={formatEventDateRange(events, tournament.start_time)}
+        />
+      </TabPageOnly>
       <DashboardTabNav />
       <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 pt-10 pb-20">
         {children}

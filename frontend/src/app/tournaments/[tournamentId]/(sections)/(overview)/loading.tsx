@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/primitives/back-button";
 import { Card } from "@/components/primitives/card";
 import { Skeleton } from "@/components/primitives/skeleton";
 import { Text } from "@/components/primitives/text";
@@ -14,6 +15,9 @@ export default function OverviewTabLoading() {
       <span role="status" className="sr-only">
         Loading tournament
       </span>
+      <BackButton href="/tournaments" className="self-start">
+        All tournaments
+      </BackButton>
 
       <Card aria-hidden className="gap-2">
         <Skeleton className="h-7 w-3/4" />
