@@ -6,7 +6,7 @@ import { SegmentedButton, SegmentedButtonItem } from "@/components/primitives/se
 
 const CHIP_CLASS_NAME = cn(
   buttonVariants({ variant: "outline", size: "sm" }),
-  "flex-none rounded-lg first:border-l data-[state=on]:bg-blue data-[state=on]:text-white data-[state=on]:hover:bg-blue-dark",
+  "flex-none rounded-lg first:border-l data-[state=on]:bg-blue-lighter data-[state=on]:text-blue",
 );
 
 interface ChipGroupProps {
