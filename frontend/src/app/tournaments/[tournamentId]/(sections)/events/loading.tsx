@@ -17,7 +17,7 @@ export default function EventsLoading() {
       <span role="status" className="sr-only">
         Loading events
       </span>
-      <Skeleton className="h-7 w-2/3 self-start" />
+      <Skeleton className="h-7 w-2/3" />
 
       <div className="flex items-center gap-2.5">
         <SearchForm

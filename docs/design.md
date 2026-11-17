@@ -530,16 +530,17 @@ from the venue floor.
 
 **Status:** Completed, with fields filled in by §10.1.
 
-Tabs: Overview · Fencers · Clubs · Events.
+Tabs: Overview · Fencers · Clubs · Events. Every tab opens with an "< All
+tournaments" back button to `/tournaments`, drawn by the tabs' layout.
 
 Hi-fi throughout: text uses the shared `Text` styles (C.3), searches are the hi-fi
 search bar with a clear button. Fencer and club rows keep their pin button, which does nothing until pinning lands (§6.3); event rows end in a chevron.
 
 - **Loading:** each tab has its own skeleton under the tabs. Fixed text and
-  controls that need no fetched data (the Overview's back button and event card titles, search
+  controls that need no fetched data (the Overview's event card titles, search
   bars, the fencer and club filter buttons) render for real; the tournament name,
   dates, cards and rows shimmer.
-- **Overview:** an "< All tournaments" back button to `/tournaments`, the uppercase name, the date range (from its events, else
+- **Overview:** the uppercase name, the date range (from its events, else
   `start_time`) and the location (venue, city, country), then an organizer row,
   then Ongoing, Upcoming and Completed event cards with times like "9:00 AM" (UTC,
   no label). Missing values show as placeholders: "Dates TBC", "Location TBC", and
@@ -557,7 +558,7 @@ search bar with a clear button. Fencer and club rows keep their pin button, whic
   by name. Each row's second line
   reads "US · Location TBC", as the design's "US · Boston, MA": clubs store no
   location yet.
-- **Events:** "< {name}" back to Overview, search, a filter sheet (Weapon, Age
+- **Events:** the tournament name as the title, search, a filter sheet (Weapon, Age
   Category, Gender, Event Status, Date, Event Type, all filtered on the page) with
   `Name: Value` chips, a light week strip whose calendar icon opens an
   inline month card under it (event days dotted; tapping a day picks it), and the day's events grouped under time headings. A day

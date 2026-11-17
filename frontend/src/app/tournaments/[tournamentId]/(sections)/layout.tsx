@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/primitives/back-button";
 import { TabNav } from "@/components/primitives/tab-nav";
 
 const TABS = [
@@ -21,7 +22,10 @@ export default async function TournamentSectionsLayout({
         basePath={`/tournaments/${tournamentId}`}
         tabs={TABS}
       />
-      <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 pt-10 pb-20 font-manrope">
+      <div className="mx-auto flex w-full max-w-mobile flex-col gap-4 px-4 pt-4 pb-20 font-manrope">
+        <BackButton href="/tournaments" className="self-start">
+          All tournaments
+        </BackButton>
         {children}
       </div>
     </>

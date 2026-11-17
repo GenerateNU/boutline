@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 
-import { BackButton } from "@/components/primitives/back-button";
 import { Text } from "@/components/primitives/text";
 import { EventCard } from "@/features/event/components/event-card";
 import { getCompetitors } from "@/features/competitor/services/getCompetitors";
@@ -77,11 +76,9 @@ export default async function EventsTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <BackButton href={`/tournaments/${tournamentId}`} className="self-start">
-        <Text as="h1" variant="title" className="uppercase">
-          {tournament.name}
-        </Text>
-      </BackButton>
+      <Text as="h1" variant="title" className="uppercase">
+        {tournament.name}
+      </Text>
 
       <div className="flex items-center gap-2.5">
         <SearchForm action={basePath} label="Search events" placeholder="Search events" defaultValue={search} />
