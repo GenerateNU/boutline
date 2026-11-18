@@ -19,6 +19,8 @@ interface SelectProps extends React.ComponentProps<typeof SelectPrimitive.Root> 
   "aria-label"?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
+  // Replaces the chevron, e.g. TimeField's clock.
+  icon?: React.ReactNode;
 }
 
 function Select({
@@ -28,6 +30,7 @@ function Select({
   "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
+  icon,
   children,
   ...props
 }: SelectProps) {
@@ -43,16 +46,18 @@ function Select({
       >
         <SelectPrimitive.Value placeholder={placeholder} />
         <SelectPrimitive.Icon asChild>
-          <ExpandMoreOutlined className="size-4 shrink-0 text-neutral-secondary transition-transform group-data-[state=open]:rotate-180" />
+          {icon ?? (
+            <ExpandMoreOutlined className="size-4 shrink-0 text-neutral-secondary transition-transform group-data-[state=open]:rotate-180" />
+          )}
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
         <SelectPrimitive.Content
           position="popper"
           sideOffset={4}
-          className="z-50 w-(--radix-select-trigger-width) origin-(--radix-select-content-transform-origin) rounded-lg border border-outline bg-background shadow-md motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out"
+          className="z-50 max-h-(--radix-select-content-available-height) w-(--radix-select-trigger-width) origin-(--radix-select-content-transform-origin) rounded-lg border border-outline bg-background shadow-md motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out"
         >
-          <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
+          <SelectPrimitive.Viewport className="max-h-80 p-1">{children}</SelectPrimitive.Viewport>
         </SelectPrimitive.Content>
       </SelectPrimitive.Portal>
     </SelectPrimitive.Root>
