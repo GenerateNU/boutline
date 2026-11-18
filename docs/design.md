@@ -1853,17 +1853,22 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
 - The set includes the global nav, tab nav, section, list, card, chip (the filter
   tag: `rounded-md border-blue-light bg-blue-lightest text-blue` with a close X when
   it is removable), chip group, text, label, button, segmented button, search bar, dropdown, text field,
-  select, date field, checkbox, radio, toggle, slider, calendar,
+  select, date field, time field, checkbox, radio, toggle, slider, calendar,
   dropzone and upload dialog, modal, filter sheet, pagination, toast, tooltip,
   progress indicators, a loading spinner, and a shimmering skeleton block.
-- Form fields (text field, select, date field) share one hi-fi frame: a `text-xs`
+- Form fields (text field, select, date field, time field) share one hi-fi frame: a `text-xs`
   label above a `rounded-md border-outline` box that turns `border-blue` with a
   `ring-blue-lighter` halo on focus or open, a 2px `border-red-dark` when
   `aria-invalid` or `:user-invalid` (a required field left empty once edited or
   submitted), and `bg-disabled` when disabled. A required field's label
   ends in a `text-red-dark` asterisk, hidden from screen readers since `required`
-  is already announced. Select is Radix Select; the date field opens the calendar
-  in a Radix Popover.
+  is already announced. Select is Radix Select, its menu capped at `max-h-80`
+  and scrolling past that. The date field opens the calendar in a Radix Popover on
+  the picked day (or today) and shows `MMM d, yyyy`. The time field is a Select of
+  15-minute slots shown as `h:mm a` behind a clock icon, holding the `HH:mm` a
+  native time input would; an off-grid value is added to the list. Tournament and
+  event setup use both; a fencer's birth date stays a typed native date input,
+  since paging a calendar back years is slower than typing it.
 - Overlays: Modal is a `rounded-3xl p-5` card with an `text-xl` title and close (X)
   header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a
   filled or `destructive` action). The filter sheet is a `rounded-t-3xl` bottom sheet
