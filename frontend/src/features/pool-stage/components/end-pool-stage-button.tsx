@@ -11,11 +11,9 @@ import { errorMessage } from "@/utils/error-message";
 
 interface EndPoolStageButtonProps {
   poolStageId: string;
-  // Where to go once the stage has ended; without it the current page refreshes.
-  redirectTo?: string;
 }
 
-function EndPoolStageButton({ poolStageId, redirectTo }: EndPoolStageButtonProps) {
+function EndPoolStageButton({ poolStageId }: EndPoolStageButtonProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
@@ -27,11 +25,7 @@ function EndPoolStageButton({ poolStageId, redirectTo }: EndPoolStageButtonProps
           method: "POST",
         });
         toast({ description: "Pool stage ended" });
-        if (redirectTo) {
-          router.push(redirectTo);
-        } else {
-          router.refresh();
-        }
+        router.refresh();
       } catch (err) {
         toast({ description: errorMessage(err) });
       }
