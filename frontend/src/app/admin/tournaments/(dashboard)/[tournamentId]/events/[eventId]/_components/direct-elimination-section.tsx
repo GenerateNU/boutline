@@ -8,16 +8,11 @@ import { GenerateTableauForm } from "./generate-tableau-form";
 import { StartDirectEliminationButton } from "./start-direct-elimination-button";
 
 interface DirectEliminationSectionProps {
-  tournamentId: string;
   eventId: string;
   canManage: boolean;
 }
 
-async function DirectEliminationSection({
-  tournamentId,
-  eventId,
-  canManage,
-}: DirectEliminationSectionProps) {
+async function DirectEliminationSection({ eventId, canManage }: DirectEliminationSectionProps) {
   const directElimination = await getEventDirectElimination(eventId);
   const drawn = directElimination ? await getTableauDrawn(eventId) : false;
 
@@ -44,12 +39,7 @@ async function DirectEliminationSection({
       {!canManage && !drawn && (
         <p className="text-sm text-neutral-secondary">Waiting for an admin to draw the tableau.</p>
       )}
-      {canDraw && (
-        <GenerateTableauForm
-          directEliminationId={directElimination.id}
-          tableauHref={`/tournaments/${tournamentId}/events/${eventId}/tableau`}
-        />
-      )}
+      {canDraw && <GenerateTableauForm directEliminationId={directElimination.id} />}
     </Section>
   );
 }
