@@ -6,17 +6,16 @@ import { apiRequest } from "@/services/api-request";
 import { EndPoolStageButton } from "./end-pool-stage-button";
 
 const refresh = jest.fn();
-const push = jest.fn();
 
-jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push }) }));
+jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 jest.mock("../../../services/api-request", () => ({ apiRequest: jest.fn() }));
 
 const apiRequestMock = jest.mocked(apiRequest);
 
-async function clickEnd(redirectTo?: string) {
+async function clickEnd() {
   render(
     <Toaster>
-      <EndPoolStageButton poolStageId="ps 1" redirectTo={redirectTo} />
+      <EndPoolStageButton poolStageId="ps 1" />
     </Toaster>,
   );
   fireEvent.click(screen.getByRole("button", { name: "End pool stage" }));
@@ -25,7 +24,6 @@ async function clickEnd(redirectTo?: string) {
 describe("EndPoolStageButton", () => {
   beforeEach(() => {
     refresh.mockClear();
-    push.mockClear();
     apiRequestMock.mockReset();
   });
 
@@ -33,37 +31,24 @@ describe("EndPoolStageButton", () => {
     {
       name: "confirms and refreshes on success",
       result: () => Promise.resolve({}),
-      redirectTo: undefined,
       message: "Pool stage ended",
       refreshes: 1,
-      pushes: [],
     },
     {
-      name: "confirms and navigates on success when given a destination",
-      result: () => Promise.resolve({}),
-      redirectTo: "/admin/tournaments/t-1/events/e-1",
-      message: "Pool stage ended",
-      refreshes: 0,
-      pushes: [["/admin/tournaments/t-1/events/e-1"]],
-    },
-    {
-      name: "shows the error and stays put on failure",
+      name: "shows the error and does not refresh on failure",
       result: () => Promise.reject(new Error("every pool must end before the pool stage can end")),
-      redirectTo: "/admin/tournaments/t-1/events/e-1",
       message: "every pool must end before the pool stage can end",
       refreshes: 0,
-      pushes: [],
     },
   ];
 
-  it.each(cases)("$name", async ({ result, redirectTo, message, refreshes, pushes }) => {
+  it.each(cases)("$name", async ({ result, message, refreshes }) => {
     apiRequestMock.mockImplementation(result);
 
-    await clickEnd(redirectTo);
+    await clickEnd();
 
     expect(await screen.findByText(message)).toBeInTheDocument();
     expect(refresh).toHaveBeenCalledTimes(refreshes);
-    expect(push.mock.calls).toEqual(pushes);
   });
 
   it("posts to the stage's end endpoint", async () => {
