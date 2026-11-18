@@ -17,7 +17,7 @@ var _ poolresult.PoolResultRepository = (*FakePoolResultRepository)(nil)
 // FakePoolResultRepository mirrors the SQL: GetLatestPoolStageID fails with
 // ErrNotFound when the event has no pool stage.
 type FakePoolResultRepository struct {
-	PoolStages map[uuid.UUID]uuid.UUID                      // stage ID by event ID
+	PoolStages map[uuid.UUID]uuid.UUID                     // stage ID by event ID
 	Fencers    map[uuid.UUID][]poolresult.PoolResultFencer // by pool stage ID
 	Bouts      map[uuid.UUID][]pool.PoolSheetBoutRow       // by pool stage ID
 	Entrants   map[uuid.UUID][]uuid.UUID                   // by event ID
