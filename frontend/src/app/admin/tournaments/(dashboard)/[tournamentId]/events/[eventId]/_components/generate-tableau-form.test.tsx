@@ -5,10 +5,9 @@ import { apiRequest } from "@/services/api-request";
 
 import { GenerateTableauForm } from "./generate-tableau-form";
 
-const push = jest.fn();
-const TABLEAU_HREF = "/tournaments/t-1/events/e-1/tableau";
+const refresh = jest.fn();
 
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 jest.mock("../../../../../../../../services/api-request", () => ({ apiRequest: jest.fn() }));
 
 const apiRequestMock = jest.mocked(apiRequest);
@@ -16,7 +15,7 @@ const apiRequestMock = jest.mocked(apiRequest);
 function submit(percent?: string) {
   render(
     <Toaster>
-      <GenerateTableauForm directEliminationId="de 1" tableauHref={TABLEAU_HREF} />
+      <GenerateTableauForm directEliminationId="de 1" />
     </Toaster>,
   );
   if (percent) {
@@ -27,32 +26,32 @@ function submit(percent?: string) {
 
 describe("GenerateTableauForm", () => {
   beforeEach(() => {
-    push.mockClear();
+    refresh.mockClear();
     apiRequestMock.mockReset();
   });
 
   const cases = [
     {
-      name: "confirms and goes to the tableau on success",
+      name: "confirms and refreshes on success",
       result: () => Promise.resolve({}),
       message: "Tableau drawn",
-      pushes: [[TABLEAU_HREF]],
+      refreshes: 1,
     },
     {
-      name: "shows the backend error and stays put on failure",
+      name: "shows the backend error and does not refresh on failure",
       result: () => Promise.reject(new Error("at least 2 fencers must advance to draw a tableau")),
       message: "at least 2 fencers must advance to draw a tableau",
-      pushes: [],
+      refreshes: 0,
     },
   ];
 
-  it.each(cases)("$name", async ({ result, message, pushes }) => {
+  it.each(cases)("$name", async ({ result, message, refreshes }) => {
     apiRequestMock.mockImplementation(result);
 
     submit();
 
     expect(await screen.findByText(message)).toBeInTheDocument();
-    expect(push.mock.calls).toEqual(pushes);
+    expect(refresh).toHaveBeenCalledTimes(refreshes);
   });
 
   it("defaults to 100 percent", async () => {
