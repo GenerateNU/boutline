@@ -3,6 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 const textVariants = cva("", {
   variants: {
     variant: {
+      heading: "text-2xl font-semibold text-charcoal",
       title: "text-xl font-semibold text-obsidian",
       subtitle: "text-sm font-semibold text-obsidian",
       body: "text-sm text-obsidian",

@@ -8,7 +8,7 @@ export default function EventFencersTabLoading() {
       <span role="status" className="sr-only">
         Loading fencers
       </span>
-      <Text as="h1" variant="title">
+      <Text as="h2" variant="title">
         Fencers
       </Text>
       <FencerBrowserSkeleton />

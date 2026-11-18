@@ -21,10 +21,7 @@ export default function PoolPageLoading() {
       </span>
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <BackButton
-            href={`/tournaments/${tournamentId}/events/${eventId}/pooling`}
-            className="-ml-3"
-          >
+          <BackButton href={`/tournaments/${tournamentId}/events/${eventId}/pooling`}>
             <span className="sr-only">Back to </span>Pooling
           </BackButton>
           <Skeleton className="size-6 rounded-full" />

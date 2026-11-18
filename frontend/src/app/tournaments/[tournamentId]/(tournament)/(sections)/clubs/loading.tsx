@@ -3,7 +3,6 @@
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 
 import { ListCardSkeleton } from "@/components/primitives/list-card-skeleton";
-import { Skeleton } from "@/components/primitives/skeleton";
 import { ClubFilterSheet } from "@/features/competitor/components/club-filter-sheet";
 import { SearchForm } from "@/features/tournament/components/search-form";
 
@@ -19,7 +18,6 @@ export default function ClubsLoading() {
       <span role="status" className="sr-only">
         Loading clubs
       </span>
-      <Skeleton className="h-7 w-2/3" />
 
       <div className="flex items-center gap-2.5">
         <SearchForm
