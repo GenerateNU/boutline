@@ -1,4 +1,8 @@
+"use client";
+
 import Image from "next/image";
+import { cn } from "cn";
+import { useState } from "react";
 
 type BackgroundVersion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
@@ -22,19 +26,29 @@ interface BackgroundProps {
 
 function Background({ version }: BackgroundProps) {
   const { size, frame, pattern } = backgrounds[version];
+  // Hidden until the pattern has loaded, then faded in from the top-left corner.
+  const [loaded, setLoaded] = useState(false);
 
+  // The mask sits on a layer filling the (clipping) parent rather than on the frame, since
+  // a mask crops to its element and the pattern spills well outside the phone-sized frame.
   return (
     <div
       aria-hidden
-      className={`pointer-events-none absolute top-0 left-1/2 -z-10 -translate-x-1/2 ${frame}`}
+      className={cn(
+        "pointer-events-none absolute inset-0 -z-10 [mask-image:linear-gradient(135deg,#000_40%,transparent_60%)] [mask-size:300%_300%]",
+        loaded ? "motion-safe:animate-reveal-from-top-left" : "opacity-0",
+      )}
     >
-      <Image
-        src={`/brand/backgrounds/bg-${version}.svg`}
-        alt=""
-        width={size[0]}
-        height={size[1]}
-        className={`absolute max-w-none -translate-1/2 ${pattern}`}
-      />
+      <div className={`absolute top-0 left-1/2 -translate-x-1/2 ${frame}`}>
+        <Image
+          src={`/brand/backgrounds/bg-${version}.svg`}
+          alt=""
+          width={size[0]}
+          height={size[1]}
+          onLoad={() => setLoaded(true)}
+          className={`absolute max-w-none -translate-1/2 ${pattern}`}
+        />
+      </div>
     </div>
   );
 }

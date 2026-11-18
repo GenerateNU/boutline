@@ -52,21 +52,21 @@ function TableauList({
 
   if (round.bouts.length === 0) {
     return (
-      <p className="py-8 text-center text-muted-foreground">
+      <p className="py-8 text-center text-muted-foreground lg:text-left">
         No bouts in this round yet.
       </p>
     );
   }
   if (bouts.length === 0) {
     return (
-      <p className="py-8 text-center text-muted-foreground">
+      <p className="py-8 text-center text-muted-foreground lg:text-left">
         No bouts match your search.
       </p>
     );
   }
 
   return (
-    <ul className="flex flex-col gap-4">
+    <ul className="flex flex-col gap-4 lg:grid lg:grid-cols-[repeat(auto-fill,22rem)]">
       {bouts.map((bout) => (
         <TableauListItem
           key={bout.id}

@@ -38,7 +38,7 @@ function renderBracket(focusedRoundId: string) {
   const { container, rerender } = render(
     bracket(focusedRoundId, onFocusedRoundChange),
   );
-  const scroller = container.firstElementChild?.firstElementChild as HTMLElement;
+  const scroller = container.firstElementChild as HTMLElement;
   setLeft(scroller, 0);
   return {
     scroller,
@@ -62,6 +62,7 @@ function swipeTo(
 
 beforeAll(() => {
   Element.prototype.scrollTo = jest.fn();
+  window.scrollTo = jest.fn();
 });
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => jest.useRealTimers());

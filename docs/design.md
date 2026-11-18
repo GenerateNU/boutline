@@ -1555,6 +1555,25 @@ once the event's pool stage has ended:
   round buttons above it follow: the button for the round snapped to is selected,
   and picking a round button scrolls the bracket to that round (#168). A list view
   of the selected round and a name/club search sit alongside the bracket.
+- When the round buttons don't fit the screen width, they scroll sideways with
+  their scrollbar hidden; the edge with more buttons past it fades out over 2.5rem
+  as the scroll hint, and the selected button is scrolled to the centre whenever
+  the selected round changes.
+- The tab has no fixed height: the bracket scrolls sideways on its own and down
+  with the page, and the round buttons stick to the top of the screen over it with
+  no background. Picking a round scrolls the page only when that round's first bout
+  is out of view, and not at all when every round fits on screen.
+- Unlike the event's other tabs, the tableau leaves the centred mobile column
+  (`EventTabBody`): from just under the tabs it fills the screen over the
+  `Background` pattern, so the back link and event title float over it, and the
+  bracket (and its skeleton) runs off the screen edge rather than stopping at the
+  page gutter. The search row keeps the mobile width.
+- Every `Background` pattern fades in from its top-left corner once its image has
+  loaded (`animate-reveal-from-top-left`, 1s, ease-in-out; none under reduced
+  motion). The tableau's mounts with the tab, so it replays on every switch to it.
+- On laptops (`lg` up) everything stays left-aligned: the round buttons are a fixed
+  `w-32` each, the bracket shows as many rounds as fit, the list view is a grid of
+  22rem cards, and the empty states read left.
 
 ---
 
