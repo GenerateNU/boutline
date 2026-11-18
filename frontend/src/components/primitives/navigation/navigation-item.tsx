@@ -5,7 +5,8 @@ type NavigationSurface = "dark" | "light";
 
 const SURFACES = {
   dark: {
-    item: "h-12 items-center rounded-xl px-4 lg:h-full lg:flex-none lg:motion-safe:animate-tab-in",
+    // A tab focused mid-stagger would still be invisible, so focus skips the entrance.
+    item: "h-12 items-center rounded-xl px-4 lg:h-full lg:flex-none lg:motion-safe:animate-tab-in lg:focus-visible:animate-none",
     active: "text-white lg:[anchor-name:--active-tab]",
     idle: "text-neutral-muted hover:text-white",
     // On laptops the indicator spans the whole tab rather than just its label.
