@@ -147,9 +147,9 @@ func (f *FakeCompetitorRepository) GetCompetitorByID(
 func (f *FakeCompetitorRepository) ListCompetitors(
 	_ context.Context,
 	filter competitor.CompetitorListFilter,
-) ([]competitor.Competitor, int64, error) {
+) ([]competitor.Competitor, int64, int64, error) {
 	if f.Err != nil {
-		return nil, 0, f.Err
+		return nil, 0, 0, f.Err
 	}
 	term := strings.ToLower(filter.Term)
 	matched := make([]competitor.Competitor, 0, len(f.Competitors))
@@ -185,15 +185,20 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 		return strings.Compare(a.LastName, b.LastName)
 	})
 
-	total := int64(len(matched))
+	total, checkedIn := int64(len(matched)), int64(0)
+	for _, c := range matched {
+		if c.CheckedInAt != nil {
+			checkedIn++
+		}
+	}
 	if filter.Offset >= len(matched) {
-		return []competitor.Competitor{}, total, nil
+		return []competitor.Competitor{}, total, checkedIn, nil
 	}
 	matched = matched[filter.Offset:]
 	if filter.Limit < len(matched) {
 		matched = matched[:filter.Limit]
 	}
-	return matched, total, nil
+	return matched, total, checkedIn, nil
 }
 
 func (f *FakeCompetitorRepository) ListCompetitorTeams(
@@ -325,6 +330,13 @@ func (f *FakeCompetitorRepository) UpdateCompetitorByID(
 	}
 	if update.Team != nil {
 		stored.Team = *update.Team
+	}
+	if update.CheckedInAt != nil {
+		stored.CheckedInAt = nil
+		if !update.CheckedInAt.IsZero() {
+			checkedInAt := *update.CheckedInAt
+			stored.CheckedInAt = &checkedInAt
+		}
 	}
 	stored.UpdatedAt = time.Now()
 	f.Competitors[id] = stored
