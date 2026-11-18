@@ -5,12 +5,13 @@ type NavigationSurface = "dark" | "light";
 
 const SURFACES = {
   dark: {
-    item: "h-12 items-center rounded-xl px-4",
-    active: "text-white",
+    item: "h-12 items-center rounded-xl px-4 lg:h-full lg:flex-none lg:motion-safe:animate-tab-in",
+    active: "text-white lg:[anchor-name:--active-tab]",
     idle: "text-neutral-muted hover:text-white",
     // On laptops the indicator spans the whole tab rather than just its label.
     label: "relative h-full lg:static",
-    indicator: "bottom-2 h-0.75",
+    // NavigationBar draws the laptop indicator instead, wherever anchor positioning lets it slide.
+    indicator: "bottom-2 h-0.75 lg:supports-[anchor-name:--a]:hidden",
   },
   light: {
     item: "h-10 px-1 pt-2.5 whitespace-nowrap",

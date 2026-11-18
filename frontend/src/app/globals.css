@@ -90,6 +90,7 @@
   --animate-sheet-in: sheet-in 250ms cubic-bezier(0.32, 0.72, 0, 1);
   --animate-sheet-out: sheet-out 200ms ease-in;
   --animate-shimmer: shimmer 1.5s ease-in-out infinite;
+  --animate-tab-in: tab-in 300ms ease-out backwards;
 
   /* `scale` and `translate` are their own properties, so these don't clobber
      Tailwind's -translate-*-1/2 centring the way a `transform` keyframe would. */
@@ -134,6 +135,13 @@
   @keyframes fade-out {
     to {
       opacity: 0;
+    }
+  }
+  /* `backwards` holds a staggered tab hidden through its animation-delay. */
+  @keyframes tab-in {
+    from {
+      opacity: 0;
+      translate: -0.5rem 0;
     }
   }
   @keyframes shimmer {

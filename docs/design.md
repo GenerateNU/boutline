@@ -470,7 +470,10 @@ from the venue floor.
   from a page nested under it (an event's Events tab), which adds an entry. From
   `lg` the tab row moves up into the global nav, right of the plate, with each tab
   as wide as its label rather than spread evenly, and the active tab's green
-  underline spans the whole tab.
+  underline spans the whole tab. There the tabs fade in one after another from
+  left to right when the row first appears, and the underline slides to a newly
+  chosen tab (both off with reduced motion). Browsers without CSS anchor
+  positioning show the underline without the slide.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
 - **`/`**: the landing page. A `blue-dark` hero with a "Live fencing results"

@@ -26,7 +26,7 @@ function TabNav({ label, basePath, tabs }: TabNavProps) {
     <div className="bg-obsidian shadow-md lg:absolute lg:top-0 lg:right-16 lg:left-80 lg:h-10 lg:shadow-none">
       <NavigationBar
         aria-label={label}
-        className="mx-auto max-w-mobile rounded-none lg:h-full lg:max-w-none lg:*:h-full lg:*:flex-none"
+        className="mx-auto max-w-mobile rounded-none lg:h-full lg:max-w-none"
         items={tabs.map(({ label, segment }) => {
           const href = segment ? `${root}/${segment}` : basePath;
           // Matched on the URL rather than the layout segment, so a loading screen
