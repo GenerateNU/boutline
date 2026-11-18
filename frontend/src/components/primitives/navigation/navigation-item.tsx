@@ -10,14 +10,16 @@ const SURFACES = {
     idle: "text-neutral-muted hover:text-white",
     // On laptops the indicator spans the whole tab rather than just its label.
     label: "relative h-full lg:static",
-    // NavigationBar draws the laptop indicator instead, wherever anchor positioning lets it slide.
-    indicator: "bottom-2 h-0.75 lg:supports-[anchor-name:--a]:hidden",
+    activeLabel: "[anchor-name:--active-tab] lg:[anchor-name:none]",
+    // NavigationBar draws the indicator instead, wherever anchor positioning lets it slide.
+    indicator: "bottom-2 h-0.75 supports-[anchor-name:--a]:hidden",
   },
   light: {
     item: "h-10 px-1 pt-2.5 whitespace-nowrap",
     active: "font-semibold text-obsidian",
     idle: "font-medium text-neutral-secondary hover:text-obsidian",
     label: "h-5",
+    activeLabel: "",
     indicator: "bottom-0 h-0.5",
   },
 };
@@ -49,7 +51,7 @@ function NavigationItem({
       )}
       {...props}
     >
-      <span className={cn("flex items-center", styles.label)}>
+      <span className={cn("flex items-center", styles.label, active && styles.activeLabel)}>
         {label}
         <span
           aria-hidden

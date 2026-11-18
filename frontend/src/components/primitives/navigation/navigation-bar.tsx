@@ -48,7 +48,7 @@ function NavigationBar({ items, surface = "dark", className, ...props }: Navigat
         <span
           aria-hidden
           data-slot="navigation-indicator"
-          className="absolute right-[anchor(right)] bottom-2 left-[anchor(left)] hidden h-0.75 rounded-t-sm bg-accent-green [position-anchor:--active-tab] lg:supports-[anchor-name:--a]:block motion-safe:animate-tab-in motion-safe:transition-[left,right] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.65,0,0.35,1)]"
+          className="absolute right-[anchor(right)] bottom-2 left-[anchor(left)] hidden h-0.75 rounded-t-sm bg-accent-green [position-anchor:--active-tab] supports-[anchor-name:--a]:block lg:motion-safe:animate-tab-in motion-safe:transition-[left,right] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.65,0,0.35,1)]"
           style={{ animationDelay: `${activeIndex * TAB_STAGGER_MS}ms` }}
         />
       )}
