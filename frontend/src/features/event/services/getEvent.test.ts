@@ -35,4 +35,20 @@ describe("getEvent", () => {
 
     await expect(getEvent("e1")).rejects.toThrow("Request failed with status 500");
   });
+
+  it("rejects when the given signal aborts a stalled request", async () => {
+    // A fetch that never answers on its own, only rejecting when aborted, as a real fetch does.
+    fetchMock.mockImplementation(
+      (_url: URL, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+        }),
+    );
+    const controller = new AbortController();
+
+    const request = getEvent("e1", controller.signal);
+    controller.abort(new DOMException("timed out", "TimeoutError"));
+
+    await expect(request).rejects.toThrow("timed out");
+  });
 });

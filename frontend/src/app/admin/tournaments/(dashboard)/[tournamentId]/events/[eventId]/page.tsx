@@ -9,6 +9,8 @@ import { getTournamentRole } from "@/features/tournament/services/getTournamentR
 
 import { DirectEliminationSection } from "./_components/direct-elimination-section";
 
+const EVENT_LABEL_TIMEOUT_MS = 2_000;
+
 export default async function AdminEventPage({
   params,
 }: PageProps<"/admin/tournaments/[tournamentId]/events/[eventId]">) {
@@ -16,8 +18,9 @@ export default async function AdminEventPage({
   const [poolStage, role, event] = await Promise.all([
     getEventPoolStage(eventId),
     getTournamentRole(tournamentId),
-    // Only the back link's label needs the event, so a failed fetch falls back to "Event" rather than failing the page.
-    getEvent(eventId).catch(() => null),
+    // Only the back link's label needs the event, so a failed or stalled fetch falls back
+    // to "Event" rather than failing the page or holding it up; the timeout aborts it.
+    getEvent(eventId, AbortSignal.timeout(EVENT_LABEL_TIMEOUT_MS)).catch(() => null),
   ]);
   // The layout lets referees in to look; the backend refuses them anyway, so this only hides buttons they can't use.
   const canManage = role === "admin";
