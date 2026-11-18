@@ -1,3 +1,4 @@
+import { AGE_LABELS, WEAPON_LABELS } from "@/features/event/lib/event-filters";
 import { readOffsetParam, readStringParam, type SearchParams } from "@/lib/search-params";
 
 interface FilterOption {
@@ -31,6 +32,8 @@ export function parseFencerFilters(query: SearchParams) {
   const team = readStringParam(query, "team");
   const rating = readStringParam(query, "rating");
   const gender = readStringParam(query, "gender");
+  const weapon = readStringParam(query, "weapon");
+  const ageCategory = readStringParam(query, "ageCategory");
 
   return {
     offset: readOffsetParam(query),
@@ -39,5 +42,8 @@ export function parseFencerFilters(query: SearchParams) {
     team: team && team.length <= MAX_CLUB_LENGTH ? team : undefined,
     rating: RATING_OPTIONS.some((option) => option.value === rating) ? rating : undefined,
     gender: GENDER_OPTIONS.some((option) => option.value === gender) ? gender : undefined,
+    // Weapon and age category live on events, so they share the event filters' labels.
+    weapon: Object.hasOwn(WEAPON_LABELS, weapon) ? weapon : undefined,
+    ageCategory: Object.hasOwn(AGE_LABELS, ageCategory) ? ageCategory : undefined,
   };
 }

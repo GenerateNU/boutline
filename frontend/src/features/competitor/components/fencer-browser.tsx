@@ -11,6 +11,7 @@ import {
   RATING_OPTIONS,
 } from "@/features/competitor/lib/fencer-filters";
 import { getCompetitors } from "@/features/competitor/services/getCompetitors";
+import { AGE_OPTIONS, WEAPON_OPTIONS } from "@/features/event/lib/event-filters";
 import { SearchForm } from "@/features/tournament/components/search-form";
 import type { SearchParams } from "@/lib/search-params";
 
@@ -43,7 +44,11 @@ function emptyMessage({ search, hasFilters, eventId }: EmptyMessageInput) {
 
 // The searchable, filterable fencer list shared by the tournament and event Fencers tabs.
 async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerBrowserProps) {
-  const { offset, search, team, rating, gender } = parseFencerFilters(query);
+  const filters = parseFencerFilters(query);
+  const { offset, search, team, rating, gender } = filters;
+  // An event has one weapon and age category, so those filters only mean something tournament-wide.
+  const weapon = eventId ? undefined : filters.weapon;
+  const ageCategory = eventId ? undefined : filters.ageCategory;
 
   const { data, total, limit } = await getCompetitors(tournamentId, FENCER_PAGE_SIZE, offset, {
     eventId,
@@ -51,14 +56,22 @@ async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerB
     team,
     rating,
     gender,
+    weapon,
+    ageCategory,
   });
 
   const activeFilters = [
     { param: "team", name: "Club", value: team },
+    { param: "weapon", name: "Weapon", value: weapon && optionLabel(WEAPON_OPTIONS, weapon) },
+    {
+      param: "ageCategory",
+      name: "Age Category",
+      value: ageCategory && optionLabel(AGE_OPTIONS, ageCategory),
+    },
     { param: "rating", name: "Rating", value: rating && optionLabel(RATING_OPTIONS, rating) },
     { param: "gender", name: "Gender", value: gender && optionLabel(GENDER_OPTIONS, gender) },
   ];
-  const hasFilters = Boolean(team || rating || gender);
+  const hasFilters = Boolean(team || rating || gender || weapon || ageCategory);
 
   return (
     <>
@@ -70,7 +83,7 @@ async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerB
           defaultValue={search}
           suggest={{ tournamentId, sources: [{ kind: "fencers", href: basePath }] }}
         />
-        <FencerFilterSheet tournamentId={tournamentId} />
+        <FencerFilterSheet tournamentId={tournamentId} scope={eventId ? "event" : "tournament"} />
       </div>
 
       <ActiveFilterChips filters={activeFilters} />
@@ -92,7 +105,7 @@ async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerB
         limit={limit}
         offset={offset}
         basePath={basePath}
-        params={{ q: search || undefined, team, rating, gender }}
+        params={{ q: search || undefined, team, rating, gender, weapon, ageCategory }}
       />
     </>
   );

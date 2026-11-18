@@ -255,8 +255,9 @@ are not a table of their own; a club is the set of distinct `team` values.
   `U` = unrated, default U), `team` (free-text club, `''` when none), `user_id`
   (the account that created the row; `SET NULL` when that user is deleted).
 - `POST /competitors` (the tournament must exist; the caller becomes `user_id`).
-- `GET /competitors?q&tournament_id&rating&team&ids`: fuzzy name search,
-  alphabetical when there is no `q`, exact `team` match.
+- `GET /competitors?q&tournament_id&eventId&rating&gender&team&weapon&ageCategory&ids`:
+  fuzzy name search, alphabetical when there is no `q`, exact match on others,
+  `weapon` and `age` come from a sub-query.
 - `GET /competitors/{id}`, and `PATCH /competitors/{id}` (an empty `team` clears it).
 - `DELETE /competitors/{id}`: tournament admins only (§7.2); 409 once the
   competitor has fenced a bout.
@@ -549,11 +550,12 @@ search bar with a clear button. Fencer and club rows keep their pin button, whic
   no label). Missing values show as placeholders: "Dates TBC", "Location TBC", and
   "Organizer contact TBC" always, since no contact is stored. An unknown ID is a 404.
 - **Fencers:** search (suggesting fencer
-  names as you type), the fencer filter sheet (Club, Rating, Gender; see §4.4, plus
-  Weapon and Age Category as disabled "coming soon" placeholders),
-  removable chips, and a paginated list of fencer cards (name, country · club, a
-  rating badge like "A26") from `GET /competitors?tournament_id=&q&team&rating&gender`.
-  The country is a placeholder showing US for everyone.
+  names as you type), the fencer filter sheet (Club, Weapon, Age Category, Rating,
+  Gender, in that order; see §4.4), removable chips, and a paginated list of fencer
+  cards (name, country · club, a rating badge like "A26") from
+  `GET /competitors?tournament_id=&q&team&weapon&ageCategory&rating&gender`.
+  Weapon and Age Category filter on owning event since competitors don't have
+  those fields directly.
 - **Clubs:** search suggesting Fencers and Clubs,
   and a paginated list of clubs from `GET /tournaments/{id}/teams`; each links to
   the Fencers tab filtered to that club. Its filter sheet's Fencer, Club and Weapon
@@ -591,11 +593,10 @@ Figma's Title/H3); an event not in the tournament is a 404.
   "Unrated"), and Gender (a row of single-select outline chips, sets `?gender=`, F/M/O
   shown as Female/Male/Other). There is no Fencer search in the sheet — that collided
   with the page's own search bar, so free-text name search is the search bar (`?q=`)
-  alone now. Applied filters show as `Name: Value` removable pills (e.g. "Club: bos",
+  alone now. Applied filters show as `Name: Value` removable `Chip` tags (e.g. "Club: bos",
   "Rating: Unrated", "Gender: Female") under the search bar and at the top of the
-  sheet. Weapon and Age Category appear in the Figma but are deferred to the
-  tournament-level Fencers tab, since `competitors` carries neither column (both live
-  on `events`). It lists the event's own competitors (§8.4). Rows link to a fencer
+  sheet. Weapon and Age Category are uniform across an event, so those filters are not
+  needed here. It lists the event's own competitors (§8.4). Rows link to a fencer
   page, which is placeholder text under a "< Fencers" back button.
 - **Pooling** (Partial): see §11.6 for its current state.
 - **Tableau** (Completed): bracket and list views of `GET /events/{id}/tableau`, with
@@ -924,6 +925,8 @@ the tournament and bout `end` state.
 - `user_id` records who created the row (§2.5), not which person the fencer is. A
   link to the fencer's own account, for following their bouts or refusing to let
   them referee themselves, would be a separate column.
+- A fencer in two events shows up twice in tournament-level fencer search, since
+  they have two separate competitor rows. Fix is currently out of scope.
 
 ### 8.5 Event attributes and bout settings
 
@@ -1823,7 +1826,7 @@ earlier outlined set. Components use tokens, never raw colors.
 | --- | --- |
 | `background` / `foreground` | page and text; `foreground` is also the outline color |
 | `muted` / `muted-foreground` | hover fills, secondary text, empty states |
-| `selected` (blue) | only a chosen state: filled button, toggle on, active tab |
+| `selected` (blue) | only a chosen state: filled button, toggle on, active tab. Hi-fi chip rows (`ChipGroup`) are the exception: an on chip keeps its blue outline and blue text over a `blue-lighter` fill |
 | `destructive` | errors and destructive actions; hi-fi destructive actions (Button `destructive` variant) use `red-dark` |
 | `border`, `input`, `ring` | hairlines, field borders, focus rings |
 | `brand` | alias of the hi-fi navy `blue` (#21358b), kept for existing uses |
@@ -1866,7 +1869,8 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
 - Primitives live in `src/components/primitives/`: shadcn-generated, restyled, with
   `cva` variants, `cn`, `data-slot`, and behavior from `radix-ui`.
 - The set includes the global nav, tab nav, section, list, card, chip (the filter
-  tag), chip group, text, label, button, segmented button, search bar, dropdown, text field,
+  tag: `rounded-md border-blue-light bg-blue-lightest text-blue` with a close X when
+  it is removable), chip group, text, label, button, segmented button, search bar, dropdown, text field,
   select, date field, checkbox, radio, toggle, slider, calendar,
   dropzone and upload dialog, modal, filter sheet, pagination, toast, tooltip,
   progress indicators, a loading spinner, and a shimmering skeleton block.
@@ -1882,8 +1886,9 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
   header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a
   filled or `destructive` action). The filter sheet is a `rounded-t-3xl` bottom sheet
   whose search sections are a label above a `FilterSearchField` whose suggestions show
-  in a `Dropdown` of `DropdownOption` rows while typing; picked values show as
-  removable tags at the top until submitted. Other sections are a Distance slider, a
+  in a `Dropdown` of `DropdownOption` rows while typing, floating over the sections
+  below rather than pushing them down; picked values show as removable `Chip` tags at
+  the top until submitted. Other sections are a Distance slider, a
   Select, and rows of outline chips (`ChipGroup` / `ChipGroupItem`), then a full-width
   Clear All and a filled submit. `triggerActive` gives the trigger its pressed look
   while filters are applied. The toast is
