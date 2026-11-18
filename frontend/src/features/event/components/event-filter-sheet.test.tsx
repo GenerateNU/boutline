@@ -76,14 +76,14 @@ describe("EventFilterSheet", () => {
     await openSheet();
 
     expect(screen.getByRole("radio", { name: "Epee" })).toBeChecked();
-    expect(screen.getByRole("button", { name: "Date" })).toHaveTextContent("Oct 5, 2026");
+    expect(screen.getByRole("combobox", { name: "Date" })).toHaveTextContent("Oct 5, 2026");
   });
 
   it("sets the picked date", async () => {
     currentParams = new URLSearchParams("date=2026-10-05");
     await openSheet();
 
-    fireEvent.click(screen.getByRole("button", { name: "Date" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Date" }));
     fireEvent.click(screen.getByRole("button", { name: /October 9/ }));
     fireEvent.click(screen.getByRole("button", { name: "Show Events" }));
 

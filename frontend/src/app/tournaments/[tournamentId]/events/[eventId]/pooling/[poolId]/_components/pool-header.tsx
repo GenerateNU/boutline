@@ -16,12 +16,12 @@ export function PoolHeader({ pool, poolingPath }: PoolHeaderProps) {
   return (
     <header className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <BackButton href={poolingPath} className="-ml-3">
+        <BackButton href={poolingPath}>
           <span className="sr-only">Back to </span>Pooling
         </BackButton>
         <PoolPinButton pool={pool} />
       </div>
-      <h1 className="sr-only">{poolTitle(pool)}</h1>
+      <h2 className="sr-only">{poolTitle(pool)}</h2>
       <div className="flex items-center gap-2.5">
         <PoolStatusBadge status={pool.status} />
         <span aria-hidden className="size-1 rounded-full bg-neutral-muted" />

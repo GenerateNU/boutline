@@ -11,7 +11,7 @@ export default async function EventFencersTab({
 
   return (
     <>
-      <Text as="h1" variant="title">
+      <Text as="h2" variant="title">
         Fencers
       </Text>
       <FencerBrowser

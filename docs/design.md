@@ -255,8 +255,9 @@ are not a table of their own; a club is the set of distinct `team` values.
   `U` = unrated, default U), `team` (free-text club, `''` when none), `user_id`
   (the account that created the row; `SET NULL` when that user is deleted).
 - `POST /competitors` (the tournament must exist; the caller becomes `user_id`).
-- `GET /competitors?q&tournament_id&eventId&rating&team&ids`: fuzzy name search,
-  alphabetical when there is no `q`, exact `team` match.
+- `GET /competitors?q&tournament_id&eventId&rating&gender&team&weapon&ageCategory&ids`:
+  fuzzy name search, alphabetical when there is no `q`, exact match on others,
+  `weapon` and `age` come from a sub-query.
 - `GET /competitors/{id}`, and `PATCH /competitors/{id}` (an empty `team` clears it).
   `PATCH` also takes `{"checkedIn": bool}`, admin only (403 otherwise): true sets
   `checked_in_at` to now, false clears it (§10.5). Responses include `checkedInAt`
@@ -473,7 +474,16 @@ from the venue floor.
   from a page nested under it (an event's Events tab), which adds an entry. From
   `lg` the tab row moves up into the global nav, right of the plate, with each tab
   as wide as its label rather than spread evenly, and the active tab's green
-  underline spans the whole tab.
+  underline spans the whole tab. When a tab row first appears it slides down
+  from under the global nav on phones, and from `lg` its tabs fade in one after
+  another from left to right. At every width the underline slides to a newly
+  chosen tab. All of this is off with reduced motion, and browsers without CSS
+  anchor positioning show the underline without the slide.
+- **Nested pages** (a pool, an event fencer, a bout, the referee screen, an admin
+  event): they keep their level's tab bar with their tab active, but not the level's
+  header (an event's "< {tournament name}" link, the dashboard header). Each draws one
+  back button, labelled with where it goes, in its place. `TabPageOnly` hides the
+  level's header by URL depth, so a loading screen above the layout agrees.
 - **Find Private Tournament:** a dialog that takes the six-character code, looks it
   up with `GET /tournaments/code/{code}`, and opens the tournament.
 - **`/`**: the landing page. A `blue-dark` hero with a "Live fencing results"
@@ -528,34 +538,40 @@ from the venue floor.
 
 **Status:** Completed, with fields filled in by §10.1.
 
-Tabs: Overview · Fencers · Clubs · Events.
+Tabs: Overview · Fencers · Clubs · Events. Every tab opens with an "< All
+tournaments" back button to `/tournaments` and the uppercase tournament name, both
+drawn by the tabs' layout, which fetches the tournament once; switching tabs neither
+refetches nor redraws them.
 
 Hi-fi throughout: text uses the shared `Text` styles (C.3), searches are the hi-fi
 search bar with a clear button. Fencer and club rows keep their pin button, which does nothing until pinning lands (§6.3); event rows end in a chevron.
 
 - **Loading:** each tab has its own skeleton under the tabs. Fixed text and
   controls that need no fetched data (the Overview's event card titles, search
-  bars, the fencer and club filter buttons) render for real; the tournament name,
-  dates, cards and rows shimmer.
-- **Overview:** the uppercase name, the date range (from its events, else
+  bars, the fencer and club filter buttons) render for real; dates, cards and rows
+  shimmer. The name shimmers only on the first visit, in `(tournament)/loading.tsx`
+  above the layout.
+- **Overview:** a card with the date range (from its events, else
   `start_time`) and the location (venue, city, country), then an organizer row,
   then Ongoing, Upcoming and Completed event cards with times like "9:00 AM" (UTC,
   no label). Missing values show as placeholders: "Dates TBC", "Location TBC", and
   "Organizer contact TBC" always, since no contact is stored. An unknown ID is a 404.
-- **Fencers:** the tournament name as the title, then search (suggesting fencer
-  names as you type), the fencer filter sheet (Club, Rating, Gender; see §4.4, plus
-  Weapon and Age Category as disabled "coming soon" placeholders),
-  removable chips, and the "Check in:" card (§10.5) listing the matching fencers from
-  `GET /competitors?tournament_id=&q&team&rating&gender`. There are no fencer cards
-  or paging: the card scrolls on its own and loads the next 25 near its bottom.
-- **Clubs:** the tournament name as the title, search suggesting Fencers and Clubs,
+- **Fencers:** search (suggesting fencer
+  names as you type), the fencer filter sheet (Club, Weapon, Age Category, Rating,
+  Gender, in that order; see §4.4), removable chips, and the "Check in:" card (§10.5)
+  listing the matching fencers from
+  `GET /competitors?tournament_id=&q&team&weapon&ageCategory&rating&gender`.
+  Weapon and Age Category filter on owning event since competitors don't have
+  those fields directly. There are no fencer cards or paging: the card scrolls on
+  its own and loads the next page near its bottom.
+- **Clubs:** search suggesting Fencers and Clubs,
   and a paginated list of clubs from `GET /tournaments/{id}/teams`; each links to
   the Fencers tab filtered to that club. Its filter sheet's Fencer, Club and Weapon
   sections are disabled "coming soon" placeholders, since the clubs API only searches
   by name. Each row's second line
   reads "US · Location TBC", as the design's "US · Boston, MA": clubs store no
   location yet.
-- **Events:** "< {name}" back to Overview, search, a filter sheet (Weapon, Age
+- **Events:** search, a filter sheet (Weapon, Age
   Category, Gender, Event Status, Date, Event Type, all filtered on the page) with
   `Name: Value` chips, a light week strip whose calendar icon opens an
   inline month card under it (event days dotted; tapping a day picks it), and the day's events grouped under time headings. A day
@@ -568,12 +584,13 @@ search bar with a clear button. Fencer and club rows keep their pin button, whic
 **Status:** Partial.
 
 Tabs: Pools · Tableau · Fencers · Results (routes `pooling`, `tableau`, `fencers`,
-`results`). The page opens on Fencers. These replace the tournament's tabs rather
-than stacking under them, and a "< {tournament name}" link above the content leads
-back to the tournament.
+`results`). The page opens on Pools. These replace the tournament's tabs rather
+than stacking under them. On every tab, a "< {tournament name}" link back to the
+tournament sits above the event's name as the page heading (`Text` `heading`, the
+Figma's Title/H3); an event not in the tournament is a 404.
 
-- **Loading:** entering an event shows the event tabs with the tournament link
-  shimmering, since that boundary covers every tab. Each tab then has its own
+- **Loading:** entering an event shows the event tabs with the tournament link and
+  event name shimmering, since that boundary covers every tab. Each tab then has its own
   skeleton, with fixed headings, labels, column headers and
   controls drawn for real (controls that would act on unloaded data are disabled).
   The fencer and bout pages are placeholders and have none.
@@ -584,18 +601,18 @@ back to the tournament.
   "Unrated"), and Gender (a row of single-select outline chips, sets `?gender=`, F/M/O
   shown as Female/Male/Other). There is no Fencer search in the sheet — that collided
   with the page's own search bar, so free-text name search is the search bar (`?q=`)
-  alone now. Applied filters show as `Name: Value` removable pills (e.g. "Club: bos",
+  alone now. Applied filters show as `Name: Value` removable `Chip` tags (e.g. "Club: bos",
   "Rating: Unrated", "Gender: Female") under the search bar and at the top of the
-  sheet. Weapon and Age Category appear in the Figma but are deferred to the
-  tournament-level Fencers tab, since `competitors` carries neither column (both live
-  on `events`). It lists the event's own competitors (§8.4) in the
-  "Check in:" card (§10.5), with Edit Mode for admins. The fencer page (placeholder text) has no link from it.
+  sheet. Weapon and Age Category are uniform across an event, so those filters are not
+  needed here. It lists the event's own competitors (§8.4) in the "Check in:" card
+  (§10.5), with Edit Mode for admins. The fencer page (placeholder text under a
+  "< Fencers" back button) has no link from it.
 - **Pooling** (Partial): see §11.6 for its current state.
 - **Tableau** (Completed): bracket and list views of `GET /events/{id}/tableau`, with
-  search. See §12.5.
+  search, under the event's tournament link only. See §12.5.
 - **Results** (Placeholder): static text. Replaced in §13.3.
-- **Bout page** (`…/bout/[boutId]`, Placeholder): two score tiles, a "Referee
-  view" button and a touch log, from the fixture. Only its referee link reaches
+- **Bout page** (`…/bout/[boutId]`, Placeholder): a "< Tableau" back button, two
+  score tiles, a "Referee view" button and a touch log, from the fixture. Only its referee link reaches
   the real API.
 
 ### 4.5 Admin home (`/admin/tournaments`)
@@ -650,6 +667,9 @@ Tabs: Fencers (the index page) · Referees · Events · Settings.
   "Add fencers" button ("Coming soon") until a ticket defines that flow.
 - **Events** and **Settings** (Planned): a "coming soon" line over a static
   `Skeleton` layout (event cards, a form) until a ticket defines what they show.
+- **Event page** (`/admin/tournaments/[id]/events/[eventId]`): nested under Events, so
+  the header gives way to a "< {event name}" back button to the public event (§4.1),
+  then the pool stage and, once it ends, the direct elimination.
 
 ---
 
@@ -667,7 +687,9 @@ so it is built to survive double taps, slow networks and failed requests.
 
 **Status:** Completed.
 
-Until the bout loads, the screen shows the not-started layout: its section titles,
+A "< Pools" back button leads to the event's Pools tab, where referee links start;
+the bout page only knows the seeded bouts. Until the bout loads, the screen shows
+the not-started layout: its section titles,
 "First to" and a disabled "Start match" render for real, while the target score,
 the fencers and the history shimmer.
 
@@ -913,6 +935,8 @@ the tournament and bout `end` state.
 - `user_id` records who created the row (§2.5), not which person the fencer is. A
   link to the fencer's own account, for following their bouts or refusing to let
   them referee themselves, would be a separate column.
+- A fencer in two events shows up twice in tournament-level fencer search, since
+  they have two separate competitor rows. Fix is currently out of scope.
 
 ### 8.5 Event attributes and bout settings
 
@@ -1829,10 +1853,11 @@ earlier outlined set. Components use tokens, never raw colors.
 | --- | --- |
 | `background` / `foreground` | page and text; `foreground` is also the outline color |
 | `muted` / `muted-foreground` | hover fills, secondary text, empty states |
-| `selected` (blue) | only a chosen state: filled button, toggle on, active tab |
+| `selected` (blue) | only a chosen state: filled button, toggle on, active tab. Hi-fi chip rows (`ChipGroup`) are the exception: an on chip keeps its blue outline and blue text over a `blue-lighter` fill |
 | `destructive` | errors and destructive actions; hi-fi destructive actions (Button `destructive` variant) use `red-dark` |
 | `border`, `input`, `ring` | hairlines, field borders, focus rings |
 | `brand` | alias of the hi-fi navy `blue` (#21358b), kept for existing uses |
+| `charcoal` (#1e1e1e) | the `Text` `heading` variant |
 | `green` (#32944b) | the V tile on the pool bout card |
 
 No Tailwind palette colors. Status pills (tournament, pool and event status) go
@@ -1843,9 +1868,10 @@ Geist Sans; Geist Mono for aligned numbers. Hi-fi screens (global nav, tournamen
 browser, filter sheet, Pools tab) use Manrope (`font-manrope`), and the BOUTLINE
 wordmark uses Special Gothic Expanded One (`font-wordmark`). Body and controls `text-sm`, metadata
 `text-xs text-muted-foreground`, at most `font-medium`. Sizes from `text-2xl` up are
-reserved for scores and bout banners. Referee scores go up to `text-9xl`.
+reserved for scores, bout banners and the event page heading. Referee scores go up to `text-9xl`.
 Page text uses the `Text` primitive (`textVariants` inside other primitives' slots):
-`title` (`text-xl font-semibold`, titles and time headings; uppercase where the
+`heading` (`text-2xl font-semibold text-charcoal`, Title/H3, the event name on its
+tabs), `title` (`text-xl font-semibold`, titles and time headings; uppercase where the
 design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
 `caption` (`text-xs font-medium text-neutral-secondary`, times and metadata) and
 `muted` (`text-sm text-neutral-secondary`, empty states).
@@ -1870,24 +1896,31 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
 - Primitives live in `src/components/primitives/`: shadcn-generated, restyled, with
   `cva` variants, `cn`, `data-slot`, and behavior from `radix-ui`.
 - The set includes the global nav, tab nav, section, list, card, chip (the filter
-  tag), chip group, text, label, button, segmented button, search bar, dropdown, text field,
-  select, date field, checkbox, radio, toggle, slider, calendar,
+  tag: `rounded-md border-blue-light bg-blue-lightest text-blue` with a close X when
+  it is removable), chip group, text, label, button, segmented button, search bar, dropdown, text field,
+  select, date field, time field, checkbox, radio, toggle, slider, calendar,
   dropzone and upload dialog, modal, filter sheet, pagination, toast, tooltip,
   progress indicators, a loading spinner, and a shimmering skeleton block.
-- Form fields (text field, select, date field) share one hi-fi frame: a `text-xs`
+- Form fields (text field, select, date field, time field) share one hi-fi frame: a `text-xs`
   label above a `rounded-md border-outline` box that turns `border-blue` with a
   `ring-blue-lighter` halo on focus or open, a 2px `border-red-dark` when
   `aria-invalid` or `:user-invalid` (a required field left empty once edited or
   submitted), and `bg-disabled` when disabled. A required field's label
   ends in a `text-red-dark` asterisk, hidden from screen readers since `required`
-  is already announced. Select is Radix Select; the date field opens the calendar
-  in a Radix Popover.
+  is already announced. Select is Radix Select, its menu capped at `max-h-80`
+  and scrolling past that. The date field opens the calendar in a Radix Popover on
+  the picked day (or today) and shows `MMM d, yyyy`. The time field is a Select of
+  15-minute slots shown as `h:mm a` behind a clock icon, holding the `HH:mm` a
+  native time input would; an off-grid value is added to the list. Tournament and
+  event setup use both; a fencer's birth date stays a typed native date input,
+  since paging a calendar back years is slower than typing it.
 - Overlays: Modal is a `rounded-3xl p-5` card with an `text-xl` title and close (X)
   header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a
   filled or `destructive` action). The filter sheet is a `rounded-t-3xl` bottom sheet
   whose search sections are a label above a `FilterSearchField` whose suggestions show
-  in a `Dropdown` of `DropdownOption` rows while typing; picked values show as
-  removable tags at the top until submitted. Other sections are a Distance slider, a
+  in a `Dropdown` of `DropdownOption` rows while typing, floating over the sections
+  below rather than pushing them down; picked values show as removable `Chip` tags at
+  the top until submitted. Other sections are a Distance slider, a
   Select, and rows of outline chips (`ChipGroup` / `ChipGroupItem`), then a full-width
   Clear All and a filled submit. `triggerActive` gives the trigger its pressed look
   while filters are applied. The toast is
@@ -1903,13 +1936,14 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
   but the data changes when it lands.
   - Each fetching route segment has its own `loading.tsx`, under its tab bar. A
     layout that fetches gets its boundary one level up, which draws its tabs too
-    (the dashboard's `(dashboard)` group, the event shell in `events/loading.tsx`).
+    (the dashboard's `(dashboard)` group, the tournament's `(tournament)` group, the
+    event shell in `events/loading.tsx`).
   - Route groups and in-page `Suspense` keep a fallback off pages it doesn't fit:
     `/tournaments` and `/admin/tournaments` use `Suspense`, and an event's fencer
     list sits in `fencers/(list)`. Client fetches render their skeleton in place.
   - No `loading.tsx` sits beside a tabbed layout, where it would wrap every tab:
     a tab switch shows the nearest fallback the browser already has until the new
-    tab's own arrives, so the tournament Overview's lives in `(sections)/(overview)`.
+    tab's own arrives, so the tournament Overview's lives in `(tournament)/(sections)/(overview)`.
   - A skeleton's first child is a screen-reader-only `role="status"` "Loading …"
     label; the blocks are `aria-hidden`. `Skeleton` shimmers with `motion-safe:`
     and stays flat when reduced motion is on.

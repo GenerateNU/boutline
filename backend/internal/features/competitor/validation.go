@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/event"
 )
 
 var memberNumberPattern = regexp.MustCompile(`^1\d{8}$`)
@@ -32,6 +33,23 @@ func parseGender(raw string) (Gender, error) {
 		return "", errs.Public("gender must be one of F, M, or O", errs.ErrInvalidInput)
 	}
 	return gender, nil
+}
+
+func parseWeapon(raw string) (event.EventWeapon, error) {
+	weapon := event.EventWeapon(strings.TrimSpace(raw))
+	if !weapon.IsValid() {
+		return "", errs.Public("weapon must be one of foil, epee, or sabre", errs.ErrInvalidInput)
+	}
+	return weapon, nil
+}
+
+func parseAgeCategory(raw string) (event.EventAgeCategory, error) {
+	ageCategory := event.EventAgeCategory(strings.TrimSpace(raw))
+	if !ageCategory.IsValid() {
+		return "", errs.Public(
+			"age category must be one of y8, y10, y12, y14, cadet, junior, senior, veteran, or open", errs.ErrInvalidInput)
+	}
+	return ageCategory, nil
 }
 
 func parseBirthdate(raw string) (time.Time, error) {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BackButton } from "@/components/primitives/back-button";
 import { Button } from "@/components/primitives/button";
 import { Section } from "@/components/primitives/section";
 
@@ -20,6 +21,9 @@ export default async function BoutPage({ params }: BoutPageProps) {
 
   return (
     <>
+      <BackButton href={`/tournaments/${tournamentId}/events/${eventId}/tableau`} className="self-start">
+        Tableau
+      </BackButton>
       <Section title={`Bout · ${round}`}>
         <div className="grid grid-cols-2 gap-3">
           {[left, right].map((fencer, index) => (

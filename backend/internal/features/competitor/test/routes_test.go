@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"boutline/internal/features/competitor"
+	"boutline/internal/features/event"
 	"boutline/internal/session"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
@@ -276,6 +277,49 @@ func TestListEndpoint(t *testing.T) {
 		t.Parallel()
 		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?ids=not-a-uuid")
 		assert.Equal(t, http.StatusBadRequest, resp.Code)
+	})
+
+	t.Run("filters by weapon and age category from the query string", func(t *testing.T) {
+		t.Parallel()
+		foilCadet := seeded("A", "Adams", competitor.RatingU, "")
+		foilCadet.Event = &event.Event{Weapon: ptr(event.EventWeaponFoil), AgeCategory: ptr(event.EventAgeCategoryCadet)}
+		sabreSenior := seeded("B", "Baker", competitor.RatingU, "")
+		sabreSenior.Event = &event.Event{Weapon: ptr(event.EventWeaponSabre), AgeCategory: ptr(event.EventAgeCategorySenior)}
+		noWeapon := seeded("C", "Clark", competitor.RatingU, "")
+		noWeapon.Event = &event.Event{}
+
+		cases := []struct {
+			name      string
+			query     string
+			wantCount int
+		}{
+			{"weapon alone", "weapon=foil", 1},
+			{"ageCategory alone", "ageCategory=senior", 1},
+			{"weapon and ageCategory combined", "weapon=foil&ageCategory=cadet", 1},
+			{"weapon and ageCategory combined matching nothing", "weapon=foil&ageCategory=senior", 0},
+		}
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				t.Parallel()
+				resp := newTestAPI(t, foilCadet, sabreSenior, noWeapon).Get("/api/v1/competitors?" + c.query)
+				require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+				body := decodeBody(t, resp.Body.Bytes())
+				assert.Len(t, body["data"], c.wantCount)
+				assert.InDelta(t, c.wantCount, body["total"], 0)
+			})
+		}
+	})
+
+	t.Run("rejects a weapon outside the enum", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?weapon=rapier")
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	})
+
+	t.Run("rejects an age category outside the enum", func(t *testing.T) {
+		t.Parallel()
+		resp := newTestAPI(t, seed...).Get("/api/v1/competitors?ageCategory=adult")
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	})
 
 	t.Run("matches by name when a query is given", func(t *testing.T) {

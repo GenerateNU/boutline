@@ -94,11 +94,11 @@ INSERT INTO tournament_users (user_id, tournament_id, role, created_at, updated_
   ('a0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-00000000001a', 'admin',   now(), now())
 ON CONFLICT DO NOTHING;
 
-INSERT INTO events (id, tournament_id, name, status, start_time, started_at, completed_at, created_at, updated_at) VALUES
-  ('c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Mixed Épée',    'active',   now() - interval '3 hours',  now() - interval '3 hours',  NULL,                                          now() - interval '14 days',  now()),
-  ('c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Women''s Foil', 'upcoming', now() + interval '4 hours',  NULL,                        NULL,                                          now() - interval '14 days',  now()),
-  ('c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Open Sabre',    'upcoming', now() + interval '30 days',  NULL,                        NULL,                                          now() - interval '2 days',   now()),
-  ('c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Open Épée',     'ended',    now() - interval '90 days',  now() - interval '90 days',  now() - interval '90 days' + interval '9 hours', now() - interval '120 days', now())
+INSERT INTO events (id, tournament_id, name, status, start_time, started_at, completed_at, created_at, updated_at, weapon, age_category) VALUES
+  ('c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Mixed Épée',    'active',   now() - interval '3 hours',  now() - interval '3 hours',  NULL,                                          now() - interval '14 days',  now(), 'epee',  'senior'),
+  ('c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'Women''s Foil', 'upcoming', now() + interval '4 hours',  NULL,                        NULL,                                          now() - interval '14 days',  now(), 'foil',  'junior'),
+  ('c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000002', 'Open Sabre',    'upcoming', now() + interval '30 days',  NULL,                        NULL,                                          now() - interval '2 days',   now(), 'sabre', 'open'),
+  ('c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000003', 'Open Épée',     'ended',    now() - interval '90 days',  now() - interval '90 days',  now() - interval '90 days' + interval '9 hours', now() - interval '120 days', now(), 'epee',  'veteran')
 ON CONFLICT DO NOTHING;
 
 -- Competitors are entered in an event and tagged with that event's

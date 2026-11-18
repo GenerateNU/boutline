@@ -169,6 +169,16 @@ func (f *FakeCompetitorRepository) ListCompetitors(
 		if filter.Team != nil && !strings.Contains(strings.ToLower(candidate.Team), strings.ToLower(*filter.Team)) {
 			continue
 		}
+		// The fake has no events table, so weapon/age category are read off the
+		// seeded Event pointer; the real query reaches them through event_id instead.
+		if filter.Weapon != nil && (candidate.Event == nil || candidate.Event.Weapon == nil ||
+			*candidate.Event.Weapon != *filter.Weapon) {
+			continue
+		}
+		if filter.AgeCategory != nil && (candidate.Event == nil || candidate.Event.AgeCategory == nil ||
+			*candidate.Event.AgeCategory != *filter.AgeCategory) {
+			continue
+		}
 		if len(filter.IDs) > 0 && !slices.Contains(filter.IDs, candidate.ID) {
 			continue
 		}

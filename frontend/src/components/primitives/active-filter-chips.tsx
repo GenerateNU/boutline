@@ -31,7 +31,6 @@ function ActiveFilterChips({ filters, className }: ActiveFilterChipsProps) {
           <Chip
             onDismiss={() => setFilters({ [param]: undefined })}
             dismissLabel={`Remove ${name}: ${value}`}
-            className="rounded-full border-blue bg-blue-lighter py-1 text-xs font-medium text-blue"
           >
             {name}: {value}
           </Chip>

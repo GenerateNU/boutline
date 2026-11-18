@@ -3,8 +3,11 @@
 import { useId, useState } from "react";
 
 import { Button } from "@/components/primitives/button";
+import { DateField } from "@/components/primitives/date-field";
 import { SelectField } from "@/components/primitives/select-field";
 import { TextField } from "@/components/primitives/text-field";
+import { TimeField } from "@/components/primitives/time-field";
+import { formatDateParam, parseDateParam } from "@/features/tournament/lib/date-param";
 
 import { TournamentDraft } from "../_types/tournament-draft";
 import { missingTournamentFields, RequiredTournamentField } from "../tournament-draft-helpers";
@@ -64,20 +67,18 @@ function TournamentDraftFields({ draft, onField, onSave, saving, error }: Tourna
         required
       />
       <div className="grid grid-cols-2 gap-3">
-        <TextField
+        <DateField
           label="Date"
-          type="date"
-          value={draft.date}
+          value={parseDateParam(draft.date)}
           {...invalidProps("date")}
-          onChange={(change) => onField("date", change.target.value)}
+          onValueChange={(date) => onField("date", formatDateParam(date))}
           required
         />
-        <TextField
+        <TimeField
           label="Time"
-          type="time"
           value={draft.time}
           {...invalidProps("time")}
-          onChange={(change) => onField("time", change.target.value)}
+          onValueChange={(time) => onField("time", time)}
           required
         />
       </div>

@@ -348,6 +348,20 @@ func (s *competitorService) ListCompetitors(
 	if team := strings.TrimSpace(input.Team); team != "" {
 		filter.Team = &team
 	}
+	if input.Weapon != "" {
+		weapon, err := parseWeapon(input.Weapon)
+		if err != nil {
+			return nil, errs.HumaError(err)
+		}
+		filter.Weapon = &weapon
+	}
+	if input.AgeCategory != "" {
+		ageCategory, err := parseAgeCategory(input.AgeCategory)
+		if err != nil {
+			return nil, errs.HumaError(err)
+		}
+		filter.AgeCategory = &ageCategory
+	}
 	ids, err := utils.ParseUUIDList(input.IDs, "ids")
 	if err != nil {
 		return nil, errs.HumaError(err)
