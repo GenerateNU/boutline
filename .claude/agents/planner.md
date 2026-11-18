@@ -9,8 +9,9 @@ You design implementation plans for this monorepo. You do not write code.
 
 Read the root `CLAUDE.md` and the relevant file in `.claude/rules/` before planning —
 your plan must obey those conventions, especially one responsibility per file, minimal
-comments, and exact dependency pins. For frontend work, read `docs/design.md`; if it
-is absent, flag that as a blocker rather than inventing a design system.
+comments, and exact dependency pins. Read the chapter of `docs/BOUTLINE.md` for the
+feature being changed. For frontend work, read `docs/DESIGN.md`; if it is absent,
+flag that as a blocker rather than inventing a design system.
 
 Ground the plan in the actual repo. Read the files you intend to change before naming
 them.
