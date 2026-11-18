@@ -7,6 +7,7 @@ interface ServerRequestOptions {
   params?: Record<string, string | number | undefined>;
   // The /api proxy adds the session header for browser calls; a server fetch sends the token itself.
   token?: string;
+  signal?: AbortSignal;
 }
 
 // Server Components and Server Actions fetch Node-side, where apiRequest's relative
@@ -18,7 +19,7 @@ export function serverURL(path: string): URL {
 // The server-side counterpart of apiRequest.
 export async function serverRequest<T>(
   path: string,
-  { params = {}, token }: ServerRequestOptions = {},
+  { params = {}, token, signal }: ServerRequestOptions = {},
 ): Promise<T> {
   const url = serverURL(path);
   for (const [key, value] of Object.entries(params)) {
@@ -30,6 +31,7 @@ export async function serverRequest<T>(
   const response = await fetch(url, {
     cache: "no-store",
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    signal,
   });
   if (!response.ok) {
     let body: unknown = null;

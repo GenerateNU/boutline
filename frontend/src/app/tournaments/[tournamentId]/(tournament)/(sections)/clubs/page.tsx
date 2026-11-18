@@ -1,12 +1,9 @@
-import { notFound } from "next/navigation";
-
 import { Pagination } from "@/components/primitives/pagination";
 import { Text } from "@/components/primitives/text";
 import { ClubCard } from "@/features/competitor/components/club-card";
 import { ClubFilterSheet } from "@/features/competitor/components/club-filter-sheet";
 import { getTeams } from "@/features/competitor/services/getTeams";
 import { SearchForm } from "@/features/tournament/components/search-form";
-import { getTournament } from "@/features/tournament/services/getTournament";
 import { readOffsetParam, readStringParam } from "@/lib/search-params";
 
 const PAGE_SIZE = 20;
@@ -21,20 +18,10 @@ export default async function ClubsTab({
   const offset = readOffsetParam(query);
   const basePath = `/tournaments/${tournamentId}/clubs`;
 
-  const [tournament, { data, total, limit }] = await Promise.all([
-    getTournament(tournamentId),
-    getTeams(tournamentId, PAGE_SIZE, offset, search),
-  ]);
-  if (!tournament) {
-    notFound();
-  }
+  const { data, total, limit } = await getTeams(tournamentId, PAGE_SIZE, offset, search);
 
   return (
     <div className="flex flex-col gap-4">
-      <Text as="h1" variant="title" className="uppercase">
-        {tournament.name}
-      </Text>
-
       <div className="flex items-center gap-2.5">
         <SearchForm
           action={basePath}
