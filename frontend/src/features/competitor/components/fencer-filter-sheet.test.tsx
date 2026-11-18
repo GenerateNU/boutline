@@ -33,8 +33,8 @@ async function search(term: string, field = "Club") {
   });
 }
 
-async function openSheet() {
-  render(<FencerFilterSheet tournamentId="t 1" />);
+async function openSheet(scope: "tournament" | "event" = "tournament") {
+  render(<FencerFilterSheet tournamentId="t 1" scope={scope} />);
   await act(async () => {
     fireEvent.click(screen.getByRole("button", { name: "Filter fencers" }));
   });
@@ -195,5 +195,76 @@ describe("FencerFilterSheet", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
 
     expect(replace).toHaveBeenLastCalledWith("/fencers", { scroll: false });
+  });
+
+  it("picking a Weapon chip and submitting sets ?weapon=", async () => {
+    await openSheet();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Foil" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/fencers?weapon=foil", { scroll: false });
+  });
+
+  async function chooseAgeCategory(value: string) {
+    const option = await waitFor(() => {
+      const found = document.querySelector(`select[name="ageCategory"] option[value="${value}"]`);
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    fireEvent.change(option.parentElement!, { target: { value } });
+  }
+
+  it("picking an Age Category and submitting sets ?ageCategory=", async () => {
+    await openSheet();
+
+    await chooseAgeCategory("y10");
+    fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/fencers?ageCategory=y10", { scroll: false });
+  });
+
+  it("shows the picked weapon as a tag", async () => {
+    await openSheet();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Epee" }));
+
+    expect(screen.getByText("Weapon: Epee")).toBeInTheDocument();
+  });
+
+  it("shows Age Category: Y10 as a tag", async () => {
+    await openSheet();
+
+    await chooseAgeCategory("y10");
+
+    expect(screen.getByText("Age Category: Y10")).toBeInTheDocument();
+  });
+
+  it("Clear All then Show Fencers clears all five filters", async () => {
+    currentParams = new URLSearchParams(
+      "team=Salle+Nord&weapon=foil&ageCategory=y10&rating=C&gender=F",
+    );
+    await openSheet();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/fencers", { scroll: false });
+  });
+
+  it("scope=event renders neither Weapon chips nor the Age Category select", async () => {
+    await openSheet("event");
+
+    expect(screen.queryByRole("radio", { name: "Foil" })).not.toBeInTheDocument();
+    expect(document.querySelector('select[name="ageCategory"]')).not.toBeInTheDocument();
+  });
+
+  it("scope=event strips weapon and ageCategory from the URL on submit", async () => {
+    currentParams = new URLSearchParams("team=Salle+Nord&weapon=foil&ageCategory=y10");
+    await openSheet("event");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show Fencers" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/fencers?team=Salle+Nord", { scroll: false });
   });
 });

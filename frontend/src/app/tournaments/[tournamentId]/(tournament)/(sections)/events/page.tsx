@@ -1,6 +1,3 @@
-import { notFound } from "next/navigation";
-
-import { BackButton } from "@/components/primitives/back-button";
 import { Text } from "@/components/primitives/text";
 import { EventCard } from "@/features/event/components/event-card";
 import { getCompetitors } from "@/features/competitor/services/getCompetitors";
@@ -16,7 +13,6 @@ import { CalendarButton } from "@/features/tournament/components/calendar-button
 import { SearchForm } from "@/features/tournament/components/search-form";
 import { WeekStrip } from "@/features/tournament/components/week-strip";
 import { parseDateParam } from "@/features/tournament/lib/date-param";
-import { getTournament } from "@/features/tournament/services/getTournament";
 import {
   eventDay,
   eventDays,
@@ -46,13 +42,7 @@ export default async function EventsTab({
   const chips = eventFilterChips(filters);
   const basePath = `/tournaments/${tournamentId}/events`;
 
-  const [tournament, events] = await Promise.all([
-    getTournament(tournamentId),
-    getEvents(tournamentId),
-  ]);
-  if (!tournament) {
-    notFound();
-  }
+  const events = await getEvents(tournamentId);
 
   const filteredEvents = events.filter((event) => matchesEventFilters(event, filters));
   const days = eventDays(filteredEvents);
@@ -77,12 +67,6 @@ export default async function EventsTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <BackButton href={`/tournaments/${tournamentId}`} className="self-start">
-        <Text as="h1" variant="title" className="uppercase">
-          {tournament.name}
-        </Text>
-      </BackButton>
-
       <div className="flex items-center gap-2.5">
         <SearchForm action={basePath} label="Search events" placeholder="Search events" defaultValue={search} />
         <EventFilterSheet eventDays={days} />

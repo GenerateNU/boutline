@@ -43,6 +43,7 @@
   --color-disabled-border: var(--disabled-border);
   --color-disabled-foreground: var(--disabled-foreground);
   --color-obsidian: var(--obsidian);
+  --color-charcoal: var(--charcoal);
   --color-fencing-white: var(--fencing-white);
   --color-blue-lightest: var(--blue-lightest);
   --color-blue-soft: var(--blue-soft);
@@ -224,6 +225,7 @@
   --disabled-border: #ccd1d9;
   --disabled-foreground: #6e7582;
   --obsidian: #010d21;
+  --charcoal: #1e1e1e;
   --fencing-white: #fafafa;
   --blue-lightest: #f2f6fe;
   --blue-soft: #dbe3f9;

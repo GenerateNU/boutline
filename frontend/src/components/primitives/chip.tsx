@@ -8,7 +8,6 @@ interface ChipProps extends React.ComponentProps<"div"> {
   onDismiss?: () => void;
   dismissLabel?: string;
   dropdown?: boolean;
-  selected?: boolean;
 }
 
 function Chip({
@@ -18,7 +17,6 @@ function Chip({
   onDismiss,
   dismissLabel = "Remove",
   dropdown,
-  selected,
   children,
   ...props
 }: ChipProps) {
@@ -28,11 +26,8 @@ function Chip({
     <div
       data-slot="chip"
       className={cn(
-        "inline-flex items-center gap-1 rounded-md border border-outline bg-background px-2.5 py-1.5 text-xs font-medium text-obsidian [&_svg]:size-3.5 [&_svg]:shrink-0",
-        {
-          "hover:bg-surface": removable,
-          "border-blue-light bg-blue-lightest text-blue": selected,
-        },
+        "inline-flex items-center gap-1.5 rounded-md border border-blue-light bg-blue-lightest py-1 pr-2.5 pl-2 text-xs font-medium text-blue shadow-sm [&_svg]:size-4 [&_svg]:shrink-0",
+        { "hover:bg-blue-lighter": removable },
         className,
       )}
       {...props}
