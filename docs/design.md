@@ -1535,6 +1535,10 @@ once the event's pool stage has ended:
   round buttons above it follow: the button for the round snapped to is selected,
   and picking a round button scrolls the bracket to that round (#168). A list view
   of the selected round and a name/club search sit alongside the bracket.
+- When the round buttons don't fit the screen width, they scroll sideways with
+  their scrollbar hidden; the edge with more buttons past it fades out over 2.5rem
+  as the scroll hint, and the selected button is scrolled to the centre whenever
+  the selected round changes.
 
 ---
 

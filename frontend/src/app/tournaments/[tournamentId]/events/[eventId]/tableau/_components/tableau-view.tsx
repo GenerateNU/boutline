@@ -101,6 +101,7 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
             }))}
             value={selectedRoundId}
             onValueChange={setSelectedRoundId}
+            className="-mx-4 px-4"
           />
         </div>
 
