@@ -255,8 +255,9 @@ are not a table of their own; a club is the set of distinct `team` values.
   `U` = unrated, default U), `team` (free-text club, `''` when none), `user_id`
   (the account that created the row; `SET NULL` when that user is deleted).
 - `POST /competitors` (the tournament must exist; the caller becomes `user_id`).
-- `GET /competitors?q&tournament_id&rating&team&ids`: fuzzy name search,
-  alphabetical when there is no `q`, exact `team` match.
+- `GET /competitors?q&tournament_id&eventId&rating&gender&team&weapon&ageCategory&ids`:
+  fuzzy name search, alphabetical when there is no `q`, exact match on others,
+  `weapon` and `age` come from a sub-query.
 - `GET /competitors/{id}`, and `PATCH /competitors/{id}` (an empty `team` clears it).
 - `DELETE /competitors/{id}`: tournament admins only (§7.2); 409 once the
   competitor has fenced a bout.
@@ -540,11 +541,12 @@ search bar with a clear button. Fencer and club rows keep their pin button, whic
   no label). Missing values show as placeholders: "Dates TBC", "Location TBC", and
   "Organizer contact TBC" always, since no contact is stored. An unknown ID is a 404.
 - **Fencers:** the tournament name as the title, then search (suggesting fencer
-  names as you type), the fencer filter sheet (Club, Rating, Gender; see §4.4, plus
-  Weapon and Age Category as disabled "coming soon" placeholders),
-  removable chips, and a paginated list of fencer cards (name, country · club, a
-  rating badge like "A26") from `GET /competitors?tournament_id=&q&team&rating&gender`.
-  The country is a placeholder showing US for everyone.
+  names as you type), the fencer filter sheet (Club, Weapon, Age Category, Rating,
+  Gender, in that order; see §4.4), removable chips, and a paginated list of fencer
+  cards (name, country · club, a rating badge like "A26") from
+  `GET /competitors?tournament_id=&q&team&weapon&ageCategory&rating&gender`.
+  Weapon and Age Category filter on owning event since competitors don't have
+  those fields directly.
 - **Clubs:** the tournament name as the title, search suggesting Fencers and Clubs,
   and a paginated list of clubs from `GET /tournaments/{id}/teams`; each links to
   the Fencers tab filtered to that club. Its filter sheet's Fencer, Club and Weapon
@@ -583,10 +585,8 @@ back to the tournament.
   with the page's own search bar, so free-text name search is the search bar (`?q=`)
   alone now. Applied filters show as `Name: Value` removable pills (e.g. "Club: bos",
   "Rating: Unrated", "Gender: Female") under the search bar and at the top of the
-  sheet. Weapon and Age Category appear in the Figma but are deferred to the
-  tournament-level Fencers tab, since `competitors` carries neither column (both live
-  on `events`). It lists the event's own competitors (§8.4). Rows link to a fencer
-  page, which is placeholder text.
+  sheet. Weapon and Age Category are uniform across an event, so those filters are not
+  needed here.
 - **Pooling** (Partial): see §11.6 for its current state.
 - **Tableau** (Completed): bracket and list views of `GET /events/{id}/tableau`, with
   search. See §12.5.
@@ -909,6 +909,8 @@ the tournament and bout `end` state.
 - `user_id` records who created the row (§2.5), not which person the fencer is. A
   link to the fencer's own account, for following their bouts or refusing to let
   them referee themselves, would be a separate column.
+- A fencer in two events shows up twice in tournament-level fencer search, since
+  they have two separate competitor rows. Fix is currently out of scope.
 
 ### 8.5 Event attributes and bout settings
 

@@ -12,7 +12,7 @@ const ROW_COUNT = 6;
 // current path and reads the tournament id from the URL.
 function FencerBrowserSkeleton() {
   const pathname = usePathname();
-  const { tournamentId } = useParams<{ tournamentId: string }>();
+  const { tournamentId, eventId } = useParams<{ tournamentId: string; eventId?: string }>();
   const search = useSearchParams().get("q") ?? "";
 
   return (
@@ -25,7 +25,7 @@ function FencerBrowserSkeleton() {
           defaultValue={search}
           suggest={{ tournamentId, sources: [{ kind: "fencers", href: pathname }] }}
         />
-        <FencerFilterSheet tournamentId={tournamentId} />
+        <FencerFilterSheet tournamentId={tournamentId} scope={eventId ? "event" : "tournament"} />
       </div>
 
       <ul aria-hidden className="flex flex-col gap-3">

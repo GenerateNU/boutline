@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"boutline/internal/errs"
+	"boutline/internal/features/event"
 	"boutline/internal/utils"
 
 	"github.com/google/uuid"
@@ -80,13 +81,15 @@ type CompetitorUpdate struct {
 }
 
 type CompetitorListFilter struct {
-	IDs          []uuid.UUID // empty means don't filter by id
-	EventID      *uuid.UUID  // nil means don't filter by event
-	TournamentID *uuid.UUID  // nil means don't filter by tournament
-	Rating       *Rating     // nil means don't filter by rating
-	Gender       *Gender     // nil means don't filter by gender
-	Team         *string     // nil means don't filter by team
-	Term         string      // fuzzy match against name; empty means don't filter
+	IDs          []uuid.UUID             // empty means don't filter by id
+	EventID      *uuid.UUID              // nil means don't filter by event
+	TournamentID *uuid.UUID              // nil means don't filter by tournament
+	Rating       *Rating                 // nil means don't filter by rating
+	Gender       *Gender                 // nil means don't filter by gender
+	Team         *string                 // nil means don't filter by team
+	Weapon       *event.EventWeapon      // nil means don't filter by weapon
+	AgeCategory  *event.EventAgeCategory // nil means don't filter by age category
+	Term         string                  // fuzzy match against name; empty means don't filter
 	Limit        int
 	Offset       int
 }
@@ -214,6 +217,17 @@ func (r *competitorRepository) ListCompetitors(
 	}
 	if filter.Gender != nil {
 		query = query.Where("gender = ?", string(*filter.Gender))
+	}
+	if filter.Weapon != nil || filter.AgeCategory != nil {
+		// sub-query because events table has weapon and age
+		events := r.db.WithContext(ctx).Model(&event.Event{}).Select("id")
+		if filter.Weapon != nil {
+			events = events.Where("weapon = ?", string(*filter.Weapon))
+		}
+		if filter.AgeCategory != nil {
+			events = events.Where("age_category = ?", string(*filter.AgeCategory))
+		}
+		query = query.Where("event_id IN (?)", events)
 	}
 	if filter.Team != nil {
 		query = utils.SubstringMatch(query, competitorTeamSearchColumns, *filter.Team)
