@@ -23,12 +23,12 @@ export function PoolList({ pools, poolingPath }: PoolListProps) {
 
   return (
     <div className="flex flex-col gap-6 font-manrope">
-      <div className="flex gap-2">
+      <div className="flex max-w-mobile gap-2">
         <PoolSearch value={search} onChange={setSearch} options={options} />
         <PoolFilterSheet filters={filters} options={options} onApply={setFilters} />
       </div>
       {ordered.length > 0 ? (
-        <ul aria-label="Pools" className="flex flex-col gap-6">
+        <ul aria-label="Pools" className="flex flex-col gap-6 lg:grid lg:grid-cols-[repeat(auto-fill,24rem)]">
           {ordered.map((pool) => (
             <li key={pool.id}>
               <PoolCard pool={pool} poolingPath={poolingPath} />

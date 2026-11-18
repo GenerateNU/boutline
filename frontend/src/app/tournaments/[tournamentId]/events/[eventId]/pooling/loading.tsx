@@ -20,11 +20,11 @@ export default function PoolingTabLoading() {
       <span role="status" className="sr-only">
         Loading pools
       </span>
-      <div className="flex gap-2">
+      <div className="flex max-w-mobile gap-2">
         <PoolSearch value="" onChange={ignoreChange} options={NO_OPTIONS} />
         <Skeleton className="size-11.5 rounded-[12px]" />
       </div>
-      <ul aria-hidden className="flex flex-col gap-6">
+      <ul aria-hidden className="flex flex-col gap-6 lg:grid lg:grid-cols-[repeat(auto-fill,24rem)]">
         {Array.from({ length: CARD_COUNT }, (_, index) => (
           <li
             key={index}
