@@ -17,11 +17,12 @@ describe("TabPageOnly", () => {
   ])("on $name, shown is $shown", ({ pathname, shown }) => {
     mockPathname.mockReturnValue(pathname);
     render(
-      <TabPageOnly basePath="/events/1">
+      <TabPageOnly basePath="/events/1" fallback={<p>Fallback</p>}>
         <p>Header</p>
       </TabPageOnly>,
     );
 
     expect(screen.queryByText("Header") !== null).toBe(shown);
+    expect(screen.queryByText("Fallback") !== null).toBe(!shown);
   });
 });

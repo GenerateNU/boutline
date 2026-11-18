@@ -27,7 +27,10 @@ export default async function TournamentDashboardLayout({
 
   return (
     <>
-      <TabPageOnly basePath={`/admin/tournaments/${tournamentId}`}>
+      <TabPageOnly
+        basePath={`/admin/tournaments/${tournamentId}`}
+        fallback={<h1 className="sr-only">{tournament.name}</h1>}
+      >
         <DashboardHeader
           tournament={tournament}
           dates={formatEventDateRange(events, tournament.start_time)}
