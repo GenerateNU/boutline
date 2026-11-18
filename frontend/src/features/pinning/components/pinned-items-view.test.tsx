@@ -5,7 +5,7 @@ import { PINNED_STORAGE_KEY, type PinnedIds } from "@/features/pinning/types/pin
 import type { Competitor } from "@/types/competitor";
 
 function fencer(id: string, firstName: string, tournamentId = "t1"): Competitor {
-  return { id, eventId: "e1", tournamentId, firstName, lastName: "Smith", rating: "A", ratingYear: 26, team: "" };
+  return { id, eventId: "e1", tournamentId, firstName, lastName: "Smith", rating: "A", ratingYear: 26, team: "", checkedInAt: null };
 }
 
 const ANN = fencer("f1", "Ann");

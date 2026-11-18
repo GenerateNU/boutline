@@ -1,3 +1,4 @@
+import { cn } from "cn";
 import Image from "next/image";
 
 type BackgroundVersion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
@@ -18,15 +19,16 @@ const backgrounds: Record<
 
 interface BackgroundProps {
   version: BackgroundVersion;
+  className?: string;
 }
 
-function Background({ version }: BackgroundProps) {
+function Background({ version, className }: BackgroundProps) {
   const { size, frame, pattern } = backgrounds[version];
 
   return (
     <div
       aria-hidden
-      className={`pointer-events-none absolute top-0 left-1/2 -z-10 -translate-x-1/2 ${frame}`}
+      className={cn("pointer-events-none absolute top-0 left-1/2 -z-10 -translate-x-1/2", frame, className)}
     >
       <Image
         src={`/brand/backgrounds/bg-${version}.svg`}

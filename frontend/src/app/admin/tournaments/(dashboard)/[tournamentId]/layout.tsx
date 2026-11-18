@@ -7,6 +7,7 @@ import { formatEventDateRange } from "@/lib/event-schedule";
 
 import { DashboardTabNav } from "../_components/dashboard-tab-nav";
 import { DashboardHeader } from "./_components/dashboard-header";
+import { FencersBackground } from "./_components/fencers-background";
 
 export default async function TournamentDashboardLayout({
   children,
@@ -25,7 +26,8 @@ export default async function TournamentDashboardLayout({
   }
 
   return (
-    <>
+    <div className="relative isolate overflow-x-clip">
+      <FencersBackground />
       <DashboardHeader
         tournament={tournament}
         dates={formatEventDateRange(events, tournament.start_time)}
@@ -34,6 +36,6 @@ export default async function TournamentDashboardLayout({
       <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 pt-10 pb-20">
         {children}
       </div>
-    </>
+    </div>
   );
 }

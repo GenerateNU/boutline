@@ -1,4 +1,4 @@
-import { readOffsetParam, readStringParam, type SearchParams } from "@/lib/search-params";
+import { readStringParam, type SearchParams } from "@/lib/search-params";
 
 interface FilterOption {
   value: string;
@@ -33,7 +33,6 @@ export function parseFencerFilters(query: SearchParams) {
   const gender = readStringParam(query, "gender");
 
   return {
-    offset: readOffsetParam(query),
     search: readStringParam(query, "q"),
     // Values the backend would reject are dropped, since a 422 would break the page.
     team: team && team.length <= MAX_CLUB_LENGTH ? team : undefined,
