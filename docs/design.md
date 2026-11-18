@@ -471,7 +471,11 @@ from the venue floor.
   from a page nested under it (an event's Events tab), which adds an entry. From
   `lg` the tab row moves up into the global nav, right of the plate, with each tab
   as wide as its label rather than spread evenly, and the active tab's green
-  underline spans the whole tab.
+  underline spans the whole tab. When a tab row first appears it slides down
+  from under the global nav on phones, and from `lg` its tabs fade in one after
+  another from left to right. At every width the underline slides to a newly
+  chosen tab. All of this is off with reduced motion, and browsers without CSS
+  anchor positioning show the underline without the slide.
 - **Nested pages** (a pool, an event fencer, a bout, the referee screen, an admin
   event): they keep their level's tab bar with their tab active, but not the level's
   header (an event's "< {tournament name}" link, the dashboard header). Each draws one
