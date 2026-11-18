@@ -35,7 +35,8 @@ var (
 type CompetitorRepository interface {
 	CreateCompetitor(ctx context.Context, competitor *Competitor) error
 	GetCompetitorByID(ctx context.Context, id uuid.UUID) (*Competitor, error)
-	ListCompetitors(ctx context.Context, filter CompetitorListFilter) ([]Competitor, int64, error)
+	// ListCompetitors returns the page plus how many rows match the filter and how many of those are checked in.
+	ListCompetitors(ctx context.Context, filter CompetitorListFilter) ([]Competitor, int64, int64, error)
 	UpdateCompetitorByID(ctx context.Context, id uuid.UUID, update CompetitorUpdate) error
 	DeleteCompetitor(ctx context.Context, id uuid.UUID) error
 	SetCompetitorAthlete(ctx context.Context, id uuid.UUID, memberNumber string, athleteID uuid.UUID) error
@@ -77,6 +78,7 @@ type CompetitorUpdate struct {
 	SecondaryClub *string
 	MemberNumber  *string
 	Team          *string
+	CheckedInAt   *time.Time // pointer to the zero time clears the check-in
 }
 
 type CompetitorListFilter struct {
@@ -100,7 +102,7 @@ func NewCompetitorRepository(db *gorm.DB) CompetitorRepository {
 }
 
 func (u CompetitorUpdate) columns() map[string]any {
-	columns := make(map[string]any, 11)
+	columns := make(map[string]any, 12)
 	if u.FirstName != nil {
 		columns["first_name"] = *u.FirstName
 	}
@@ -134,6 +136,12 @@ func (u CompetitorUpdate) columns() map[string]any {
 	}
 	if u.Team != nil {
 		columns["team"] = *u.Team
+	}
+	if u.CheckedInAt != nil {
+		columns["checked_in_at"] = nil
+		if !u.CheckedInAt.IsZero() {
+			columns["checked_in_at"] = *u.CheckedInAt
+		}
 	}
 	return columns
 }
@@ -201,7 +209,7 @@ func (r *competitorRepository) SetCompetitorAthlete(
 func (r *competitorRepository) ListCompetitors(
 	ctx context.Context,
 	filter CompetitorListFilter,
-) ([]Competitor, int64, error) {
+) ([]Competitor, int64, int64, error) {
 	query := r.db.WithContext(ctx).Model(&Competitor{})
 	if filter.EventID != nil {
 		query = query.Where("event_id = ?", *filter.EventID)
@@ -223,9 +231,13 @@ func (r *competitorRepository) ListCompetitors(
 	}
 	query = utils.TrigramMatch(query, competitorNameSearchColumns, filter.Term)
 
-	var total int64
+	var total, checkedIn int64
 	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("count competitors: %w", err)
+		return nil, 0, 0, fmt.Errorf("count competitors: %w", err)
+	}
+	// A fresh session copies the conditions, so the extra Where doesn't leak into the page query.
+	if err := query.Session(&gorm.Session{}).Where("checked_in_at IS NOT NULL").Count(&checkedIn).Error; err != nil {
+		return nil, 0, 0, fmt.Errorf("count checked-in competitors: %w", err)
 	}
 
 	// With no term there is no relevance to rank by, so the roster falls back
@@ -239,9 +251,9 @@ func (r *competitorRepository) ListCompetitors(
 		Offset(filter.Offset).
 		Find(&competitors).Error
 	if err != nil {
-		return nil, 0, fmt.Errorf("select competitors: %w", err)
+		return nil, 0, 0, fmt.Errorf("select competitors: %w", err)
 	}
-	return competitors, total, nil
+	return competitors, total, checkedIn, nil
 }
 
 // ListCompetitorTeams matches distinct team names rather than competitor

@@ -151,6 +151,7 @@ func TestPoolBoutsCreatedDuringAnEditMatchThePool(t *testing.T) {
 // Foil stage, which creates the pool's six round-robin bouts at slots 1 to 6.
 func createPool(t *testing.T, app *fiber.App, number int) string {
 	t.Helper()
+	poolCreateCheckInAll(t, app, authHeaders(t, uuid.MustParse(alexMorgan)))
 
 	created := send(t, app, testkit.POST, "/api/v1/pools", map[string]any{"pools": []map[string]any{{
 		"pool_stage_id": poolCreateStageID, "number": number, "strip": "Strip 9", "referee_id": jordanLee,

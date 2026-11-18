@@ -88,7 +88,7 @@ func RegisterPoolStageService(api huma.API, service PoolStageService) {
 		Method:      http.MethodPost,
 		Path:        poolStageBasePath + "/{id}/proposed-pools",
 		Summary:     "Propose pools for a pool stage",
-		Description: "Splits the given competitors into pools with the seeding algorithm (rating snake, clubmates kept apart) " +
+		Description: "Splits the given competitors, or the event's checked-in fencers when competitor_ids is omitted, into pools with the seeding algorithm (rating snake, clubmates kept apart) " +
 			"and returns the suggestion without saving anything. Send the lists, adjusted as needed, to POST /api/v1/pools.",
 		Tags: []string{"Pool Stages"},
 	}, service.ProposePools)

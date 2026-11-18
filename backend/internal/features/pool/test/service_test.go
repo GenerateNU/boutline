@@ -67,7 +67,7 @@ func newCreateFixture() *createFixture {
 	f.lockStage(f.otherStage)
 
 	for n := 1; n <= 10; n++ {
-		f.repo.Competitors[competitor(n)] = pool.PoolEntrant{ID: competitor(n), EventID: f.stage.EventID}
+		f.repo.Competitors[competitor(n)] = pool.PoolEntrant{ID: competitor(n), EventID: f.stage.EventID, CheckedIn: true}
 	}
 
 	return f
@@ -232,6 +232,15 @@ func TestCreatePools(t *testing.T) {
 			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2, 3, 4)} },
 			wantCode:   http.StatusBadRequest,
 			wantDetail: "competitor " + competitor(2).String() + " is not entered in the pool stage's event",
+		},
+		{
+			name: "rejects a competitor who isn't checked in",
+			setup: func(f *createFixture) {
+				f.repo.Competitors[competitor(3)] = pool.PoolEntrant{ID: competitor(3), EventID: f.stage.EventID}
+			},
+			items:      func(f *createFixture) []pool.PoolCreateItem { return []pool.PoolCreateItem{f.item(1, 1, 2, 3, 4)} },
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "competitor " + competitor(3).String() + " is not checked in",
 		},
 		{
 			name: "rejects a competitor already in a pool of the stage under a new number",

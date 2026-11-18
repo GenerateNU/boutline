@@ -194,6 +194,7 @@ erDiagram
       text secondary_club
       text member_number
       uuid athlete_id FK
+      timestamptz checked_in_at
     }
     competitors }o--o| athletes : fk_competitors_athlete
     competitors }o--o| events : fk_competitors_event

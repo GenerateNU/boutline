@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"boutline/internal/errs"
 	"boutline/internal/features/event"
@@ -291,6 +292,13 @@ func competitorUpdateFrom(body CompetitorUpdateBody) (*CompetitorUpdate, error) 
 		}
 		update.MemberNumber = &number
 	}
+	if body.CheckedIn != nil {
+		checkedInAt := time.Time{}
+		if *body.CheckedIn {
+			checkedInAt = time.Now().UTC()
+		}
+		update.CheckedInAt = &checkedInAt
+	}
 
 	if update == (CompetitorUpdate{}) {
 		return nil, errs.Public("provide at least one field to update", errs.ErrInvalidInput)
@@ -350,7 +358,7 @@ func (s *competitorService) ListCompetitors(
 	}
 	filter.IDs = ids
 
-	competitors, total, err := s.repo.ListCompetitors(ctx, filter)
+	competitors, total, checkedIn, err := s.repo.ListCompetitors(ctx, filter)
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list competitors: %w", err))
 	}
@@ -361,10 +369,11 @@ func (s *competitorService) ListCompetitors(
 		data = append(data, newCompetitorResponse(competitor, showMemberNumber))
 	}
 	return &CompetitorListOutput{Body: CompetitorListBody{
-		Data:   data,
-		Total:  total,
-		Limit:  limit,
-		Offset: offset,
+		Data:      data,
+		Total:     total,
+		CheckedIn: checkedIn,
+		Limit:     limit,
+		Offset:    offset,
 	}}, nil
 }
 
