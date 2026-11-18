@@ -15,7 +15,8 @@ export default async function EventLayout({
   const { tournamentId, eventId } = await params;
 
   const [tournament, event] = await Promise.all([getTournament(tournamentId), getEvent(eventId)]);
-  if (!tournament || event?.tournament_id !== tournamentId) {
+  // Compared with the tournament's own id rather than the URL's, which may differ in case.
+  if (!tournament || event?.tournament_id !== tournament.id) {
     notFound();
   }
 

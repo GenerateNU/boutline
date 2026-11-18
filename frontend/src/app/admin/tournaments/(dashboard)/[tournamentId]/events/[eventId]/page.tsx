@@ -16,7 +16,8 @@ export default async function AdminEventPage({
   const [poolStage, role, event] = await Promise.all([
     getEventPoolStage(eventId),
     getTournamentRole(tournamentId),
-    getEvent(eventId),
+    // Only the back link's label needs the event, so a failed fetch falls back to "Event" rather than failing the page.
+    getEvent(eventId).catch(() => null),
   ]);
   // The layout lets referees in to look; the backend refuses them anyway, so this only hides buttons they can't use.
   const canManage = role === "admin";
