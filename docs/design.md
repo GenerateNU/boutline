@@ -532,7 +532,8 @@ from the venue floor.
 
 Tabs: Overview · Fencers · Clubs · Events. Every tab opens with an "< All
 tournaments" back button to `/tournaments` and the uppercase tournament name, both
-drawn by the tabs' layout, so switching tabs never redraws them.
+drawn by the tabs' layout, which fetches the tournament once; switching tabs neither
+refetches nor redraws them.
 
 Hi-fi throughout: text uses the shared `Text` styles (C.3), searches are the hi-fi
 search bar with a clear button. Fencer and club rows keep their pin button, which does nothing until pinning lands (§6.3); event rows end in a chevron.
@@ -540,8 +541,8 @@ search bar with a clear button. Fencer and club rows keep their pin button, whic
 - **Loading:** each tab has its own skeleton under the tabs. Fixed text and
   controls that need no fetched data (the Overview's event card titles, search
   bars, the fencer and club filter buttons) render for real; dates, cards and rows
-  shimmer. The name shimmers only on the first visit, in its own `Suspense` in the
-  layout.
+  shimmer. The name shimmers only on the first visit, in `(tournament)/loading.tsx`
+  above the layout.
 - **Overview:** a card with the date range (from its events, else
   `start_time`) and the location (venue, city, country), then an organizer row,
   then Ongoing, Upcoming and Completed event cards with times like "9:00 AM" (UTC,
@@ -1898,13 +1899,14 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
   but the data changes when it lands.
   - Each fetching route segment has its own `loading.tsx`, under its tab bar. A
     layout that fetches gets its boundary one level up, which draws its tabs too
-    (the dashboard's `(dashboard)` group, the event shell in `events/loading.tsx`).
+    (the dashboard's `(dashboard)` group, the tournament's `(tournament)` group, the
+    event shell in `events/loading.tsx`).
   - Route groups and in-page `Suspense` keep a fallback off pages it doesn't fit:
     `/tournaments` and `/admin/tournaments` use `Suspense`, and an event's fencer
     list sits in `fencers/(list)`. Client fetches render their skeleton in place.
   - No `loading.tsx` sits beside a tabbed layout, where it would wrap every tab:
     a tab switch shows the nearest fallback the browser already has until the new
-    tab's own arrives, so the tournament Overview's lives in `(sections)/(overview)`.
+    tab's own arrives, so the tournament Overview's lives in `(tournament)/(sections)/(overview)`.
   - A skeleton's first child is a screen-reader-only `role="status"` "Loading …"
     label; the blocks are `aria-hidden`. `Skeleton` shimmers with `motion-safe:`
     and stays flat when reduced motion is on.

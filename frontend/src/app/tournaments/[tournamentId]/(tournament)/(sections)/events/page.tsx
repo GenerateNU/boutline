@@ -1,5 +1,3 @@
-import { notFound } from "next/navigation";
-
 import { Text } from "@/components/primitives/text";
 import { EventCard } from "@/features/event/components/event-card";
 import { getCompetitors } from "@/features/competitor/services/getCompetitors";
@@ -15,7 +13,6 @@ import { CalendarButton } from "@/features/tournament/components/calendar-button
 import { SearchForm } from "@/features/tournament/components/search-form";
 import { WeekStrip } from "@/features/tournament/components/week-strip";
 import { parseDateParam } from "@/features/tournament/lib/date-param";
-import { getTournament } from "@/features/tournament/services/getTournament";
 import {
   eventDay,
   eventDays,
@@ -45,13 +42,7 @@ export default async function EventsTab({
   const chips = eventFilterChips(filters);
   const basePath = `/tournaments/${tournamentId}/events`;
 
-  const [tournament, events] = await Promise.all([
-    getTournament(tournamentId),
-    getEvents(tournamentId),
-  ]);
-  if (!tournament) {
-    notFound();
-  }
+  const events = await getEvents(tournamentId);
 
   const filteredEvents = events.filter((event) => matchesEventFilters(event, filters));
   const days = eventDays(filteredEvents);
