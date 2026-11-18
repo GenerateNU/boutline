@@ -64,13 +64,6 @@ func TestListPoolResults(t *testing.T) {
 		assertRows(t, asObjects(t, body["data"], "data"), want)
 	})
 
-	t.Run("q narrows the rows without renumbering them", func(t *testing.T) {
-		body := getResults(t, mixedEpeeEventID, "?q=cambridge", http.StatusOK).GetBody()
-
-		assert.EqualValues(t, 2, body["total"])
-		assertRows(t, asObjects(t, body["data"], "data"), []result{want[3], want[5]})
-	})
-
 	t.Run("event with no pool stage has no results", func(t *testing.T) {
 		getResults(t, openEpeeEventID, "", http.StatusOK).
 			AssertField("data", []any{})

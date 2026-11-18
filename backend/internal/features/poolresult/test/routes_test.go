@@ -132,18 +132,6 @@ func TestPoolResultsEndpoint(t *testing.T) {
 			wantTotal: 5,
 		},
 		{
-			name: "q matches a name ignoring case and keeps the stage-wide place", fx: newFixture().withPoolStage(),
-			query: "?q=fc%20lc", want: []string{"3 LC pending"}, wantTotal: 1,
-		},
-		{
-			name: "q matches a club", fx: newFixture().withPoolStage(),
-			query: "?q=BOSTON", want: []string{"1 LA pending"}, wantTotal: 1,
-		},
-		{
-			name: "q with no match is empty", fx: newFixture().withPoolStage(),
-			query: "?q=nobody", want: []string{},
-		},
-		{
 			name: "a page is a slice of the ranked rows", fx: newFixture().withPoolStage(),
 			query: "?limit=2&offset=1", want: []string{"2 LD pending", "3 LC pending"}, wantTotal: 5,
 		},

@@ -10,7 +10,6 @@ const (
 
 type PoolResultListInput struct {
 	ID     string `path:"id" format:"uuid" doc:"Event ID"`
-	Q      string `query:"q" maxLength:"200" doc:"Keeps fencers whose name or club contains this text, ignoring case; places stay stage-wide"`
 	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset int    `query:"offset" default:"0" minimum:"0"`
 }
@@ -27,7 +26,7 @@ type PoolResultResponse struct {
 
 type PoolResultListBody struct {
 	Data   []PoolResultResponse `json:"data" doc:"Ordered by stage-wide place"`
-	Total  int64                `json:"total" doc:"Fencers matching q, ignoring the page"`
+	Total  int64                `json:"total" doc:"Fencers ranked, ignoring the page"`
 	Limit  int                  `json:"limit"`
 	Offset int                  `json:"offset"`
 }

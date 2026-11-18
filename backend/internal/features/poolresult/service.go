@@ -49,7 +49,6 @@ func (s *poolResultService) ListPoolResults(ctx context.Context, input *PoolResu
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
-	rows = filterPoolResults(rows, input.Q)
 
 	end := min(offset+limit, len(rows))
 	page := rows[min(offset, end):end]
