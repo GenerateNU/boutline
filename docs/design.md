@@ -583,7 +583,7 @@ back to the tournament.
   "Unrated"), and Gender (a row of single-select outline chips, sets `?gender=`, F/M/O
   shown as Female/Male/Other). There is no Fencer search in the sheet — that collided
   with the page's own search bar, so free-text name search is the search bar (`?q=`)
-  alone now. Applied filters show as `Name: Value` removable pills (e.g. "Club: bos",
+  alone now. Applied filters show as `Name: Value` removable `Chip` tags (e.g. "Club: bos",
   "Rating: Unrated", "Gender: Female") under the search bar and at the top of the
   sheet. Weapon and Age Category are uniform across an event, so those filters are not
   needed here.
@@ -1810,7 +1810,7 @@ earlier outlined set. Components use tokens, never raw colors.
 | --- | --- |
 | `background` / `foreground` | page and text; `foreground` is also the outline color |
 | `muted` / `muted-foreground` | hover fills, secondary text, empty states |
-| `selected` (blue) | only a chosen state: filled button, toggle on, active tab |
+| `selected` (blue) | only a chosen state: filled button, toggle on, active tab. Hi-fi chip rows (`ChipGroup`) are the exception: an on chip keeps its blue outline and blue text over a `blue-lighter` fill |
 | `destructive` | errors and destructive actions; hi-fi destructive actions (Button `destructive` variant) use `red-dark` |
 | `border`, `input`, `ring` | hairlines, field borders, focus rings |
 | `brand` | alias of the hi-fi navy `blue` (#21358b), kept for existing uses |
@@ -1851,7 +1851,8 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
 - Primitives live in `src/components/primitives/`: shadcn-generated, restyled, with
   `cva` variants, `cn`, `data-slot`, and behavior from `radix-ui`.
 - The set includes the global nav, tab nav, section, list, card, chip (the filter
-  tag), chip group, text, label, button, segmented button, search bar, dropdown, text field,
+  tag: `rounded-md border-blue-light bg-blue-lightest text-blue` with a close X when
+  it is removable), chip group, text, label, button, segmented button, search bar, dropdown, text field,
   select, date field, checkbox, radio, toggle, slider, calendar,
   dropzone and upload dialog, modal, filter sheet, pagination, toast, tooltip,
   progress indicators, a loading spinner, and a shimmering skeleton block.
@@ -1867,8 +1868,9 @@ design is), `subtitle` (`text-sm font-semibold`, row names), `body` (`text-sm`),
   header, a muted description, and a two-column `ModalFooter` (outline Cancel plus a
   filled or `destructive` action). The filter sheet is a `rounded-t-3xl` bottom sheet
   whose search sections are a label above a `FilterSearchField` whose suggestions show
-  in a `Dropdown` of `DropdownOption` rows while typing; picked values show as
-  removable tags at the top until submitted. Other sections are a Distance slider, a
+  in a `Dropdown` of `DropdownOption` rows while typing, floating over the sections
+  below rather than pushing them down; picked values show as removable `Chip` tags at
+  the top until submitted. Other sections are a Distance slider, a
   Select, and rows of outline chips (`ChipGroup` / `ChipGroupItem`), then a full-width
   Clear All and a filled submit. `triggerActive` gives the trigger its pressed look
   while filters are applied. The toast is
