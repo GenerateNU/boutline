@@ -41,38 +41,38 @@ function TableauBracket({
   const focusFromSwipe = useRef(false);
   const firstRoundId = rounds[0]?.id;
 
-  // Scrolls so the column sits at the left edge and the bout sits just below the
-  // round buttons floating above the scroller (hence the pt-16 clearance).
+  // Scrolls the bracket so the column sits at the left gutter, and the page so the
+  // bout sits just below the round buttons stuck to the top of the screen.
   function scrollToBout(column: HTMLElement, bout: HTMLElement) {
     const scroller = scrollerRef.current;
     if (!scroller) {
       return;
     }
     const clearance = 64;
-    const scrollerRect = scroller.getBoundingClientRect();
+    const gutter = parseFloat(getComputedStyle(scroller).scrollPaddingLeft) || 0;
     const left =
       scroller.scrollLeft +
       column.getBoundingClientRect().left -
-      scrollerRect.left;
-    const top =
-      scroller.scrollTop +
-      bout.getBoundingClientRect().top -
-      scrollerRect.top -
-      clearance;
+      scroller.getBoundingClientRect().left -
+      gutter;
     // The last rounds can't reach the left edge (nothing left to scroll), so clamp.
     const maxLeft = scroller.scrollWidth - scroller.clientWidth;
-    const maxTop = scroller.scrollHeight - scroller.clientHeight;
     const targetLeft = Math.min(Math.max(left, 0), maxLeft);
-    const targetTop = Math.min(Math.max(top, 0), maxTop);
     // No movement means no scroll event, which would leave the pick flag stuck.
-    if (
-      Math.abs(targetLeft - scroller.scrollLeft) < 1 &&
-      Math.abs(targetTop - scroller.scrollTop) < 1
-    ) {
-      return;
+    if (Math.abs(targetLeft - scroller.scrollLeft) >= 1) {
+      scrollingToButtonPick.current = true;
+      scroller.scrollTo({ left: targetLeft, behavior: "smooth" });
     }
-    scrollingToButtonPick.current = true;
-    scroller.scrollTo({ left: targetLeft, top: targetTop, behavior: "smooth" });
+    // Only move the page when the bout is hidden, so a pick doesn't scroll the search away.
+    const boutRect = bout.getBoundingClientRect();
+    const boutHidden =
+      boutRect.top < clearance || boutRect.bottom > window.innerHeight;
+    if (boutHidden) {
+      window.scrollTo({
+        top: window.scrollY + boutRect.top - clearance,
+        behavior: "smooth",
+      });
+    }
   }
 
   // Round picked in the button group (or by a swipe): scroll to its column by the left edge.
@@ -86,6 +86,12 @@ function TableauBracket({
     }
     if (focusFromSwipe.current) {
       focusFromSwipe.current = false;
+      return;
+    }
+    // With every round already on screen (laptops) there's no column to bring in, and
+    // scrolling the page alone just jolts it up and down.
+    const scroller = scrollerRef.current;
+    if (!scroller || scroller.scrollWidth <= scroller.clientWidth) {
       return;
     }
     const column = columnRefs.current[focusedRoundId];
@@ -162,28 +168,26 @@ function TableauBracket({
   }
 
   return (
-    <div className="h-full">
-      {/* Scrolls both ways. Top padding keeps the first cards clear of the round
-          buttons, which float over it; snap-x lines columns up on swipe. */}
-      <div
-        ref={scrollerRef}
-        onScroll={handleScroll}
-        className="h-full snap-x snap-mandatory overflow-auto pt-16 pb-6"
-      >
-        <div className="flex w-max gap-11.5">
-          {rounds.map((round, roundIndex) => (
-            <BracketRound
-              key={round.id}
-              ref={(element) => {
-                columnRefs.current[round.id] = element;
-              }}
-              round={round}
-              isLast={roundIndex === rounds.length - 1}
-              query={query}
-              boutBasePath={boutBasePath}
-            />
-          ))}
-        </div>
+    // Scrolls sideways only; the page scrolls it vertically. -mx-4 runs it to the screen
+    // edges, and scroll-px-4 snaps columns to the page gutter rather than the edge.
+    <div
+      ref={scrollerRef}
+      onScroll={handleScroll}
+      className="-mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 pt-6 pb-6"
+    >
+      <div className="flex w-max gap-11.5">
+        {rounds.map((round, roundIndex) => (
+          <BracketRound
+            key={round.id}
+            ref={(element) => {
+              columnRefs.current[round.id] = element;
+            }}
+            round={round}
+            isLast={roundIndex === rounds.length - 1}
+            query={query}
+            boutBasePath={boutBasePath}
+          />
+        ))}
       </div>
     </div>
   );

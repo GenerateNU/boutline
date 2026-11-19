@@ -39,16 +39,16 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
 
   if (tableau.rounds.length === 0) {
     return (
-      <p className="py-8 text-center text-muted-foreground">
+      <p className="py-8 text-center text-muted-foreground lg:text-left">
         The tableau hasn&apos;t been drawn yet.
       </p>
     );
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="shrink-0 pb-4">
-        <div className="flex items-center gap-3">
+    <div className="flex flex-col">
+      <div className="pb-4">
+        <div className="flex max-w-mobile items-center gap-3">
           <label className="flex h-11.5 min-w-0 flex-1 items-center gap-2 rounded-[12px] border border-outline bg-background px-4 shadow-sm">
             <Input
               type="text"
@@ -87,12 +87,9 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 -top-4 z-10 -mx-4 h-24 bg-linear-to-b from-fencing-white from-50% to-transparent"
-        />
-        <div className="absolute inset-x-0 top-0 z-20">
+      <div className="relative">
+        {/* Sticks while the page scrolls down the bracket, so a round stays one tap away. */}
+        <div className="sticky top-0 z-20">
           <ButtonGroup
             aria-label="Rounds"
             options={tableau.rounds.map((round) => ({
@@ -101,6 +98,7 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
             }))}
             value={selectedRoundId}
             onValueChange={setSelectedRoundId}
+            className="-mx-4 px-4 lg:*:w-32 lg:*:flex-none"
           />
         </div>
 
@@ -113,7 +111,7 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
             boutBasePath={boutBasePath}
           />
         ) : (
-          <div className="h-full overflow-y-auto pt-16 pb-6">
+          <div className="pt-6 pb-6">
             <TableauList
               rounds={tableau.rounds}
               selectedRoundId={selectedRoundId}

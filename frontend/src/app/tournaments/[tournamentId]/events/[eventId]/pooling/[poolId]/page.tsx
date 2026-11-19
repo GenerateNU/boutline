@@ -20,7 +20,8 @@ export default async function PoolPage({ params }: PoolPageProps) {
   }
 
   return (
-    <div className="flex flex-col gap-6 font-manrope">
+    // Fitted on laptops so the pin ends at the right column rather than the screen edge.
+    <div className="flex flex-col gap-6 font-manrope lg:w-fit">
       <PoolHeader
         pool={pool}
         poolingPath={`${eventPath}/pooling`}
