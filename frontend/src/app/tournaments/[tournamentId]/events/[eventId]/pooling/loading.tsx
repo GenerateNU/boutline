@@ -9,7 +9,7 @@ import { VIEW_ITEM_CLASS } from "./_components/pool-card";
 import { PoolSearch } from "./_components/pool-search";
 import { PoolTableSkeleton } from "./_components/pool-table-skeleton";
 
-const CARD_COUNT = 2;
+const CARD_COUNT = 3;
 const NO_OPTIONS = { fencers: [], clubs: [], poolNumbers: [] };
 
 function ignoreChange() {}
@@ -20,11 +20,11 @@ export default function PoolingTabLoading() {
       <span role="status" className="sr-only">
         Loading pools
       </span>
-      <div className="flex max-w-mobile gap-2">
+      <div className="flex max-w-[calc(var(--container-mobile)-2rem)] gap-2">
         <PoolSearch value="" onChange={ignoreChange} options={NO_OPTIONS} />
         <Skeleton className="size-11.5 rounded-[12px]" />
       </div>
-      <ul aria-hidden className="flex flex-col gap-6 lg:grid lg:grid-cols-[repeat(auto-fill,24rem)]">
+      <ul aria-hidden className="flex flex-col gap-6 lg:grid lg:grid-cols-3">
         {Array.from({ length: CARD_COUNT }, (_, index) => (
           <li
             key={index}

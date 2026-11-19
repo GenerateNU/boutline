@@ -23,7 +23,7 @@ function EventTabBody({ children }: EventTabBodyProps) {
         tableau
           ? "relative isolate min-h-[calc(100dvh-5.5rem)] overflow-clip bg-fencing-white lg:min-h-[calc(100dvh-2.5rem)]"
           : "max-w-mobile",
-        segment === "pooling" && "lg:max-w-none",
+        segment === "pooling" && "lg:max-w-none lg:px-10",
       )}
     >
       {tableau && <Background version={7} />}

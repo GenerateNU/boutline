@@ -1429,8 +1429,8 @@ with `buildPool` (`pooling/_fixtures/build-pool.ts`).
   fencers. For the tournament's staff (any role from `GET /tournaments/{id}/role`)
   the card ends in a "Referee bout" button to that bout's referee screen (§5.1).
 - **Laptops** (`lg` up): the tab leaves the centred mobile column (`EventTabBody`),
-  with no background, and everything is left-aligned. The search row keeps the mobile width
-  and the pool cards form a grid of 24rem cards. The pool page puts the V/D grid and
+  with no background and a wider side margin (`px-10`), and everything is left-aligned. The search row stays as long as on a
+  phone (the mobile column minus its gutters), and the pool cards form a three-column grid that fills the width. The pool page puts the V/D grid and
   the standings (or bout card) side by side in two 24rem columns, with the back link
   and pin spanning both. Both skeletons follow the same layout.
 - Club short codes and fencer country are not shown yet, since the data has neither.
