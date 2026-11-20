@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"boutline/internal/features/competitor"
 	"boutline/internal/features/event"
@@ -14,6 +15,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var checkedInAt = time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC)
 
 type proposalFixture struct {
 	event event.Event
@@ -49,7 +52,15 @@ func (f *proposalFixture) enter(n int, eventID uuid.UUID, rating competitor.Rati
 		LastName:  "Test",
 		Rating:    rating,
 		Team:      club,
+
+		CheckedInAt: &checkedInAt,
 	}
+}
+
+func (f *proposalFixture) checkOut(n int) {
+	entered := f.repo.Competitors[competitorID(n)]
+	entered.CheckedInAt = nil
+	f.repo.Competitors[competitorID(n)] = entered
 }
 
 func (f *proposalFixture) propose(t *testing.T, ids ...string) (*poolstage.PoolStageProposalOutput, error) {
@@ -161,6 +172,19 @@ func TestProposePoolsRejects(t *testing.T) {
 			wantDetail: fmt.Sprintf("competitor %s is not entered in this pool stage's event", competitorID(9)),
 		},
 		{
+			name:       "a competitor who isn't checked in",
+			prepare:    func(f *proposalFixture) { f.checkOut(2) },
+			ids:        competitorIDs(1, 4),
+			wantCode:   http.StatusBadRequest,
+			wantDetail: fmt.Sprintf("competitor %s is not checked in", competitorID(2)),
+		},
+		{
+			name:       "too few checked-in fencers when none are listed",
+			prepare:    func(f *proposalFixture) { f.checkOut(4) },
+			wantCode:   http.StatusBadRequest,
+			wantDetail: "3 competitors cannot be split into pools of 4 to 6 fencers",
+		},
+		{
 			name:       "too few competitors for one pool",
 			ids:        competitorIDs(1, 3),
 			wantCode:   http.StatusBadRequest,
@@ -238,6 +262,52 @@ func TestProposePoolsRejects(t *testing.T) {
 			assert.Equal(t, tt.wantCode, code)
 			assert.Equal(t, tt.wantDetail, detail)
 			assert.Nil(t, out)
+		})
+	}
+}
+
+func TestProposePoolsDefaultsToCheckedInFencers(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		prepare func(f *proposalFixture)
+		wantIDs []string
+	}{
+		{name: "everyone is checked in", wantIDs: competitorIDs(1, 6)},
+		{
+			name:    "a fencer who isn't checked in is left out",
+			prepare: func(f *proposalFixture) { f.checkOut(6) },
+			wantIDs: competitorIDs(1, 5),
+		},
+		{
+			name: "a checked-in fencer from another event is left out",
+			prepare: func(f *proposalFixture) {
+				f.enter(7, uuid.New(), "A", "Elsewhere")
+			},
+			wantIDs: competitorIDs(1, 6),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			f := newProposalFixture(6, 6, nil)
+			if tt.prepare != nil {
+				tt.prepare(f)
+			}
+
+			out, err := f.propose(t)
+			require.NoError(t, err)
+
+			proposed := []string{}
+			for _, pool := range out.Body.Pools {
+				for _, fencer := range pool.Fencers {
+					proposed = append(proposed, fencer.CompetitorID)
+				}
+			}
+			assert.ElementsMatch(t, tt.wantIDs, proposed)
 		})
 	}
 }

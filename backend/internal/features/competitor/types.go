@@ -5,23 +5,24 @@ import "time"
 const birthdateLayout = time.DateOnly
 
 type CompetitorResponse struct {
-	ID            string    `json:"id" format:"uuid"`
-	EventID       string    `json:"eventId" format:"uuid"`
-	TournamentID  string    `json:"tournamentId,omitempty" format:"uuid"`
-	FirstName     string    `json:"firstName"`
-	LastName      string    `json:"lastName"`
-	Gender        string    `json:"gender" enum:"F,M,O"`
-	Birthdate     string    `json:"birthdate" format:"date"`
-	Division      string    `json:"division"`
-	Rating        string    `json:"rating" enum:"A,B,C,D,E,U"`
-	RatingYear    *int16    `json:"ratingYear" nullable:"true"`
-	PrimaryClub   *string   `json:"primaryClub" nullable:"true"`
-	SecondaryClub *string   `json:"secondaryClub" nullable:"true"`
-	MemberNumber  *string   `json:"memberNumber" nullable:"true"`
-	AthleteID     *string   `json:"athleteId" nullable:"true" format:"uuid"`
-	Team          string    `json:"team"`
-	CreatedAt     time.Time `json:"createdAt"`
-	UpdatedAt     time.Time `json:"updatedAt"`
+	ID            string     `json:"id" format:"uuid"`
+	EventID       string     `json:"eventId" format:"uuid"`
+	TournamentID  string     `json:"tournamentId,omitempty" format:"uuid"`
+	FirstName     string     `json:"firstName"`
+	LastName      string     `json:"lastName"`
+	Gender        string     `json:"gender" enum:"F,M,O"`
+	Birthdate     string     `json:"birthdate" format:"date"`
+	Division      string     `json:"division"`
+	Rating        string     `json:"rating" enum:"A,B,C,D,E,U"`
+	RatingYear    *int16     `json:"ratingYear" nullable:"true"`
+	PrimaryClub   *string    `json:"primaryClub" nullable:"true"`
+	SecondaryClub *string    `json:"secondaryClub" nullable:"true"`
+	MemberNumber  *string    `json:"memberNumber" nullable:"true"`
+	AthleteID     *string    `json:"athleteId" nullable:"true" format:"uuid"`
+	Team          string     `json:"team"`
+	CheckedInAt   *time.Time `json:"checkedInAt" nullable:"true"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
 }
 
 func newCompetitorResponse(competitor Competitor, showMemberNumber bool) CompetitorResponse {
@@ -50,6 +51,7 @@ func newCompetitorResponse(competitor Competitor, showMemberNumber bool) Competi
 		MemberNumber:  memberNumber,
 		AthleteID:     athleteID,
 		Team:          competitor.Team,
+		CheckedInAt:   competitor.CheckedInAt,
 		CreatedAt:     competitor.CreatedAt,
 		UpdatedAt:     competitor.UpdatedAt,
 	}
@@ -100,6 +102,8 @@ type CompetitorUpdateBody struct {
 	MemberNumber  *string `json:"memberNumber,omitempty" maxLength:"64" doc:"USA Fencing member number: 9 digits starting with 1; send an empty string to clear it and unlink the athlete"`
 
 	Team *string `json:"team,omitempty" maxLength:"120" doc:"Deprecated: use primaryClub"`
+
+	CheckedIn *bool `json:"checkedIn,omitempty" doc:"true checks the fencer in now; false clears the check-in"`
 }
 
 type CompetitorUpdateInput struct {
@@ -125,10 +129,11 @@ type CompetitorListInput struct {
 }
 
 type CompetitorListBody struct {
-	Data   []CompetitorResponse `json:"data"`
-	Total  int64                `json:"total" doc:"Rows matching the filter, ignoring the page"`
-	Limit  int                  `json:"limit"`
-	Offset int                  `json:"offset"`
+	Data      []CompetitorResponse `json:"data"`
+	Total     int64                `json:"total" doc:"Rows matching the filter, ignoring the page"`
+	CheckedIn int64                `json:"checkedIn" doc:"How many of the matching rows are checked in"`
+	Limit     int                  `json:"limit"`
+	Offset    int                  `json:"offset"`
 }
 
 type CompetitorListOutput struct {

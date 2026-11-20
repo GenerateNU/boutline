@@ -333,10 +333,20 @@ func TestProposePoolsEndpoint(t *testing.T) {
 		}
 	})
 
+	t.Run("proposes the event's checked-in fencers when none are listed", func(t *testing.T) {
+		t.Parallel()
+
+		resp := api(t).Post(path, map[string]any{})
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+		pools := decodeBody(t, resp.Body.Bytes())["pools"].([]any)
+		require.Len(t, pools, 1)
+		assert.Len(t, pools[0].(map[string]any)["fencers"], 5)
+	})
+
 	for name, ids := range map[string]any{
 		"rejects fewer than four competitors before the handler runs": competitorIDs(1, 3),
 		"rejects a malformed competitor before the handler runs":      append([]string{"nope"}, competitorIDs(1, 3)...),
-		"rejects a null list before the handler runs":                 nil,
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

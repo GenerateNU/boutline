@@ -68,9 +68,10 @@ type Competitor struct {
 	SecondaryClub *string `gorm:"type:text"`
 	MemberNumber  *string `gorm:"type:text;uniqueIndex:idx_competitors_event_member_number"`
 	// TODO: Remove Team in favor of PrimaryClub later
-	Team      string `gorm:"type:text;not null;default:''"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Team        string `gorm:"type:text;not null;default:''"`
+	CheckedInAt *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 func (Competitor) TableName() string {

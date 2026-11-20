@@ -40,9 +40,10 @@ type LockedPoolStage struct {
 
 // PoolEntrant is a competitor as pool create checks them.
 type PoolEntrant struct {
-	ID      uuid.UUID
-	EventID uuid.UUID
-	Seated  bool // already in a bout of one of the stage's pools
+	ID        uuid.UUID
+	EventID   uuid.UUID
+	CheckedIn bool
+	Seated    bool // already in a bout of one of the stage's pools
 }
 
 // Mirrors bout.BoutStatusUpcoming; bout imports this package, so it cannot be referenced here.

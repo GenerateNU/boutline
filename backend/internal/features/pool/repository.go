@@ -192,10 +192,10 @@ func (r *poolRepository) ListPoolEntrants(
 ) ([]PoolEntrant, error) {
 	var entrants []PoolEntrant
 
-	// Each requested competitor's event, and whether they already fence a bout in one of
+	// Each requested competitor's event, whether they are checked in, and whether they already fence a bout in one of
 	// this stage's pools other than exceptPoolID.
 	err := r.db.WithContext(ctx).Raw(`
-		SELECT c.id, c.event_id, EXISTS (
+		SELECT c.id, c.event_id, c.checked_in_at IS NOT NULL AS checked_in, EXISTS (
 			SELECT 1 FROM bouts b
 			JOIN pools p ON p.id = b.pool_id
 			WHERE p.pool_stage_id = ? AND p.id <> ? AND (b.competitor_1_id = c.id OR b.competitor_2_id = c.id)

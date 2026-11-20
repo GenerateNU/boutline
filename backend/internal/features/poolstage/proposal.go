@@ -18,7 +18,7 @@ const proposedPoolMaxFencers = 10
 // proposedMaxPools is the most pools batch pool creation takes in one request.
 const proposedMaxPools = 100
 
-// ProposePools splits the competitors into pools without saving anything. Rating years
+// ProposePools splits the listed competitors, or the event's checked-in ones when none are listed, into pools without saving anything. Rating years
 // are not stored yet, so ties within a rating letter fall to the seeding's random draw.
 func (s *poolStageService) ProposePools(ctx context.Context, input *PoolStageProposalInput) (*PoolStageProposalOutput, error) {
 	id, err := utils.ParseUUID(input.ID, "id")
@@ -38,7 +38,7 @@ func (s *poolStageService) ProposePools(ctx context.Context, input *PoolStagePro
 		return nil, errs.HumaError(err)
 	}
 
-	competitors, err := s.loadProposalCompetitors(ctx, *stage, competitorIDs)
+	competitors, competitorIDs, err := s.proposalCompetitors(ctx, *stage, competitorIDs)
 	if err != nil {
 		return nil, errs.HumaError(err)
 	}
@@ -119,9 +119,35 @@ func parseProposalCompetitors(raw []string) ([]uuid.UUID, error) {
 	return ids, nil
 }
 
-// loadProposalCompetitors returns every competitor by id after checking each exists and is
-// entered in the stage's event, the rule pool creation applies, so a proposal can be
-// created as is. The first failure is reported in request order.
+// proposalCompetitors resolves who is being proposed: the listed competitors, or every
+// checked-in fencer of the stage's event when none are listed.
+func (s *poolStageService) proposalCompetitors(
+	ctx context.Context,
+	stage PoolStage,
+	ids []uuid.UUID,
+) (map[uuid.UUID]PoolStageCompetitor, []uuid.UUID, error) {
+	if len(ids) > 0 {
+		competitors, err := s.loadProposalCompetitors(ctx, stage, ids)
+		return competitors, ids, err
+	}
+
+	listed, err := s.repo.ListCheckedInEventCompetitors(ctx, stage.EventID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("list checked-in competitors: %w", err)
+	}
+	competitors := make(map[uuid.UUID]PoolStageCompetitor, len(listed))
+	ids = make([]uuid.UUID, 0, len(listed))
+	for _, competitor := range listed {
+		competitors[competitor.ID] = competitor
+		ids = append(ids, competitor.ID)
+	}
+
+	return competitors, ids, nil
+}
+
+// loadProposalCompetitors returns every competitor by id after checking each exists, is
+// entered in the stage's event and is checked in, so a proposal can be created as is.
+// The first failure is reported in request order.
 func (s *poolStageService) loadProposalCompetitors(
 	ctx context.Context,
 	stage PoolStage,
@@ -144,6 +170,9 @@ func (s *poolStageService) loadProposalCompetitors(
 		if competitor.EventID != stage.EventID {
 			return nil, errs.Public(
 				fmt.Sprintf("competitor %s is not entered in this pool stage's event", id), errs.ErrInvalidInput)
+		}
+		if competitor.CheckedInAt == nil {
+			return nil, errs.Public(fmt.Sprintf("competitor %s is not checked in", id), errs.ErrInvalidInput)
 		}
 	}
 

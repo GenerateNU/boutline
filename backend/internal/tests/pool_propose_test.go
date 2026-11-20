@@ -8,6 +8,7 @@ import (
 	"boutline/internal/features/poolstage"
 	"boutline/internal/tests/testkit"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,6 +21,8 @@ func TestProposePoolsAgainstRealDatabase(t *testing.T) {
 	route := "/api/v1/pool-stages/" + poolCreateStageID + "/proposed-pools"
 	// Propose refuses a stage that already has pools, so don't depend on test order.
 	poolCreateEmptyStage(t, app, headers)
+
+	poolCreateCheckInAll(t, app, headers)
 
 	t.Run("splits the field into balanced pools without saving them", func(t *testing.T) {
 		before := poolCreateStageTotal(t, app, headers)
@@ -51,6 +54,47 @@ func TestProposePoolsAgainstRealDatabase(t *testing.T) {
 		assert.Equal(t, before, poolCreateStageTotal(t, app, headers), "a proposal saves no pools")
 	})
 
+	t.Run("proposes the event's checked-in fencers when none are listed", func(t *testing.T) {
+		result := testkit.New(t).
+			Request(testkit.Request{App: app, Route: route, Method: testkit.POST, Headers: headers,
+				Body: map[string]any{}}).
+			AssertStatus(http.StatusOK)
+
+		raw, err := json.Marshal(result.GetBody())
+		require.NoError(t, err)
+		var body poolstage.PoolStageProposalResult
+		require.NoError(t, json.Unmarshal(raw, &body))
+		require.Len(t, body.Pools, 2)
+
+		proposed := []string{}
+		for _, pool := range body.Pools {
+			assert.Len(t, pool.Fencers, 6)
+			for _, fencer := range pool.Fencers {
+				proposed = append(proposed, fencer.CompetitorID)
+			}
+		}
+		want := make([]string, 0, 12)
+		for n := 1; n <= 12; n++ {
+			want = append(want, poolCreateCompetitorID(n))
+		}
+		assert.ElementsMatch(t, want, proposed)
+	})
+
+	t.Run("refuses a fencer who isn't checked in", func(t *testing.T) {
+		poolProposeSetCheckedIn(t, app, headers, 12, false).AssertStatus(http.StatusOK)
+		t.Cleanup(func() { poolProposeSetCheckedIn(t, app, headers, 12, true).AssertStatus(http.StatusOK) })
+
+		ids := make([]string, 0, 12)
+		for n := 1; n <= 12; n++ {
+			ids = append(ids, poolCreateCompetitorID(n))
+		}
+		result := testkit.New(t).
+			Request(testkit.Request{App: app, Route: route, Method: testkit.POST, Headers: headers,
+				Body: map[string]any{"competitor_ids": ids}}).
+			AssertStatus(http.StatusBadRequest)
+		assert.Contains(t, result.GetBody()["detail"], "is not checked in")
+	})
+
 	rejects := []struct {
 		name  string
 		other string
@@ -71,4 +115,15 @@ func TestProposePoolsAgainstRealDatabase(t *testing.T) {
 			assert.Contains(t, result.GetBody()["detail"], "is not entered in this pool stage's event")
 		})
 	}
+}
+
+func poolProposeSetCheckedIn(
+	t *testing.T, app *fiber.App, headers map[string]string, n int, checkedIn bool,
+) *testkit.IntegrationTestBuilder {
+	t.Helper()
+
+	return testkit.New(t).Request(testkit.Request{
+		App: app, Route: "/api/v1/competitors/" + poolCreateCompetitorID(n), Method: testkit.PATCH,
+		Headers: headers, Body: map[string]any{"checkedIn": checkedIn},
+	})
 }

@@ -23,7 +23,10 @@ type PoolStageRepository interface {
 	CountPoolStagePools(ctx context.Context, id uuid.UUID) (total, open int64, err error)
 	DeletePoolStageByID(ctx context.Context, id uuid.UUID) error
 	ListPoolStageCompetitors(ctx context.Context, competitorIDs []uuid.UUID) ([]PoolStageCompetitor, error)
+	ListCheckedInEventCompetitors(ctx context.Context, eventID uuid.UUID) ([]PoolStageCompetitor, error)
 }
+
+const poolStageCompetitorColumns = "id, event_id, first_name, last_name, rating, team, checked_in_at"
 
 type PoolStageUpdate struct {
 	MaxCompetitorPerPool *int
@@ -205,11 +208,27 @@ func (r *poolStageRepository) ListPoolStageCompetitors(ctx context.Context, comp
 
 	err := r.db.WithContext(ctx).
 		Table("competitors").
-		Select("id, event_id, first_name, last_name, rating, team").
+		Select(poolStageCompetitorColumns).
 		Where("id IN ?", competitorIDs).
 		Scan(&competitors).Error
 	if err != nil {
 		return nil, fmt.Errorf("select competitors: %w", err)
+	}
+
+	return competitors, nil
+}
+
+func (r *poolStageRepository) ListCheckedInEventCompetitors(ctx context.Context, eventID uuid.UUID) ([]PoolStageCompetitor, error) {
+	var competitors []PoolStageCompetitor
+
+	err := r.db.WithContext(ctx).
+		Table("competitors").
+		Select(poolStageCompetitorColumns).
+		Where("event_id = ? AND checked_in_at IS NOT NULL", eventID).
+		Order("last_name, first_name, id").
+		Scan(&competitors).Error
+	if err != nil {
+		return nil, fmt.Errorf("select checked-in competitors: %w", err)
 	}
 
 	return competitors, nil

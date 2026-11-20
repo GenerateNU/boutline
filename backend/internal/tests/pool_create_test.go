@@ -28,6 +28,15 @@ func poolCreateCompetitorID(n int) string {
 	return fmt.Sprintf("d0000000-0000-4000-8000-%012d", 32+n)
 }
 
+// poolCreateCheckInAll checks in all twelve, since only checked-in fencers can be placed in a pool.
+func poolCreateCheckInAll(t *testing.T, app *fiber.App, headers map[string]string) {
+	t.Helper()
+
+	for n := 1; n <= 12; n++ {
+		poolProposeSetCheckedIn(t, app, headers, n, true).AssertStatus(http.StatusOK)
+	}
+}
+
 // poolCreateToken signs in Alex Morgan, an admin of Fall Open, the stage's tournament.
 func poolCreateToken(t *testing.T, app *fiber.App) string {
 	t.Helper()
@@ -232,6 +241,7 @@ func TestCreatePoolsAgainstRealDatabase(t *testing.T) {
 	app := testkit.GetDBTestApp(t)
 	headers := map[string]string{"Authorization": "Bearer " + poolCreateToken(t, app)}
 	fixture := poolCreateFixture{app: app, headers: headers}
+	poolCreateCheckInAll(t, app, headers)
 	t.Cleanup(func() { poolCreateEmptyStage(t, app, headers) })
 
 	t.Run("a bad referee rolls back every pool in the request", func(t *testing.T) {

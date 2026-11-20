@@ -1,9 +1,11 @@
 package test
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"boutline/internal/errs"
@@ -246,6 +248,30 @@ func (f *FakePoolStageRepository) ListPoolStageCompetitors(
 			competitors = append(competitors, competitor)
 		}
 	}
+
+	return competitors, nil
+}
+
+func (f *FakePoolStageRepository) ListCheckedInEventCompetitors(
+	_ context.Context,
+	eventID uuid.UUID,
+) ([]poolstage.PoolStageCompetitor, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	var competitors []poolstage.PoolStageCompetitor
+	for _, competitor := range f.Competitors {
+		if competitor.EventID == eventID && competitor.CheckedInAt != nil {
+			competitors = append(competitors, competitor)
+		}
+	}
+	slices.SortFunc(competitors, func(a, b poolstage.PoolStageCompetitor) int {
+		return cmp.Or(
+			strings.Compare(a.LastName, b.LastName),
+			strings.Compare(a.FirstName, b.FirstName),
+			strings.Compare(a.ID.String(), b.ID.String()))
+	})
 
 	return competitors, nil
 }
