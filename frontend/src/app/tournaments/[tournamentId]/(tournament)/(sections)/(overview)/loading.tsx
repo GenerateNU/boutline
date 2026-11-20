@@ -16,7 +16,6 @@ export default function OverviewTabLoading() {
       </span>
 
       <Card aria-hidden className="gap-2">
-        <Skeleton className="h-7 w-3/4" />
         {LABEL_WIDTHS.map((width) => (
           <Skeleton key={width} className={`h-4 ${width}`} />
         ))}

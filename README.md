@@ -1,7 +1,8 @@
 # boutline
 
 Monorepo: `frontend/` is Next.js 16 + React 19 + Tailwind 4, `backend/` is a Go +
-Fiber API with Postgres, `docs/` holds design specs.
+Fiber API with Postgres. `docs/BOUTLINE.md` describes the product and
+`docs/DESIGN.md` its design practices.
 
 - [Prerequisites](#prerequisites)
 - [Setup](#setup)

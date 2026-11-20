@@ -43,6 +43,7 @@
   --color-disabled-border: var(--disabled-border);
   --color-disabled-foreground: var(--disabled-foreground);
   --color-obsidian: var(--obsidian);
+  --color-charcoal: var(--charcoal);
   --color-fencing-white: var(--fencing-white);
   --color-blue-lightest: var(--blue-lightest);
   --color-blue-soft: var(--blue-soft);
@@ -90,6 +91,8 @@
   --animate-sheet-in: sheet-in 250ms cubic-bezier(0.32, 0.72, 0, 1);
   --animate-sheet-out: sheet-out 200ms ease-in;
   --animate-shimmer: shimmer 1.5s ease-in-out infinite;
+  --animate-tab-in: tab-in 300ms ease-in-out backwards;
+  --animate-tab-row-in: tab-row-in 250ms ease-in-out;
 
   /* `scale` and `translate` are their own properties, so these don't clobber
      Tailwind's -translate-*-1/2 centring the way a `transform` keyframe would. */
@@ -134,6 +137,25 @@
   @keyframes fade-out {
     to {
       opacity: 0;
+    }
+  }
+  /* `backwards` holds a staggered tab hidden through its animation-delay. */
+  @keyframes tab-in {
+    from {
+      opacity: 0;
+      translate: -0.5rem 0;
+    }
+  }
+  /* The clip tracks the slide, so the row seems to come out from under the global
+     nav rather than over it. The negative bottom inset leaves room for its shadow. */
+  @keyframes tab-row-in {
+    from {
+      opacity: 0;
+      translate: 0 -100%;
+      clip-path: inset(100% 0 -1rem 0);
+    }
+    to {
+      clip-path: inset(0 0 -1rem 0);
     }
   }
   @keyframes shimmer {
@@ -203,6 +225,7 @@
   --disabled-border: #ccd1d9;
   --disabled-foreground: #6e7582;
   --obsidian: #010d21;
+  --charcoal: #1e1e1e;
   --fencing-white: #fafafa;
   --blue-lightest: #f2f6fe;
   --blue-soft: #dbe3f9;

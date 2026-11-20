@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 
 import { TournamentInfoCard } from "./tournament-info-card";
 
@@ -32,10 +32,9 @@ describe("TournamentInfoCard", () => {
 
   it.each(cases)("renders $name", ({ dates, location, shown }) => {
     const { container } = render(
-      <TournamentInfoCard name="Boston Open" dates={dates} location={location} />,
+      <TournamentInfoCard dates={dates} location={location} />,
     );
 
-    expect(screen.getByRole("heading", { level: 1, name: "Boston Open" })).toBeInTheDocument();
     const rows = Array.from(container.querySelectorAll("[data-slot='label']")).map(
       (row) => row.textContent,
     );

@@ -82,9 +82,8 @@ function EventFilterSheet({ eventDays }: EventFilterSheetProps) {
       </ChipGroup>
 
       <DateField
-        key={date?.getTime()}
         label="Date"
-        defaultValue={date}
+        value={date}
         onValueChange={setDate}
         eventDates={eventDays.flatMap((day) => parseDateParam(day) ?? [])}
       />

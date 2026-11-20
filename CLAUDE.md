@@ -1,8 +1,8 @@
 # boutline
 
 Monorepo. `frontend/` — Next.js 16 App Router, React 19, TypeScript, Tailwind 4, Bun.
-`backend/` — Go 1.25 + Fiber, layered architecture. `docs/` — design specs and style
-guides, authoritative once present.
+`backend/` — Go 1.25 + Fiber, layered architecture. `docs/` — the product spec and
+the design practices (see Docs below).
 
 ## Commands
 
@@ -34,10 +34,22 @@ These override defaults you would otherwise apply.
 - When this file and the surrounding code disagree on naming or structure, match the
   surrounding code and mention the conflict.
 
+## Docs
+
+- `docs/BOUTLINE.md` describes the product: features, rules, data, API, and the
+  status and tickets of each step. Screens get only a general description of what
+  they show and do. Update it when what a feature does changes — a new feature,
+  endpoint, rule or lifecycle, or a step changing status. Frontend changes to
+  layout, styling, components or implementation don't touch it.
+- `docs/DESIGN.md` holds design practices only: the visual language, layout,
+  navigation, motion, components and loading states. Update it when a practice
+  itself changes or a new reusable one is set, not for each screen built with the
+  existing ones.
+
 ## Before writing code
 
-- Frontend work: read `docs/design.md` first and follow it. If it does not exist yet,
-  say so and ask rather than inventing a design system.
+- Read the chapter of `docs/BOUTLINE.md` for the feature you're working on.
+- Frontend work: read `docs/DESIGN.md` first and follow it.
 - Ask before adding a dependency, changing build/CI setup, or adding a top-level
   directory.
 
