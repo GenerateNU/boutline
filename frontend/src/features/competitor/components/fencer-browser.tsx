@@ -1,7 +1,10 @@
+import Link from "next/link";
+
 import { ActiveFilterChips } from "@/components/primitives/active-filter-chips";
-import { Pagination } from "@/components/primitives/pagination";
+import { Button } from "@/components/primitives/button";
 import { Text } from "@/components/primitives/text";
-import { FencerCard } from "@/features/competitor/components/fencer-card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/primitives/tooltip";
+import { CheckInCard } from "@/features/competitor/components/check-in-card";
 import { FencerFilterSheet } from "@/features/competitor/components/fencer-filter-sheet";
 import {
   FENCER_PAGE_SIZE,
@@ -13,7 +16,7 @@ import {
 import { getCompetitors } from "@/features/competitor/services/getCompetitors";
 import { AGE_OPTIONS, WEAPON_OPTIONS } from "@/features/event/lib/event-filters";
 import { SearchForm } from "@/features/tournament/components/search-form";
-import type { SearchParams } from "@/lib/search-params";
+import { readStringParam, type SearchParams } from "@/lib/search-params";
 
 interface FencerBrowserProps {
   tournamentId: string;
@@ -21,6 +24,8 @@ interface FencerBrowserProps {
   query: SearchParams;
   // Set on an event's page, which lists only that event's fencers.
   eventId?: string;
+  // Admins get an Edit Mode button (?edit=1) that turns check-in into checkboxes.
+  canEdit?: boolean;
 }
 
 interface EmptyMessageInput {
@@ -43,14 +48,15 @@ function emptyMessage({ search, hasFilters, eventId }: EmptyMessageInput) {
 }
 
 // The searchable, filterable fencer list shared by the tournament and event Fencers tabs.
-async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerBrowserProps) {
+async function FencerBrowser({ tournamentId, basePath, query, eventId, canEdit = false }: FencerBrowserProps) {
   const filters = parseFencerFilters(query);
-  const { offset, search, team, rating, gender } = filters;
+  const { search, team, rating, gender } = filters;
   // An event has one weapon and age category, so those filters only mean something tournament-wide.
   const weapon = eventId ? undefined : filters.weapon;
   const ageCategory = eventId ? undefined : filters.ageCategory;
+  const editing = canEdit && readStringParam(query, "edit") === "1";
 
-  const { data, total, limit } = await getCompetitors(tournamentId, FENCER_PAGE_SIZE, offset, {
+  const { data, total, checkedIn, limit } = await getCompetitors(tournamentId, FENCER_PAGE_SIZE, 0, {
     eventId,
     query: search,
     team,
@@ -88,25 +94,41 @@ async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerB
 
       <ActiveFilterChips filters={activeFilters} />
 
+      {canEdit && (
+        <div className="flex gap-2">
+          <Button asChild size="sm">
+            <Link href={editing ? basePath : `${basePath}?edit=1`}>{editing ? "Done" : "Edit Mode"}</Link>
+          </Button>
+          {editing && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <Button size="sm" variant="outline" disabled>
+                    Add fencers
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Coming soon</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      )}
+
+      {data.length > 0 && (
+        <CheckInCard
+          competitors={data}
+          checkedInTotal={checkedIn}
+          editable={editing}
+          source={{ tournamentId, eventId, query: search, team, rating, gender, weapon, ageCategory }}
+          total={total}
+          pageSize={limit}
+        />
+      )}
+
       {data.length === 0 && (
         <Text variant="muted">{emptyMessage({ search, hasFilters, eventId })}</Text>
       )}
 
-      <ul className="flex flex-col gap-3">
-        {data.map((competitor) => (
-          <li key={competitor.id}>
-            <FencerCard competitor={competitor} pinned={false} />
-          </li>
-        ))}
-      </ul>
-
-      <Pagination
-        total={total}
-        limit={limit}
-        offset={offset}
-        basePath={basePath}
-        params={{ q: search || undefined, team, rating, gender, weapon, ageCategory }}
-      />
     </>
   );
 }
