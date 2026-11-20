@@ -13,7 +13,7 @@ context.
 
 **2. Approve.** Show me the plan's goal, contracts, and slice list, then wait. Do not
 start implementing until I say go. If the planner flagged a blocker or a missing
-`docs/design.md`, lead with that.
+`docs/DESIGN.md`, lead with that.
 
 **3. Execute.** Launch one `implementer` subagent (Sonnet) per slice marked
 `parallel: yes`, all in a single message so they run concurrently. Hold back any slice

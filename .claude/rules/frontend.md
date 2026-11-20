@@ -7,10 +7,13 @@ paths:
 
 ## Design source of truth
 
-Read `docs/design.md` before writing or changing any UI, and follow it for tokens,
+Read `docs/DESIGN.md` before writing or changing any UI, and follow it for tokens,
 spacing, typography, and component anatomy. Do not introduce ad-hoc hex colors or
-one-off spacing values. If `docs/design.md` is missing, stop and ask instead of
+one-off spacing values. If `docs/DESIGN.md` is missing, stop and ask instead of
 improvising a visual language.
+
+A frontend change updates `docs/BOUTLINE.md` only when it changes what a feature
+does, not how a screen looks or is built.
 
 ## Next.js
 
