@@ -121,7 +121,7 @@ func checkFencerCounts(requests []poolRequest, limit int) error {
 }
 
 // checkEntrants checks that every requested competitor exists, is entered in the
-// stage's event, is checked in (design §11.2), and is not already in one of the stage's pools other than
+// stage's event, is checked in, and is not already in one of the stage's pools other than
 // exceptPoolID (uuid.Nil for none).
 func checkEntrants(
 	ctx context.Context,

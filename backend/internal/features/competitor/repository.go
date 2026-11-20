@@ -36,7 +36,6 @@ var (
 type CompetitorRepository interface {
 	CreateCompetitor(ctx context.Context, competitor *Competitor) error
 	GetCompetitorByID(ctx context.Context, id uuid.UUID) (*Competitor, error)
-	// ListCompetitors returns the page plus how many rows match the filter and how many of those are checked in.
 	ListCompetitors(ctx context.Context, filter CompetitorListFilter) ([]Competitor, int64, int64, error)
 	UpdateCompetitorByID(ctx context.Context, id uuid.UUID, update CompetitorUpdate) error
 	DeleteCompetitor(ctx context.Context, id uuid.UUID) error
@@ -249,7 +248,6 @@ func (r *competitorRepository) ListCompetitors(
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, 0, fmt.Errorf("count competitors: %w", err)
 	}
-	// A fresh session copies the conditions, so the extra Where doesn't leak into the page query.
 	if err := query.Session(&gorm.Session{}).Where("checked_in_at IS NOT NULL").Count(&checkedIn).Error; err != nil {
 		return nil, 0, 0, fmt.Errorf("count checked-in competitors: %w", err)
 	}
