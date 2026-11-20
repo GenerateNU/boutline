@@ -9,6 +9,7 @@ import (
 	"boutline/internal/features/eventresult"
 	"boutline/internal/features/health"
 	"boutline/internal/features/pool"
+	"boutline/internal/features/poolresult"
 	"boutline/internal/features/poolstage"
 	"boutline/internal/features/scoring"
 	"boutline/internal/features/tableau"
@@ -31,6 +32,7 @@ func SetUpRoutes(app *fiber.App, routeParams types.RouteParams) {
 	event.RegisterEventRoutes(routeParams.API, routeParams.ServiceParams)
 	tableau.RegisterTableauRoutes(routeParams.API, routeParams.ServiceParams)
 	eventresult.RegisterEventResultRoutes(routeParams.API, routeParams.ServiceParams)
+	poolresult.RegisterPoolResultRoutes(routeParams.API, routeParams.ServiceParams)
 	user.RegisterUserRoutes(routeParams.API, routeParams.ServiceParams)
 	competitor.RegisterCompetitorRoutes(routeParams.API, routeParams.ServiceParams)
 	athlete.RegisterAthleteRoutes(routeParams.API, routeParams.ServiceParams)
