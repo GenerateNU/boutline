@@ -8,10 +8,17 @@ import {
 import EventLoading from "./loading";
 
 const mockParams = jest.fn();
+const mockPathname = jest.fn();
 jest.mock("next/navigation", () => ({
   useParams: () => mockParams(),
-  usePathname: () => `/tournaments/${mockParams().tournamentId}/events/${mockParams().eventId}/pooling`,
+  usePathname: () => mockPathname(),
 }));
+
+function renderAt(tournamentId: string, eventId: string, rest: string) {
+  mockParams.mockReturnValue({ tournamentId, eventId });
+  mockPathname.mockReturnValue(`/tournaments/${tournamentId}/events/${eventId}${rest}`);
+  render(<EventLoading />);
+}
 
 describe("EventLoading", () => {
   rememberTournamentName("t-known", "Spring Open");
@@ -19,11 +26,9 @@ describe("EventLoading", () => {
 
   it.each([
     { tournamentId: "t-known", eventId: "e-known", backName: "Spring Open", heading: "Men's Epee" },
-    { tournamentId: "t-unknown", eventId: "e-unknown", backName: "", heading: null },
+    { tournamentId: "t-unknown", eventId: "e-unknown", backName: "Back to tournament", heading: null },
   ])("draws the header for $tournamentId", ({ tournamentId, eventId, backName, heading }) => {
-    mockParams.mockReturnValue({ tournamentId, eventId });
-
-    render(<EventLoading />);
+    renderAt(tournamentId, eventId, "/pooling");
 
     const backLinks = screen
       .getAllByRole("link")
@@ -31,6 +36,16 @@ describe("EventLoading", () => {
     expect(backLinks).toHaveLength(1);
     expect(backLinks[0]).toHaveAccessibleName(backName);
     expect(screen.queryByRole("heading", { level: 1 })?.textContent ?? null).toBe(heading);
-    expect(screen.getByText("Loading pools")).toBeInTheDocument();
+  });
+
+  it.each([
+    { rest: "/pooling", skeleton: "Loading pools" },
+    { rest: "/pooling/p1", skeleton: "Loading pool" },
+    { rest: "/fencers", skeleton: null },
+  ])("draws the matching skeleton under $rest", ({ rest, skeleton }) => {
+    renderAt("t-known", "e-known", rest);
+
+    const statuses = screen.getAllByRole("status").map((status) => status.textContent);
+    expect(statuses).toEqual(skeleton ? ["Loading event", skeleton] : ["Loading event"]);
   });
 });

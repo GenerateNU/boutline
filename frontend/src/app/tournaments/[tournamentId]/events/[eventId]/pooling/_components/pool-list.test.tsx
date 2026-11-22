@@ -103,13 +103,21 @@ describe("PoolList search suggestions", () => {
     expect(suggestions("Clubs")).toEqual(clubs);
   });
 
-  it("searches for a picked suggestion and closes the list", () => {
+  it.each([
+    { by: "pointer", focusOption: false, searchFocused: false },
+    { by: "keyboard", focusOption: true, searchFocused: true },
+  ])("searches for a suggestion picked by $by and closes the list", ({ focusOption, searchFocused }) => {
     const search = typeInSearch("cambridge");
+    const option = screen.getByRole("button", { name: "Cambridge FC" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Cambridge FC" }));
+    if (focusOption) {
+      act(() => option.focus());
+    }
+    fireEvent.click(option);
 
     expect(search).toHaveValue("Cambridge FC");
     expect(screen.queryByRole("region", { name: "Clubs" })).not.toBeInTheDocument();
+    expect(document.activeElement === search).toBe(searchFocused);
     expect(titles()).toEqual([poolTitles[1], poolTitles[2], poolTitles[3]]);
   });
 });

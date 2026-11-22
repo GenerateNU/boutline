@@ -21,7 +21,7 @@ export function PoolsSkeleton() {
         Loading pools
       </span>
       <div className="flex max-w-[calc(var(--container-mobile)-2rem)] gap-2">
-        <PoolSearch value="" onChange={ignoreChange} options={NO_OPTIONS} />
+        <PoolSearch value="" onChange={ignoreChange} options={NO_OPTIONS} disabled />
         <Skeleton className="size-11.5 rounded-[12px]" />
       </div>
       <ul aria-hidden className="flex flex-col gap-6 lg:grid lg:grid-cols-3">
