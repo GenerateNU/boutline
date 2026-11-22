@@ -15,7 +15,7 @@ export default function PoolPageLoading() {
   const { tournamentId, eventId } = useParams<{ tournamentId: string; eventId: string }>();
 
   return (
-    <div className="flex flex-col gap-6 font-manrope">
+    <div className="flex flex-col gap-6 font-manrope lg:w-fit">
       <span role="status" className="sr-only">
         Loading pool
       </span>
@@ -32,7 +32,7 @@ export default function PoolPageLoading() {
           <Skeleton className="h-4 w-16" />
         </div>
       </div>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[repeat(2,24rem)] lg:items-start">
         <PoolTableSkeleton />
         <div className="overflow-hidden rounded-[12px] border border-outline bg-card">
           <table className="w-full border-collapse">

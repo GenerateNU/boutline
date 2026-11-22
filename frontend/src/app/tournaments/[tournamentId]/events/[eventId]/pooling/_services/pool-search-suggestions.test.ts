@@ -13,7 +13,12 @@ function labels(query: string) {
 
 describe("poolSearchSuggestions", () => {
   it.each([
-    { case: "an empty query", query: "  ", fencers: [], clubs: [] },
+    {
+      case: "an empty query",
+      query: "  ",
+      fencers: ["Ava Johnson", "Liam O'Brien", "Maya Chen", "Nora Silva", "Noah Park"],
+      clubs: ["Boston Fencing Club", "Northeastern Fencing", "NYAC Fencing"],
+    },
     { case: "a fencer-only match", query: "chen", fencers: ["Maya Chen"], clubs: [] },
     { case: "a club-only match", query: "nyac", fencers: [], clubs: ["NYAC Fencing"] },
     { case: "matches in both groups", query: "no", fencers: ["Nora Silva", "Noah Park"], clubs: ["Northeastern Fencing"] },

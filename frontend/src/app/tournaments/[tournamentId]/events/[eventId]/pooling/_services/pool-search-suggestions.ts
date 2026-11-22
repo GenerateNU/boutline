@@ -12,9 +12,15 @@ export interface PoolSearchSuggestions {
   clubs: Suggestion[];
 }
 
+function groupSuggestions(names: string[], query: string): Suggestion[] {
+  // An empty field lists the first names so focusing it shows what can be searched.
+  const matches = matchingSuggestions(names, query) ?? names.map((name) => ({ value: name, label: name }));
+  return matches.slice(0, MAX_PER_GROUP);
+}
+
 export function poolSearchSuggestions(options: PoolFilterOptions, query: string): PoolSearchSuggestions {
   return {
-    fencers: (matchingSuggestions(options.fencers, query) ?? []).slice(0, MAX_PER_GROUP),
-    clubs: (matchingSuggestions(options.clubs, query) ?? []).slice(0, MAX_PER_GROUP),
+    fencers: groupSuggestions(options.fencers, query),
+    clubs: groupSuggestions(options.clubs, query),
   };
 }

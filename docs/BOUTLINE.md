@@ -1314,9 +1314,10 @@ results, stored on the DE entry (§12.1).
 
 - **Pool list:** the event's pools from `GET /pool-sheets?event_id=…`, each showing
   either its V/D grid or its standings (place, fencer, V, V/M, TS, TR, Ind), with a
-  link to the pool page. Pools can be searched by fencer or club name, filtered by
-  fencer, club, status and pool number, and sorted by pool number, start time or
-  strip. A pool can be pinned (§6.3), and pinned pools always lead the list.
+  link to the pool page. Pools can be searched by fencer or club name (focusing the
+  empty search lists the first five of each, so it shows what can be searched),
+  filtered by fencer, club, status and pool number, and sorted by pool number,
+  start time or strip. A pool can be pinned (§6.3), and pinned pools always lead the list.
 - **Pool page:** one pool from `GET /pool-sheets/{id}` (not found for an unknown or
   malformed id): its status, fencer count, V/D grid and standings. Tapping a bout in
   the grid shows that bout: its fencers, scores, winner, status and strip. For the

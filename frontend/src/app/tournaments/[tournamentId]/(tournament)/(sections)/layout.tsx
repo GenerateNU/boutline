@@ -4,6 +4,7 @@ import { BackButton } from "@/components/primitives/back-button";
 import { Text } from "@/components/primitives/text";
 import { getTournament } from "@/features/tournament/services/getTournament";
 
+import { RememberTournamentName } from "../_components/remember-tournament-name";
 import { TournamentTabNav } from "../_components/tournament-tab-nav";
 
 // A route group, so the tournament tabs skip event pages, which carry their own tab bar.
@@ -21,6 +22,7 @@ export default async function TournamentSectionsLayout({
 
   return (
     <>
+      <RememberTournamentName tournamentId={tournament.id} name={tournament.name} />
       <TournamentTabNav />
       <div className="mx-auto flex w-full max-w-mobile flex-col gap-4 px-4 pt-4 pb-20 font-manrope">
         <BackButton href="/tournaments" className="self-start">

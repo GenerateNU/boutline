@@ -24,6 +24,9 @@ still look like the earlier outlined set. Components use tokens, never raw color
   still scroll. Scrollable areas inside a page keep their scrollbars.
 - A row of controls too wide for the screen scrolls sideways with its scrollbar
   hidden, and fades out at the edge with more past it as the scroll hint.
+- An event's tabs lay out in `EventTabBody`, the centred column. From `lg`, Pools
+  leaves it for a `px-10` margin, with its cards in a three-column grid and the pool
+  page in two 24rem columns, left-aligned with the search row at phone length.
 
 ## Navigation
 
@@ -165,6 +168,10 @@ data changes when it lands. Controls that would act on unloaded data are disable
   that fetches gets its boundary one level up, which draws its tabs too (the
   dashboard's `(dashboard)` group, the tournament's `(tournament)` group, the event
   shell in `events/loading.tsx`).
+- The event shell lays out in the tab's own `EventTabBody` column and draws the Pools
+  skeleton on Pools, so nothing jumps when the layout resolves. Its back link is
+  always real. The tournament and event names it already saw on the way in
+  (remembered on navigation, in memory) render for real and shimmer on a fresh load.
 - Route groups and in-page `Suspense` keep a fallback off pages it doesn't fit:
   `/tournaments` and `/admin/tournaments` use `Suspense`, and an event's fencer list
   sits in `fencers/(list)`. Client fetches render their skeleton in place.

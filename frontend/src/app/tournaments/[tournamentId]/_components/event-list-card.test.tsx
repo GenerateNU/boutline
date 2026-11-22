@@ -69,7 +69,7 @@ describe("EventListCard", () => {
       const text = normalise(links[i].textContent);
       row.forEach((part) => expect(text).toContain(part));
       expect(within(links[i]).getByText(row[1])).toBeInTheDocument();
-      expect(links[i]).toHaveAttribute("href", `/tournaments/t1/events/${events[i].id}`);
+      expect(links[i]).toHaveAttribute("href", `/tournaments/t1/events/${events[i].id}/pooling`);
     });
 
     if (rows.length === 0) {

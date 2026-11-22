@@ -34,8 +34,8 @@ export function PoolSearch({ value, onChange, options }: PoolSearchProps) {
     <SearchBar
       ref={inputRef}
       type="search"
-      aria-label="Search pools"
-      placeholder="Search pools"
+      aria-label="Search fencers or clubs"
+      placeholder="Search fencers or clubs"
       value={value}
       onChange={(event) => onChange(event.target.value)}
       className="flex-1"

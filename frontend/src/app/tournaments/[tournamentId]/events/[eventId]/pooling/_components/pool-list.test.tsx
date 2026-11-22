@@ -54,7 +54,7 @@ function titles(): string[] {
 
 function renderList(query: string) {
   render(<PoolList pools={poolBoards} poolingPath="/tournaments/t/events/e/pooling" />);
-  fireEvent.change(screen.getByRole("searchbox", { name: "Search pools" }), { target: { value: query } });
+  fireEvent.change(screen.getByRole("searchbox", { name: "Search fencers or clubs" }), { target: { value: query } });
 }
 
 function openFilterSheet() {
@@ -74,7 +74,7 @@ function chip(sheet: HTMLElement, name: string) {
 
 function typeInSearch(query: string) {
   render(<PoolList pools={poolBoards} poolingPath="/tournaments/t/events/e/pooling" />);
-  const search = screen.getByRole("searchbox", { name: "Search pools" });
+  const search = screen.getByRole("searchbox", { name: "Search fencers or clubs" });
   act(() => search.focus());
   fireEvent.change(search, { target: { value: query } });
   return search;
@@ -87,6 +87,11 @@ function suggestions(group: string): string[] {
 
 describe("PoolList search suggestions", () => {
   it.each([
+    {
+      query: "",
+      fencers: ["Amara Okafor", "Caitlin Lee", "Ethan Kowalski", "Mateo Garcia", "Maya Chen"],
+      clubs: ["Boston Fencing Club", "Cambridge FC", "MIT Fencing", "New York Fencers Club"],
+    },
     { query: "zoe", fencers: ["Zoe Kim"], clubs: [] },
     { query: "cambridge", fencers: [], clubs: ["Cambridge FC"] },
     { query: "new", fencers: [], clubs: ["New York Fencers Club"] },
