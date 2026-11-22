@@ -95,7 +95,7 @@ async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerB
       <ul className="flex flex-col gap-3">
         {data.map((competitor) => (
           <li key={competitor.id}>
-            <FencerCard competitor={competitor} pinned={false} />
+            <FencerCard competitor={competitor} />
           </li>
         ))}
       </ul>

@@ -647,33 +647,36 @@ can score any bout.**
 
 ## 6. Pinning
 
-**Status:** Partial. The state, the batch fetch and the pinned view are built; no
-page has a pin control yet.
+**Status:** Completed.
 
-**What it is:** a spectator pins the fencers and bouts they care about (their
-child, their clubmates, the bout on strip 4) and sees them together, without
-creating an account.
+**What it is:** a spectator pins the fencers, clubs, pools and tableaus they care
+about (their child, their clubmates, the pool on strip 4) and sees them together,
+without creating an account.
 
 ### 6.1 Pinned state
 
 **Status:** Completed.
 
-Pins live in the browser's `sessionStorage` (`boutline:pinned`, up to 100 fencers
-and 100 bouts), never in the database. The pinned view fetches the pinned fencers
-in one request with the `ids` filter on `/competitors` (§B.1). The design pins
-fencers, clubs and pools, not bouts, so pinned bouts are stored but not shown;
-whether `boutIds` should become `clubIds` and `poolIds` is open.
+Pins live in the browser's `sessionStorage` (`boutline:pinned`), never in the
+database: pinned fencer ids, plus club, pool and tableau snapshots that carry their
+tournament (pools and tableaus also their event id and name, pools their title). Up
+to 100 of each kind. Pins saved before this keep their fencers; their old bout and
+pool pins are dropped.
 
 ### 6.2 The pinned view
 
 **Status:** Completed.
 
-`/pinned` is "View Pins", with tabs All / Fencers / Clubs / Pools and a Back link.
-All lists Fencers, Clubs and Pools in that order.
+`/pinned` is "View Pins", with tabs All / Fencers / Clubs / Pools / Tableaus and a
+Back link. All lists Fencers, Clubs, Pools and Tableaus in that order.
 
-- A fencer shows their name, country · club and rating, and links to their event
-  fencer page. Fencers sort by name, and each one's pin unpins them.
-- Clubs and Pools show an empty state until clubs and pools can be pinned.
+- **Fencers:** each pinned fencer shows their card, then their bouts, pool and
+  tableau, from `GET /pool-sheets?event_id=` and `GET /events/{id}/tableau`. A bout
+  is not linked and shows its stage, the opponent and the score, or "Upcoming".
+- **Clubs:** rows linking to the club's fencer filter.
+- **Pools:** full pool cards, loaded live with `GET /pool-sheets?ids=` (§11.3).
+- **Tableaus:** rows linking to the event's Tableau tab.
+- Every item's pin unpins it.
 - Every tournament page except the referee screen has a floating pin button
   linking to `/pinned?tournamentId=…`, which Back returns to.
 
@@ -683,12 +686,12 @@ every pin when it's opened without one.
 
 ### 6.3 Pin controls
 
-**Status:** Partial. Pools can be pinned (§11.6); the rest is Planned.
+**Status:** Completed.
 
-A pin toggle on each fencer row, on clubs and on pools, and listing pinned clubs
-and pools. Pool pins are stored with the others as `poolIds`;
-pins saved before that keep their fencers and bouts. `/pinned` doesn't list pinned
-pools yet.
+A pin toggle sits on fencer rows (the tournament and event Fencers tabs), club
+rows, pool cards and the pool page header, and the tableau toolbar once the tableau
+is drawn. Event pages have no separate pinned section; pinned pools lead the pool
+list (§11.6).
 
 ---
 

@@ -1,60 +1,34 @@
 "use client";
 
+import { useMemo } from "react";
+
+import { PoolCard } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_components/pool-card";
+import { ListCard } from "@/components/primitives/list-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/primitives/tabs";
+import { ClubCard } from "@/features/competitor/components/club-card";
 import { FencerCard } from "@/features/competitor/components/fencer-card";
+import { FencerBoutList } from "@/features/pinning/components/fencer-bout-list";
 import { PinnedItemsSkeleton } from "@/features/pinning/components/pinned-items-skeleton";
 import { usePinnedFencers } from "@/features/pinning/hooks/use-pinned-fencers";
-import type { Competitor } from "@/types/competitor";
+import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
+import { usePinnedPools } from "@/features/pinning/hooks/use-pinned-pools";
+import { pinnedInTournament } from "@/features/pinning/services/pinned-in-tournament";
 
 interface PinnedSectionProps {
   title: string;
+  empty: string;
+  isEmpty: boolean;
   children: React.ReactNode;
 }
 
 // The Figma's section headings are black and sentence case, unlike the shared
 // Section's small gray caps.
-function PinnedSection({ title, children }: PinnedSectionProps) {
+function PinnedSection({ title, empty, isEmpty, children }: PinnedSectionProps) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-base font-medium text-obsidian">{title}</h2>
-      {children}
+      {isEmpty ? <p className="text-sm text-neutral-secondary">{empty}</p> : <ul className="flex flex-col gap-2">{children}</ul>}
     </section>
-  );
-}
-
-interface FencerSectionProps {
-  fencers: Competitor[];
-  onUnpin: (id: string) => void;
-}
-
-function FencerSection({ fencers, onUnpin }: FencerSectionProps) {
-  return (
-    <PinnedSection title="Fencers">
-      {fencers.length === 0 ? (
-        <p className="text-sm text-neutral-secondary">No pinned fencers yet</p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {fencers.map((fencer) => (
-            <li key={fencer.id}>
-              <FencerCard competitor={fencer} pinned onTogglePin={() => onUnpin(fencer.id)} />
-            </li>
-          ))}
-        </ul>
-      )}
-    </PinnedSection>
-  );
-}
-
-interface EmptySectionProps {
-  title: string;
-}
-
-// Clubs and pools can't be pinned yet, so their sections only ever show this.
-function EmptySection({ title }: EmptySectionProps) {
-  return (
-    <PinnedSection title={title}>
-      <p className="text-sm text-neutral-secondary">{`No pinned ${title.toLowerCase()} yet`}</p>
-    </PinnedSection>
   );
 }
 
@@ -63,8 +37,12 @@ interface PinnedItemsViewProps {
 }
 
 function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
-  const { fencers, error, unpinFencer } = usePinnedFencers(tournamentId);
+  const { pinned, togglePin } = usePinnedItems();
+  const scoped = useMemo(() => pinnedInTournament(pinned, tournamentId), [pinned, tournamentId]);
+  const { fencers, bouts, error: fencersError } = usePinnedFencers(tournamentId);
+  const { pools, error: poolsError } = usePinnedPools(scoped.pools);
 
+  const error = fencersError ?? poolsError;
   if (error) {
     return (
       <p role="alert" className="text-sm text-red-dark">
@@ -72,9 +50,57 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
       </p>
     );
   }
-  if (!fencers) {
+  if (!fencers || !pools) {
     return <PinnedItemsSkeleton />;
   }
+
+  const fencerSection = (
+    <PinnedSection title="Fencers" empty="No pinned fencers yet" isEmpty={fencers.length === 0}>
+      {fencers.map((fencer) => (
+        <li key={fencer.id} className="flex flex-col gap-2">
+          <FencerCard competitor={fencer} />
+          <FencerBoutList bouts={bouts[fencer.id] ?? []} />
+        </li>
+      ))}
+    </PinnedSection>
+  );
+  const clubSection = (
+    <PinnedSection title="Clubs" empty="No pinned clubs yet" isEmpty={scoped.clubs.length === 0}>
+      {scoped.clubs.map((club) => (
+        <li key={`${club.tournamentId}/${club.name}`}>
+          <ClubCard name={club.name} tournamentId={club.tournamentId} />
+        </li>
+      ))}
+    </PinnedSection>
+  );
+  const poolSection = (
+    <PinnedSection title="Pools" empty="No pinned pools yet" isEmpty={pools.length === 0}>
+      {pools.map(({ pool, pin }) => (
+        <li key={pool.id}>
+          <PoolCard
+            pool={pool}
+            poolingPath={`/tournaments/${encodeURIComponent(pin.tournamentId)}/events/${encodeURIComponent(pin.eventId)}/pooling`}
+            event={{ tournamentId: pin.tournamentId, eventId: pin.eventId, eventName: pin.eventName }}
+          />
+        </li>
+      ))}
+    </PinnedSection>
+  );
+  const tableauSection = (
+    <PinnedSection title="Tableaus" empty="No pinned tableaus yet" isEmpty={scoped.tableaus.length === 0}>
+      {scoped.tableaus.map((tableau) => (
+        <li key={tableau.eventId}>
+          <ListCard
+            title={tableau.eventName}
+            description="Tableau"
+            href={`/tournaments/${encodeURIComponent(tableau.tournamentId)}/events/${encodeURIComponent(tableau.eventId)}/tableau`}
+            pinned
+            onTogglePin={() => togglePin("tableau", tableau)}
+          />
+        </li>
+      ))}
+    </PinnedSection>
+  );
 
   return (
     <Tabs defaultValue="all">
@@ -83,20 +109,25 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
         <TabsTrigger value="fencers">Fencers</TabsTrigger>
         <TabsTrigger value="clubs">Clubs</TabsTrigger>
         <TabsTrigger value="pools">Pools</TabsTrigger>
+        <TabsTrigger value="tableaus">Tableaus</TabsTrigger>
       </TabsList>
       <TabsContent value="all" className="flex flex-col gap-6 pt-4">
-        <FencerSection fencers={fencers} onUnpin={unpinFencer} />
-        <EmptySection title="Clubs" />
-        <EmptySection title="Pools" />
+        {fencerSection}
+        {clubSection}
+        {poolSection}
+        {tableauSection}
       </TabsContent>
       <TabsContent value="fencers" className="pt-4">
-        <FencerSection fencers={fencers} onUnpin={unpinFencer} />
+        {fencerSection}
       </TabsContent>
       <TabsContent value="clubs" className="pt-4">
-        <EmptySection title="Clubs" />
+        {clubSection}
       </TabsContent>
       <TabsContent value="pools" className="pt-4">
-        <EmptySection title="Pools" />
+        {poolSection}
+      </TabsContent>
+      <TabsContent value="tableaus" className="pt-4">
+        {tableauSection}
       </TabsContent>
     </Tabs>
   );

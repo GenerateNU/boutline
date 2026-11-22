@@ -49,11 +49,7 @@ export default async function ClubsTab({
         <ul className="flex flex-col gap-3">
           {data.map((team) => (
             <li key={team.name}>
-              <ClubCard
-                team={team}
-                href={`/tournaments/${tournamentId}/fencers?team=${encodeURIComponent(team.name)}`}
-                pinned={false}
-              />
+              <ClubCard name={team.name} tournamentId={tournamentId} />
             </li>
           ))}
         </ul>

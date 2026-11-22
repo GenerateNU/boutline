@@ -1,26 +1,78 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 
+import { buildPool } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_fixtures/build-pool";
 import { PinnedItemsView } from "@/features/pinning/components/pinned-items-view";
-import { PINNED_STORAGE_KEY, type PinnedIds } from "@/features/pinning/types/pinning";
+import { PINNED_STORAGE_KEY, type PinnedItems } from "@/features/pinning/types/pinning";
 import type { Competitor } from "@/types/competitor";
 
 function fencer(id: string, firstName: string, tournamentId = "t1"): Competitor {
   return { id, eventId: "e1", tournamentId, firstName, lastName: "Smith", rating: "A", ratingYear: 26, team: "" };
 }
 
-const ANN = fencer("f1", "Ann");
-const CARA = fencer("f3", "Cara", "t2");
+const ANN = fencer("ann-smith", "Ann");
+const CARA = fencer("cara-smith", "Cara", "t2");
+const POOL_ONE = buildPool({
+  number: 1,
+  fencers: [
+    ["Ann", "Smith", ""],
+    ["First", "Last", ""],
+  ],
+  bouts: [[1, 2, 5, 3]],
+});
+const POOL_TWO = buildPool({
+  number: 2,
+  fencers: [
+    ["Dee", "Jones", ""],
+    ["Eve", "Jones", ""],
+  ],
+});
+
+const NO_PINS: PinnedItems = { fencerIds: [], clubs: [], pools: [], tableaus: [] };
+const ALL_PINS: PinnedItems = {
+  fencerIds: [],
+  clubs: [
+    { tournamentId: "t1", name: "Alpha FC" },
+    { tournamentId: "t2", name: "Beta FC" },
+  ],
+  pools: [
+    { tournamentId: "t1", eventId: "e1", eventName: "Mens Foil", id: "pool-1", title: "Pool 1 · Strip 1" },
+    { tournamentId: "t2", eventId: "e2", eventName: "Womens Epee", id: "pool-2", title: "Pool 2 · Strip 2" },
+  ],
+  tableaus: [
+    { tournamentId: "t1", eventId: "e1", eventName: "Mens Foil" },
+    { tournamentId: "t2", eventId: "e2", eventName: "Womens Epee" },
+  ],
+};
+
+function respond(body: unknown) {
+  return { ok: true, status: 200, json: async () => body };
+}
+
+function list(data: unknown[]) {
+  return respond({ data, total: data.length, limit: data.length, offset: 0 });
+}
 
 function mockApi() {
   global.fetch = jest.fn(async (input: RequestInfo | URL) => {
-    const ids = new URL(String(input), "http://localhost").searchParams.get("ids")?.split(",") ?? [];
-    const data = [ANN, CARA].filter(({ id }) => ids.includes(id));
-    return { ok: true, status: 200, json: async () => ({ data, total: data.length, limit: data.length, offset: 0 }) };
+    const { pathname, searchParams } = new URL(String(input), "http://localhost");
+    const ids = searchParams.get("ids")?.split(",") ?? [];
+    if (pathname.endsWith("/competitors")) {
+      return list([ANN, CARA].filter(({ id }) => ids.includes(id)));
+    }
+    if (pathname.endsWith("/pool-sheets")) {
+      const pools = [POOL_ONE, POOL_TWO];
+      return list(searchParams.has("ids") ? pools.filter(({ id }) => ids.includes(id)) : pools);
+    }
+    return respond({ rounds: [] });
   }) as jest.Mock;
 }
 
-function seed(pinned: PinnedIds) {
-  window.sessionStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(pinned));
+function seed(pinned: Partial<PinnedItems>) {
+  window.sessionStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify({ ...NO_PINS, ...pinned }));
+}
+
+function storedPins(): PinnedItems {
+  return JSON.parse(window.sessionStorage.getItem(PINNED_STORAGE_KEY) ?? "{}");
 }
 
 function openTab(name: string) {
@@ -34,7 +86,7 @@ describe("PinnedItemsView", () => {
     mockApi();
   });
 
-  it("has the All, Fencers, Clubs and Pools tabs", async () => {
+  it("has the All, Fencers, Clubs, Pools and Tableaus tabs", async () => {
     render(<PinnedItemsView />);
 
     await screen.findByText("No pinned fencers yet");
@@ -43,10 +95,11 @@ describe("PinnedItemsView", () => {
       "Fencers",
       "Clubs",
       "Pools",
+      "Tableaus",
     ]);
   });
 
-  it("lists All's sections as Fencers, Clubs, Pools, each with its empty message", async () => {
+  it("lists All's sections in order, each with its empty message", async () => {
     render(<PinnedItemsView />);
 
     await screen.findByText("No pinned fencers yet");
@@ -54,46 +107,93 @@ describe("PinnedItemsView", () => {
       "Fencers",
       "Clubs",
       "Pools",
+      "Tableaus",
     ]);
     expect(screen.getByText("No pinned clubs yet")).toBeInTheDocument();
     expect(screen.getByText("No pinned pools yet")).toBeInTheDocument();
+    expect(screen.getByText("No pinned tableaus yet")).toBeInTheDocument();
   });
 
-  it("links a pinned fencer to their page", async () => {
-    seed({ fencerIds: ["f1"], boutIds: [], poolIds: [] });
+  it("links a pinned fencer to their page and lists their bouts", async () => {
+    seed({ fencerIds: ["ann-smith"] });
     render(<PinnedItemsView />);
 
     expect(await screen.findByRole("link", { name: /Ann Smith/ })).toHaveAttribute(
       "href",
-      "/tournaments/t1/events/e1/fencers/f1",
+      "/tournaments/t1/events/e1/fencers/ann-smith",
     );
+    expect(await screen.findByText("Pool 1 · vs First Last")).toBeInTheDocument();
   });
 
   it("tapping the pin unpins the fencer", async () => {
-    seed({ fencerIds: ["f1"], boutIds: [], poolIds: [] });
+    seed({ fencerIds: ["ann-smith"] });
     render(<PinnedItemsView />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Unpin Ann Smith" }));
 
     expect(await screen.findByText("No pinned fencers yet")).toBeInTheDocument();
-    expect(JSON.parse(window.sessionStorage.getItem(PINNED_STORAGE_KEY) ?? "{}").fencerIds).toEqual([]);
+    expect(storedPins().fencerIds).toEqual([]);
   });
 
   it.each([
-    { name: "only that tournament's pins", tournamentId: "t1", wantCara: false },
-    { name: "every pin without a tournament", tournamentId: undefined, wantCara: true },
+    { name: "only that tournament's fencers", tournamentId: "t1", wantCara: false },
+    { name: "every fencer without a tournament", tournamentId: undefined, wantCara: true },
   ])("shows $name", async ({ tournamentId, wantCara }) => {
-    seed({ fencerIds: ["f1", "f3"], boutIds: [], poolIds: [] });
+    seed({ fencerIds: ["ann-smith", "cara-smith"] });
     render(<PinnedItemsView tournamentId={tournamentId} />);
 
     expect(await screen.findByRole("link", { name: /Ann Smith/ })).toBeInTheDocument();
     expect(Boolean(screen.queryByRole("link", { name: /Cara Smith/ }))).toBe(wantCara);
   });
 
+  it("renders pinned clubs, pools and tableaus scoped to the tournament", async () => {
+    seed(ALL_PINS);
+    render(<PinnedItemsView tournamentId="t1" />);
+
+    expect(await screen.findByRole("link", { name: /Alpha FC/ })).toHaveAttribute(
+      "href",
+      "/tournaments/t1/fencers?team=Alpha%20FC",
+    );
+    expect(screen.getByRole("link", { name: /Mens Foil/ })).toHaveAttribute(
+      "href",
+      "/tournaments/t1/events/e1/tableau",
+    );
+    expect(screen.getByRole("heading", { name: "Pool 1 · Strip 1" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View pool" })).toHaveAttribute(
+      "href",
+      "/tournaments/t1/events/e1/pooling/pool-1",
+    );
+    expect(screen.queryByText(/Beta FC|Womens Epee|Pool 2/)).not.toBeInTheDocument();
+  });
+
+  it("renders every tournament's clubs, pools and tableaus without a tournament", async () => {
+    seed(ALL_PINS);
+    render(<PinnedItemsView />);
+
+    expect(await screen.findByRole("link", { name: /Beta FC/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Womens Epee/ })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "View pool" })).toHaveLength(2);
+  });
+
+  it.each([
+    { kind: "club", field: "clubs", button: "Unpin Alpha FC", empty: "No pinned clubs yet" },
+    { kind: "pool", field: "pools", button: "Unpin Pool 1 · Strip 1", empty: "No pinned pools yet" },
+    { kind: "tableau", field: "tableaus", button: "Unpin Mens Foil", empty: "No pinned tableaus yet" },
+  ] as const)("tapping the pin unpins the $kind", async ({ field, button, empty }) => {
+    seed({ [field]: ALL_PINS[field] });
+    render(<PinnedItemsView tournamentId="t1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: button }));
+
+    expect(await screen.findByText(empty)).toBeInTheDocument();
+    expect(storedPins()[field].map((item) => item.tournamentId)).toEqual(["t2"]);
+  });
+
   it.each([
     { tab: "Fencers", shows: "No pinned fencers yet", hides: "No pinned clubs yet" },
     { tab: "Clubs", shows: "No pinned clubs yet", hides: "No pinned pools yet" },
-    { tab: "Pools", shows: "No pinned pools yet", hides: "No pinned clubs yet" },
+    { tab: "Pools", shows: "No pinned pools yet", hides: "No pinned tableaus yet" },
+    { tab: "Tableaus", shows: "No pinned tableaus yet", hides: "No pinned clubs yet" },
   ])("shows only its section on the $tab tab", async ({ tab, shows, hides }) => {
     render(<PinnedItemsView />);
     await screen.findByText("No pinned fencers yet");
@@ -105,7 +205,7 @@ describe("PinnedItemsView", () => {
   });
 
   it("shows a skeleton until the pins arrive", async () => {
-    seed({ fencerIds: ["f1"], boutIds: [], poolIds: [] });
+    seed({ fencerIds: ["ann-smith"] });
     global.fetch = jest.fn(() => new Promise(() => {})) as jest.Mock;
     render(<PinnedItemsView />);
 
@@ -114,7 +214,7 @@ describe("PinnedItemsView", () => {
   });
 
   it("shows the error when loading fails", async () => {
-    seed({ fencerIds: ["f1"], boutIds: [], poolIds: [] });
+    seed({ fencerIds: ["ann-smith"] });
     global.fetch = jest.fn().mockRejectedValue(new Error("Network down"));
     render(<PinnedItemsView />);
 

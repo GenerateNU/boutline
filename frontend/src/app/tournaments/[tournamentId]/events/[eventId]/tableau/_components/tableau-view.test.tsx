@@ -39,14 +39,44 @@ const TABLEAU: Tableau = {
   ],
 };
 
+const EVENT = { tournamentId: "t-1", eventId: "e-1", eventName: "Men's Epee" };
+
 const renderView = (value: Tableau = TABLEAU) =>
-  render(<TableauView tableau={value} boutBasePath="/bout" />);
+  render(<TableauView tableau={value} boutBasePath="/bout" event={EVENT} />);
+
+const storedTableaus = () =>
+  JSON.parse(sessionStorage.getItem("boutline:pinned") ?? "{}").tableaus;
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = jest.fn();
 });
 
+beforeEach(() => {
+  sessionStorage.clear();
+});
+
 describe("TableauView", () => {
+  it("pins and unpins the tableau", () => {
+    renderView();
+
+    fireEvent.click(screen.getByRole("button", { name: "Pin tableau" }));
+    expect(screen.getByRole("button", { name: "Unpin tableau" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(storedTableaus()).toEqual([EVENT]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Unpin tableau" }));
+    expect(screen.getByRole("button", { name: "Pin tableau" })).toBeInTheDocument();
+    expect(storedTableaus()).toEqual([]);
+  });
+
+  it("offers no pin before the tableau is drawn", () => {
+    renderView({ rounds: [] });
+
+    expect(screen.queryByRole("button", { name: "Pin tableau" })).not.toBeInTheDocument();
+  });
+
   it("says so when the tableau hasn't been drawn", () => {
     renderView({ rounds: [] });
 

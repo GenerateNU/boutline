@@ -5,6 +5,7 @@ import { buildPool } from "../_fixtures/build-pool";
 import { PoolCard } from "./pool-card";
 
 const poolingPath = "/tournaments/t/events/e/pooling";
+const EVENT = { tournamentId: "t", eventId: "e", eventName: "Mens Foil" };
 
 const pool = buildPool({
   number: 1,
@@ -17,10 +18,14 @@ const pool = buildPool({
 });
 
 function renderCard() {
-  render(<PoolCard pool={pool} poolingPath={poolingPath} />);
+  render(<PoolCard pool={pool} poolingPath={poolingPath} event={EVENT} />);
 }
 
 describe("PoolCard", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
   it("renders the title, status and bouts table", () => {
     renderCard();
 
@@ -46,6 +51,17 @@ describe("PoolCard", () => {
 
     expect(screen.getByRole("columnheader", { name: "Place" })).toBeInTheDocument();
     expect(screen.queryByRole("cell", { name: "V5" })).not.toBeInTheDocument();
+  });
+
+  it("turns light blue once pinned", () => {
+    renderCard();
+    const card = screen.getByRole("article");
+    expect(card).toHaveClass("bg-card");
+
+    fireEvent.click(screen.getByRole("button", { name: "Pin Pool 1 \u00b7 Strip 3" }));
+
+    expect(screen.getByRole("button", { name: "Unpin Pool 1 \u00b7 Strip 3" })).toHaveAttribute("aria-pressed", "true");
+    expect(card).toHaveClass("border-blue-light", "bg-blue-lightest");
   });
 
   it("links to the pool page", () => {
