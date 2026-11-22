@@ -8,9 +8,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"boutline/internal/features/directelimination"
 	"boutline/internal/features/event"
+	"boutline/internal/features/eventresult"
 	"boutline/internal/features/pool"
-	"boutline/internal/features/poolstageresult"
+	"boutline/internal/features/poolstage"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
@@ -18,43 +20,47 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type fixture struct {
+type poolStageFixture struct {
 	eventID uuid.UUID
-	repo    *FakePoolStageResultRepository
+	repo    *FakeEventResultRepository
 	fencers map[string]uuid.UUID
 }
 
-func newFixture() fixture {
-	return fixture{
+func newPoolStageFixture() poolStageFixture {
+	return poolStageFixture{
 		eventID: uuid.New(),
 		fencers: map[string]uuid.UUID{},
-		repo: &FakePoolStageResultRepository{
-			PoolStages: map[uuid.UUID]uuid.UUID{},
-			Fencers:    map[uuid.UUID][]poolstageresult.PoolStageResultFencer{},
-			Bouts:      map[uuid.UUID][]pool.PoolSheetBoutRow{},
-			Entrants:   map[uuid.UUID][]uuid.UUID{},
+		repo: &FakeEventResultRepository{
+			PoolStages:   map[uuid.UUID]eventresult.EventResultPoolStageRow{},
+			Eliminations: map[uuid.UUID]eventresult.EventResultDirectEliminationRow{},
+			PoolBouts:    map[uuid.UUID][]pool.PoolSheetBoutRow{},
+			PoolFencers:  map[uuid.UUID][]eventresult.PoolStageResultFencer{},
+			Entrants:     map[uuid.UUID][]directelimination.DirectEliminationEntrant{},
 		},
 	}
 }
 
-// withPoolStage seats A, B and C in pool 1 and D and E in pool 2. Across the
-// stage they rank A, D, C, B, E; pool 2's active bout must not count.
-func (f fixture) withPoolStage() fixture {
+// withPoolStage seats A, B and C in pool 1 and D and E in pool 2 of a stage that
+// is still running. Across the stage they rank A, D, C, B, E; pool 2's active bout
+// must not count.
+func (f poolStageFixture) withPoolStage() poolStageFixture {
 	stageID := uuid.New()
-	f.repo.PoolStages[f.eventID] = stageID
+	f.repo.PoolStages[f.eventID] = eventresult.EventResultPoolStageRow{ID: stageID, Status: poolstage.PoolStageStatusActive}
 
-	bladeClub, salleClub := "Boston Blade", "Salle Rouge"
-	clubs := map[string]*string{"A": &bladeClub, "D": &salleClub}
+	club := "Salle Rouge"
 	for _, seat := range []struct {
 		name string
 		pool int
 	}{{"A", 1}, {"B", 1}, {"C", 1}, {"D", 2}, {"E", 2}} {
 		id := uuid.New()
 		f.fencers[seat.name] = id
-		f.repo.Fencers[stageID] = append(f.repo.Fencers[stageID], poolstageresult.PoolStageResultFencer{
-			CompetitorID: id, FirstName: "F" + seat.name, LastName: "L" + seat.name,
-			Club: clubs[seat.name], PoolNumber: seat.pool,
-		})
+		fencer := eventresult.PoolStageResultFencer{
+			CompetitorID: id, FirstName: "F" + seat.name, LastName: "L" + seat.name, PoolNumber: seat.pool,
+		}
+		if seat.name == "D" {
+			fencer.Club = &club
+		}
+		f.repo.PoolFencers[stageID] = append(f.repo.PoolFencers[stageID], fencer)
 	}
 
 	bout := func(status, a string, sa int, b string, sb int) pool.PoolSheetBoutRow {
@@ -62,7 +68,7 @@ func (f fixture) withPoolStage() fixture {
 			Status: status, Competitor1ID: f.fencers[a], Competitor1Score: sa, Competitor2ID: f.fencers[b], Competitor2Score: sb,
 		}
 	}
-	f.repo.Bouts[stageID] = []pool.PoolSheetBoutRow{
+	f.repo.PoolBouts[stageID] = []pool.PoolSheetBoutRow{
 		bout("ended", "A", 5, "B", 2), bout("ended", "A", 5, "C", 3), bout("ended", "C", 5, "B", 4),
 		bout("ended", "D", 5, "E", 1), bout("active", "E", 4, "D", 0),
 	}
@@ -70,29 +76,36 @@ func (f fixture) withPoolStage() fixture {
 	return f
 }
 
-func (f fixture) withTableau(names ...string) fixture {
-	for _, name := range names {
-		f.repo.Entrants[f.eventID] = append(f.repo.Entrants[f.eventID], f.fencers[name])
+// withTableau adds the event's direct elimination; with no names it is not drawn yet.
+func (f poolStageFixture) withTableau(names ...string) poolStageFixture {
+	deID := uuid.New()
+	f.repo.Eliminations[f.eventID] = eventresult.EventResultDirectEliminationRow{
+		ID: deID, Status: directelimination.DirectEliminationStatusUpcoming,
+	}
+	for i, name := range names {
+		f.repo.Entrants[deID] = append(f.repo.Entrants[deID], directelimination.DirectEliminationEntrant{
+			CompetitorID: f.fencers[name], Seed: i + 1,
+		})
 	}
 
 	return f
 }
 
-func (f fixture) get(t *testing.T, path string) *httptest.ResponseRecorder {
+func (f poolStageFixture) get(t *testing.T, path string) *httptest.ResponseRecorder {
 	t.Helper()
 
 	_, api := humatest.New(t)
 	events := &FakeEventLookup{Events: map[uuid.UUID]event.Event{f.eventID: {ID: f.eventID}}}
-	poolstageresult.RegisterPoolStageResultService(api, poolstageresult.NewPoolStageResultService(f.repo, events))
+	eventresult.RegisterPoolStageResultService(api, eventresult.NewPoolStageResultService(f.repo, events))
 
 	return api.Get(path)
 }
 
-func (f fixture) path(query string) string {
+func (f poolStageFixture) path(query string) string {
 	return "/api/v1/events/" + f.eventID.String() + "/pool-stage-results" + query
 }
 
-type resultsBody struct {
+type poolStageResultsBody struct {
 	Data []struct {
 		Place    int    `json:"place"`
 		LastName string `json:"last_name"`
@@ -101,7 +114,7 @@ type resultsBody struct {
 	Total int `json:"total"`
 }
 
-func (b resultsBody) summary() []string {
+func (b poolStageResultsBody) summary() []string {
 	out := make([]string, len(b.Data))
 	for i, row := range b.Data {
 		out[i] = fmt.Sprintf("%d %s %s", row.Place, row.LastName, row.Status)
@@ -113,30 +126,35 @@ func (b resultsBody) summary() []string {
 func TestPoolStageResultsEndpoint(t *testing.T) {
 	t.Parallel()
 
+	pending := []string{"1 LA pending", "2 LD pending", "3 LC pending", "4 LB pending", "5 LE pending"}
+
 	tests := []struct {
 		name      string
-		fx        fixture
+		fx        poolStageFixture
 		query     string
 		want      []string
 		wantTotal int
 	}{
-		{name: "event with no pool stage is empty", fx: newFixture(), want: []string{}},
+		{name: "event with no pool stage is empty", fx: newPoolStageFixture(), want: []string{}},
 		{
-			name: "ranks every pool together and is pending before the draw", fx: newFixture().withPoolStage(),
-			want:      []string{"1 LA pending", "2 LD pending", "3 LC pending", "4 LB pending", "5 LE pending"},
-			wantTotal: 5,
+			name: "ranks every pool of a running stage together", fx: newPoolStageFixture().withPoolStage(),
+			want: pending, wantTotal: 5,
 		},
 		{
-			name: "a drawn tableau splits advanced from eliminated", fx: newFixture().withPoolStage().withTableau("A", "D", "C"),
+			name: "an undrawn tableau leaves everyone pending", fx: newPoolStageFixture().withPoolStage().withTableau(),
+			want: pending, wantTotal: 5,
+		},
+		{
+			name: "a drawn tableau splits advanced from eliminated", fx: newPoolStageFixture().withPoolStage().withTableau("A", "D", "C"),
 			want:      []string{"1 LA advanced", "2 LD advanced", "3 LC advanced", "4 LB eliminated", "5 LE eliminated"},
 			wantTotal: 5,
 		},
 		{
-			name: "a page is a slice of the ranked rows", fx: newFixture().withPoolStage(),
+			name: "a page is a slice of the ranked rows", fx: newPoolStageFixture().withPoolStage(),
 			query: "?limit=2&offset=1", want: []string{"2 LD pending", "3 LC pending"}, wantTotal: 5,
 		},
 		{
-			name: "offset past the end is empty with the total", fx: newFixture().withPoolStage(),
+			name: "offset past the end is empty with the total", fx: newPoolStageFixture().withPoolStage(),
 			query: "?offset=50", want: []string{}, wantTotal: 5,
 		},
 	}
@@ -148,7 +166,7 @@ func TestPoolStageResultsEndpoint(t *testing.T) {
 			resp := tt.fx.get(t, tt.fx.path(tt.query))
 			require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
 
-			var body resultsBody
+			var body poolStageResultsBody
 			require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
 			assert.Equal(t, tt.want, body.summary())
 			assert.Equal(t, tt.wantTotal, body.Total)
@@ -160,7 +178,7 @@ func TestPoolStageResultsEndpoint(t *testing.T) {
 func TestPoolStageResultsEndpointShape(t *testing.T) {
 	t.Parallel()
 
-	fx := newFixture().withPoolStage()
+	fx := newPoolStageFixture().withPoolStage()
 
 	tests := []struct {
 		name  string
@@ -209,17 +227,17 @@ func TestPoolStageResultsEndpointShape(t *testing.T) {
 func TestPoolStageResultsEndpointErrors(t *testing.T) {
 	t.Parallel()
 
-	failing := newFixture()
+	failing := newPoolStageFixture()
 	failing.repo.Err = errors.New("connection refused")
 
 	tests := []struct {
 		name       string
-		fx         fixture
+		fx         poolStageFixture
 		id         string
 		wantStatus int
 	}{
-		{name: "malformed id is rejected", fx: newFixture(), id: "nope", wantStatus: http.StatusUnprocessableEntity},
-		{name: "unknown event is 404", fx: newFixture(), id: uuid.NewString(), wantStatus: http.StatusNotFound},
+		{name: "malformed id is rejected", fx: newPoolStageFixture(), id: "nope", wantStatus: http.StatusUnprocessableEntity},
+		{name: "unknown event is 404", fx: newPoolStageFixture(), id: uuid.NewString(), wantStatus: http.StatusNotFound},
 		{name: "repository failure is 500", fx: failing, wantStatus: http.StatusInternalServerError},
 	}
 

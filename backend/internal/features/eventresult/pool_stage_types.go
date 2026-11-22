@@ -1,12 +1,6 @@
-package poolstageresult
+package eventresult
 
 import "boutline/internal/features/pool"
-
-const (
-	PoolStageResultMinPageSize     = 1
-	PoolStageResultDefaultPageSize = 20
-	PoolStageResultMaxPageSize     = 100
-)
 
 type PoolStageResultListInput struct {
 	ID     string `path:"id" format:"uuid" doc:"Event ID"`

@@ -1,12 +1,17 @@
-package poolstageresult
+package eventresult
 
 import (
+	"boutline/internal/features/directelimination"
 	"boutline/internal/features/pool"
 
 	"github.com/google/uuid"
 )
 
-func rankPoolStageResults(fencers []PoolStageResultFencer, bouts []pool.PoolSheetBoutRow, entrantIDs []uuid.UUID) []PoolStageResultRow {
+func rankPoolStageResults(
+	fencers []PoolStageResultFencer,
+	bouts []pool.PoolSheetBoutRow,
+	entrants []directelimination.DirectEliminationEntrant,
+) []PoolStageResultRow {
 	byID := make(map[uuid.UUID]PoolStageResultFencer, len(fencers))
 	ids := make([]uuid.UUID, 0, len(fencers))
 	for _, fencer := range fencers {
@@ -14,9 +19,9 @@ func rankPoolStageResults(fencers []PoolStageResultFencer, bouts []pool.PoolShee
 		ids = append(ids, fencer.CompetitorID)
 	}
 
-	entered := make(map[uuid.UUID]bool, len(entrantIDs))
-	for _, id := range entrantIDs {
-		entered[id] = true
+	entered := make(map[uuid.UUID]bool, len(entrants))
+	for _, entrant := range entrants {
+		entered[entrant.CompetitorID] = true
 	}
 
 	ranks := pool.RankPoolStage(ids, bouts)

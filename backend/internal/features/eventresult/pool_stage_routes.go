@@ -1,4 +1,4 @@
-package poolstageresult
+package eventresult
 
 import (
 	"net/http"
@@ -13,7 +13,7 @@ const poolStageResultPath = "/api/v1/events/{id}/pool-stage-results"
 
 func RegisterPoolStageResultRoutes(api huma.API, params *types.ServiceParams) {
 	RegisterPoolStageResultService(api, NewPoolStageResultService(
-		NewPoolStageResultRepository(params.DB),
+		NewEventResultRepository(params.DB),
 		event.NewEventRepository(params.DB),
 	))
 }

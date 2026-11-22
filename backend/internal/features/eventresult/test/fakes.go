@@ -21,6 +21,7 @@ type FakeEventResultRepository struct {
 	PoolStages   map[uuid.UUID]eventresult.EventResultPoolStageRow            // by event ID
 	Eliminations map[uuid.UUID]eventresult.EventResultDirectEliminationRow    // by event ID
 	PoolBouts    map[uuid.UUID][]pool.PoolSheetBoutRow                        // by pool stage ID
+	PoolFencers  map[uuid.UUID][]eventresult.PoolStageResultFencer            // by pool stage ID
 	Entrants     map[uuid.UUID][]directelimination.DirectEliminationEntrant   // by direct elimination ID
 	DEBouts      map[uuid.UUID][]directelimination.DirectEliminationBoutScore // by direct elimination ID
 	Competitors  map[uuid.UUID]eventresult.EventResultCompetitor
@@ -57,6 +58,14 @@ func (f *FakeEventResultRepository) ListPoolStageBouts(_ context.Context, poolSt
 	}
 
 	return f.PoolBouts[poolStageID], nil
+}
+
+func (f *FakeEventResultRepository) ListPoolStageResultFencers(_ context.Context, poolStageID uuid.UUID) ([]eventresult.PoolStageResultFencer, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	return f.PoolFencers[poolStageID], nil
 }
 
 func (f *FakeEventResultRepository) ListDirectEliminationEntrants(_ context.Context, directEliminationID uuid.UUID) ([]directelimination.DirectEliminationEntrant, error) {

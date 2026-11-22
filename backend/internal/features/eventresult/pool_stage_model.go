@@ -1,4 +1,4 @@
-package poolstageresult
+package eventresult
 
 import (
 	"boutline/internal/features/pool"
@@ -14,8 +14,8 @@ const (
 	PoolStageResultStatusEliminated PoolStageResultStatus = "eliminated"
 )
 
-// PoolStageResultFencer is read from the pool stage's bouts and the competitors table,
-// not stored anywhere of its own.
+// PoolStageResultFencer is read from the pool stage's bouts and the competitors
+// table, not stored anywhere of its own.
 type PoolStageResultFencer struct {
 	CompetitorID uuid.UUID
 	FirstName    string
