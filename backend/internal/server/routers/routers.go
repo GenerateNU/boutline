@@ -31,6 +31,7 @@ func SetUpRoutes(app *fiber.App, routeParams types.RouteParams) {
 	event.RegisterEventRoutes(routeParams.API, routeParams.ServiceParams)
 	tableau.RegisterTableauRoutes(routeParams.API, routeParams.ServiceParams)
 	eventresult.RegisterEventResultRoutes(routeParams.API, routeParams.ServiceParams)
+	eventresult.RegisterPoolStageResultRoutes(routeParams.API, routeParams.ServiceParams)
 	user.RegisterUserRoutes(routeParams.API, routeParams.ServiceParams)
 	competitor.RegisterCompetitorRoutes(routeParams.API, routeParams.ServiceParams)
 	athlete.RegisterAthleteRoutes(routeParams.API, routeParams.ServiceParams)
