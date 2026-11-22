@@ -1,8 +1,8 @@
 import { ActiveFilterChips } from "@/components/primitives/active-filter-chips";
 import { Pagination } from "@/components/primitives/pagination";
 import { Text } from "@/components/primitives/text";
-import { FencerCard } from "@/features/competitor/components/fencer-card";
 import { FencerFilterSheet } from "@/features/competitor/components/fencer-filter-sheet";
+import { FencerList } from "@/features/competitor/components/fencer-list";
 import {
   FENCER_PAGE_SIZE,
   GENDER_OPTIONS,
@@ -92,13 +92,7 @@ async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerB
         <Text variant="muted">{emptyMessage({ search, hasFilters, eventId })}</Text>
       )}
 
-      <ul className="flex flex-col gap-3">
-        {data.map((competitor) => (
-          <li key={competitor.id}>
-            <FencerCard competitor={competitor} />
-          </li>
-        ))}
-      </ul>
+      <FencerList competitors={data} />
 
       <Pagination
         total={total}

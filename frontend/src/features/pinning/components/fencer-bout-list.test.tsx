@@ -18,10 +18,9 @@ describe("FencerBoutList", () => {
     expect(screen.getByText(text)).toBeInTheDocument();
   });
 
-  it("says so when there are no bouts", () => {
-    render(<FencerBoutList bouts={[]} />);
+  it("renders nothing when there are no bouts", () => {
+    const { container } = render(<FencerBoutList bouts={[]} />);
 
-    expect(screen.getByText("No bouts yet")).toBeInTheDocument();
-    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 });

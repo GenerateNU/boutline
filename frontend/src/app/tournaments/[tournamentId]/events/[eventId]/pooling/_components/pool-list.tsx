@@ -1,11 +1,12 @@
 "use client";
 
 import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
+import { pinnedFirst } from "@/features/pinning/services/pinned-first";
 import type { PinnedEvent } from "@/features/pinning/types/pinning";
 
 import { usePoolFilters } from "../_hooks/use-pool-filters";
 import { noPoolsMessage } from "../_services/no-pools-message";
-import { pinnedFirst } from "../_services/pinned-first";
+import { poolTitle } from "../_services/pool-title";
 import type { PoolBoard } from "../_types/pool-board";
 
 import { PoolCard } from "./pool-card";
@@ -21,7 +22,8 @@ interface PoolListProps {
 export function PoolList({ pools, poolingPath, event }: PoolListProps) {
   const { search, setSearch, filters, setFilters, matches, options } = usePoolFilters(pools);
   const { pinned } = usePinnedItems();
-  const ordered = pinnedFirst(matches, pinned.pools.map((pool) => pool.id));
+  const pinnedIds = new Set(pinned.pools.map((pool) => pool.id));
+  const ordered = pinnedFirst(matches, (pool) => pinnedIds.has(pool.id), poolTitle);
 
   return (
     <div className="flex flex-col gap-6 font-manrope">

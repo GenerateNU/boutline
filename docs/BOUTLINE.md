@@ -690,8 +690,9 @@ every pin when it's opened without one.
 
 A pin toggle sits on fencer rows (the tournament and event Fencers tabs), club
 rows, pool cards and the pool page header, and the tableau toolbar once the tableau
-is drawn. Event pages have no separate pinned section; pinned pools lead the pool
-list (§11.6).
+is drawn. There is no separate pinned section: pinned fencers, clubs and pools move
+to the top of the page of the list they're on, alphabetically, and the rest keep
+the list's order (§11.6).
 
 ---
 

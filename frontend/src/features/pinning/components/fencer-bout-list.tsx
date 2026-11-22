@@ -11,11 +11,7 @@ function resultLabel({ status, score }: FencerBout) {
 
 function FencerBoutList({ bouts }: { bouts: FencerBout[] }) {
   if (bouts.length === 0) {
-    return (
-      <Text variant="caption" className="pl-4">
-        No bouts yet
-      </Text>
-    );
+    return null;
   }
   return (
     <ul aria-label="Bouts" className="flex flex-col gap-1 pl-4">
