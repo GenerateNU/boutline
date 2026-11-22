@@ -26,6 +26,15 @@ LEFT JOIN scorings s ON s.bout_id = b.id AND s.revoked_at IS NULL
 WHERE p.pool_stage_id = ?
 GROUP BY b.id`
 
+// Club falls back to the legacy team column until every competitor has a primary club.
+const poolStageResultFencersQuery = `
+SELECT DISTINCT c.id AS competitor_id, c.first_name, c.last_name,
+       COALESCE(c.primary_club, NULLIF(c.team, '')) AS club, p.number AS pool_number
+FROM bouts b
+JOIN pools p ON p.id = b.pool_id
+JOIN competitors c ON c.id IN (b.competitor_1_id, b.competitor_2_id)
+WHERE p.pool_stage_id = ?`
+
 const directEliminationBoutsQuery = `
 SELECT b.round_size, b.status, b.competitor_1_id, b.competitor_2_id,` + boutScoreColumns + `
 FROM bouts b
@@ -37,6 +46,7 @@ type EventResultRepository interface {
 	GetLatestPoolStage(ctx context.Context, eventID uuid.UUID) (*EventResultPoolStageRow, error)
 	GetLatestDirectElimination(ctx context.Context, eventID uuid.UUID) (*EventResultDirectEliminationRow, error)
 	ListPoolStageBouts(ctx context.Context, poolStageID uuid.UUID) ([]pool.PoolSheetBoutRow, error)
+	ListPoolStageResultFencers(ctx context.Context, poolStageID uuid.UUID) ([]PoolStageResultFencer, error)
 	ListDirectEliminationEntrants(ctx context.Context, directEliminationID uuid.UUID) ([]directelimination.DirectEliminationEntrant, error)
 	ListDirectEliminationBouts(ctx context.Context, directEliminationID uuid.UUID) ([]directelimination.DirectEliminationBoutScore, error)
 	ListEventResultCompetitors(ctx context.Context, ids []uuid.UUID) ([]EventResultCompetitor, error)
@@ -98,6 +108,16 @@ func (r *eventResultRepository) ListPoolStageBouts(ctx context.Context, poolStag
 
 	if err := r.db.WithContext(ctx).Raw(poolStageBoutsQuery, poolStageID).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("select bouts for pool stage %s: %w", poolStageID, err)
+	}
+
+	return rows, nil
+}
+
+func (r *eventResultRepository) ListPoolStageResultFencers(ctx context.Context, poolStageID uuid.UUID) ([]PoolStageResultFencer, error) {
+	var rows []PoolStageResultFencer
+
+	if err := r.db.WithContext(ctx).Raw(poolStageResultFencersQuery, poolStageID).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("select fencers for pool stage %s: %w", poolStageID, err)
 	}
 
 	return rows, nil
