@@ -10,7 +10,7 @@ import (
 
 	"boutline/internal/features/event"
 	"boutline/internal/features/pool"
-	"boutline/internal/features/poolresult"
+	"boutline/internal/features/poolstageresult"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
@@ -20,7 +20,7 @@ import (
 
 type fixture struct {
 	eventID uuid.UUID
-	repo    *FakePoolResultRepository
+	repo    *FakePoolStageResultRepository
 	fencers map[string]uuid.UUID
 }
 
@@ -28,9 +28,9 @@ func newFixture() fixture {
 	return fixture{
 		eventID: uuid.New(),
 		fencers: map[string]uuid.UUID{},
-		repo: &FakePoolResultRepository{
+		repo: &FakePoolStageResultRepository{
 			PoolStages: map[uuid.UUID]uuid.UUID{},
-			Fencers:    map[uuid.UUID][]poolresult.PoolResultFencer{},
+			Fencers:    map[uuid.UUID][]poolstageresult.PoolStageResultFencer{},
 			Bouts:      map[uuid.UUID][]pool.PoolSheetBoutRow{},
 			Entrants:   map[uuid.UUID][]uuid.UUID{},
 		},
@@ -51,7 +51,7 @@ func (f fixture) withPoolStage() fixture {
 	}{{"A", 1}, {"B", 1}, {"C", 1}, {"D", 2}, {"E", 2}} {
 		id := uuid.New()
 		f.fencers[seat.name] = id
-		f.repo.Fencers[stageID] = append(f.repo.Fencers[stageID], poolresult.PoolResultFencer{
+		f.repo.Fencers[stageID] = append(f.repo.Fencers[stageID], poolstageresult.PoolStageResultFencer{
 			CompetitorID: id, FirstName: "F" + seat.name, LastName: "L" + seat.name,
 			Club: clubs[seat.name], PoolNumber: seat.pool,
 		})
@@ -83,13 +83,13 @@ func (f fixture) get(t *testing.T, path string) *httptest.ResponseRecorder {
 
 	_, api := humatest.New(t)
 	events := &FakeEventLookup{Events: map[uuid.UUID]event.Event{f.eventID: {ID: f.eventID}}}
-	poolresult.RegisterPoolResultService(api, poolresult.NewPoolResultService(f.repo, events))
+	poolstageresult.RegisterPoolStageResultService(api, poolstageresult.NewPoolStageResultService(f.repo, events))
 
 	return api.Get(path)
 }
 
 func (f fixture) path(query string) string {
-	return "/api/v1/events/" + f.eventID.String() + "/pool-results" + query
+	return "/api/v1/events/" + f.eventID.String() + "/pool-stage-results" + query
 }
 
 type resultsBody struct {
@@ -110,7 +110,7 @@ func (b resultsBody) summary() []string {
 	return out
 }
 
-func TestPoolResultsEndpoint(t *testing.T) {
+func TestPoolStageResultsEndpoint(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -157,7 +157,7 @@ func TestPoolResultsEndpoint(t *testing.T) {
 	}
 }
 
-func TestPoolResultsEndpointShape(t *testing.T) {
+func TestPoolStageResultsEndpointShape(t *testing.T) {
 	t.Parallel()
 
 	fx := newFixture().withPoolStage()
@@ -206,7 +206,7 @@ func TestPoolResultsEndpointShape(t *testing.T) {
 	}
 }
 
-func TestPoolResultsEndpointErrors(t *testing.T) {
+func TestPoolStageResultsEndpointErrors(t *testing.T) {
 	t.Parallel()
 
 	failing := newFixture()
@@ -231,7 +231,7 @@ func TestPoolResultsEndpointErrors(t *testing.T) {
 			if id == "" {
 				id = tt.fx.eventID.String()
 			}
-			resp := tt.fx.get(t, "/api/v1/events/"+id+"/pool-results")
+			resp := tt.fx.get(t, "/api/v1/events/"+id+"/pool-stage-results")
 
 			require.Equal(t, tt.wantStatus, resp.Code, "body: %s", resp.Body)
 			assert.NotContains(t, resp.Body.String(), "connection refused")

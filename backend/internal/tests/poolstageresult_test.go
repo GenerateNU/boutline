@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Exercises the pool result SQL against seeds/seed.sql: fencers and pool numbers
+// Exercises the pool stage result SQL against seeds/seed.sql: fencers and pool numbers
 // derived from the stage's bouts, the club fallback, and the tableau entrant lookup
 // on a direct elimination that has not been drawn.
-func TestListPoolResults(t *testing.T) {
+func TestListPoolStageResults(t *testing.T) {
 	app := testkit.GetDBTestApp(t)
 
 	getResults := func(t *testing.T, eventID, query string, wantStatus int) *testkit.IntegrationTestBuilder {
@@ -22,7 +22,7 @@ func TestListPoolResults(t *testing.T) {
 		return testkit.New(t).
 			Request(testkit.Request{
 				App:    app,
-				Route:  "/api/v1/events/" + eventID + "/pool-results" + query,
+				Route:  "/api/v1/events/" + eventID + "/pool-stage-results" + query,
 				Method: testkit.GET,
 			}).
 			AssertStatus(wantStatus)

@@ -1,4 +1,4 @@
-package poolresult
+package poolstageresult
 
 import (
 	"boutline/internal/features/pool"
@@ -6,8 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
-func rankPoolResults(fencers []PoolResultFencer, bouts []pool.PoolSheetBoutRow, entrantIDs []uuid.UUID) []PoolResultRow {
-	byID := make(map[uuid.UUID]PoolResultFencer, len(fencers))
+func rankPoolStageResults(fencers []PoolStageResultFencer, bouts []pool.PoolSheetBoutRow, entrantIDs []uuid.UUID) []PoolStageResultRow {
+	byID := make(map[uuid.UUID]PoolStageResultFencer, len(fencers))
 	ids := make([]uuid.UUID, 0, len(fencers))
 	for _, fencer := range fencers {
 		byID[fencer.CompetitorID] = fencer
@@ -20,12 +20,12 @@ func rankPoolResults(fencers []PoolResultFencer, bouts []pool.PoolSheetBoutRow, 
 	}
 
 	ranks := pool.RankPoolStage(ids, bouts)
-	rows := make([]PoolResultRow, 0, len(ranks))
+	rows := make([]PoolStageResultRow, 0, len(ranks))
 	for _, rank := range ranks {
-		rows = append(rows, PoolResultRow{
+		rows = append(rows, PoolStageResultRow{
 			Fencer:   byID[rank.CompetitorID],
 			Standing: rank.Standing,
-			Status:   poolResultStatus(entered, rank.CompetitorID),
+			Status:   poolStageResultStatus(entered, rank.CompetitorID),
 		})
 	}
 
@@ -33,13 +33,13 @@ func rankPoolResults(fencers []PoolResultFencer, bouts []pool.PoolSheetBoutRow, 
 }
 
 // The tableau is drawn in one step, so having no entrants at all means it hasn't been.
-func poolResultStatus(entered map[uuid.UUID]bool, id uuid.UUID) PoolResultStatus {
+func poolStageResultStatus(entered map[uuid.UUID]bool, id uuid.UUID) PoolStageResultStatus {
 	switch {
 	case len(entered) == 0:
-		return PoolResultStatusPending
+		return PoolStageResultStatusPending
 	case entered[id]:
-		return PoolResultStatusAdvanced
+		return PoolStageResultStatusAdvanced
 	default:
-		return PoolResultStatusEliminated
+		return PoolStageResultStatusEliminated
 	}
 }

@@ -1,4 +1,4 @@
-package poolresult
+package poolstageresult
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 )
 
 // Club falls back to the legacy team column until every competitor has a primary club.
-const poolResultFencersQuery = `
+const poolStageResultFencersQuery = `
 SELECT DISTINCT c.id AS competitor_id, c.first_name, c.last_name,
        COALESCE(c.primary_club, NULLIF(c.team, '')) AS club, p.number AS pool_number
 FROM bouts b
@@ -31,21 +31,21 @@ LEFT JOIN scorings s ON s.bout_id = b.id AND s.revoked_at IS NULL
 WHERE p.pool_stage_id = ?
 GROUP BY b.id`
 
-type PoolResultRepository interface {
+type PoolStageResultRepository interface {
 	GetLatestPoolStageID(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error)
-	ListPoolResultFencers(ctx context.Context, poolStageID uuid.UUID) ([]PoolResultFencer, error)
+	ListPoolStageResultFencers(ctx context.Context, poolStageID uuid.UUID) ([]PoolStageResultFencer, error)
 	ListPoolStageBouts(ctx context.Context, poolStageID uuid.UUID) ([]pool.PoolSheetBoutRow, error)
 	// ListTableauEntrantIDs reads the event's latest direct elimination, which is
 	// empty until its tableau is drawn.
 	ListTableauEntrantIDs(ctx context.Context, eventID uuid.UUID) ([]uuid.UUID, error)
 }
 
-type poolResultRepository struct {
+type poolStageResultRepository struct {
 	db *gorm.DB
 }
 
-func NewPoolResultRepository(db *gorm.DB) PoolResultRepository {
-	return &poolResultRepository{db: db}
+func NewPoolStageResultRepository(db *gorm.DB) PoolStageResultRepository {
+	return &poolStageResultRepository{db: db}
 }
 
 func latestStageOfEvent(db *gorm.DB, table string, eventID uuid.UUID) *gorm.DB {
@@ -56,7 +56,7 @@ func latestStageOfEvent(db *gorm.DB, table string, eventID uuid.UUID) *gorm.DB {
 		Limit(1)
 }
 
-func (r *poolResultRepository) GetLatestPoolStageID(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error) {
+func (r *poolStageResultRepository) GetLatestPoolStageID(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error) {
 	var ids []uuid.UUID
 
 	if err := latestStageOfEvent(r.db.WithContext(ctx), "pool_stages", eventID).Pluck("id", &ids).Error; err != nil {
@@ -69,17 +69,17 @@ func (r *poolResultRepository) GetLatestPoolStageID(ctx context.Context, eventID
 	return ids[0], nil
 }
 
-func (r *poolResultRepository) ListPoolResultFencers(ctx context.Context, poolStageID uuid.UUID) ([]PoolResultFencer, error) {
-	var rows []PoolResultFencer
+func (r *poolStageResultRepository) ListPoolStageResultFencers(ctx context.Context, poolStageID uuid.UUID) ([]PoolStageResultFencer, error) {
+	var rows []PoolStageResultFencer
 
-	if err := r.db.WithContext(ctx).Raw(poolResultFencersQuery, poolStageID).Scan(&rows).Error; err != nil {
+	if err := r.db.WithContext(ctx).Raw(poolStageResultFencersQuery, poolStageID).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("select fencers for pool stage %s: %w", poolStageID, err)
 	}
 
 	return rows, nil
 }
 
-func (r *poolResultRepository) ListPoolStageBouts(ctx context.Context, poolStageID uuid.UUID) ([]pool.PoolSheetBoutRow, error) {
+func (r *poolStageResultRepository) ListPoolStageBouts(ctx context.Context, poolStageID uuid.UUID) ([]pool.PoolSheetBoutRow, error) {
 	var rows []pool.PoolSheetBoutRow
 
 	if err := r.db.WithContext(ctx).Raw(poolStageBoutsQuery, poolStageID).Scan(&rows).Error; err != nil {
@@ -89,7 +89,7 @@ func (r *poolResultRepository) ListPoolStageBouts(ctx context.Context, poolStage
 	return rows, nil
 }
 
-func (r *poolResultRepository) ListTableauEntrantIDs(ctx context.Context, eventID uuid.UUID) ([]uuid.UUID, error) {
+func (r *poolStageResultRepository) ListTableauEntrantIDs(ctx context.Context, eventID uuid.UUID) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
 
 	db := r.db.WithContext(ctx)
