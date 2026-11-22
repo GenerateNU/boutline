@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { PoolCard } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_components/pool-card";
 import { ListCard } from "@/components/primitives/list-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/primitives/tabs";
+import { Text } from "@/components/primitives/text";
 import { ClubCard } from "@/features/competitor/components/club-card";
 import { FencerCard } from "@/features/competitor/components/fencer-card";
 import { FencerBoutList } from "@/features/pinning/components/fencer-bout-list";
@@ -76,7 +77,8 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
   const poolSection = (
     <PinnedSection title="Pools" empty="No pinned pools yet" isEmpty={pools.length === 0}>
       {pools.map(({ pool, pin }) => (
-        <li key={pool.id}>
+        <li key={pool.id} className="flex flex-col gap-2">
+          <Text variant="caption">{pin.eventName}</Text>
           <PoolCard
             pool={pool}
             poolingPath={`/tournaments/${encodeURIComponent(pin.tournamentId)}/events/${encodeURIComponent(pin.eventId)}/pooling`}

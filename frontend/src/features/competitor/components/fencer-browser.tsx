@@ -1,8 +1,8 @@
 import { ActiveFilterChips } from "@/components/primitives/active-filter-chips";
 import { Pagination } from "@/components/primitives/pagination";
 import { Text } from "@/components/primitives/text";
+import { FencerCard } from "@/features/competitor/components/fencer-card";
 import { FencerFilterSheet } from "@/features/competitor/components/fencer-filter-sheet";
-import { FencerList } from "@/features/competitor/components/fencer-list";
 import {
   FENCER_PAGE_SIZE,
   GENDER_OPTIONS,
@@ -12,6 +12,7 @@ import {
 } from "@/features/competitor/lib/fencer-filters";
 import { getCompetitors } from "@/features/competitor/services/getCompetitors";
 import { AGE_OPTIONS, WEAPON_OPTIONS } from "@/features/event/lib/event-filters";
+import { PinnedFirstList } from "@/features/pinning/components/pinned-first-list";
 import { SearchForm } from "@/features/tournament/components/search-form";
 import type { SearchParams } from "@/lib/search-params";
 
@@ -92,7 +93,15 @@ async function FencerBrowser({ tournamentId, basePath, query, eventId }: FencerB
         <Text variant="muted">{emptyMessage({ search, hasFilters, eventId })}</Text>
       )}
 
-      <FencerList competitors={data} />
+      <PinnedFirstList
+        className="flex flex-col gap-3"
+        entries={data.map((competitor) => ({
+          key: competitor.id,
+          label: `${competitor.firstName} ${competitor.lastName}`,
+          pin: { kind: "fencer", item: competitor.id },
+          node: <FencerCard competitor={competitor} />,
+        }))}
+      />
 
       <Pagination
         total={total}

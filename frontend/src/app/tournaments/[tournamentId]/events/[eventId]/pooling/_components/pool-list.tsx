@@ -1,7 +1,6 @@
 "use client";
 
-import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
-import { pinnedFirst } from "@/features/pinning/services/pinned-first";
+import { PinnedFirstList } from "@/features/pinning/components/pinned-first-list";
 import type { PinnedEvent } from "@/features/pinning/types/pinning";
 
 import { usePoolFilters } from "../_hooks/use-pool-filters";
@@ -21,9 +20,6 @@ interface PoolListProps {
 
 export function PoolList({ pools, poolingPath, event }: PoolListProps) {
   const { search, setSearch, filters, setFilters, matches, options } = usePoolFilters(pools);
-  const { pinned } = usePinnedItems();
-  const pinnedIds = new Set(pinned.pools.map((pool) => pool.id));
-  const ordered = pinnedFirst(matches, (pool) => pinnedIds.has(pool.id), poolTitle);
 
   return (
     <div className="flex flex-col gap-6 font-manrope">
@@ -31,14 +27,17 @@ export function PoolList({ pools, poolingPath, event }: PoolListProps) {
         <PoolSearch value={search} onChange={setSearch} options={options} />
         <PoolFilterSheet filters={filters} options={options} onApply={setFilters} />
       </div>
-      {ordered.length > 0 ? (
-        <ul aria-label="Pools" className="flex flex-col gap-6">
-          {ordered.map((pool) => (
-            <li key={pool.id}>
-              <PoolCard pool={pool} poolingPath={poolingPath} event={event} />
-            </li>
-          ))}
-        </ul>
+      {matches.length > 0 ? (
+        <PinnedFirstList
+          aria-label="Pools"
+          className="flex flex-col gap-6"
+          entries={matches.map((pool) => ({
+            key: pool.id,
+            label: poolTitle(pool),
+            pin: { kind: "pool", item: { ...event, id: pool.id, title: poolTitle(pool) } },
+            node: <PoolCard pool={pool} poolingPath={poolingPath} event={event} />,
+          }))}
+        />
       ) : (
         <p className="text-sm text-neutral-secondary">{noPoolsMessage(search, filters)}</p>
       )}

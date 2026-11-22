@@ -158,7 +158,8 @@ describe("PinnedItemsView", () => {
       "href",
       "/tournaments/t1/events/e1/tableau",
     );
-    expect(screen.getByRole("heading", { name: "Pool 1 · Strip 1" })).toBeInTheDocument();
+    // Pools from different events can share a title, so each card is labelled with its event.
+    expect(screen.getByRole("heading", { name: "Pool 1 · Strip 1" }).closest("li")).toHaveTextContent("Mens Foil");
     expect(screen.getByRole("link", { name: "View pool" })).toHaveAttribute(
       "href",
       "/tournaments/t1/events/e1/pooling/pool-1",

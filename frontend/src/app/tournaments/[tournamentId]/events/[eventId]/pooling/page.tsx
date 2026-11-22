@@ -13,8 +13,8 @@ export default async function PoolingTab({ params }: PoolingTabProps) {
   const { tournamentId, eventId } = await params;
   const [pools, event] = await Promise.all([getEventPools(eventId), getEvent(eventId)]);
   if (!event) {
-notFound();
-}
+    notFound();
+  }
 
   const pinnedEvent: PinnedEvent = { tournamentId, eventId, eventName: event.name };
 

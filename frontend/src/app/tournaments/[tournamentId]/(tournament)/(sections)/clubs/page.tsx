@@ -1,8 +1,9 @@
 import { Pagination } from "@/components/primitives/pagination";
 import { Text } from "@/components/primitives/text";
+import { ClubCard } from "@/features/competitor/components/club-card";
 import { ClubFilterSheet } from "@/features/competitor/components/club-filter-sheet";
-import { ClubList } from "@/features/competitor/components/club-list";
 import { getTeams } from "@/features/competitor/services/getTeams";
+import { PinnedFirstList } from "@/features/pinning/components/pinned-first-list";
 import { SearchForm } from "@/features/tournament/components/search-form";
 import { readOffsetParam, readStringParam } from "@/lib/search-params";
 
@@ -46,7 +47,15 @@ export default async function ClubsTab({
             : "No clubs are competing in this tournament yet."}
         </Text>
       ) : (
-        <ClubList names={data.map((team) => team.name)} tournamentId={tournamentId} />
+        <PinnedFirstList
+          className="flex flex-col gap-3"
+          entries={data.map(({ name }) => ({
+            key: name,
+            label: name,
+            pin: { kind: "club", item: { tournamentId, name } },
+            node: <ClubCard name={name} tournamentId={tournamentId} />,
+          }))}
+        />
       )}
 
       <Pagination

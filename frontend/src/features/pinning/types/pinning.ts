@@ -32,5 +32,8 @@ export interface PinnedItemOf {
   tableau: PinnedTableau;
 }
 
+// A kind paired with an item of that kind, so a mixed list can't pair a club with a fencer id.
+export type Pin = { [K in PinKind]: { kind: K; item: PinnedItemOf[K] } }[PinKind];
+
 export const PINNED_STORAGE_KEY = "boutline:pinned";
 export const PINNED_MAX_IDS = 100;
