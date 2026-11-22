@@ -1,7 +1,6 @@
-import Link from "next/link";
-
 import { Card, CardHeader, CardTitle } from "@/components/primitives/card";
 import { Text, textVariants } from "@/components/primitives/text";
+import { EventLink } from "@/features/event/components/event-link";
 import { EventStatusBadge } from "@/features/event/components/event-status-badge";
 import type { TournamentEvent } from "@/features/event/types/event";
 import { pluralize } from "@/lib/pluralize";
@@ -13,10 +12,7 @@ interface EventCardProps {
 
 function EventCard({ event, competitorCount }: EventCardProps) {
   return (
-    <Link
-      href={`/tournaments/${event.tournament_id}/events/${event.id}`}
-      className="block rounded-[12px]"
-    >
+    <EventLink event={event} className="block rounded-[12px]">
       <Card orientation="horizontal" className="gap-3 transition-colors hover:bg-blue-lightest">
         <CardHeader>
           <CardTitle className={textVariants({ variant: "subtitle", className: "uppercase" })}>
@@ -28,7 +24,7 @@ function EventCard({ event, competitorCount }: EventCardProps) {
         </CardHeader>
         <EventStatusBadge status={event.status} />
       </Card>
-    </Link>
+    </EventLink>
   );
 }
 

@@ -31,6 +31,6 @@ describe("EventCard", () => {
     render(<EventCard event={EVENT} competitorCount={competitorCount} />);
 
     expect(screen.getByText(want)).toBeInTheDocument();
-    expect(screen.getByRole("link")).toHaveAttribute("href", "/tournaments/t1/events/e1");
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/tournaments/t1/events/e1/pooling");
   });
 });

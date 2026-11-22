@@ -24,27 +24,29 @@ export function PoolBouts({ pool, fencersPath, boutsPath, canReferee }: PoolBout
   const detail = selectedBoutId ? poolBoutDetail(pool, selectedBoutId) : null;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[repeat(2,24rem)] lg:items-start">
       <PoolTable
         caption={`${poolTitle(pool)} bouts`}
         data={boutsTable(pool)}
         selectedBoutId={selectedBoutId}
         onSelectBout={(boutId) => setSelectedBoutId((current) => (current === boutId ? null : boutId))}
       />
-      <div aria-live="polite" className="flex flex-col gap-3">
-        {detail && (
-          <>
-            <p className="text-center text-sm text-neutral-secondary">Showing the bout you tapped</p>
-            <BoutCard
-              detail={detail}
-              fencersPath={fencersPath}
-              refereePath={canReferee ? `${boutsPath}/${detail.id}/referee` : null}
-              onShowAll={() => setSelectedBoutId(null)}
-            />
-          </>
-        )}
+      <div className="flex flex-col gap-6">
+        <div aria-live="polite" className="flex flex-col gap-3">
+          {detail && (
+            <>
+              <p className="text-center text-sm text-neutral-secondary">Showing the bout you tapped</p>
+              <BoutCard
+                detail={detail}
+                fencersPath={fencersPath}
+                refereePath={canReferee ? `${boutsPath}/${detail.id}/referee` : null}
+                onShowAll={() => setSelectedBoutId(null)}
+              />
+            </>
+          )}
+        </div>
+        {!detail && <PoolStandingsTable pool={pool} />}
       </div>
-      {!detail && <PoolStandingsTable pool={pool} />}
     </div>
   );
 }
