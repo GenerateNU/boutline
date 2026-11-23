@@ -9,9 +9,11 @@ import type { Competitor } from "@/types/competitor";
 
 interface FencerCardProps {
   competitor: Competitor;
+  // Replaces the link to the fencer's page, e.g. to open a dialog about them.
+  onSelect?: () => void;
 }
 
-function FencerCard({ competitor }: FencerCardProps) {
+function FencerCard({ competitor, onSelect }: FencerCardProps) {
   const { id, eventId, tournamentId, firstName, lastName, rating, ratingYear, team } = competitor;
   const { isPinned, togglePin } = usePinnedItems();
   const pinned = isPinned("fencer", id);
@@ -29,7 +31,8 @@ function FencerCard({ competitor }: FencerCardProps) {
         </Text>
       }
       badge={<RatingBadge tone={pinned ? "filled" : "subtle"}>{rating}{ratingYear}</RatingBadge>}
-      href={href || undefined}
+      href={onSelect ? undefined : href || undefined}
+      onSelect={onSelect}
       pinned={pinned}
       onTogglePin={() => togglePin("fencer", id)}
     />
