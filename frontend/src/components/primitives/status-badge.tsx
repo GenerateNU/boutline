@@ -8,7 +8,9 @@ type Status =
   | "live"
   | "scheduled"
   | "occupied"
-  | "available";
+  | "available"
+  | "present"
+  | "absent";
 
 const STATUSES: Record<Status, { label: string; className: string }> = {
   "in-progress": {
@@ -41,6 +43,8 @@ const STATUSES: Record<Status, { label: string; className: string }> = {
     label: "Available",
     className: "bg-green-light text-green-dark",
   },
+  present: { label: "Present", className: "bg-green-light text-green-dark" },
+  absent: { label: "Absent", className: "bg-red-light text-red-dark" },
 };
 
 interface StatusBadgeProps extends React.ComponentProps<"div"> {

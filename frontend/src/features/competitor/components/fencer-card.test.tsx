@@ -13,6 +13,7 @@ const YAN: Competitor = {
   rating: "A",
   ratingYear: 26,
   team: "Boston Blade Club",
+  checkedInAt: null,
 };
 
 describe("FencerCard", () => {

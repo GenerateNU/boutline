@@ -2,7 +2,7 @@ import { fetchPinnedFencers } from "@/features/pinning/services/pinned-items-que
 import { Competitor } from "@/types/competitor";
 
 function fencer(id: string, firstName: string, lastName: string): Competitor {
-  return { id, eventId: "e1", firstName, lastName, rating: "A", ratingYear: null, team: "" };
+  return { id, eventId: "e1", firstName, lastName, rating: "A", ratingYear: null, team: "", checkedInAt: null };
 }
 
 describe("fetchPinnedFencers", () => {
