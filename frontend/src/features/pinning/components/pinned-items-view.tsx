@@ -24,10 +24,9 @@ function PinnedSection({ title, children }: PinnedSectionProps) {
 
 interface FencerSectionProps {
   fencers: Competitor[];
-  onUnpin: (id: string) => void;
 }
 
-function FencerSection({ fencers, onUnpin }: FencerSectionProps) {
+function FencerSection({ fencers }: FencerSectionProps) {
   return (
     <PinnedSection title="Fencers">
       {fencers.length === 0 ? (
@@ -36,7 +35,7 @@ function FencerSection({ fencers, onUnpin }: FencerSectionProps) {
         <ul className="flex flex-col gap-2">
           {fencers.map((fencer) => (
             <li key={fencer.id}>
-              <FencerCard competitor={fencer} pinned onTogglePin={() => onUnpin(fencer.id)} />
+              <FencerCard competitor={fencer} />
             </li>
           ))}
         </ul>
@@ -49,7 +48,7 @@ interface EmptySectionProps {
   title: string;
 }
 
-// Clubs and pools can't be pinned yet, so their sections only ever show this.
+// Pinned clubs and pools aren't listed here yet, so their sections only ever show this.
 function EmptySection({ title }: EmptySectionProps) {
   return (
     <PinnedSection title={title}>
@@ -63,7 +62,7 @@ interface PinnedItemsViewProps {
 }
 
 function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
-  const { fencers, error, unpinFencer } = usePinnedFencers(tournamentId);
+  const { fencers, error } = usePinnedFencers(tournamentId);
 
   if (error) {
     return (
@@ -85,12 +84,12 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
         <TabsTrigger value="pools">Pools</TabsTrigger>
       </TabsList>
       <TabsContent value="all" className="flex flex-col gap-6 pt-4">
-        <FencerSection fencers={fencers} onUnpin={unpinFencer} />
+        <FencerSection fencers={fencers} />
         <EmptySection title="Clubs" />
         <EmptySection title="Pools" />
       </TabsContent>
       <TabsContent value="fencers" className="pt-4">
-        <FencerSection fencers={fencers} onUnpin={unpinFencer} />
+        <FencerSection fencers={fencers} />
       </TabsContent>
       <TabsContent value="clubs" className="pt-4">
         <EmptySection title="Clubs" />
