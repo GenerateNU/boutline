@@ -24,6 +24,7 @@ export async function getTableau(eventId: string): Promise<Tableau> {
         id: bout.id,
         number: bout.slot,
         status: bout.status,
+        location: bout.location ?? undefined,
         top: toTableauFencer(bout.top),
         bottom: toTableauFencer(bout.bottom),
         topScore: bout.top_score ?? undefined,

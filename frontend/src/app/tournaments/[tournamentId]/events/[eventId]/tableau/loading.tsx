@@ -1,10 +1,10 @@
 import ListOutlined from "@mui/icons-material/ListOutlined";
 import SearchOutlined from "@mui/icons-material/SearchOutlined";
 
-import { Background } from "@/components/primitives/background";
 import { Button } from "@/components/primitives/button";
 import { Input } from "@/components/primitives/input";
 import { Skeleton } from "@/components/primitives/skeleton";
+import { TableauBackground } from "./_components/tableau-background";
 
 export default function TableauTabLoading() {
   return (
@@ -12,7 +12,7 @@ export default function TableauTabLoading() {
       <span role="status" className="sr-only">
         Loading tableau
       </span>
-      <Background version={7} />
+      <TableauBackground />
       <div className="flex h-full flex-col">
         <div className="flex shrink-0 items-center gap-3 pb-4">
           <label className="flex h-11.5 min-w-0 flex-1 items-center gap-2 rounded-[12px] border border-outline bg-background px-4 shadow-sm">

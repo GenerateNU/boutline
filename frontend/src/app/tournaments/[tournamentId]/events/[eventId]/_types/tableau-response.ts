@@ -12,6 +12,7 @@ export interface TableauBoutResponse {
   id: string;
   slot: number;
   status: TableauBoutStatus;
+  location: string | null;
   top: TableauFencerResponse;
   bottom: TableauFencerResponse;
   top_score: number | null;

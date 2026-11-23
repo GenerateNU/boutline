@@ -12,6 +12,7 @@ export interface TableauBout {
   id: string;
   number: number;
   status: TableauBoutStatus;
+  location?: string;
   top: TableauFencer;
   bottom: TableauFencer;
   topScore?: number;

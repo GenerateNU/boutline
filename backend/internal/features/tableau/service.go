@@ -132,9 +132,10 @@ func newTableauBoutResponse(row BoutRow, scores map[scoreKey]int) (TableauBoutRe
 	}
 
 	resp := TableauBoutResponse{
-		ID:     row.ID.String(),
-		Slot:   row.Slot,
-		Status: string(row.Status),
+		ID:       row.ID.String(),
+		Slot:     row.Slot,
+		Status:   string(row.Status),
+		Location: row.Location,
 		Top: FencerResponse{
 			ID: row.TopID.String(), FirstName: row.TopFirst, LastName: row.TopLast, Club: row.TopClub, Seed: *row.TopSeed,
 		},

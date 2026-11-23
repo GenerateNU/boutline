@@ -16,6 +16,7 @@ type TableauBoutResponse struct {
 	ID          string         `json:"id" format:"uuid"`
 	Slot        int            `json:"slot" doc:"1-based position in the round, top to bottom"`
 	Status      string         `json:"status" enum:"upcoming,active,ended"`
+	Location    *string        `json:"location" nullable:"true" doc:"Strip or area the bout is fenced on; null until assigned"`
 	Top         FencerResponse `json:"top"`
 	Bottom      FencerResponse `json:"bottom"`
 	TopScore    *int           `json:"top_score" nullable:"true" doc:"Null until the bout has started"`

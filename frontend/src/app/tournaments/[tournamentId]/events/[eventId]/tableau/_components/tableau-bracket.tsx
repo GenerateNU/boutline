@@ -178,6 +178,7 @@ function TableauBracket({
                 columnRefs.current[round.id] = element;
               }}
               round={round}
+              isFirst={roundIndex === 0}
               isLast={roundIndex === rounds.length - 1}
               query={query}
               boutBasePath={boutBasePath}

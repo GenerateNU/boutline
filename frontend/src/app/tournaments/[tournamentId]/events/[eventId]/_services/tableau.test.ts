@@ -44,7 +44,7 @@ describe("getTableau", () => {
         {
           size: 4,
           bouts: [
-            { id: "b-1", slot: 1, status: "ended", top: MAYA, bottom: KENJI, top_score: 15, bottom_score: 9 },
+            { id: "b-1", slot: 1, status: "ended", location: "Strip 3", top: MAYA, bottom: KENJI, top_score: 15, bottom_score: 9 },
           ],
         },
         { size: 2, bouts: [] },
@@ -63,6 +63,7 @@ describe("getTableau", () => {
               id: "b-1",
               number: 1,
               status: "ended",
+              location: "Strip 3",
               top: {
                 id: "f-1",
                 firstName: "Maya",
@@ -87,13 +88,13 @@ describe("getTableau", () => {
     });
   });
 
-  it("turns null scores into undefined", async () => {
+  it("turns null scores and a null location into undefined", async () => {
     respondWith({
       rounds: [
         {
           size: 2,
           bouts: [
-            { id: "b-1", slot: 1, status: "upcoming", top: MAYA, bottom: KENJI, top_score: null, bottom_score: null },
+            { id: "b-1", slot: 1, status: "upcoming", location: null, top: MAYA, bottom: KENJI, top_score: null, bottom_score: null },
           ],
         },
       ],
@@ -103,6 +104,7 @@ describe("getTableau", () => {
 
     expect(rounds[0].bouts[0].topScore).toBeUndefined();
     expect(rounds[0].bouts[0].bottomScore).toBeUndefined();
+    expect(rounds[0].bouts[0].location).toBeUndefined();
   });
 
   it.each([

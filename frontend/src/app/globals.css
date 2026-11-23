@@ -261,3 +261,8 @@
     scrollbar-width: none;
   }
 }
+
+/* Greys a card that doesn't match a search without fading its text. */
+@utility dimmed {
+  @apply relative after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-obsidian/20;
+}

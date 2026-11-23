@@ -1,4 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+
+import { PINNED_STORAGE_KEY } from "@/features/pinning/types/pinning";
 
 import type { TableauBout } from "../../_types/tableau";
 import { BracketMatch } from "./bracket-match";
@@ -15,10 +17,12 @@ const bout = (
   status: TableauBout["status"],
   topScore?: number,
   bottomScore?: number,
+  location?: string,
 ): TableauBout => ({
   id: "b-1",
   number: 1,
   status,
+  location,
   top: fencer("t", "Maya"),
   bottom: fencer("b", "Kenji"),
   topScore,
@@ -39,7 +43,21 @@ function renderMatch(
   );
 }
 
+// The card frame (border, background) is the link's wrapper, which also holds the pin.
+function card() {
+  return screen.getByRole("link").parentElement;
+}
+
+function storedBoutIds() {
+  return JSON.parse(window.sessionStorage.getItem(PINNED_STORAGE_KEY) ?? "{}")
+    .boutIds;
+}
+
 describe("BracketMatch", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
   it.each([
     { name: "the top fencer wins", top: 15, bottom: 11 },
     { name: "the bottom fencer wins", top: 9, bottom: 15 },
@@ -65,7 +83,7 @@ describe("BracketMatch", () => {
   it("gives a live bout a green border, a mint top score and a blue bottom score", () => {
     renderMatch(bout("active", 2, 3));
 
-    expect(screen.getByRole("link")).toHaveClass("border-accent-green");
+    expect(card()).toHaveClass("border-accent-green");
     expect(screen.getByText("Live")).toBeInTheDocument();
     expect(screen.getByText("2")).toHaveClass("bg-mint-light");
     expect(screen.getByText("3")).toHaveClass("bg-blue-soft");
@@ -79,7 +97,7 @@ describe("BracketMatch", () => {
     expect(dashes.every((dash) => dash.classList.contains("bg-surface"))).toBe(
       true,
     );
-    expect(screen.getByRole("link")).not.toHaveClass("border-accent-green");
+    expect(card()).not.toHaveClass("border-accent-green");
   });
 
   it.each(["active", "ended"] as const)(
@@ -106,19 +124,59 @@ describe("BracketMatch", () => {
   it("outlines a search match in blue, even when the bout is live", () => {
     renderMatch(bout("active", 2, 3), { matched: true });
 
-    expect(screen.getByRole("link")).toHaveClass(
+    expect(card()).toHaveClass(
       "border-blue-vivid",
       "border-2",
     );
-    expect(screen.getByRole("link")).not.toHaveClass("border-accent-green");
+    expect(card()).not.toHaveClass("border-accent-green");
   });
 
-  it("greys out a bout that doesn't match the search without fading its text", () => {
+  it("greys out a bout that doesn't match the search, pin included, without fading its text", () => {
     renderMatch(bout("ended", 15, 11), { dimmed: true });
 
-    expect(screen.getByRole("link").className).toContain(
-      "after:bg-obsidian/20",
+    expect(card()).toHaveClass("dimmed");
+    expect(card()).toContainElement(
+      screen.getByRole("button", { name: "Pin bout" }),
     );
-    expect(screen.getByRole("link")).not.toHaveClass("opacity-40");
+    expect(card()).not.toHaveClass("opacity-40");
+  });
+
+  it.each([
+    { name: "its location", location: "Strip 3", want: "Strip 3" },
+    { name: "TBA Location when it has none", location: undefined, want: "TBA Location" },
+  ])("shows $name in the header", ({ location, want }) => {
+    renderMatch(bout("upcoming", undefined, undefined, location));
+
+    expect(screen.getByRole("link")).toHaveTextContent(want);
+    expect(screen.getByText(want)).toHaveClass("uppercase");
+  });
+
+  it("pins and unpins the bout, turning the card light blue while pinned", () => {
+    renderMatch(bout("ended", 15, 11));
+
+    fireEvent.click(screen.getByRole("button", { name: "Pin bout" }));
+
+    expect(
+      screen.getByRole("button", { name: "Unpin bout" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(storedBoutIds()).toEqual(["b-1"]);
+    expect(card()).toHaveClass("bg-blue-lightest");
+
+    fireEvent.click(screen.getByRole("button", { name: "Unpin bout" }));
+
+    expect(screen.getByRole("button", { name: "Pin bout" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(storedBoutIds()).toEqual([]);
+    expect(card()).toHaveClass("bg-card");
+  });
+
+  it("keeps the pin outside the link so pressing it doesn't open the bout", () => {
+    renderMatch(bout("ended", 15, 11));
+
+    expect(screen.getByRole("link")).not.toContainElement(
+      screen.getByRole("button", { name: "Pin bout" }),
+    );
   });
 });

@@ -147,6 +147,7 @@ func TestGetTableauBouts(t *testing.T) {
 	upcoming := boutRow(4, 2, bout.BoutStatusUpcoming)
 	ended := boutRow(4, 1, bout.BoutStatusEnded)
 	final := boutRow(2, 1, bout.BoutStatusActive)
+	ended.Location = ptr("Strip 3")
 
 	fx := newFixture(4, upcoming, ended, final)
 	revoked := time.Now()
@@ -172,6 +173,9 @@ func TestGetTableauBouts(t *testing.T) {
 	assert.Equal(t, ptr("Boston Fencing Club"), semis[0].Top.Club)
 	assert.Nil(t, semis[0].Bottom.Club, "a fencer with no primary club has a null club")
 	assert.Equal(t, 4, semis[0].Bottom.Seed)
+
+	assert.Equal(t, ptr("Strip 3"), semis[0].Location)
+	assert.Nil(t, semis[1].Location, "a bout with no location has a null location")
 
 	assert.Equal(t, "ended", semis[0].Status)
 	assert.Equal(t, "upcoming", semis[1].Status)

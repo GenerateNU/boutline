@@ -683,7 +683,8 @@ every pin when it's opened without one.
 
 ### 6.3 Pin controls
 
-**Status:** Partial. Pools can be pinned (§11.6); the rest is Planned.
+**Status:** Partial. Pools (§11.6) and tableau bracket bouts (§12.5) can be
+pinned; the rest is Planned.
 
 A pin toggle on each fencer row, on clubs and on pools, and listing pinned clubs
 and pools. Pool pins are stored with the others as `poolIds`;
@@ -1435,10 +1436,10 @@ once the event's pool stage has ended:
   Rounds not yet created come back with no bouts.
 - Response shape: `{ "rounds": [{ "size": 8, "bouts": [...] }] }`, largest round
   first, `size: 2` being the final. Each bout carries `id`, `slot` (1-based, top
-  to bottom), `status` (`upcoming`, `active` or `ended`), `top` and `bottom`
-  fencers (`id`, `first_name`, `last_name`, `club`, `seed`), and `top_score` and
-  `bottom_score`. `club` is the fencer's primary club and is `null` when they
-  have none.
+  to bottom), `status` (`upcoming`, `active` or `ended`), `location` (the strip,
+  `null` until assigned), `top` and `bottom` fencers (`id`, `first_name`,
+  `last_name`, `club`, `seed`), and `top_score` and `bottom_score`. `club` is the
+  fencer's primary club and is `null` when they have none.
 - Scores are `null` while the bout is `upcoming`; once it has started they are
   the sum of the fencer's unrevoked scorings, `0` if there are none yet.
 - `rounds` is `[]` when the event has no direct elimination or no entries.
@@ -1448,6 +1449,9 @@ once the event's pool stage has ended:
   round buttons follows the bracket as it scrolls, and picking one scrolls the
   bracket to that round (#168). A list view of the selected round and a name/club
   search sit alongside the bracket.
+- Each bracket bout shows its location ("TBA Location" when it has none) and a
+  pin toggle that stores the bout in `boutIds` (§6.1). TBA positions have no bout
+  to pin, so their pin is disabled (#337).
 
 ---
 
