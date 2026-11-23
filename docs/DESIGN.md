@@ -59,6 +59,7 @@ Tokens live in `src/app/globals.css`.
 | `brand` | alias of the hi-fi navy `blue` (#21358b), kept for existing uses |
 | `charcoal` (#1e1e1e) | the `Text` `heading` variant |
 | `green` (#32944b) | the V tile on the pool bout card |
+| `amber` (#f5a623) | the Eliminated dot on pool results, beside `accent-green` for Advanced |
 
 No Tailwind palette colors. Status pills (tournament, pool and event status) go
 through the `StatusBadge` primitive, which maps a status to one of the status pairs.

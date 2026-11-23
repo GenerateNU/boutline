@@ -1248,8 +1248,8 @@ fencer in two pools, or re-seat a pool that has just started.
 
 ### 11.3 Pool results
 
-**Status:** Partial. The pool sheet is built; the stage results endpoint is
-planned.
+**Status:** Partial. The pool sheet and the stage results are built, with the
+pool sheet's to-dos below.
 
 Two reads share one standings function (`pool/standings.go`):
 
@@ -1265,9 +1265,14 @@ Two reads share one standings function (`pool/standings.go`):
     registration order, which can differ from the order create seats them in
     (§11.2). Until `bouts.winner_id` exists (§9.2), the higher score wins, so a
     priority win at a tied score shows no winner.
-- **Stage results** (planned): `GET /pool-stages/{id}/results` returns the
-  stage's overall ranking, computed from ended bouts, which seeds the DE. Each
-  pool's grid comes from the pool sheet.
+- **Stage results** (built): `GET /events/{id}/pool-stage-results` returns the
+  overall ranking of the event's latest pool stage, computed from ended bouts:
+  each fencer's place (shared when tied), standing, club, pool number and status.
+  The status is `pending` until the tableau is drawn, then `advanced` for fencers
+  with a DE entry and `eliminated` for the rest. It is paginated, returns an empty
+  list for an event with no pool stage, and not found for an unknown event. It
+  lives in the event result feature beside the final classification. Each pool's
+  grid comes from the pool sheet.
 
 | Column | Meaning |
 | --- | --- |
@@ -1311,13 +1316,17 @@ results, stored on the DE entry (§12.1).
 
 ### 11.6 Pooling tab and pool screen
 
-**Status:** Partial. Issue: #127. Both screens read the pool sheets API (§11.3).
+**Status:** Partial. Issue: #127. The pool list and pool page read the pool sheets
+API, and the pool results read the stage results (§11.3).
 
 - **Pool list:** the event's pools from `GET /pool-sheets?event_id=…`, each showing
   either its V/D grid or its standings (place, fencer, V, V/M, TS, TR, Ind), with a
   link to the pool page. Pools can be searched by fencer or club name, filtered by
   fencer, club, status and pool number, and sorted by pool number, start time or
   strip. A pool can be pinned (§6.3), and pinned pools always lead the list.
+- **Pool results:** the tab's second view (`?view=results`) lists every fencer in
+  the stage ranking with their place, club, status, V, V/M and TS. It can be
+  searched by fencer or club name and filtered by status and pool number.
 - **Pool page:** one pool from `GET /pool-sheets/{id}` (not found for an unknown or
   malformed id): its status, fencer count, V/D grid and standings. Tapping a bout in
   the grid shows that bout: its fencers, scores, winner, status and strip. For the
