@@ -5,7 +5,7 @@ import { buildPool } from "../_fixtures/build-pool";
 import { PoolCard } from "./pool-card";
 
 const poolingPath = "/tournaments/t/events/e/pooling";
-const EVENT = { tournamentId: "t", eventId: "e", eventName: "Mens Foil" };
+const EVENT = { tournamentId: "t", eventId: "e" };
 
 const pool = buildPool({
   number: 1,

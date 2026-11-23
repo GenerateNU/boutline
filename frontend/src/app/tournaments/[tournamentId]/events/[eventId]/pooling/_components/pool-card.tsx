@@ -32,7 +32,7 @@ export function PoolCard({ pool, poolingPath, event }: PoolCardProps) {
   const { isPinned } = usePinnedItems();
   const [view, setView] = useState<PoolView>("bouts");
   const title = poolTitle(pool);
-  const pinned = isPinned("pool", { ...event, id: pool.id, title });
+  const pinned = isPinned("pool", { ...event, id: pool.id });
 
   return (
     <article

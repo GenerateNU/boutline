@@ -19,7 +19,7 @@ interface PoolPinButtonProps {
 
 export function PoolPinButton({ pool, event, className }: PoolPinButtonProps) {
   const { isPinned, togglePin } = usePinnedItems();
-  const item = { ...event, id: pool.id, title: poolTitle(pool) };
+  const item = { ...event, id: pool.id };
   const pinned = isPinned("pool", item);
   const PinIcon = pinned ? PushPin : PushPinOutlined;
 
@@ -28,7 +28,7 @@ export function PoolPinButton({ pool, event, className }: PoolPinButtonProps) {
       variant="plain"
       size="xs"
       active={pinned}
-      aria-label={`${pinned ? "Unpin" : "Pin"} ${item.title}`}
+      aria-label={`${pinned ? "Unpin" : "Pin"} ${poolTitle(pool)}`}
       onClick={() => togglePin("pool", item)}
       className={cn("[&_svg]:size-5", className)}
     >

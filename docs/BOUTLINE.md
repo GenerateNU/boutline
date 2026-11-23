@@ -659,9 +659,9 @@ without creating an account.
 **Status:** Completed.
 
 Pins live in the browser's `sessionStorage` (`boutline:pinned`), never in the
-database: pinned fencer ids, plus club, pool and tableau snapshots that carry their
-tournament (pools and tableaus also their event id and name, pools their title). Up
-to 100 of each kind. Pins saved before this keep their fencers; their old bout and
+database: pinned fencer ids, plus club, pool and tableau pins that carry their
+tournament (clubs their name, pools and tableaus their event id, pools their id).
+Only ids are saved, so names are always current. Up to 100 of each kind. Pins saved before this keep their fencers; their old bout and
 pool pins are dropped.
 
 ### 6.2 The pinned view
@@ -677,8 +677,12 @@ Back link. All lists Fencers, Clubs, Pools and Tableaus in that order.
   its stage, the opponent and the score, or "Upcoming", and a link to their
   fencer page.
 - **Clubs:** rows linking to the club's fencer filter.
-- **Pools:** full pool cards, loaded live with `GET /pool-sheets?ids=` (§11.3).
-- **Tableaus:** rows linking to the event's Tableau tab.
+- **Pools:** full pool cards under their event's name, loaded live with
+  `GET /pool-sheets?ids=` (§11.3), sorted by event then pool number.
+- **Tableaus:** rows titled with their event's name, linking to the event's
+  Tableau tab.
+- Event names come from one server-side `GET /events?tournament_id=` for the page's
+  tournament.
 - Every item's pin unpins it.
 - Every tournament page except the referee screen has a floating pin button
   linking to `/pinned?tournamentId=…`, which Back returns to.

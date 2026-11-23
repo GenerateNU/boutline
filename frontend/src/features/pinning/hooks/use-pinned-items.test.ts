@@ -2,9 +2,9 @@ import { act, renderHook } from "@testing-library/react";
 import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
 import { PINNED_MAX_IDS, PINNED_STORAGE_KEY } from "@/features/pinning/types/pinning";
 
-const EVENT = { tournamentId: "t1", eventId: "e1", eventName: "Men's Epee" };
+const EVENT = { tournamentId: "t1", eventId: "e1" };
 const CLUB = { tournamentId: "t1", name: "Salle" };
-const POOL = { ...EVENT, id: "p1", title: "Pool 1" };
+const POOL = { ...EVENT, id: "p1" };
 
 const CASES = [
   ["fencer", "f1", "fencerIds"],

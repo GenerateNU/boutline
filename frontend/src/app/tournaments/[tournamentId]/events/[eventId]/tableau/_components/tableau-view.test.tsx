@@ -39,7 +39,7 @@ const TABLEAU: Tableau = {
   ],
 };
 
-const EVENT = { tournamentId: "t-1", eventId: "e-1", eventName: "Men's Epee" };
+const EVENT = { tournamentId: "t-1", eventId: "e-1" };
 
 const renderView = (value: Tableau = TABLEAU) =>
   render(<TableauView tableau={value} boutBasePath="/bout" event={EVENT} />);

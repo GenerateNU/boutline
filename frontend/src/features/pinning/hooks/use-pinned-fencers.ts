@@ -13,7 +13,11 @@ interface PinnedFencers {
   fencers: Competitor[] | null;
   bouts: Record<string, FencerBout[]>;
   error: string | null;
+  // Kept apart from error so the fencer cards stay when only their bouts fail.
+  boutsError: string | null;
 }
+
+const NOT_SETTLED: PinnedFencers = { fencers: null, bouts: {}, error: null, boutsError: null };
 
 const subscribe = () => () => {};
 
@@ -31,30 +35,36 @@ function usePinnedFencers(tournamentId?: string): PinnedFencers {
       return;
     }
     let ignore = false;
-    fetchPinnedFencers(pinned.fencerIds)
-      .then(async (all) => {
-        const fencers = tournamentId ? all.filter((fencer) => fencer.tournamentId === tournamentId) : all;
-        return { fencers, bouts: await fetchFencerBouts(fencers), error: null };
-      })
-      .then(
-        (result) => {
-          if (!ignore) {
-            setSettled(result);
-          }
-        },
-        (caught) => {
-          if (!ignore) {
-            setSettled({ fencers: null, bouts: {}, error: errorMessage(caught) });
-          }
-        },
-      );
+    async function load() {
+      let fencers: Competitor[];
+      try {
+        const all = await fetchPinnedFencers(pinned.fencerIds);
+        fencers = tournamentId ? all.filter((fencer) => fencer.tournamentId === tournamentId) : all;
+      } catch (caught) {
+        if (!ignore) {
+          setSettled({ ...NOT_SETTLED, error: errorMessage(caught) });
+        }
+        return;
+      }
+      try {
+        const bouts = await fetchFencerBouts(fencers);
+        if (!ignore) {
+          setSettled({ fencers, bouts, error: null, boutsError: null });
+        }
+      } catch (caught) {
+        if (!ignore) {
+          setSettled({ fencers, bouts: {}, error: null, boutsError: errorMessage(caught) });
+        }
+      }
+    }
+    load();
     return () => {
       ignore = true;
     };
   }, [hydrated, pinned.fencerIds, tournamentId]);
 
   if (!hydrated || !settled) {
-    return { fencers: null, bouts: {}, error: null };
+    return NOT_SETTLED;
   }
   // While a refetch is in flight the last result stays on screen, minus anything
   // unpinned since, so unpinning removes one card instead of reloading the list.
@@ -63,7 +73,7 @@ function usePinnedFencers(tournamentId?: string): PinnedFencers {
       pinned.fencerIds.includes(fencer.id) &&
       (!tournamentId || fencer.tournamentId === tournamentId),
   );
-  return { fencers: fencers ?? null, bouts: settled.bouts, error: settled.error };
+  return { ...settled, fencers: fencers ?? null };
 }
 
 export { usePinnedFencers };

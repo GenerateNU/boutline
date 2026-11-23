@@ -1,7 +1,6 @@
 export interface PinnedEvent {
   tournamentId: string;
   eventId: string;
-  eventName: string;
 }
 
 export interface PinnedClub {
@@ -11,7 +10,6 @@ export interface PinnedClub {
 
 export interface PinnedPool extends PinnedEvent {
   id: string;
-  title: string;
 }
 
 export type PinnedTableau = PinnedEvent;

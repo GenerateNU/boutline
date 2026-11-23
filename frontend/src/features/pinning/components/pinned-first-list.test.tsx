@@ -3,14 +3,14 @@ import { render, screen } from "@testing-library/react";
 import { PinnedFirstList, type PinnedFirstEntry } from "@/features/pinning/components/pinned-first-list";
 import { PINNED_STORAGE_KEY, type PinnedItems } from "@/features/pinning/types/pinning";
 
-const POOL_EVENT = { tournamentId: "t1", eventId: "e1", eventName: "Mixed Épée" };
+const POOL_EVENT = { tournamentId: "t1", eventId: "e1" };
 
 // One entry of each listable kind, in the list's incoming order.
 const ENTRIES: PinnedFirstEntry[] = [
   { key: "f1", label: "Yan Wang", pin: { kind: "fencer", item: "f1" }, node: "Yan Wang" },
   { key: "c1", label: "Boston Blade", pin: { kind: "club", item: { tournamentId: "t1", name: "Boston Blade" } }, node: "Boston Blade" },
-  { key: "p10", label: "Pool 10", pin: { kind: "pool", item: { ...POOL_EVENT, id: "p10", title: "Pool 10" } }, node: "Pool 10" },
-  { key: "p2", label: "Pool 2", pin: { kind: "pool", item: { ...POOL_EVENT, id: "p2", title: "Pool 2" } }, node: "Pool 2" },
+  { key: "p10", label: "Pool 10", pin: { kind: "pool", item: { ...POOL_EVENT, id: "p10" } }, node: "Pool 10" },
+  { key: "p2", label: "Pool 2", pin: { kind: "pool", item: { ...POOL_EVENT, id: "p2" } }, node: "Pool 2" },
 ];
 
 function seed(pins: Partial<PinnedItems>) {
@@ -37,7 +37,7 @@ describe("PinnedFirstList", () => {
     },
     {
       case: "pinned pools, numbers compared as numbers",
-      pins: { pools: [{ ...POOL_EVENT, id: "p10", title: "Pool 10" }, { ...POOL_EVENT, id: "p2", title: "Pool 2" }] },
+      pins: { pools: [{ ...POOL_EVENT, id: "p10" }, { ...POOL_EVENT, id: "p2" }] },
       order: ["Pool 2", "Pool 10", "Yan Wang", "Boston Blade"],
     },
     {
@@ -45,7 +45,7 @@ describe("PinnedFirstList", () => {
       pins: {
         fencerIds: ["f1"],
         clubs: [{ tournamentId: "t1", name: "Boston Blade" }],
-        pools: [{ ...POOL_EVENT, id: "p10", title: "Pool 10" }, { ...POOL_EVENT, id: "p2", title: "Pool 2" }],
+        pools: [{ ...POOL_EVENT, id: "p10" }, { ...POOL_EVENT, id: "p2" }],
       },
       order: ["Boston Blade", "Pool 2", "Pool 10", "Yan Wang"],
     },

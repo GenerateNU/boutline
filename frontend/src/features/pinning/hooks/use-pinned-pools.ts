@@ -38,18 +38,19 @@ function usePinnedPools(pins: PinnedPool[]): PinnedPools {
       return;
     }
     let ignore = false;
-    fetchPinnedPools(idsKey ? idsKey.split(",") : []).then(
-      (boards) => {
+    async function load() {
+      try {
+        const boards = await fetchPinnedPools(idsKey ? idsKey.split(",") : []);
         if (!ignore) {
           setSettled({ boards, error: null });
         }
-      },
-      (caught) => {
+      } catch (caught) {
         if (!ignore) {
           setSettled({ boards: null, error: errorMessage(caught) });
         }
-      },
-    );
+      }
+    }
+    load();
     return () => {
       ignore = true;
     };
@@ -71,3 +72,4 @@ function usePinnedPools(pins: PinnedPool[]): PinnedPools {
 }
 
 export { usePinnedPools };
+export type { PinnedPoolEntry };

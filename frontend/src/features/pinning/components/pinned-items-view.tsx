@@ -13,38 +13,58 @@ import { PinnedFencerDialog } from "@/features/pinning/components/pinned-fencer-
 import { PinnedItemsSkeleton } from "@/features/pinning/components/pinned-items-skeleton";
 import { usePinnedFencers } from "@/features/pinning/hooks/use-pinned-fencers";
 import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
-import { usePinnedPools } from "@/features/pinning/hooks/use-pinned-pools";
+import { type PinnedPoolEntry, usePinnedPools } from "@/features/pinning/hooks/use-pinned-pools";
 import type { PinnedItems } from "@/features/pinning/types/pinning";
 import type { Competitor } from "@/types/competitor";
 
 const compare = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base", numeric: true });
 
 // Pins from every tournament share one store, so the page keeps only this tournament's.
-function pinnedInTournament({ clubs, pools, tableaus }: PinnedItems, tournamentId?: string) {
+function pinnedInTournament(
+  { clubs, pools, tableaus }: PinnedItems,
+  eventNames: Record<string, string>,
+  tournamentId?: string,
+) {
   const inScope = <T extends { tournamentId: string }>(items: T[]) =>
     tournamentId ? items.filter((item) => item.tournamentId === tournamentId) : [...items];
 
   return {
     clubs: inScope(clubs).sort((a, b) => compare(a.name, b.name)),
-    pools: inScope(pools).sort((a, b) => compare(a.eventName, b.eventName) || compare(a.title, b.title)),
-    tableaus: inScope(tableaus).sort((a, b) => compare(a.eventName, b.eventName)),
+    pools: inScope(pools),
+    tableaus: inScope(tableaus).sort((a, b) =>
+      compare(eventNames[a.eventId] ?? "", eventNames[b.eventId] ?? ""),
+    ),
   };
+}
+
+// Pools sort by event, then by number from the live pool ("Pool 2" before "Pool 10").
+function sortPools(pools: PinnedPoolEntry[], eventNames: Record<string, string>) {
+  return [...pools].sort(
+    (a, b) =>
+      compare(eventNames[a.pin.eventId] ?? "", eventNames[b.pin.eventId] ?? "") || a.pool.number - b.pool.number,
+  );
 }
 
 interface PinnedSectionProps {
   title: string;
   empty: string;
   isEmpty: boolean;
+  // A section whose request failed shows why, while the other sections stay usable.
+  error?: string | null;
   children: React.ReactNode;
 }
 
 // The Figma's section headings are black and sentence case, unlike the shared
 // Section's small gray caps.
-function PinnedSection({ title, empty, isEmpty, children }: PinnedSectionProps) {
+function PinnedSection({ title, empty, isEmpty, error, children }: PinnedSectionProps) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-base font-medium text-obsidian">{title}</h2>
-      {isEmpty ? (
+      {error ? (
+        <p role="alert" className="text-sm text-red-dark">
+          {error}
+        </p>
+      ) : isEmpty ? (
         <p className="text-sm text-neutral-secondary">{empty}</p>
       ) : (
         <ul className="flex flex-col gap-2">{children}</ul>
@@ -55,30 +75,33 @@ function PinnedSection({ title, empty, isEmpty, children }: PinnedSectionProps) 
 
 interface PinnedItemsViewProps {
   tournamentId?: string;
+  // Event id to name, for the tournament's events.
+  eventNames: Record<string, string>;
 }
 
-function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
+function PinnedItemsView({ tournamentId, eventNames }: PinnedItemsViewProps) {
   const { pinned, togglePin } = usePinnedItems();
   const [selected, setSelected] = useState<Competitor | null>(null);
-  const scoped = useMemo(() => pinnedInTournament(pinned, tournamentId), [pinned, tournamentId]);
-  const { fencers, bouts, error: fencersError } = usePinnedFencers(tournamentId);
+  const scoped = useMemo(
+    () => pinnedInTournament(pinned, eventNames, tournamentId),
+    [pinned, eventNames, tournamentId],
+  );
+  const { fencers, bouts, error: fencersError, boutsError } = usePinnedFencers(tournamentId);
   const { pools, error: poolsError } = usePinnedPools(scoped.pools);
 
-  const error = fencersError ?? poolsError;
-  if (error) {
-    return (
-      <p role="alert" className="text-sm text-red-dark">
-        {error}
-      </p>
-    );
-  }
-  if (!fencers || !pools) {
+  // Wait until each request has either loaded or failed, so no section flashes its empty message.
+  if ((!fencers && !fencersError) || (!pools && !poolsError)) {
     return <PinnedItemsSkeleton />;
   }
 
   const fencerSection = (
-    <PinnedSection title="Fencers" empty="No pinned fencers yet" isEmpty={fencers.length === 0}>
-      {fencers.map((fencer) => (
+    <PinnedSection
+      title="Fencers"
+      empty="No pinned fencers yet"
+      isEmpty={!fencers?.length}
+      error={fencersError}
+    >
+      {fencers?.map((fencer) => (
         <li key={fencer.id}>
           <FencerCard competitor={fencer} onSelect={() => setSelected(fencer)} />
         </li>
@@ -95,10 +118,10 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
     </PinnedSection>
   );
   const poolSection = (
-    <PinnedSection title="Pools" empty="No pinned pools yet" isEmpty={pools.length === 0}>
-      {pools.map(({ pool, pin }) => (
+    <PinnedSection title="Pools" empty="No pinned pools yet" isEmpty={!pools?.length} error={poolsError}>
+      {sortPools(pools ?? [], eventNames).map(({ pool, pin }) => (
         <li key={pool.id} className="flex flex-col gap-2">
-          <Text variant="caption">{pin.eventName}</Text>
+          <Text variant="caption">{eventNames[pin.eventId]}</Text>
           <PoolCard
             pool={pool}
             poolingPath={`/tournaments/${encodeURIComponent(pin.tournamentId)}/events/${encodeURIComponent(pin.eventId)}/pooling`}
@@ -113,7 +136,7 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
       {scoped.tableaus.map((tableau) => (
         <li key={tableau.eventId}>
           <ListCard
-            title={tableau.eventName}
+            title={eventNames[tableau.eventId] ?? "Tableau"}
             description="Tableau"
             href={`/tournaments/${encodeURIComponent(tableau.tournamentId)}/events/${encodeURIComponent(tableau.eventId)}/tableau`}
             pinned
@@ -154,7 +177,7 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
         </TabsContent>
       </Tabs>
       <Dialog.Root open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        {selected && <PinnedFencerDialog fencer={selected} bouts={bouts[selected.id] ?? []} />}
+        {selected && <PinnedFencerDialog fencer={selected} bouts={bouts[selected.id] ?? []} boutsError={boutsError} />}
       </Dialog.Root>
     </>
   );

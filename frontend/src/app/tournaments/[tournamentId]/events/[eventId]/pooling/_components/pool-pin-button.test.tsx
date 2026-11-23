@@ -7,8 +7,8 @@ import { buildPool } from "../_fixtures/build-pool";
 import { PoolPinButton } from "./pool-pin-button";
 
 const POOL = buildPool({ number: 1, strip: "Strip 3", fencers: [] });
-const EVENT = { tournamentId: "t1", eventId: "e1", eventName: "Mens Foil" };
-const PINNED_POOL = { ...EVENT, id: "pool-1", title: "Pool 1 \u00b7 Strip 3" };
+const EVENT = { tournamentId: "t1", eventId: "e1" };
+const PINNED_POOL = { ...EVENT, id: "pool-1" };
 
 function stored() {
   return JSON.parse(window.sessionStorage.getItem(PINNED_STORAGE_KEY) ?? "{}");

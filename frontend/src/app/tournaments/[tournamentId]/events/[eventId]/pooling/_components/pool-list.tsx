@@ -34,7 +34,7 @@ export function PoolList({ pools, poolingPath, event }: PoolListProps) {
           entries={matches.map((pool) => ({
             key: pool.id,
             label: poolTitle(pool),
-            pin: { kind: "pool", item: { ...event, id: pool.id, title: poolTitle(pool) } },
+            pin: { kind: "pool", item: { ...event, id: pool.id } },
             node: <PoolCard pool={pool} poolingPath={poolingPath} event={event} />,
           }))}
         />

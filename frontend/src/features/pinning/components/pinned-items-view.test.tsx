@@ -49,6 +49,8 @@ const ANN_BOUTS = [
   annBout("b3", "Hugo Ito", "upcoming", null, null),
 ];
 
+const EVENT_NAMES = { e1: "Mens Foil", e2: "Womens Epee" };
+
 const NO_PINS: PinnedItems = { fencerIds: [], clubs: [], pools: [], tableaus: [] };
 const ALL_PINS: PinnedItems = {
   fencerIds: [],
@@ -57,12 +59,12 @@ const ALL_PINS: PinnedItems = {
     { tournamentId: "t2", name: "Beta FC" },
   ],
   pools: [
-    { tournamentId: "t1", eventId: "e1", eventName: "Mens Foil", id: "pool-1", title: "Pool 1 · Strip 1" },
-    { tournamentId: "t2", eventId: "e2", eventName: "Womens Epee", id: "pool-2", title: "Pool 2 · Strip 2" },
+    { tournamentId: "t1", eventId: "e1", id: "pool-1" },
+    { tournamentId: "t2", eventId: "e2", id: "pool-2" },
   ],
   tableaus: [
-    { tournamentId: "t1", eventId: "e1", eventName: "Mens Foil" },
-    { tournamentId: "t2", eventId: "e2", eventName: "Womens Epee" },
+    { tournamentId: "t1", eventId: "e1" },
+    { tournamentId: "t2", eventId: "e2" },
   ],
 };
 
@@ -74,9 +76,13 @@ function list(data: unknown[]) {
   return respond({ data, total: data.length, limit: data.length, offset: 0 });
 }
 
-function mockApi() {
+// A request whose path matches `failing` rejects, as if the network dropped it.
+function mockApi(failing?: RegExp) {
   global.fetch = jest.fn(async (input: RequestInfo | URL) => {
     const { pathname, searchParams } = new URL(String(input), "http://localhost");
+    if (failing?.test(pathname)) {
+      throw new Error("Network down");
+    }
     const ids = searchParams.get("ids")?.split(",") ?? [];
     if (pathname.endsWith("/competitors/ann-smith/bouts")) {
       return respond({ data: ANN_BOUTS });
@@ -115,7 +121,7 @@ describe("PinnedItemsView", () => {
   });
 
   it("has the All, Fencers, Clubs, Pools and Tableaus tabs", async () => {
-    render(<PinnedItemsView />);
+    render(<PinnedItemsView eventNames={EVENT_NAMES} />);
 
     await screen.findByText("No pinned fencers yet");
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
@@ -128,7 +134,7 @@ describe("PinnedItemsView", () => {
   });
 
   it("lists All's sections in order, each with its empty message", async () => {
-    render(<PinnedItemsView />);
+    render(<PinnedItemsView eventNames={EVENT_NAMES} />);
 
     await screen.findByText("No pinned fencers yet");
     expect(screen.getAllByRole("heading").map((heading) => heading.textContent)).toEqual([
@@ -144,7 +150,7 @@ describe("PinnedItemsView", () => {
 
   it("opens a pinned fencer's pools and bouts in a dialog", async () => {
     seed({ fencerIds: ["ann-smith"] });
-    render(<PinnedItemsView />);
+    render(<PinnedItemsView eventNames={EVENT_NAMES} />);
 
     fireEvent.click(await screen.findByRole("button", { name: /^Ann Smith/ }));
 
@@ -164,7 +170,7 @@ describe("PinnedItemsView", () => {
 
   it("lists no bouts under the cards, only in the dialog", async () => {
     seed({ fencerIds: ["cara-smith"] });
-    render(<PinnedItemsView />);
+    render(<PinnedItemsView eventNames={EVENT_NAMES} />);
 
     fireEvent.click(await screen.findByRole("button", { name: /^Cara Smith/ }));
 
@@ -175,7 +181,7 @@ describe("PinnedItemsView", () => {
 
   it("tapping the pin unpins the fencer", async () => {
     seed({ fencerIds: ["ann-smith"] });
-    render(<PinnedItemsView />);
+    render(<PinnedItemsView eventNames={EVENT_NAMES} />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Unpin Ann Smith" }));
 
@@ -188,7 +194,7 @@ describe("PinnedItemsView", () => {
     { name: "every fencer without a tournament", tournamentId: undefined, wantCara: true },
   ])("shows $name", async ({ tournamentId, wantCara }) => {
     seed({ fencerIds: ["ann-smith", "cara-smith"] });
-    render(<PinnedItemsView tournamentId={tournamentId} />);
+    render(<PinnedItemsView tournamentId={tournamentId} eventNames={EVENT_NAMES} />);
 
     expect(await screen.findByRole("button", { name: /^Ann Smith/ })).toBeInTheDocument();
     expect(Boolean(screen.queryByRole("button", { name: /^Cara Smith/ }))).toBe(wantCara);
@@ -196,7 +202,7 @@ describe("PinnedItemsView", () => {
 
   it("renders pinned clubs, pools and tableaus scoped to the tournament", async () => {
     seed(ALL_PINS);
-    render(<PinnedItemsView tournamentId="t1" />);
+    render(<PinnedItemsView tournamentId="t1" eventNames={EVENT_NAMES} />);
 
     expect(await screen.findByRole("link", { name: /Alpha FC/ })).toHaveAttribute(
       "href",
@@ -215,22 +221,23 @@ describe("PinnedItemsView", () => {
     expect(screen.queryByText(/Beta FC|Womens Epee|Pool 2/)).not.toBeInTheDocument();
   });
 
-  it("sorts clubs by name, pools by event then number, and tableaus by event", async () => {
+  it("sorts clubs by name, pools by event, and tableaus by event", async () => {
     seed({
       clubs: [
         { tournamentId: "t1", name: "Zeta FC" },
         { tournamentId: "t1", name: "alpha fc" },
       ],
+      // Pool 1 is in Womens Epee, so Mens Foil's Pool 2 leads.
       pools: [
-        { tournamentId: "t1", eventId: "e1", eventName: "Mens Foil", id: "pool-1", title: "Pool 10" },
-        { tournamentId: "t1", eventId: "e1", eventName: "Mens Foil", id: "pool-2", title: "Pool 2" },
+        { tournamentId: "t1", eventId: "e2", id: "pool-1" },
+        { tournamentId: "t1", eventId: "e1", id: "pool-2" },
       ],
       tableaus: [
-        { tournamentId: "t1", eventId: "e2", eventName: "Womens Epee" },
-        { tournamentId: "t1", eventId: "e1", eventName: "Mens Foil" },
+        { tournamentId: "t1", eventId: "e2" },
+        { tournamentId: "t1", eventId: "e1" },
       ],
     });
-    render(<PinnedItemsView tournamentId="t1" />);
+    render(<PinnedItemsView tournamentId="t1" eventNames={EVENT_NAMES} />);
 
     const titlesIn = (section: string) =>
       within(screen.getByRole("heading", { name: section }).closest("section")!)
@@ -245,7 +252,7 @@ describe("PinnedItemsView", () => {
 
   it("renders every tournament's clubs, pools and tableaus without a tournament", async () => {
     seed(ALL_PINS);
-    render(<PinnedItemsView />);
+    render(<PinnedItemsView eventNames={EVENT_NAMES} />);
 
     expect(await screen.findByRole("link", { name: /Beta FC/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Womens Epee/ })).toBeInTheDocument();
@@ -258,7 +265,7 @@ describe("PinnedItemsView", () => {
     { kind: "tableau", field: "tableaus", button: "Unpin Mens Foil", empty: "No pinned tableaus yet" },
   ] as const)("tapping the pin unpins the $kind", async ({ field, button, empty }) => {
     seed({ [field]: ALL_PINS[field] });
-    render(<PinnedItemsView tournamentId="t1" />);
+    render(<PinnedItemsView tournamentId="t1" eventNames={EVENT_NAMES} />);
 
     fireEvent.click(await screen.findByRole("button", { name: button }));
 
@@ -272,7 +279,7 @@ describe("PinnedItemsView", () => {
     { tab: "Pools", shows: "No pinned pools yet", hides: "No pinned tableaus yet" },
     { tab: "Tableaus", shows: "No pinned tableaus yet", hides: "No pinned clubs yet" },
   ])("shows only its section on the $tab tab", async ({ tab, shows, hides }) => {
-    render(<PinnedItemsView />);
+    render(<PinnedItemsView eventNames={EVENT_NAMES} />);
     await screen.findByText("No pinned fencers yet");
 
     openTab(tab);
@@ -284,17 +291,47 @@ describe("PinnedItemsView", () => {
   it("shows a skeleton until the pins arrive", async () => {
     seed({ fencerIds: ["ann-smith"] });
     global.fetch = jest.fn(() => new Promise(() => {})) as jest.Mock;
-    render(<PinnedItemsView />);
+    render(<PinnedItemsView eventNames={EVENT_NAMES} />);
 
     expect(await screen.findByRole("status")).toHaveTextContent("Loading pins");
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
   });
 
-  it("shows the error when loading fails", async () => {
-    seed({ fencerIds: ["ann-smith"] });
-    global.fetch = jest.fn().mockRejectedValue(new Error("Network down"));
-    render(<PinnedItemsView />);
+  it.each([
+    {
+      case: "pinned fencers",
+      failing: /\/competitors$/,
+      section: "Fencers",
+      stillShown: { role: "heading", name: "Pool 1 · Strip 1" },
+    },
+    {
+      case: "pinned pools",
+      failing: /\/pool-sheets$/,
+      section: "Pools",
+      stillShown: { role: "button", name: /^Ann Smith/ },
+    },
+  ])("keeps the other sections when $case fail to load", async ({ failing, section, stillShown }) => {
+    mockApi(failing);
+    seed({ ...ALL_PINS, fencerIds: ["ann-smith"] });
+    render(<PinnedItemsView tournamentId="t1" eventNames={EVENT_NAMES} />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Network down");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Network down");
+    expect(within(alert.closest("section")!).getByRole("heading", { level: 2 })).toHaveTextContent(section);
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(screen.getByRole(stillShown.role, { name: stillShown.name })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unpin Alpha FC" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unpin Mens Foil" })).toBeInTheDocument();
+  });
+
+  it("keeps the fencer cards and shows the error in the dialog when bouts fail to load", async () => {
+    mockApi(/\/bouts$/);
+    seed({ fencerIds: ["ann-smith"] });
+    render(<PinnedItemsView eventNames={EVENT_NAMES} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /^Ann Smith/ }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Ann Smith" });
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("Network down");
   });
 });

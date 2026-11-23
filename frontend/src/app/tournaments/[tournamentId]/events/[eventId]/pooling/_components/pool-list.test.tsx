@@ -46,7 +46,7 @@ const poolBoards = [
   }),
 ];
 
-const EVENT = { tournamentId: "t", eventId: "e", eventName: "Mens Foil" };
+const EVENT = { tournamentId: "t", eventId: "e" };
 const poolTitles = ["Pool 1 · Strip 3", "Pool 2 · Strip 4", "Pool 3 · Strip 5", "Pool 4 · Strip 2"];
 
 function titles(): string[] {

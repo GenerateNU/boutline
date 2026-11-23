@@ -39,18 +39,19 @@ function useFencerPools(bouts: FencerBout[]): FencerPools {
 
   useEffect(() => {
     let ignore = false;
-    fetchPinnedPools(idsKey ? idsKey.split(",") : []).then(
-      (pools) => {
+    async function load() {
+      try {
+        const pools = await fetchPinnedPools(idsKey ? idsKey.split(",") : []);
         if (!ignore) {
           setSettled({ pools, error: null });
         }
-      },
-      (caught) => {
+      } catch (caught) {
         if (!ignore) {
           setSettled({ pools: null, error: errorMessage(caught) });
         }
-      },
-    );
+      }
+    }
+    load();
     return () => {
       ignore = true;
     };
@@ -62,10 +63,11 @@ function useFencerPools(bouts: FencerBout[]): FencerPools {
 interface PinnedFencerDialogProps {
   fencer: Competitor;
   bouts: FencerBout[];
+  boutsError: string | null;
 }
 
 // Rendered inside a Dialog.Root, like the Results tab's fencer dialog.
-function PinnedFencerDialog({ fencer, bouts }: PinnedFencerDialogProps) {
+function PinnedFencerDialog({ fencer, bouts, boutsError }: PinnedFencerDialogProps) {
   const { id, eventId, tournamentId, firstName, lastName, rating, ratingYear, team } = fencer;
   const { pools, error } = useFencerPools(bouts);
 
@@ -111,7 +113,11 @@ function PinnedFencerDialog({ fencer, bouts }: PinnedFencerDialogProps) {
 
         <section className="flex flex-col gap-2">
           <h3 className="text-sm font-medium">Bouts</h3>
-          {bouts.length === 0 ? (
+          {boutsError ? (
+            <p role="alert" className="text-sm text-red-dark">
+              {boutsError}
+            </p>
+          ) : bouts.length === 0 ? (
             <Text variant="caption">No bouts yet</Text>
           ) : (
             <ul aria-label="Bouts" className="flex flex-col gap-1">
