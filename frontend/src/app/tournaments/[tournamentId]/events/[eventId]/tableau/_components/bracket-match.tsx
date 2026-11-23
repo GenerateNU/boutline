@@ -30,9 +30,6 @@ function BracketMatch({
   const [topTone, bottomTone] = pillTones(bout);
   const muted = bout.status === "upcoming";
 
-  // The pin is a sibling of the link, not inside it, so pressing it never opens
-  // the bout. The card frame is on the wrapper so the location and the pin both
-  // measure from inside its border, and the overlay greys the pin as well.
   return (
     <div
       className={cn(

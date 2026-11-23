@@ -8,10 +8,6 @@ interface BoutPinButtonProps extends React.ComponentProps<typeof PinButton> {
   pinned: boolean;
 }
 
-// Sits in the card's top-right corner, 12px from the top and right edges, in a
-// row matching the location's (12px down, 20px tall) so the two stay centered on
-// one line. The card must be positioned; the row lets clicks through everywhere
-// but the button.
 function BoutPinButton({ pinned, className, ...props }: BoutPinButtonProps) {
   const PinIcon = pinned ? PushPin : PushPinOutlined;
   return (
