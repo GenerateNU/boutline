@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 import { buildPool } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_fixtures/build-pool";
 import { PinnedItemsView } from "@/features/pinning/components/pinned-items-view";
@@ -169,6 +169,20 @@ describe("PinnedItemsView", () => {
     );
   });
 
+  it("requests a fencer's bouts only when their dialog opens", async () => {
+    seed({ fencerIds: ["ann-smith", "cara-smith"] });
+    render(<PinnedItemsView eventNames={EVENT_NAMES} />);
+    const boutRequests = () =>
+      (global.fetch as jest.Mock).mock.calls.filter(([url]) => String(url).includes("/bouts"));
+
+    const card = await screen.findByRole("button", { name: /^Ann Smith/ });
+    expect(boutRequests()).toHaveLength(0);
+
+    fireEvent.click(card);
+    await screen.findByRole("dialog", { name: "Ann Smith" });
+    await waitFor(() => expect(boutRequests()).toHaveLength(1));
+  });
+
   it("lists no bouts under the cards, only in the dialog", async () => {
     seed({ fencerIds: ["cara-smith"] });
     render(<PinnedItemsView eventNames={EVENT_NAMES} />);
@@ -176,7 +190,7 @@ describe("PinnedItemsView", () => {
     fireEvent.click(await screen.findByRole("button", { name: /^Cara Smith/ }));
 
     const dialog = await screen.findByRole("dialog", { name: "Cara Smith" });
-    expect(within(dialog).getByText("No bouts yet")).toBeInTheDocument();
+    expect(await within(dialog).findByText("No bouts yet")).toBeInTheDocument();
     expect(within(dialog).queryByRole("list", { name: "Bouts" })).not.toBeInTheDocument();
   });
 
@@ -333,6 +347,6 @@ describe("PinnedItemsView", () => {
     fireEvent.click(await screen.findByRole("button", { name: /^Ann Smith/ }));
 
     const dialog = await screen.findByRole("dialog", { name: "Ann Smith" });
-    expect(within(dialog).getByRole("alert")).toHaveTextContent("Network down");
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Network down");
   });
 });

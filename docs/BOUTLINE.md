@@ -674,10 +674,10 @@ listed on the pinned view.
 Back link. All lists Fencers, Clubs, Pools and Tableaus in that order.
 
 - **Fencers:** each pinned fencer's card. Tapping it opens a dialog with everything
-  they're in: each of their pools' grids (`GET /pool-sheets?ids=`), then their
-  pool and tableau bouts from `GET /competitors/{id}/bouts` (§2.8), each showing
-  its stage, the opponent and the score, or "Upcoming", and a link to their
-  fencer page.
+  they're in, loaded when it opens: their pool and tableau bouts from
+  `GET /competitors/{id}/bouts` (§2.8), each showing its stage, the opponent and the
+  score, or "Upcoming", then those pools' grids (`GET /pool-sheets?ids=`), and a link
+  to their fencer page. The page itself requests no bouts.
 - **Clubs:** rows linking to the club's fencer filter.
 - **Pools:** full pool cards under their event's name, loaded live with
   `GET /pool-sheets?ids=` (§11.3), sorted by event then pool number.

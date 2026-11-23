@@ -86,7 +86,7 @@ function PinnedItemsView({ tournamentId, eventNames }: PinnedItemsViewProps) {
     () => pinnedInTournament(pinned, eventNames, tournamentId),
     [pinned, eventNames, tournamentId],
   );
-  const { fencers, bouts, error: fencersError, boutsError } = usePinnedFencers(tournamentId);
+  const { fencers, error: fencersError } = usePinnedFencers(tournamentId);
   const { pools, error: poolsError } = usePinnedPools(scoped.pools);
 
   // Wait until each request has either loaded or failed, so no section flashes its empty message.
@@ -177,7 +177,7 @@ function PinnedItemsView({ tournamentId, eventNames }: PinnedItemsViewProps) {
         </TabsContent>
       </Tabs>
       <Dialog.Root open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        {selected && <PinnedFencerDialog fencer={selected} bouts={bouts[selected.id] ?? []} boutsError={boutsError} />}
+        {selected && <PinnedFencerDialog fencer={selected} />}
       </Dialog.Root>
     </>
   );

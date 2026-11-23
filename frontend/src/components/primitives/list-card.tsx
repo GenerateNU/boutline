@@ -4,6 +4,7 @@ import PushPin from "@mui/icons-material/PushPin";
 import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
 import Link from "next/link";
 
+import { Button } from "@/components/primitives/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/primitives/card";
 import { PinButton } from "@/components/primitives/pin-button";
 
@@ -46,9 +47,18 @@ function ListCard({ title, description, badge, href, onSelect, pinned, onToggleP
           {header}
         </Link>
       ) : onSelect ? (
-        <button type="button" onClick={onSelect} className={STRETCHED_TARGET_CLASS}>
+        <Button
+          type="button"
+          variant="text"
+          onClick={onSelect}
+          // Undoes Button's size, colour and own focus ring: like the link, this is the card's invisible target.
+          className={cn(
+            STRETCHED_TARGET_CLASS,
+            "block h-auto shrink rounded-none p-0 whitespace-normal text-inherit hover:bg-transparent focus-visible:ring-0",
+          )}
+        >
           {header}
-        </button>
+        </Button>
       ) : (
         <div className="min-w-0 flex-1">{header}</div>
       )}

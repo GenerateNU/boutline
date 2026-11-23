@@ -2,7 +2,6 @@ import type { FencerBout } from "@/features/pinning/types/fencer-bout";
 import { tableauRoundName } from "@/lib/tableau-round-name";
 import { apiRequest } from "@/services/api-request";
 import type { BoutStatus } from "@/types/bout";
-import type { Competitor } from "@/types/competitor";
 
 // One bout as GET /competitors/{id}/bouts returns it, already from that fencer's side.
 interface CompetitorBoutResponse {
@@ -27,16 +26,11 @@ function toFencerBout(bout: CompetitorBoutResponse): FencerBout {
   };
 }
 
-async function fetchFencerBouts(fencers: Competitor[]): Promise<Record<string, FencerBout[]>> {
-  const entries = await Promise.all(
-    fencers.map(async ({ id }) => {
-      const { data } = await apiRequest<{ data: CompetitorBoutResponse[] }>(
-        `/competitors/${encodeURIComponent(id)}/bouts`,
-      );
-      return [id, data.map(toFencerBout)] as const;
-    }),
+async function fetchFencerBouts(fencerId: string): Promise<FencerBout[]> {
+  const { data } = await apiRequest<{ data: CompetitorBoutResponse[] }>(
+    `/competitors/${encodeURIComponent(fencerId)}/bouts`,
   );
-  return Object.fromEntries(entries);
+  return data.map(toFencerBout);
 }
 
 export { fetchFencerBouts };

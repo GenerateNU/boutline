@@ -13,14 +13,20 @@ import type { PoolBoard } from "@/app/tournaments/[tournamentId]/events/[eventId
 import { Button } from "@/components/primitives/button";
 import { Loading } from "@/components/primitives/loading";
 import { Text } from "@/components/primitives/text";
+import { fetchFencerBouts } from "@/features/pinning/services/fencer-bouts-query";
 import { fetchPinnedPools } from "@/features/pinning/services/pinned-pools-query";
 import type { FencerBout } from "@/features/pinning/types/fencer-bout";
 import { PoolTable } from "@/features/pool/components/pool-table";
 import type { Competitor } from "@/types/competitor";
 import { errorMessage } from "@/utils/error-message";
 
-interface FencerPools {
-  pools: PoolBoard[] | null;
+interface FencerDetails {
+  bouts: FencerBout[];
+  pools: PoolBoard[];
+}
+
+interface FencerDetailsState {
+  details: FencerDetails | null;
   error: string | null;
 }
 
@@ -32,22 +38,24 @@ function resultLabel({ status, score }: FencerBout) {
   return status === "active" ? `${result} · In Progress` : result;
 }
 
-// The pools behind a fencer's pool bouts, loaded when the dialog opens.
-function useFencerPools(bouts: FencerBout[]): FencerPools {
-  const [settled, setSettled] = useState<FencerPools | null>(null);
-  const idsKey = [...new Set(bouts.flatMap(({ poolId }) => (poolId ? [poolId] : [])))].join(",");
+// A fencer's bouts and the pools behind them, loaded only when their dialog opens
+// so the pinned page itself makes no per-fencer requests.
+function useFencerDetails(fencerId: string): FencerDetailsState {
+  const [settled, setSettled] = useState<FencerDetailsState | null>(null);
 
   useEffect(() => {
     let ignore = false;
     async function load() {
       try {
-        const pools = await fetchPinnedPools(idsKey ? idsKey.split(",") : []);
+        const bouts = await fetchFencerBouts(fencerId);
+        const poolIds = [...new Set(bouts.flatMap(({ poolId }) => (poolId ? [poolId] : [])))];
+        const pools = await fetchPinnedPools(poolIds);
         if (!ignore) {
-          setSettled({ pools, error: null });
+          setSettled({ details: { bouts, pools }, error: null });
         }
       } catch (caught) {
         if (!ignore) {
-          setSettled({ pools: null, error: errorMessage(caught) });
+          setSettled({ details: null, error: errorMessage(caught) });
         }
       }
     }
@@ -55,21 +63,19 @@ function useFencerPools(bouts: FencerBout[]): FencerPools {
     return () => {
       ignore = true;
     };
-  }, [idsKey]);
+  }, [fencerId]);
 
-  return settled ?? { pools: null, error: null };
+  return settled ?? { details: null, error: null };
 }
 
 interface PinnedFencerDialogProps {
   fencer: Competitor;
-  bouts: FencerBout[];
-  boutsError: string | null;
 }
 
 // Rendered inside a Dialog.Root, like the Results tab's fencer dialog.
-function PinnedFencerDialog({ fencer, bouts, boutsError }: PinnedFencerDialogProps) {
+function PinnedFencerDialog({ fencer }: PinnedFencerDialogProps) {
   const { id, eventId, tournamentId, firstName, lastName, rating, ratingYear, team } = fencer;
-  const { pools, error } = useFencerPools(bouts);
+  const { details, error } = useFencerDetails(id);
 
   return (
     <Dialog.Portal>
@@ -100,8 +106,8 @@ function PinnedFencerDialog({ fencer, bouts, boutsError }: PinnedFencerDialogPro
             {error}
           </p>
         )}
-        {!pools && !error && <Loading className="py-4" />}
-        {pools?.map((pool) => (
+        {!details && !error && <Loading className="py-4" />}
+        {details?.pools.map((pool) => (
           <section key={pool.id} className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <h3 className="flex-1 text-sm font-medium">{poolTitle(pool)}</h3>
@@ -111,34 +117,35 @@ function PinnedFencerDialog({ fencer, bouts, boutsError }: PinnedFencerDialogPro
           </section>
         ))}
 
-        <section className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">Bouts</h3>
-          {boutsError ? (
-            <p role="alert" className="text-sm text-red-dark">
-              {boutsError}
-            </p>
-          ) : bouts.length === 0 ? (
-            <Text variant="caption">No bouts yet</Text>
-          ) : (
-            <ul aria-label="Bouts" className="flex flex-col gap-1">
-              {bouts.map((bout) => (
-                <li key={bout.id} className="flex items-center justify-between gap-4">
-                  <Text variant="caption">{`${bout.stage} · vs ${bout.opponent}`}</Text>
-                  <Text variant="caption">{resultLabel(bout)}</Text>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {details && (
+          <section className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium">Bouts</h3>
+            {details.bouts.length === 0 ? (
+              <Text variant="caption">No bouts yet</Text>
+            ) : (
+              <ul aria-label="Bouts" className="flex flex-col gap-1">
+                {details.bouts.map((bout) => (
+                  <li key={bout.id} className="flex items-center justify-between gap-4">
+                    <Text variant="caption">
+                      {bout.stage} &middot; vs {bout.opponent}
+                    </Text>
+                    <Text variant="caption">{resultLabel(bout)}</Text>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
         {tournamentId && (
-          <Link
-            href={`/tournaments/${encodeURIComponent(tournamentId)}/events/${encodeURIComponent(eventId)}/fencers/${encodeURIComponent(id)}`}
-            className="flex items-center justify-center gap-1 rounded-md border border-foreground py-2 text-sm outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Open fencer details
-            <ArrowForwardOutlined aria-hidden className="size-4" />
-          </Link>
+          <Button asChild variant="outline" className="w-full">
+            <Link
+              href={`/tournaments/${encodeURIComponent(tournamentId)}/events/${encodeURIComponent(eventId)}/fencers/${encodeURIComponent(id)}`}
+            >
+              Open fencer details
+              <ArrowForwardOutlined aria-hidden />
+            </Link>
+          </Button>
         )}
       </Dialog.Content>
     </Dialog.Portal>
