@@ -450,8 +450,8 @@ different roles in different tournaments.
 ## 4. Browsing tournaments
 
 **Status:** Partial. The tournament screens, the event's Pools tab (§11.6) and its
-Tableau tab (§12.5) use the real API. The Results tab and the bout page run on
-placeholder data until chapter 13.
+Tableau tab (§12.5) and Results tab (§13.3) use the real API. Only the bout page
+still runs on placeholder data.
 
 **What it is:** the public face of Boutline. Anyone can find a tournament by name
 or date, open a private one by its code, and look through its events, fencers and
@@ -540,7 +540,12 @@ tournament. An event not in the tournament is a 404.
   is placeholder text.
 - **Pools** (Partial): see §11.6.
 - **Tableau** (Completed): see §12.5.
-- **Results** (Placeholder): static text. Replaced in §13.3.
+- **Results** (Partial): the event's live pool-stage ranking, from
+  `GET /events/{id}/pool-stage-results`. While every fencer is pending, one
+  Standings list with a note that qualifiers are set when the tableau is drawn;
+  after the draw, the qualifier and disqualifier counts, the percent qualified, and
+  Qualifiers and Disqualifiers lists. Each fencer opens a popup with their pool and
+  strip. Post-DE placings wait on §13.1.
 - **Bout page** (`…/bout/[boutId]`, Placeholder): the two scores, a touch log and a
   link to the referee screen, from fixture data. Only the referee link reaches the
   real API.
@@ -1142,7 +1147,7 @@ generates the DE once pools end.
 ## 11. Pools
 
 **Status:** Partial. Seeding, the manual pool and stage transitions and the pool
-sheet are built; generation, stage results and the screens are planned.
+sheet and stage results are built; generation and the screens are planned.
 
 **What it is:** the first round of an event. Fencers are split into pools of about
 six or seven, equally strong and with clubmates apart, and everyone in a pool
@@ -1248,8 +1253,7 @@ fencer in two pools, or re-seat a pool that has just started.
 
 ### 11.3 Pool results
 
-**Status:** Partial. The pool sheet is built; the stage results endpoint is
-planned.
+**Status:** Partial. The pool sheet and the stage results are built.
 
 Two reads share one standings function (`pool/standings.go`):
 
@@ -1265,9 +1269,12 @@ Two reads share one standings function (`pool/standings.go`):
     registration order, which can differ from the order create seats them in
     (§11.2). Until `bouts.winner_id` exists (§9.2), the higher score wins, so a
     priority win at a tied score shows no winner.
-- **Stage results** (planned): `GET /pool-stages/{id}/results` returns the
-  stage's overall ranking, computed from ended bouts, which seeds the DE. Each
-  pool's grid comes from the pool sheet.
+- **Stage results** (built): `GET /events/{id}/pool-stage-results` ranks every
+  fencer of the event's latest pool stage from ended bouts, paginated, and seeds
+  the DE. Each row has place and standings, name, club, rating and rating year,
+  pool number, the pool's strip, and status (`pending` until the tableau is drawn,
+  then `advanced` or `eliminated`). It is empty when the event has no pool stage.
+  Each pool's grid comes from the pool sheet.
 
 | Column | Meaning |
 | --- | --- |
@@ -1457,7 +1464,7 @@ once the event's pool stage has ended:
 
 ## 13. Results
 
-**Status:** Planned. Issue: #129.
+**Status:** Partial. Issue: #129.
 
 **What it is:** the final standings of every event, published on the event page and
 exported in the format the ratings authorities import.
@@ -1480,10 +1487,8 @@ Admins export placings in askFRED / USA Fencing format.
 
 ### 13.3 Results tab and podiums
 
-**Status:** Planned.
-
-The Results tab (static today) shows the table, and the tournament overview links
-each ended event's podium.
+**Status:** Partial. The Results tab shows the post-pool qualifying view (§4.4); the
+final placings table and the podium links on the tournament overview wait on §13.1.
 
 ---
 

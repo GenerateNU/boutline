@@ -1,7 +1,7 @@
 import { Background } from "@/components/primitives/background";
 
 // The tab's pattern, lightened by a half-white layer painted just above it.
-function TableauBackground() {
+function EventTabBackground() {
   return (
     <>
       <Background version={7} />
@@ -13,4 +13,4 @@ function TableauBackground() {
   );
 }
 
-export { TableauBackground };
+export { EventTabBackground };

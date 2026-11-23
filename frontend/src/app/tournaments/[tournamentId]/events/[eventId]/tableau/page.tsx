@@ -1,5 +1,5 @@
 import { getTableau } from "../_services/tableau";
-import { TableauBackground } from "./_components/tableau-background";
+import { EventTabBackground } from "../_components/event-tab-background";
 import { TableauView } from "./_components/tableau-view";
 
 interface TableauTabProps extends PageProps<"/tournaments/[tournamentId]/events/[eventId]/tableau"> {}
@@ -10,7 +10,7 @@ export default async function TableauTab({ params }: TableauTabProps) {
 
   return (
     <div className="relative isolate -mx-4 h-[calc(100dvh-12.5rem)] overflow-clip bg-fencing-white px-4 pt-4">
-      <TableauBackground />
+      <EventTabBackground />
       <div className="h-full">
         <TableauView
           tableau={tableau}

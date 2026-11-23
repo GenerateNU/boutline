@@ -12,7 +12,7 @@ import (
 )
 
 // Exercises the pool stage result SQL against seeds/seed.sql: fencers and pool numbers
-// derived from the stage's bouts, the club fallback, and the tableau entrant lookup
+// derived from the stage's bouts, the club fallback, the rating and pool strip, and the tableau entrant lookup
 // on a direct elimination that has not been drawn.
 func TestListPoolStageResults(t *testing.T) {
 	app := testkit.GetDBTestApp(t)
@@ -32,18 +32,20 @@ func TestListPoolStageResults(t *testing.T) {
 		place      int
 		last       string
 		club       any
+		rating     string
 		poolNumber int
+		strip      string
 	}
 	// Mixed Épée's two pools of four, mid-way through, ranked together.
 	want := []result{
-		{1, "Chen", "Boston Fencing Club", 1},
-		{2, "Sato", "Northeastern Fencing", 2},
-		{3, "Kowalski", nil, 2},
-		{4, "Patel", "Cambridge FC", 1},
-		{5, "Martinez", nil, 1},
-		{6, "Okafor", "Cambridge FC", 2},
-		{7, "Williams", "Boston Fencing Club", 2},
-		{8, "O'Brien", "Northeastern Fencing", 1},
+		{1, "Chen", "Boston Fencing Club", "A", 1, "Strip 1"},
+		{2, "Sato", "Northeastern Fencing", "A", 2, "Strip 2"},
+		{3, "Kowalski", nil, "E", 2, "Strip 2"},
+		{4, "Patel", "Cambridge FC", "C", 1, "Strip 1"},
+		{5, "Martinez", nil, "U", 1, "Strip 1"},
+		{6, "Okafor", "Cambridge FC", "B", 2, "Strip 2"},
+		{7, "Williams", "Boston Fencing Club", "D", 2, "Strip 2"},
+		{8, "O'Brien", "Northeastern Fencing", "B", 1, "Strip 1"},
 	}
 	assertRows := func(t *testing.T, rows []map[string]any, want []result) {
 		t.Helper()
@@ -52,7 +54,11 @@ func TestListPoolStageResults(t *testing.T) {
 			assert.EqualValues(t, w.place, rows[i]["place"], "row %d place", i)
 			assert.Equal(t, w.last, rows[i]["last_name"], "row %d last name", i)
 			assert.Equal(t, w.club, rows[i]["club"], "row %d club", i)
+			assert.Equal(t, w.rating, rows[i]["rating"], "row %d rating", i)
+			assert.Contains(t, rows[i], "rating_year", "row %d rating year key", i)
+			assert.Nil(t, rows[i]["rating_year"], "row %d rating year", i)
 			assert.EqualValues(t, w.poolNumber, rows[i]["pool_number"], "row %d pool number", i)
+			assert.Equal(t, w.strip, rows[i]["strip"], "row %d strip", i)
 			assert.Equal(t, "pending", rows[i]["status"], "row %d status", i)
 		}
 	}

@@ -1,6 +1,7 @@
 package eventresult
 
 import (
+	"boutline/internal/features/competitor"
 	"boutline/internal/features/pool"
 
 	"github.com/google/uuid"
@@ -21,7 +22,10 @@ type PoolStageResultFencer struct {
 	FirstName    string
 	LastName     string
 	Club         *string
+	Rating       competitor.Rating
+	RatingYear   *int16
 	PoolNumber   int
+	Strip        *string
 }
 
 type PoolStageResultRow struct {

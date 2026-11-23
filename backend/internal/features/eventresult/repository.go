@@ -29,7 +29,8 @@ GROUP BY b.id`
 // Club falls back to the legacy team column until every competitor has a primary club.
 const poolStageResultFencersQuery = `
 SELECT DISTINCT c.id AS competitor_id, c.first_name, c.last_name,
-       COALESCE(c.primary_club, NULLIF(c.team, '')) AS club, p.number AS pool_number
+       COALESCE(c.primary_club, NULLIF(c.team, '')) AS club,
+       c.rating, c.rating_year, p.number AS pool_number, p.strip
 FROM bouts b
 JOIN pools p ON p.id = b.pool_id
 JOIN competitors c ON c.id IN (b.competitor_1_id, b.competitor_2_id)

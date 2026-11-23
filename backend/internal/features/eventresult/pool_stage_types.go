@@ -14,7 +14,10 @@ type PoolStageResultResponse struct {
 	FirstName    string                `json:"first_name"`
 	LastName     string                `json:"last_name"`
 	Club         *string               `json:"club" nullable:"true" doc:"Primary club, else team; null when the fencer has neither"`
+	Rating       string                `json:"rating" enum:"A,B,C,D,E,U"`
+	RatingYear   *int16                `json:"rating_year" nullable:"true" doc:"Two-digit year the rating was earned; null when unknown"`
 	PoolNumber   int                   `json:"pool_number"`
+	Strip        *string               `json:"strip" nullable:"true" doc:"The fencer's pool's strip; null until assigned"`
 	Status       PoolStageResultStatus `json:"status" enum:"pending,advanced,eliminated" doc:"pending until the tableau is drawn, then whether the fencer is in it"`
 }
 
@@ -36,7 +39,10 @@ func newPoolStageResultResponse(row PoolStageResultRow) PoolStageResultResponse 
 		FirstName:    row.Fencer.FirstName,
 		LastName:     row.Fencer.LastName,
 		Club:         row.Fencer.Club,
+		Rating:       string(row.Fencer.Rating),
+		RatingYear:   row.Fencer.RatingYear,
 		PoolNumber:   row.Fencer.PoolNumber,
+		Strip:        row.Fencer.Strip,
 		Status:       row.Status,
 	}
 }

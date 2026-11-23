@@ -12,13 +12,14 @@ interface ListCardProps {
   description: React.ReactNode;
   badge?: React.ReactNode;
   href?: string;
+  onSelect?: () => void;
   pinned?: boolean;
   // Rows can't pin yet (the dashboard tickets wire this up), so without it the
   // pin button shows the state and does nothing.
   onTogglePin?: () => void;
 }
 
-function ListCard({ title, description, badge, href, pinned, onTogglePin }: ListCardProps) {
+function ListCard({ title, description, badge, href, onSelect, pinned, onTogglePin }: ListCardProps) {
   // Material marks a pin as set with its filled glyph rather than by filling the outline.
   const PinIcon = pinned ? PushPin : PushPinOutlined;
 
@@ -45,6 +46,14 @@ function ListCard({ title, description, badge, href, pinned, onTogglePin }: List
         >
           {header}
         </Link>
+      ) : onSelect ? (
+        <button
+          type="button"
+          onClick={onSelect}
+          className="min-w-0 flex-1 text-left outline-none after:absolute after:inset-0 after:rounded-[12px] focus-visible:after:ring-2 focus-visible:after:ring-ring"
+        >
+          {header}
+        </button>
       ) : (
         <div className="min-w-0 flex-1">{header}</div>
       )}
@@ -61,7 +70,7 @@ function ListCard({ title, description, badge, href, pinned, onTogglePin }: List
           <PinIcon aria-hidden />
         </PinButton>
       )}
-      {pinned === undefined && href && (
+      {pinned === undefined && (href || onSelect) && (
         <ChevronRightOutlined aria-hidden className="size-6 shrink-0 text-neutral-muted" />
       )}
     </Card>

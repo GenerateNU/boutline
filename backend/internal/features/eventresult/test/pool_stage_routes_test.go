@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"boutline/internal/features/competitor"
 	"boutline/internal/features/directelimination"
 	"boutline/internal/features/event"
 	"boutline/internal/features/eventresult"
@@ -41,13 +42,16 @@ func newPoolStageFixture() poolStageFixture {
 }
 
 // withPoolStage seats A, B and C in pool 1 and D and E in pool 2 of a stage that
-// is still running. Across the stage they rank A, D, C, B, E; pool 2's active bout
+// is still running. Pool 1 is on strip "1" and pool 2 has none yet; only A has a
+// known rating. Across the stage they rank A, D, C, B, E; pool 2's active bout
 // must not count.
 func (f poolStageFixture) withPoolStage() poolStageFixture {
 	stageID := uuid.New()
 	f.repo.PoolStages[f.eventID] = eventresult.EventResultPoolStageRow{ID: stageID, Status: poolstage.PoolStageStatusActive}
 
 	club := "Salle Rouge"
+	strip := "1"
+	year := int16(26)
 	for _, seat := range []struct {
 		name string
 		pool int
@@ -55,7 +59,13 @@ func (f poolStageFixture) withPoolStage() poolStageFixture {
 		id := uuid.New()
 		f.fencers[seat.name] = id
 		fencer := eventresult.PoolStageResultFencer{
-			CompetitorID: id, FirstName: "F" + seat.name, LastName: "L" + seat.name, PoolNumber: seat.pool,
+			CompetitorID: id, FirstName: "F" + seat.name, LastName: "L" + seat.name, PoolNumber: seat.pool, Rating: competitor.RatingU,
+		}
+		if seat.pool == 1 {
+			fencer.Strip = &strip
+		}
+		if seat.name == "A" {
+			fencer.Rating, fencer.RatingYear = competitor.RatingA, &year
 		}
 		if seat.name == "D" {
 			fencer.Club = &club
@@ -186,23 +196,33 @@ func TestPoolStageResultsEndpointShape(t *testing.T) {
 		want  string
 	}{
 		{
-			name:  "a row carries the stage-wide standing, club and pool",
+			name:  "a row carries the stage-wide standing, club, pool and a null strip before assignment",
 			query: "?limit=1&offset=1",
 			want: `{
 				"place": 2, "victories": 1, "matches": 1, "victory_ratio": 1,
 				"touches_scored": 5, "touches_received": 1, "indicator": 4,
 				"competitor_id": "` + fx.fencers["D"].String() + `", "first_name": "FD", "last_name": "LD",
-				"club": "Salle Rouge", "pool_number": 2, "status": "pending"
+				"club": "Salle Rouge", "rating": "U", "rating_year": null, "pool_number": 2, "strip": null, "status": "pending"
 			}`,
 		},
 		{
-			name:  "a fencer without a club has a null club",
+			name:  "a rated fencer carries rating, year and strip",
+			query: "?limit=1",
+			want: `{
+				"place": 1, "victories": 2, "matches": 2, "victory_ratio": 1,
+				"touches_scored": 10, "touches_received": 5, "indicator": 5,
+				"competitor_id": "` + fx.fencers["A"].String() + `", "first_name": "FA", "last_name": "LA",
+				"club": null, "rating": "A", "rating_year": 26, "pool_number": 1, "strip": "1", "status": "pending"
+			}`,
+		},
+		{
+			name:  "a fencer without a club has a null club and an unrated one a null year",
 			query: "?limit=1&offset=2",
 			want: `{
 				"place": 3, "victories": 1, "matches": 2, "victory_ratio": 0.5,
 				"touches_scored": 8, "touches_received": 9, "indicator": -1,
 				"competitor_id": "` + fx.fencers["C"].String() + `", "first_name": "FC", "last_name": "LC",
-				"club": null, "pool_number": 1, "status": "pending"
+				"club": null, "rating": "U", "rating_year": null, "pool_number": 1, "strip": "1", "status": "pending"
 			}`,
 		},
 	}
