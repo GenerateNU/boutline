@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { Background } from "@/components/primitives/background";
 import { getEvent } from "@/features/event/services/getEvent";
+import type { PinnedEvent } from "@/features/pinning/types/pinning";
 import { getTableau } from "../_services/tableau";
 import { TableauView } from "./_components/tableau-view";
 
@@ -14,13 +15,15 @@ export default async function TableauTab({ params }: TableauTabProps) {
     notFound();
   }
 
+  const pinnedEvent: PinnedEvent = { tournamentId, eventId, eventName: event.name };
+
   return (
     <div className="relative isolate -mx-4 h-[calc(100dvh-12.5rem)] overflow-clip bg-fencing-white px-4 pt-4">
       <Background version={7} />
       <div className="h-full">
         <TableauView
           tableau={tableau}
-          event={{ tournamentId, eventId, eventName: event.name }}
+          event={pinnedEvent}
           boutBasePath={`/tournaments/${tournamentId}/events/${eventId}/bout`}
         />
       </div>

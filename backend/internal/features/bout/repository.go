@@ -24,6 +24,13 @@ type BoutRepository interface {
 	ListCompetitorBouts(ctx context.Context, competitorID uuid.UUID) ([]CompetitorBoutRow, error)
 }
 
+// boutScoreRow is one fencer's unrevoked touches in one bout.
+type boutScoreRow struct {
+	BoutID       uuid.UUID `gorm:"column:bout_id"`
+	CompetitorID uuid.UUID `gorm:"column:competitor_id"`
+	Points       int       `gorm:"column:points"`
+}
+
 // CompetitorBoutRow is one pool or tableau bout seen from one competitor. Score and
 // OpponentScore are summed from unrevoked scorings after the bouts are selected.
 type CompetitorBoutRow struct {
@@ -338,11 +345,7 @@ func (r *boutRepository) ListCompetitorBouts(ctx context.Context, competitorID u
 	for i, row := range rows {
 		boutIDs[i] = row.ID
 	}
-	var sums []struct {
-		BoutID       uuid.UUID
-		CompetitorID uuid.UUID
-		Points       int
-	}
+	var sums []boutScoreRow
 	err = db.Table("scorings").
 		Select("bout_id, competitor_id, SUM(points) AS points").
 		Where("bout_id IN ? AND revoked_at IS NULL", boutIDs).

@@ -10,6 +10,8 @@ import {
   PinnedClub,
   PinnedItemOf,
   PinnedItems,
+  PinnedPool,
+  PinnedTableau,
 } from "@/features/pinning/types/pinning";
 
 const INITIAL_PINNED: PinnedItems = { fencerIds: [], clubs: [], pools: [], tableaus: [] };
@@ -25,14 +27,15 @@ function isSameItem(kind: PinKind, a: unknown, b: unknown): boolean {
   switch (kind) {
     case "fencer":
       return a === b;
-    case "club": {
-      const [x, y] = [a as PinnedClub, b as PinnedClub];
-      return x.tournamentId === y.tournamentId && x.name === y.name;
-    }
+    case "club":
+      return (
+        (a as PinnedClub).tournamentId === (b as PinnedClub).tournamentId &&
+        (a as PinnedClub).name === (b as PinnedClub).name
+      );
     case "pool":
-      return (a as PinnedItemOf["pool"]).id === (b as PinnedItemOf["pool"]).id;
+      return (a as PinnedPool).id === (b as PinnedPool).id;
     case "tableau":
-      return (a as PinnedItemOf["tableau"]).eventId === (b as PinnedItemOf["tableau"]).eventId;
+      return (a as PinnedTableau).eventId === (b as PinnedTableau).eventId;
   }
 }
 

@@ -37,7 +37,11 @@ function resultLabel({ status, score }: FencerBout) {
   return status === "active" ? `${result} · In Progress` : result;
 }
 
-function FencerBoutList({ bouts }: { bouts: FencerBout[] }) {
+interface FencerBoutListProps {
+  bouts: FencerBout[];
+}
+
+function FencerBoutList({ bouts }: FencerBoutListProps) {
   if (bouts.length === 0) {
     return null;
   }
@@ -66,7 +70,11 @@ function PinnedSection({ title, empty, isEmpty, children }: PinnedSectionProps) 
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-base font-medium text-obsidian">{title}</h2>
-      {isEmpty ? <p className="text-sm text-neutral-secondary">{empty}</p> : <ul className="flex flex-col gap-2">{children}</ul>}
+      {isEmpty ? (
+        <p className="text-sm text-neutral-secondary">{empty}</p>
+      ) : (
+        <ul className="flex flex-col gap-2">{children}</ul>
+      )}
     </section>
   );
 }
@@ -120,7 +128,7 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
           <PoolCard
             pool={pool}
             poolingPath={`/tournaments/${encodeURIComponent(pin.tournamentId)}/events/${encodeURIComponent(pin.eventId)}/pooling`}
-            event={{ tournamentId: pin.tournamentId, eventId: pin.eventId, eventName: pin.eventName }}
+            event={pin}
           />
         </li>
       ))}
