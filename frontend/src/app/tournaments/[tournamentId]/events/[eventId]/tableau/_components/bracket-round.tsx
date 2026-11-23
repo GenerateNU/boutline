@@ -13,6 +13,7 @@ function pairUp(slots: Slot[]): Slot[][] {
 
 interface BracketRoundProps {
   round: TableauRound;
+  isFirst: boolean;
   isLast: boolean;
   query: string;
   boutBasePath: string;
@@ -23,6 +24,7 @@ interface BracketRoundProps {
 // connector lines to the next round.
 function BracketRound({
   round,
+  isFirst,
   isLast,
   query,
   boutBasePath,
@@ -50,6 +52,7 @@ function BracketRound({
         <BracketGroup
           key={groupIndex}
           slots={group}
+          pullPair={isFirst}
           query={query}
           boutBasePath={boutBasePath}
         />
