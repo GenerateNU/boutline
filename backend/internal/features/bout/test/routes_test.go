@@ -416,3 +416,63 @@ func TestForbiddenCallersEndpoints(t *testing.T) {
 		})
 	}
 }
+
+func TestListCompetitorBoutsEndpoint(t *testing.T) {
+	t.Parallel()
+
+	competitorID, opponentID := uuid.New(), uuid.New()
+	poolNumber, roundSize, slot := 2, 8, 1
+	rows := []bout.CompetitorBoutRow{
+		{
+			ID: uuid.New(), Status: bout.BoutStatusEnded, PoolNumber: &poolNumber, Slot: &slot,
+			OpponentID: opponentID, OpponentFirstName: "Jane", OpponentLastName: "Doe", Score: 5, OpponentScore: 3,
+		},
+		{
+			ID: uuid.New(), Status: bout.BoutStatusUpcoming, RoundSize: &roundSize, Slot: &slot,
+			OpponentID: opponentID, OpponentFirstName: "Jane", OpponentLastName: "Doe",
+		},
+	}
+
+	repo := NewFakeBoutRepository()
+	repo.CompetitorBouts = map[uuid.UUID][]bout.CompetitorBoutRow{competitorID: rows}
+	_, api := humatest.New(t)
+	bout.RegisterBoutService(api, bout.NewBoutService(repo, NewFakeTournamentLookup(), NewFakePoolLookup(nil), staffOf()))
+
+	t.Run("lists the bouts from the competitor's side", func(t *testing.T) {
+		t.Parallel()
+
+		resp := api.Get("/api/v1/competitors/" + competitorID.String() + "/bouts")
+		require.Equal(t, http.StatusOK, resp.Code, "body: %s", resp.Body)
+
+		var body bout.CompetitorBoutsBody
+		require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+		require.Len(t, body.Data, 2)
+
+		pooled, tableau := body.Data[0], body.Data[1]
+		assert.Equal(t, &poolNumber, pooled.PoolNumber)
+		assert.Nil(t, pooled.RoundSize)
+		assert.Equal(t, bout.OpponentResponse{ID: opponentID.String(), FirstName: "Jane", LastName: "Doe"}, pooled.Opponent)
+		assert.Equal(t, []*int{ptr(5), ptr(3)}, []*int{pooled.Score, pooled.OpponentScore})
+
+		assert.Equal(t, &roundSize, tableau.RoundSize)
+		assert.Nil(t, tableau.PoolNumber)
+		assert.Nil(t, tableau.Score, "an upcoming bout has no score yet")
+		assert.Nil(t, tableau.OpponentScore)
+	})
+
+	tests := []struct {
+		name       string
+		path       string
+		wantStatus int
+	}{
+		{"an unknown competitor", "/api/v1/competitors/" + uuid.NewString() + "/bouts", http.StatusNotFound},
+		{"a malformed competitor id", "/api/v1/competitors/not-a-uuid/bouts", http.StatusUnprocessableEntity},
+	}
+	for _, tt := range tests {
+		t.Run("rejects "+tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.wantStatus, api.Get(tt.path).Code)
+		})
+	}
+}

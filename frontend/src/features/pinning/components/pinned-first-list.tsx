@@ -1,7 +1,6 @@
 "use client";
 
 import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
-import { pinnedFirst } from "@/features/pinning/services/pinned-first";
 import type { Pin } from "@/features/pinning/types/pinning";
 
 interface PinnedFirstEntry {
@@ -16,6 +15,15 @@ interface PinnedFirstListProps {
   entries: PinnedFirstEntry[];
   className?: string;
   "aria-label"?: string;
+}
+
+// Pinned items lead, alphabetically by label with numbers compared as numbers ("Pool 2" before "Pool 10");
+// the rest keep the order they came in, which is the list's chosen sort.
+function pinnedFirst<T>(items: T[], isPinned: (item: T) => boolean, label: (item: T) => string): T[] {
+  const pinned = items
+    .filter(isPinned)
+    .sort((a, b) => label(a).localeCompare(label(b), undefined, { sensitivity: "base", numeric: true }));
+  return [...pinned, ...items.filter((item) => !isPinned(item))];
 }
 
 // Server pages can't hand a client component callbacks, so they pass each row

@@ -41,6 +41,15 @@ describe("PinnedFirstList", () => {
       order: ["Pool 2", "Pool 10", "Yan Wang", "Boston Blade"],
     },
     {
+      case: "every entry pinned, alphabetically",
+      pins: {
+        fencerIds: ["f1"],
+        clubs: [{ tournamentId: "t1", name: "Boston Blade" }],
+        pools: [{ ...POOL_EVENT, id: "p10", title: "Pool 10" }, { ...POOL_EVENT, id: "p2", title: "Pool 2" }],
+      },
+      order: ["Boston Blade", "Pool 2", "Pool 10", "Yan Wang"],
+    },
+    {
       case: "a club pinned in another tournament",
       pins: { clubs: [{ tournamentId: "t2", name: "Boston Blade" }] },
       order: ["Yan Wang", "Boston Blade", "Pool 10", "Pool 2"],

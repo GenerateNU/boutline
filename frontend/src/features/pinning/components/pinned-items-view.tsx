@@ -8,12 +8,50 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/primitive
 import { Text } from "@/components/primitives/text";
 import { ClubCard } from "@/features/competitor/components/club-card";
 import { FencerCard } from "@/features/competitor/components/fencer-card";
-import { FencerBoutList } from "@/features/pinning/components/fencer-bout-list";
 import { PinnedItemsSkeleton } from "@/features/pinning/components/pinned-items-skeleton";
 import { usePinnedFencers } from "@/features/pinning/hooks/use-pinned-fencers";
 import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
 import { usePinnedPools } from "@/features/pinning/hooks/use-pinned-pools";
-import { pinnedInTournament } from "@/features/pinning/services/pinned-in-tournament";
+import type { FencerBout } from "@/features/pinning/types/fencer-bout";
+import type { PinnedItems } from "@/features/pinning/types/pinning";
+
+const compare = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base", numeric: true });
+
+// Pins from every tournament share one store, so the page keeps only this tournament's.
+function pinnedInTournament({ clubs, pools, tableaus }: PinnedItems, tournamentId?: string) {
+  const inScope = <T extends { tournamentId: string }>(items: T[]) =>
+    tournamentId ? items.filter((item) => item.tournamentId === tournamentId) : [...items];
+
+  return {
+    clubs: inScope(clubs).sort((a, b) => compare(a.name, b.name)),
+    pools: inScope(pools).sort((a, b) => compare(a.eventName, b.eventName) || compare(a.title, b.title)),
+    tableaus: inScope(tableaus).sort((a, b) => compare(a.eventName, b.eventName)),
+  };
+}
+
+function resultLabel({ status, score }: FencerBout) {
+  if (status === "upcoming" || !score) {
+    return "Upcoming";
+  }
+  const result = `${score[0]}–${score[1]}`;
+  return status === "active" ? `${result} · In Progress` : result;
+}
+
+function FencerBoutList({ bouts }: { bouts: FencerBout[] }) {
+  if (bouts.length === 0) {
+    return null;
+  }
+  return (
+    <ul aria-label="Bouts" className="flex flex-col gap-1 pl-4">
+      {bouts.map((bout) => (
+        <li key={bout.id} className="flex items-center justify-between gap-4">
+          <Text variant="caption">{`${bout.stage} · vs ${bout.opponent}`}</Text>
+          <Text variant="caption">{resultLabel(bout)}</Text>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 interface PinnedSectionProps {
   title: string;

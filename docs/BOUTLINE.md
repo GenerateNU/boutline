@@ -335,6 +335,7 @@ timed, on a strip.
 | POST | `/bouts` | tournament must be active; the pool must belong to the same tournament; a pool bout copies the pool's referee, strip and number and takes its next `slot`, under the pool stage lock (§11.2), until pool create makes pool bouts |
 | GET | `/bouts?tournament_id&pool_id&status&ids` | newest first |
 | GET | `/bouts/{id}` | |
+| GET | `/competitors/{id}/bouts` | public; one fencer's pool and tableau bouts from their side: pool number or round size, opponent, and their score then the opponent's (null until the bout starts). Pool bouts first by pool and slot, then tableau bouts from the first round to the final; unpaginated; 404 for an unknown competitor |
 | PATCH | `/bouts/{id}` | admin only; only while `upcoming`; `pool_id` can't change |
 | POST | `/bouts/{id}/claim` | sets `referee_id` to the caller; needs the referee role (an admin passes); only while `upcoming` and unassigned or already the caller's, 409 otherwise |
 | POST | `/bouts/{id}/start` | tournament active, referee assigned, `upcoming → active` |
@@ -671,8 +672,8 @@ pool pins are dropped.
 Back link. All lists Fencers, Clubs, Pools and Tableaus in that order.
 
 - **Fencers:** each pinned fencer shows their card, then their bouts, pool and
-  tableau, from `GET /pool-sheets?event_id=` and `GET /events/{id}/tableau`. A bout
-  is not linked and shows its stage, the opponent and the score, or "Upcoming".
+  tableau, from `GET /competitors/{id}/bouts` (§2.8). A bout is not linked and
+  shows its stage, the opponent and the score, or "Upcoming".
 - **Clubs:** rows linking to the club's fencer filter.
 - **Pools:** full pool cards, loaded live with `GET /pool-sheets?ids=` (§11.3).
 - **Tableaus:** rows linking to the event's Tableau tab.

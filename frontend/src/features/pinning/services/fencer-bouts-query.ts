@@ -1,81 +1,40 @@
-import type { TableauResponse } from "@/app/tournaments/[tournamentId]/events/[eventId]/_types/tableau-response";
-import type { PoolBoardList } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_types/pool-board";
 import type { FencerBout } from "@/features/pinning/types/fencer-bout";
 import { tableauRoundName } from "@/lib/tableau-round-name";
 import { apiRequest } from "@/services/api-request";
+import type { BoutStatus } from "@/types/bout";
 import type { Competitor } from "@/types/competitor";
 
-interface EventBouts {
-  pools: PoolBoardList["data"];
-  tableau: TableauResponse["rounds"];
+// One bout as GET /competitors/{id}/bouts returns it, already from that fencer's side.
+interface CompetitorBoutResponse {
+  id: string;
+  status: BoutStatus;
+  pool_number: number | null;
+  round_size: number | null;
+  opponent: { first_name: string; last_name: string };
+  score: number | null;
+  opponent_score: number | null;
 }
 
-// One page of pool sheets is the backend maximum.
-async function fetchEventBouts(eventId: string): Promise<EventBouts> {
-  const params = new URLSearchParams({ event_id: eventId, limit: "100" });
-  const [pools, tableau] = await Promise.all([
-    apiRequest<PoolBoardList>(`/pool-sheets?${params}`),
-    apiRequest<TableauResponse>(`/events/${encodeURIComponent(eventId)}/tableau`),
-  ]);
-  return { pools: pools.data, tableau: tableau.rounds };
-}
-
-function orient(status: FencerBout["status"], own: number, other: number): FencerBout["score"] {
-  return status === "upcoming" ? null : [own, other];
-}
-
-function boutsForFencer(fencerId: string, { pools, tableau }: EventBouts): FencerBout[] {
-  const poolBouts = [...pools]
-    .sort((a, b) => a.number - b.number)
-    .flatMap((pool) =>
-      [...pool.bouts]
-        .sort((a, b) => a.slot - b.slot)
-        .filter((bout) => bout.competitor_1_id === fencerId || bout.competitor_2_id === fencerId)
-        .map((bout): FencerBout => {
-          const first = bout.competitor_1_id === fencerId;
-          const opponentId = first ? bout.competitor_2_id : bout.competitor_1_id;
-          const opponent = pool.fencers.find((f) => f.competitor_id === opponentId);
-          const [own, other] = first
-            ? [bout.competitor_1_score, bout.competitor_2_score]
-            : [bout.competitor_2_score, bout.competitor_1_score];
-          return {
-            id: bout.id,
-            stage: `Pool ${pool.number}`,
-            opponent: opponent ? `${opponent.first_name} ${opponent.last_name}` : "",
-            status: bout.status,
-            score: orient(bout.status, own, other),
-          };
-        }),
-    );
-
-  const tableauBouts = [...tableau]
-    .sort((a, b) => b.size - a.size)
-    .flatMap((round) =>
-      round.bouts
-        .filter((bout) => bout.top.id === fencerId || bout.bottom.id === fencerId)
-        .map((bout): FencerBout => {
-          const isTop = bout.top.id === fencerId;
-          const opponent = isTop ? bout.bottom : bout.top;
-          const [own, other] = isTop ? [bout.top_score, bout.bottom_score] : [bout.bottom_score, bout.top_score];
-          return {
-            id: bout.id,
-            stage: tableauRoundName(round.size).boutName,
-            opponent: `${opponent.first_name} ${opponent.last_name}`,
-            status: bout.status,
-            score: orient(bout.status, own ?? 0, other ?? 0),
-          };
-        }),
-    );
-
-  return [...poolBouts, ...tableauBouts];
+function toFencerBout(bout: CompetitorBoutResponse): FencerBout {
+  return {
+    id: bout.id,
+    stage: bout.pool_number !== null ? `Pool ${bout.pool_number}` : tableauRoundName(bout.round_size ?? 0).boutName,
+    opponent: `${bout.opponent.first_name} ${bout.opponent.last_name}`,
+    status: bout.status,
+    score: bout.score !== null && bout.opponent_score !== null ? [bout.score, bout.opponent_score] : null,
+  };
 }
 
 async function fetchFencerBouts(fencers: Competitor[]): Promise<Record<string, FencerBout[]>> {
-  const eventIds = [...new Set(fencers.map(({ eventId }) => eventId))];
-  const entries = await Promise.all(eventIds.map(async (eventId) => [eventId, await fetchEventBouts(eventId)] as const));
-  const byEvent = new Map(entries);
-
-  return Object.fromEntries(fencers.map(({ id, eventId }) => [id, boutsForFencer(id, byEvent.get(eventId)!)]));
+  const entries = await Promise.all(
+    fencers.map(async ({ id }) => {
+      const { data } = await apiRequest<{ data: CompetitorBoutResponse[] }>(
+        `/competitors/${encodeURIComponent(id)}/bouts`,
+      );
+      return [id, data.map(toFencerBout)] as const;
+    }),
+  );
+  return Object.fromEntries(entries);
 }
 
 export { fetchFencerBouts };

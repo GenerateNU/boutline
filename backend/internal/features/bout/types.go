@@ -120,3 +120,53 @@ type BoutListBody struct {
 type BoutListOutput struct {
 	Body BoutListBody
 }
+
+type CompetitorBoutsInput struct {
+	ID string `path:"id" format:"uuid" doc:"Competitor ID"`
+}
+
+type OpponentResponse struct {
+	ID        string `json:"id" format:"uuid"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+// CompetitorBoutResponse is one bout from the competitor's side: Score is theirs
+// and OpponentScore the other fencer's.
+type CompetitorBoutResponse struct {
+	ID            string           `json:"id" format:"uuid"`
+	Status        BoutStatus       `json:"status" enum:"upcoming,active,ended"`
+	PoolNumber    *int             `json:"pool_number" doc:"Set for a pool bout"`
+	RoundSize     *int             `json:"round_size" doc:"Set for a tableau bout: 8 for the table of 8, 2 for the final"`
+	Slot          *int             `json:"slot"`
+	Opponent      OpponentResponse `json:"opponent"`
+	Score         *int             `json:"score" doc:"Null until the bout starts"`
+	OpponentScore *int             `json:"opponent_score" doc:"Null until the bout starts"`
+}
+
+type CompetitorBoutsBody struct {
+	Data []CompetitorBoutResponse `json:"data"`
+}
+
+type CompetitorBoutsOutput struct {
+	Body CompetitorBoutsBody
+}
+
+func newCompetitorBoutResponse(row CompetitorBoutRow) CompetitorBoutResponse {
+	resp := CompetitorBoutResponse{
+		ID:         row.ID.String(),
+		Status:     row.Status,
+		PoolNumber: row.PoolNumber,
+		RoundSize:  row.RoundSize,
+		Slot:       row.Slot,
+		Opponent: OpponentResponse{
+			ID: row.OpponentID.String(), FirstName: row.OpponentFirstName, LastName: row.OpponentLastName,
+		},
+	}
+	if row.Status != BoutStatusUpcoming {
+		score, opponentScore := row.Score, row.OpponentScore
+		resp.Score, resp.OpponentScore = &score, &opponentScore
+	}
+
+	return resp
+}

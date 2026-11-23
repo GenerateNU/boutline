@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 
 import { buildPool } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_fixtures/build-pool";
 import { PinnedItemsView } from "@/features/pinning/components/pinned-items-view";
@@ -26,6 +26,27 @@ const POOL_TWO = buildPool({
     ["Eve", "Jones", ""],
   ],
 });
+
+function annBout(id: string, opponent: string, status: string, score: number | null, opponentScore: number | null) {
+  const [first, last] = opponent.split(" ");
+  return {
+    id,
+    status,
+    pool_number: 1,
+    round_size: null,
+    slot: 1,
+    opponent: { id: `${id}-opp`, first_name: first, last_name: last },
+    score,
+    opponent_score: opponentScore,
+  };
+}
+
+// Ann's bouts as the backend returns them, already from her side.
+const ANN_BOUTS = [
+  annBout("b1", "First Last", "ended", 5, 3),
+  annBout("b2", "Gail Hart", "active", 2, 1),
+  annBout("b3", "Hugo Ito", "upcoming", null, null),
+];
 
 const NO_PINS: PinnedItems = { fencerIds: [], clubs: [], pools: [], tableaus: [] };
 const ALL_PINS: PinnedItems = {
@@ -56,6 +77,12 @@ function mockApi() {
   global.fetch = jest.fn(async (input: RequestInfo | URL) => {
     const { pathname, searchParams } = new URL(String(input), "http://localhost");
     const ids = searchParams.get("ids")?.split(",") ?? [];
+    if (pathname.endsWith("/competitors/ann-smith/bouts")) {
+      return respond({ data: ANN_BOUTS });
+    }
+    if (pathname.endsWith("/bouts")) {
+      return respond({ data: [] });
+    }
     if (pathname.endsWith("/competitors")) {
       return list([ANN, CARA].filter(({ id }) => ids.includes(id)));
     }
@@ -122,7 +149,20 @@ describe("PinnedItemsView", () => {
       "href",
       "/tournaments/t1/events/e1/fencers/ann-smith",
     );
-    expect(await screen.findByText("Pool 1 · vs First Last")).toBeInTheDocument();
+    const bouts = await screen.findByRole("list", { name: "Bouts" });
+    expect(within(bouts).getAllByRole("listitem").map((row) => row.textContent)).toEqual([
+      "Pool 1 · vs First Last5–3",
+      "Pool 1 · vs Gail Hart2–1 · In Progress",
+      "Pool 1 · vs Hugo ItoUpcoming",
+    ]);
+  });
+
+  it("shows no bout list for a pinned fencer with no bouts", async () => {
+    seed({ fencerIds: ["cara-smith"] });
+    render(<PinnedItemsView />);
+
+    expect(await screen.findByRole("link", { name: /Cara Smith/ })).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Bouts" })).not.toBeInTheDocument();
   });
 
   it("tapping the pin unpins the fencer", async () => {
@@ -165,6 +205,34 @@ describe("PinnedItemsView", () => {
       "/tournaments/t1/events/e1/pooling/pool-1",
     );
     expect(screen.queryByText(/Beta FC|Womens Epee|Pool 2/)).not.toBeInTheDocument();
+  });
+
+  it("sorts clubs by name, pools by event then number, and tableaus by event", async () => {
+    seed({
+      clubs: [
+        { tournamentId: "t1", name: "Zeta FC" },
+        { tournamentId: "t1", name: "alpha fc" },
+      ],
+      pools: [
+        { tournamentId: "t1", eventId: "e1", eventName: "Mens Foil", id: "pool-1", title: "Pool 10" },
+        { tournamentId: "t1", eventId: "e1", eventName: "Mens Foil", id: "pool-2", title: "Pool 2" },
+      ],
+      tableaus: [
+        { tournamentId: "t1", eventId: "e2", eventName: "Womens Epee" },
+        { tournamentId: "t1", eventId: "e1", eventName: "Mens Foil" },
+      ],
+    });
+    render(<PinnedItemsView tournamentId="t1" />);
+
+    const titlesIn = (section: string) =>
+      within(screen.getByRole("heading", { name: section }).closest("section")!)
+        .getAllByRole("listitem")
+        .map((item) => item.querySelector("[data-slot=card-title], h3")?.textContent);
+
+    await screen.findByRole("link", { name: /Zeta FC/ });
+    expect(titlesIn("Clubs")).toEqual(["alpha fc", "Zeta FC"]);
+    expect(titlesIn("Pools")).toEqual(["Pool 2 · Strip 2", "Pool 1 · Strip 1"]);
+    expect(titlesIn("Tableaus")).toEqual(["Mens Foil", "Womens Epee"]);
   });
 
   it("renders every tournament's clubs, pools and tableaus without a tournament", async () => {
