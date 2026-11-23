@@ -420,11 +420,11 @@ func TestForbiddenCallersEndpoints(t *testing.T) {
 func TestListCompetitorBoutsEndpoint(t *testing.T) {
 	t.Parallel()
 
-	competitorID, opponentID := uuid.New(), uuid.New()
+	competitorID, opponentID, poolID := uuid.New(), uuid.New(), uuid.New()
 	poolNumber, roundSize, slot := 2, 8, 1
 	rows := []bout.CompetitorBoutRow{
 		{
-			ID: uuid.New(), Status: bout.BoutStatusEnded, PoolNumber: &poolNumber, Slot: &slot,
+			ID: uuid.New(), Status: bout.BoutStatusEnded, PoolID: &poolID, PoolNumber: &poolNumber, Slot: &slot,
 			OpponentID: opponentID, OpponentFirstName: "Jane", OpponentLastName: "Doe", Score: 5, OpponentScore: 3,
 		},
 		{
@@ -449,12 +449,14 @@ func TestListCompetitorBoutsEndpoint(t *testing.T) {
 		require.Len(t, body.Data, 2)
 
 		pooled, tableau := body.Data[0], body.Data[1]
+		assert.Equal(t, ptr(poolID.String()), pooled.PoolID)
 		assert.Equal(t, &poolNumber, pooled.PoolNumber)
 		assert.Nil(t, pooled.RoundSize)
 		assert.Equal(t, bout.OpponentResponse{ID: opponentID.String(), FirstName: "Jane", LastName: "Doe"}, pooled.Opponent)
 		assert.Equal(t, []*int{ptr(5), ptr(3)}, []*int{pooled.Score, pooled.OpponentScore})
 
 		assert.Equal(t, &roundSize, tableau.RoundSize)
+		assert.Nil(t, tableau.PoolID)
 		assert.Nil(t, tableau.PoolNumber)
 		assert.Nil(t, tableau.Score, "an upcoming bout has no score yet")
 		assert.Nil(t, tableau.OpponentScore)

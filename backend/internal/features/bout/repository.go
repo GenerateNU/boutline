@@ -36,6 +36,7 @@ type boutScoreRow struct {
 type CompetitorBoutRow struct {
 	ID                uuid.UUID  `gorm:"column:id"`
 	Status            BoutStatus `gorm:"column:status"`
+	PoolID            *uuid.UUID `gorm:"column:pool_id"`
 	PoolNumber        *int       `gorm:"column:pool_number"`
 	RoundSize         *int       `gorm:"column:round_size"`
 	Slot              *int       `gorm:"column:slot"`
@@ -326,7 +327,7 @@ func (r *boutRepository) ListCompetitorBouts(ctx context.Context, competitorID u
 
 	rows := []CompetitorBoutRow{}
 	err := db.Table("bouts AS b").
-		Select(`b.id, b.status, p.number AS pool_number, b.round_size, b.slot,
+		Select(`b.id, b.status, b.pool_id, p.number AS pool_number, b.round_size, b.slot,
 			o.id AS opponent_id, o.first_name AS opponent_first_name, o.last_name AS opponent_last_name`).
 		Joins("JOIN competitors o ON o.id IN (b.competitor_1_id, b.competitor_2_id) AND o.id <> ?", competitorID).
 		Joins("LEFT JOIN pools p ON p.id = b.pool_id").

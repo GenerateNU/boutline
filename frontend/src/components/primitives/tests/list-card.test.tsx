@@ -23,4 +23,15 @@ describe("ListCard", () => {
     expect(screen.getByRole("link")).toHaveAttribute("href", "/fencers/1");
     expect(container.querySelector("svg[data-testid='ChevronRightOutlinedIcon']")).not.toBeNull();
   });
+
+  it("makes the whole row a button with onSelect instead of a link", () => {
+    const { container } = render(
+      <ListCard title="Annika Kim" description="Boston Blade Club" onSelect={() => {}} pinned />,
+    );
+
+    expect(screen.getByRole("button", { name: /^Annika Kim/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unpin Annika Kim" })).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(container.querySelector("svg[data-testid='ChevronRightOutlinedIcon']")).not.toBeNull();
+  });
 });

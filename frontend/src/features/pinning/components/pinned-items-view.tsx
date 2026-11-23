@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { Dialog } from "radix-ui";
+import { useMemo, useState } from "react";
 
 import { PoolCard } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_components/pool-card";
 import { ListCard } from "@/components/primitives/list-card";
@@ -8,12 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/primitive
 import { Text } from "@/components/primitives/text";
 import { ClubCard } from "@/features/competitor/components/club-card";
 import { FencerCard } from "@/features/competitor/components/fencer-card";
+import { PinnedFencerDialog } from "@/features/pinning/components/pinned-fencer-dialog";
 import { PinnedItemsSkeleton } from "@/features/pinning/components/pinned-items-skeleton";
 import { usePinnedFencers } from "@/features/pinning/hooks/use-pinned-fencers";
 import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
 import { usePinnedPools } from "@/features/pinning/hooks/use-pinned-pools";
-import type { FencerBout } from "@/features/pinning/types/fencer-bout";
 import type { PinnedItems } from "@/features/pinning/types/pinning";
+import type { Competitor } from "@/types/competitor";
 
 const compare = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base", numeric: true });
 
@@ -27,34 +29,6 @@ function pinnedInTournament({ clubs, pools, tableaus }: PinnedItems, tournamentI
     pools: inScope(pools).sort((a, b) => compare(a.eventName, b.eventName) || compare(a.title, b.title)),
     tableaus: inScope(tableaus).sort((a, b) => compare(a.eventName, b.eventName)),
   };
-}
-
-function resultLabel({ status, score }: FencerBout) {
-  if (status === "upcoming" || !score) {
-    return "Upcoming";
-  }
-  const result = `${score[0]}–${score[1]}`;
-  return status === "active" ? `${result} · In Progress` : result;
-}
-
-interface FencerBoutListProps {
-  bouts: FencerBout[];
-}
-
-function FencerBoutList({ bouts }: FencerBoutListProps) {
-  if (bouts.length === 0) {
-    return null;
-  }
-  return (
-    <ul aria-label="Bouts" className="flex flex-col gap-1 pl-4">
-      {bouts.map((bout) => (
-        <li key={bout.id} className="flex items-center justify-between gap-4">
-          <Text variant="caption">{`${bout.stage} · vs ${bout.opponent}`}</Text>
-          <Text variant="caption">{resultLabel(bout)}</Text>
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 interface PinnedSectionProps {
@@ -85,6 +59,7 @@ interface PinnedItemsViewProps {
 
 function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
   const { pinned, togglePin } = usePinnedItems();
+  const [selected, setSelected] = useState<Competitor | null>(null);
   const scoped = useMemo(() => pinnedInTournament(pinned, tournamentId), [pinned, tournamentId]);
   const { fencers, bouts, error: fencersError } = usePinnedFencers(tournamentId);
   const { pools, error: poolsError } = usePinnedPools(scoped.pools);
@@ -104,9 +79,8 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
   const fencerSection = (
     <PinnedSection title="Fencers" empty="No pinned fencers yet" isEmpty={fencers.length === 0}>
       {fencers.map((fencer) => (
-        <li key={fencer.id} className="flex flex-col gap-2">
-          <FencerCard competitor={fencer} />
-          <FencerBoutList bouts={bouts[fencer.id] ?? []} />
+        <li key={fencer.id}>
+          <FencerCard competitor={fencer} onSelect={() => setSelected(fencer)} />
         </li>
       ))}
     </PinnedSection>
@@ -151,33 +125,38 @@ function PinnedItemsView({ tournamentId }: PinnedItemsViewProps) {
   );
 
   return (
-    <Tabs defaultValue="all">
-      <TabsList>
-        <TabsTrigger value="all">All</TabsTrigger>
-        <TabsTrigger value="fencers">Fencers</TabsTrigger>
-        <TabsTrigger value="clubs">Clubs</TabsTrigger>
-        <TabsTrigger value="pools">Pools</TabsTrigger>
-        <TabsTrigger value="tableaus">Tableaus</TabsTrigger>
-      </TabsList>
-      <TabsContent value="all" className="flex flex-col gap-6 pt-4">
-        {fencerSection}
-        {clubSection}
-        {poolSection}
-        {tableauSection}
-      </TabsContent>
-      <TabsContent value="fencers" className="pt-4">
-        {fencerSection}
-      </TabsContent>
-      <TabsContent value="clubs" className="pt-4">
-        {clubSection}
-      </TabsContent>
-      <TabsContent value="pools" className="pt-4">
-        {poolSection}
-      </TabsContent>
-      <TabsContent value="tableaus" className="pt-4">
-        {tableauSection}
-      </TabsContent>
-    </Tabs>
+    <>
+      <Tabs defaultValue="all">
+        <TabsList>
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="fencers">Fencers</TabsTrigger>
+          <TabsTrigger value="clubs">Clubs</TabsTrigger>
+          <TabsTrigger value="pools">Pools</TabsTrigger>
+          <TabsTrigger value="tableaus">Tableaus</TabsTrigger>
+        </TabsList>
+        <TabsContent value="all" className="flex flex-col gap-6 pt-4">
+          {fencerSection}
+          {clubSection}
+          {poolSection}
+          {tableauSection}
+        </TabsContent>
+        <TabsContent value="fencers" className="pt-4">
+          {fencerSection}
+        </TabsContent>
+        <TabsContent value="clubs" className="pt-4">
+          {clubSection}
+        </TabsContent>
+        <TabsContent value="pools" className="pt-4">
+          {poolSection}
+        </TabsContent>
+        <TabsContent value="tableaus" className="pt-4">
+          {tableauSection}
+        </TabsContent>
+      </Tabs>
+      <Dialog.Root open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
+        {selected && <PinnedFencerDialog fencer={selected} bouts={bouts[selected.id] ?? []} />}
+      </Dialog.Root>
+    </>
   );
 }
 

@@ -12,11 +12,16 @@ interface ListCardProps {
   description: React.ReactNode;
   badge?: React.ReactNode;
   href?: string;
+  // Opens something in place, such as a dialog, instead of linking away; ignored with an href.
+  onSelect?: () => void;
   pinned?: boolean;
   onTogglePin?: () => void;
 }
 
-function ListCard({ title, description, badge, href, pinned, onTogglePin }: ListCardProps) {
+const STRETCHED_TARGET_CLASS =
+  "min-w-0 flex-1 text-left outline-none after:absolute after:inset-0 after:rounded-[12px] focus-visible:after:ring-2 focus-visible:after:ring-ring";
+
+function ListCard({ title, description, badge, href, onSelect, pinned, onTogglePin }: ListCardProps) {
   // Material marks a pin as set with its filled glyph rather than by filling the outline.
   const PinIcon = pinned ? PushPin : PushPinOutlined;
 
@@ -34,15 +39,16 @@ function ListCard({ title, description, badge, href, pinned, onTogglePin }: List
         "border-blue-light bg-blue-lightest": pinned,
       })}
     >
+      {/* The link or button stretches over the whole card, so all of it is the target
+          while the pin button still sits on top as its own control. */}
       {href ? (
-        // The link stretches over the whole card, so all of it opens the page
-        // while the pin button still sits on top as its own control.
-        <Link
-          href={href}
-          className="min-w-0 flex-1 outline-none after:absolute after:inset-0 after:rounded-[12px] focus-visible:after:ring-2 focus-visible:after:ring-ring"
-        >
+        <Link href={href} className={STRETCHED_TARGET_CLASS}>
           {header}
         </Link>
+      ) : onSelect ? (
+        <button type="button" onClick={onSelect} className={STRETCHED_TARGET_CLASS}>
+          {header}
+        </button>
       ) : (
         <div className="min-w-0 flex-1">{header}</div>
       )}
@@ -59,7 +65,7 @@ function ListCard({ title, description, badge, href, pinned, onTogglePin }: List
           <PinIcon aria-hidden />
         </PinButton>
       )}
-      {href && (
+      {(href || onSelect) && (
         <ChevronRightOutlined aria-hidden className="size-6 shrink-0 text-neutral-muted" />
       )}
     </Card>

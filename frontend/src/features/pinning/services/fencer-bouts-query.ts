@@ -8,6 +8,7 @@ import type { Competitor } from "@/types/competitor";
 interface CompetitorBoutResponse {
   id: string;
   status: BoutStatus;
+  pool_id: string | null;
   pool_number: number | null;
   round_size: number | null;
   opponent: { first_name: string; last_name: string };
@@ -18,6 +19,7 @@ interface CompetitorBoutResponse {
 function toFencerBout(bout: CompetitorBoutResponse): FencerBout {
   return {
     id: bout.id,
+    poolId: bout.pool_id,
     stage: bout.pool_number !== null ? `Pool ${bout.pool_number}` : tableauRoundName(bout.round_size ?? 0).boutName,
     opponent: `${bout.opponent.first_name} ${bout.opponent.last_name}`,
     status: bout.status,

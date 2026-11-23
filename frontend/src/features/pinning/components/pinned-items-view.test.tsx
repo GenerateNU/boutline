@@ -32,6 +32,7 @@ function annBout(id: string, opponent: string, status: string, score: number | n
   return {
     id,
     status,
+    pool_id: "pool-1",
     pool_number: 1,
     round_size: null,
     slot: 1,
@@ -141,28 +142,35 @@ describe("PinnedItemsView", () => {
     expect(screen.getByText("No pinned tableaus yet")).toBeInTheDocument();
   });
 
-  it("links a pinned fencer to their page and lists their bouts", async () => {
+  it("opens a pinned fencer's pools and bouts in a dialog", async () => {
     seed({ fencerIds: ["ann-smith"] });
     render(<PinnedItemsView />);
 
-    expect(await screen.findByRole("link", { name: /Ann Smith/ })).toHaveAttribute(
-      "href",
-      "/tournaments/t1/events/e1/fencers/ann-smith",
-    );
-    const bouts = await screen.findByRole("list", { name: "Bouts" });
+    fireEvent.click(await screen.findByRole("button", { name: /^Ann Smith/ }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Ann Smith" });
+    expect(await within(dialog).findByRole("heading", { name: "Pool 1 · Strip 1" })).toBeInTheDocument();
+    const bouts = within(dialog).getByRole("list", { name: "Bouts" });
     expect(within(bouts).getAllByRole("listitem").map((row) => row.textContent)).toEqual([
       "Pool 1 · vs First Last5–3",
       "Pool 1 · vs Gail Hart2–1 · In Progress",
       "Pool 1 · vs Hugo ItoUpcoming",
     ]);
+    expect(within(dialog).getByRole("link", { name: /Open fencer details/ })).toHaveAttribute(
+      "href",
+      "/tournaments/t1/events/e1/fencers/ann-smith",
+    );
   });
 
-  it("shows no bout list for a pinned fencer with no bouts", async () => {
+  it("lists no bouts under the cards, only in the dialog", async () => {
     seed({ fencerIds: ["cara-smith"] });
     render(<PinnedItemsView />);
 
-    expect(await screen.findByRole("link", { name: /Cara Smith/ })).toBeInTheDocument();
-    expect(screen.queryByRole("list", { name: "Bouts" })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /^Cara Smith/ }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Cara Smith" });
+    expect(within(dialog).getByText("No bouts yet")).toBeInTheDocument();
+    expect(within(dialog).queryByRole("list", { name: "Bouts" })).not.toBeInTheDocument();
   });
 
   it("tapping the pin unpins the fencer", async () => {
@@ -182,8 +190,8 @@ describe("PinnedItemsView", () => {
     seed({ fencerIds: ["ann-smith", "cara-smith"] });
     render(<PinnedItemsView tournamentId={tournamentId} />);
 
-    expect(await screen.findByRole("link", { name: /Ann Smith/ })).toBeInTheDocument();
-    expect(Boolean(screen.queryByRole("link", { name: /Cara Smith/ }))).toBe(wantCara);
+    expect(await screen.findByRole("button", { name: /^Ann Smith/ })).toBeInTheDocument();
+    expect(Boolean(screen.queryByRole("button", { name: /^Cara Smith/ }))).toBe(wantCara);
   });
 
   it("renders pinned clubs, pools and tableaus scoped to the tournament", async () => {

@@ -136,6 +136,7 @@ type OpponentResponse struct {
 type CompetitorBoutResponse struct {
 	ID            string           `json:"id" format:"uuid"`
 	Status        BoutStatus       `json:"status" enum:"upcoming,active,ended"`
+	PoolID        *string          `json:"pool_id" format:"uuid" doc:"Set for a pool bout"`
 	PoolNumber    *int             `json:"pool_number" doc:"Set for a pool bout"`
 	RoundSize     *int             `json:"round_size" doc:"Set for a tableau bout: 8 for the table of 8, 2 for the final"`
 	Slot          *int             `json:"slot"`
@@ -156,6 +157,7 @@ func newCompetitorBoutResponse(row CompetitorBoutRow) CompetitorBoutResponse {
 	resp := CompetitorBoutResponse{
 		ID:         row.ID.String(),
 		Status:     row.Status,
+		PoolID:     optionalUUIDString(row.PoolID),
 		PoolNumber: row.PoolNumber,
 		RoundSize:  row.RoundSize,
 		Slot:       row.Slot,

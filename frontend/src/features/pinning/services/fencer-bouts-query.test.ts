@@ -9,6 +9,7 @@ function bout(overrides: Record<string, unknown>) {
   return {
     id: "b1",
     status: "ended",
+    pool_id: null,
     pool_number: null,
     round_size: null,
     slot: 1,
@@ -35,13 +36,13 @@ describe("fetchFencerBouts", () => {
   }
 
   it.each([
-    { case: "a pool bout", bout: bout({ pool_number: 2 }), want: { stage: "Pool 2", score: [5, 3] } },
-    { case: "a tableau bout", bout: bout({ round_size: 8 }), want: { stage: "Table of 8", score: [5, 3] } },
-    { case: "a semi-final", bout: bout({ round_size: 4 }), want: { stage: "Semi-final", score: [5, 3] } },
+    { case: "a pool bout", bout: bout({ pool_id: "p2", pool_number: 2 }), want: { poolId: "p2", stage: "Pool 2", score: [5, 3] } },
+    { case: "a tableau bout", bout: bout({ round_size: 8 }), want: { poolId: null, stage: "Table of 8", score: [5, 3] } },
+    { case: "a semi-final", bout: bout({ round_size: 4 }), want: { poolId: null, stage: "Semi-final", score: [5, 3] } },
     {
       case: "an upcoming bout",
       bout: bout({ round_size: 2, status: "upcoming", score: null, opponent_score: null }),
-      want: { stage: "Final", score: null },
+      want: { poolId: null, stage: "Final", score: null },
     },
   ])("maps $case", async ({ bout: served, want }) => {
     serve([served]);
