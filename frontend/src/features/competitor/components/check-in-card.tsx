@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { Card } from "@/components/primitives/card";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { StatusBadge } from "@/components/primitives/status-badge";
 import { listCompetitors, type CompetitorQuery } from "@/features/competitor/services/listCompetitors";
 import { setCheckedIn } from "@/features/competitor/services/setCheckedIn";
+import { useInfiniteList } from "@/lib/hooks/use-infinite-list";
 import type { Competitor } from "@/types/competitor";
 
 interface CheckInCardProps {
@@ -29,22 +30,26 @@ export function CheckInCard({
   total,
   pageSize,
 }: CheckInCardProps) {
-  const [more, setMore] = useState<Competitor[]>([]);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const [shownCompetitors, setShownCompetitors] = useState(competitors);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const sentinel = useRef<HTMLLIElement>(null);
+  const {
+    items: rows,
+    loading,
+    hasMore,
+    error: loadError,
+    endRef,
+  } = useInfiniteList(competitors, total, async (offset) => {
+    const { data } = await listCompetitors(source, pageSize, offset);
+    return data;
+  });
 
   // Fresh server data (paging, search, a refresh) replaces any local toggles.
   if (shownCompetitors !== competitors) {
     setShownCompetitors(competitors);
     setOverrides({});
-    setMore([]);
   }
-
-  const rows = [...competitors, ...more];
 
   const isCheckedIn = (c: Competitor) => overrides[c.id] ?? c.checkedInAt !== null;
   // The server total, moved by every local toggle that differs from what was loaded.
@@ -52,37 +57,6 @@ export function CheckInCard({
     (count, c) => count + Number(isCheckedIn(c)) - Number(c.checkedInAt !== null),
     checkedInTotal,
   );
-
-  const hasMore = rows.length < total && !error;
-
-  // Re-observing after each page fires again while the end is still on screen, so a
-  // tall screen keeps loading until the list reaches past it.
-  useEffect(() => {
-    const end = sentinel.current;
-    if (!end || loadingMore) {
-      return;
-    }
-    const observer = new IntersectionObserver(
-      async ([entry]) => {
-        if (!entry.isIntersecting) {
-          return;
-        }
-        observer.disconnect();
-        setLoadingMore(true);
-        try {
-          const { data } = await listCompetitors(source, pageSize, rows.length);
-          setMore((m) => [...m, ...data]);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Couldn't load more fencers");
-        } finally {
-          setLoadingMore(false);
-        }
-      },
-      { rootMargin: "0px 0px 200px 0px" },
-    );
-    observer.observe(end);
-    return () => observer.disconnect();
-  }, [loadingMore, hasMore, rows.length, source, pageSize]);
 
   function toggle(competitor: Competitor) {
     const previous = isCheckedIn(competitor);
@@ -124,15 +98,15 @@ export function CheckInCard({
             </li>
           );
         })}
-        {loadingMore ? (
+        {loading ? (
           <li className="py-3 text-center text-xs text-muted-foreground">Loading…</li>
         ) : hasMore ? (
-          <li ref={sentinel} aria-hidden />
+          <li ref={endRef} aria-hidden />
         ) : null}
       </ul>
-      {error ? (
+      {error || loadError ? (
         <p role="alert" className="text-sm text-destructive">
-          {error}
+          {error ?? loadError}
         </p>
       ) : null}
     </Card>

@@ -1,15 +1,10 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-
-import { listCompetitors } from "../services/listCompetitors";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { CheckInCard } from "@/features/competitor/components/check-in-card";
 import { setCheckedIn } from "../services/setCheckedIn";
 import type { Competitor } from "@/types/competitor";
 
 jest.mock("../services/setCheckedIn", () => ({ setCheckedIn: jest.fn() }));
-jest.mock("../services/listCompetitors", () => ({ listCompetitors: jest.fn() }));
-
-const mockListCompetitors = jest.mocked(listCompetitors);
 
 const mockSetCheckedIn = jest.mocked(setCheckedIn);
 
@@ -30,58 +25,10 @@ const COMPETITORS: Competitor[] = [
   { ...BASE, id: "c-2", firstName: "Ada", lastName: "Lee", checkedInAt: "2026-11-14T10:00:00Z" },
 ];
 
-// A one-page source, so scrolling these cards never loads more.
+// A one-page source, so these cards never load more.
 const SOURCE = { source: { tournamentId: "t1" }, total: 2, pageSize: 25 };
 
-// jsdom has no IntersectionObserver; this one lets a test say the list's end came into view.
-let showListEnd: () => unknown = () => {};
-beforeAll(() => {
-  global.IntersectionObserver = class {
-    constructor(callback: IntersectionObserverCallback) {
-      // The card's callback is async; returning its promise lets the test await the load.
-      showListEnd = () =>
-        callback([{ isIntersecting: true } as IntersectionObserverEntry], this as never) as unknown;
-    }
-    observe() {}
-    disconnect() {
-      showListEnd = () => {};
-    }
-  } as unknown as typeof IntersectionObserver;
-});
-
 describe("CheckInCard", () => {
-  it.each([
-    { name: "loads the next page when the list end scrolls into view", total: 3, wantCalls: 1 },
-    { name: "stops once every fencer is loaded", total: 2, wantCalls: 0 },
-  ])("$name", async ({ total, wantCalls }) => {
-    mockListCompetitors.mockReset().mockResolvedValue({
-      data: [{ ...BASE, id: "c-3", firstName: "Mei", lastName: "Lin" }],
-      total,
-      checkedIn: 1,
-      limit: 2,
-      offset: 2,
-    });
-    render(
-      <CheckInCard
-        competitors={COMPETITORS}
-        checkedInTotal={1}
-        editable={false}
-        source={{ tournamentId: "t1" }}
-        total={total}
-        pageSize={2}
-      />,
-    );
-
-    await act(async () => {
-      await showListEnd();
-    });
-
-    expect(mockListCompetitors).toHaveBeenCalledTimes(wantCalls);
-    if (wantCalls > 0) {
-      expect(await screen.findByText("Mei Lin")).toBeInTheDocument();
-    }
-  });
-
   beforeEach(() => mockSetCheckedIn.mockReset());
 
   it("shows each fencer's state and the checked-in count", () => {
