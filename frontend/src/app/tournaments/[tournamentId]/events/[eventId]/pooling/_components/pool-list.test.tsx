@@ -46,6 +46,7 @@ const poolBoards = [
   }),
 ];
 
+const EVENT = { tournamentId: "t", eventId: "e" };
 const poolTitles = ["Pool 1 · Strip 3", "Pool 2 · Strip 4", "Pool 3 · Strip 5", "Pool 4 · Strip 2"];
 
 function titles(): string[] {
@@ -53,7 +54,7 @@ function titles(): string[] {
 }
 
 function renderList(query: string) {
-  render(<PoolList pools={poolBoards} poolingPath="/tournaments/t/events/e/pooling" />);
+  render(<PoolList pools={poolBoards} poolingPath="/tournaments/t/events/e/pooling" event={EVENT} />);
   fireEvent.change(screen.getByRole("searchbox", { name: "Search pools" }), { target: { value: query } });
 }
 
@@ -73,7 +74,7 @@ function chip(sheet: HTMLElement, name: string) {
 }
 
 function typeInSearch(query: string) {
-  render(<PoolList pools={poolBoards} poolingPath="/tournaments/t/events/e/pooling" />);
+  render(<PoolList pools={poolBoards} poolingPath="/tournaments/t/events/e/pooling" event={EVENT} />);
   const search = screen.getByRole("searchbox", { name: "Search pools" });
   act(() => search.focus());
   fireEvent.change(search, { target: { value: query } });

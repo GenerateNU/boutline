@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 
 import { FencerCard } from "@/features/competitor/components/fencer-card";
+import { PINNED_STORAGE_KEY } from "@/features/pinning/types/pinning";
 import type { Competitor } from "@/types/competitor";
 
 const YAN: Competitor = {
@@ -15,6 +16,8 @@ const YAN: Competitor = {
 };
 
 describe("FencerCard", () => {
+  beforeEach(() => sessionStorage.clear());
+
   it.each([
     { team: "Boston Blade Club", wantClub: "Boston Blade Club" },
     { team: "", wantClub: "No club" },
@@ -35,13 +38,6 @@ describe("FencerCard", () => {
     expect(screen.getByText(want)).toBeInTheDocument();
   });
 
-  it("shows a chevron instead of a pin button when pinning is off", () => {
-    render(<FencerCard competitor={YAN} />);
-
-    expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.getByRole("link")).toBeInTheDocument();
-  });
-
   it.each([
     { name: "in a tournament", tournamentId: "t1", want: "/tournaments/t1/events/e1/fencers/c-1" },
     { name: "with an empty tournament id", tournamentId: "", want: null },
@@ -58,21 +54,17 @@ describe("FencerCard", () => {
   });
 
   it.each([
-    { pinned: true, label: "Unpin Yan Wang" },
-    { pinned: false, label: "Pin Yan Wang" },
-  ])("toggles a pin when pinned is $pinned", ({ pinned, label }) => {
-    const onTogglePin = jest.fn();
-    render(<FencerCard competitor={YAN} pinned={pinned} onTogglePin={onTogglePin} />);
+    { name: "pins", clicks: 1, pressed: "true", label: "Unpin Yan Wang", stored: ["c-1"] },
+    { name: "unpins", clicks: 2, pressed: "false", label: "Pin Yan Wang", stored: [] },
+  ])("$name the fencer after $clicks click(s) on the pin", ({ clicks, pressed, label, stored }) => {
+    render(<FencerCard competitor={YAN} />);
 
-    const button = screen.getByRole("button", { name: label });
-    expect(button).toHaveAttribute("aria-pressed", String(pinned));
-    fireEvent.click(button);
-    expect(onTogglePin).toHaveBeenCalled();
-  });
+    for (let i = 0; i < clicks; i++) {
+      fireEvent.click(screen.getByRole("button", { name: /pin Yan Wang/i }));
+    }
 
-  it("shows a pin button even before pinning is wired up", () => {
-    render(<FencerCard competitor={YAN} pinned={false} />);
-
-    expect(screen.getByRole("button", { name: "Pin Yan Wang" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: label })).toHaveAttribute("aria-pressed", pressed);
+    const raw = sessionStorage.getItem(PINNED_STORAGE_KEY);
+    expect(raw ? JSON.parse(raw).fencerIds : []).toEqual(stored);
   });
 });

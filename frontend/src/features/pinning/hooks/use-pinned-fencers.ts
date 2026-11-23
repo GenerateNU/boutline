@@ -7,13 +7,9 @@ import { fetchPinnedFencers } from "@/features/pinning/services/pinned-items-que
 import type { Competitor } from "@/types/competitor";
 import { errorMessage } from "@/utils/error-message";
 
-interface Settled {
+interface PinnedFencers {
   fencers: Competitor[] | null;
   error: string | null;
-}
-
-interface PinnedFencers extends Settled {
-  unpinFencer: (id: string) => void;
 }
 
 const subscribe = () => () => {};
@@ -24,8 +20,8 @@ function usePinnedFencers(tournamentId?: string): PinnedFencers {
   // Pins live in sessionStorage, which the server render can't see; waiting for
   // hydration keeps "No pinned fencers yet" from flashing before they load.
   const hydrated = useSyncExternalStore(subscribe, () => true, () => false);
-  const { pinned, unpinFencer } = usePinnedItems();
-  const [settled, setSettled] = useState<Settled | null>(null);
+  const { pinned } = usePinnedItems();
+  const [settled, setSettled] = useState<PinnedFencers | null>(null);
 
   useEffect(() => {
     if (!hydrated) {
@@ -50,7 +46,7 @@ function usePinnedFencers(tournamentId?: string): PinnedFencers {
   }, [hydrated, pinned.fencerIds]);
 
   if (!hydrated || !settled) {
-    return { fencers: null, error: null, unpinFencer };
+    return { fencers: null, error: null };
   }
   // While a refetch is in flight the last result stays on screen, minus anything
   // unpinned since, so unpinning removes one card instead of reloading the list.
@@ -59,7 +55,7 @@ function usePinnedFencers(tournamentId?: string): PinnedFencers {
       pinned.fencerIds.includes(fencer.id) &&
       (!tournamentId || fencer.tournamentId === tournamentId),
   );
-  return { fencers: fencers ?? null, error: settled.error, unpinFencer };
+  return { fencers: fencers ?? null, error: settled.error };
 }
 
 export { usePinnedFencers };

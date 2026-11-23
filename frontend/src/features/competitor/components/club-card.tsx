@@ -1,24 +1,30 @@
+"use client";
+
 import { MockCountry } from "@/app/tournaments/[tournamentId]/_components/mock-country";
 import { ListCard } from "@/components/primitives/list-card";
-import type { Team } from "@/types/competitor";
+import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
 
 interface ClubCardProps {
-  team: Team;
-  href?: string;
-  pinned?: boolean;
+  name: string;
+  tournamentId: string;
 }
 
-function ClubCard({ team, ...props }: ClubCardProps) {
+function ClubCard({ name, tournamentId }: ClubCardProps) {
+  const { isPinned, togglePin } = usePinnedItems();
+  const club = { tournamentId, name };
+
   return (
     <ListCard
-      title={team.name}
+      title={name}
       description={
         <>
           {/* Clubs have no stored location yet. */}
           <MockCountry /> &middot; Location TBC
         </>
       }
-      {...props}
+      href={`/tournaments/${encodeURIComponent(tournamentId)}/fencers?team=${encodeURIComponent(name)}`}
+      pinned={isPinned("club", club)}
+      onTogglePin={() => togglePin("club", club)}
     />
   );
 }

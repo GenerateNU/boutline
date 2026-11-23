@@ -1,4 +1,5 @@
 import { BackButton } from "@/components/primitives/back-button";
+import type { PinnedEvent } from "@/features/pinning/types/pinning";
 
 import { PoolPinButton } from "../../_components/pool-pin-button";
 import { PoolStatusBadge } from "../../_components/pool-status-badge";
@@ -8,9 +9,10 @@ import type { PoolBoard } from "../../_types/pool-board";
 interface PoolHeaderProps {
   pool: PoolBoard;
   poolingPath: string;
+  event: PinnedEvent;
 }
 
-export function PoolHeader({ pool, poolingPath }: PoolHeaderProps) {
+export function PoolHeader({ pool, poolingPath, event }: PoolHeaderProps) {
   const count = pool.fencers.length;
 
   return (
@@ -19,7 +21,7 @@ export function PoolHeader({ pool, poolingPath }: PoolHeaderProps) {
         <BackButton href={poolingPath}>
           <span className="sr-only">Back to </span>Pooling
         </BackButton>
-        <PoolPinButton pool={pool} />
+        <PoolPinButton pool={pool} event={event} />
       </div>
       <h2 className="sr-only">{poolTitle(pool)}</h2>
       <div className="flex items-center gap-2.5">
