@@ -11,11 +11,9 @@ interface BracketGroupProps {
   slots: Slot[];
   query: string;
   boutBasePath: string;
-  // A pair is the two bouts whose winners meet in the next round, like
-  // semi-finals 1 and 2 feeding final 1. pullPair moves those two bouts closer
-  // together than the gap to the next pair, so each pair reads as one unit.
-  // Only the first round uses it: in later rounds a bout has to stay centered
-  // between the two bouts it comes from, so there's no room to move it.
+  // A pair is the two bouts whose winners meet in the next round. pullPair
+  // moves them closer together than the gap to the next pair. Only the first
+  // round uses it; later bouts stay centered between the two they come from.
   pullPair?: boolean;
 }
 
