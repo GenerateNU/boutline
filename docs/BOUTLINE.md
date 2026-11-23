@@ -518,7 +518,8 @@ back to `/tournaments`. An unknown ID is a 404.
 - **Fencers:** a searchable list of the tournament's fencers from
   `GET /competitors?tournament_id=&q&team&weapon&ageCategory&rating&gender`,
   filterable by Club, Weapon, Age Category, Rating and Gender, inside the
-  "Check in:" card (§10.5), which scrolls and loads the next page near its bottom.
+  "Check in:" card (§10.5). The card grows with the page, with no scrollbar of its
+  own, and loads the next page as its end scrolls into view.
   Weapon and Age Category filter on the owning event, since competitors don't have
   those fields.
 - **Clubs:** a searchable, paginated list of clubs from `GET /tournaments/{id}/teams`;

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import { listCompetitors } from "../services/listCompetitors";
 
@@ -33,9 +33,25 @@ const COMPETITORS: Competitor[] = [
 // A one-page source, so scrolling these cards never loads more.
 const SOURCE = { source: { tournamentId: "t1" }, total: 2, pageSize: 25 };
 
+// jsdom has no IntersectionObserver; this one lets a test say the list's end came into view.
+let showListEnd: () => unknown = () => {};
+beforeAll(() => {
+  global.IntersectionObserver = class {
+    constructor(callback: IntersectionObserverCallback) {
+      // The card's callback is async; returning its promise lets the test await the load.
+      showListEnd = () =>
+        callback([{ isIntersecting: true } as IntersectionObserverEntry], this as never) as unknown;
+    }
+    observe() {}
+    disconnect() {
+      showListEnd = () => {};
+    }
+  } as unknown as typeof IntersectionObserver;
+});
+
 describe("CheckInCard", () => {
   it.each([
-    { name: "loads the next page when scrolled to the bottom", total: 3, wantCalls: 1 },
+    { name: "loads the next page when the list end scrolls into view", total: 3, wantCalls: 1 },
     { name: "stops once every fencer is loaded", total: 2, wantCalls: 0 },
   ])("$name", async ({ total, wantCalls }) => {
     mockListCompetitors.mockReset().mockResolvedValue({
@@ -56,7 +72,9 @@ describe("CheckInCard", () => {
       />,
     );
 
-    fireEvent.scroll(screen.getByRole("list"));
+    await act(async () => {
+      await showListEnd();
+    });
 
     expect(mockListCompetitors).toHaveBeenCalledTimes(wantCalls);
     if (wantCalls > 0) {

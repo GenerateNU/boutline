@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { Card } from "@/components/primitives/card";
 import { Checkbox } from "@/components/primitives/checkbox";
@@ -15,7 +15,7 @@ interface CheckInCardProps {
   checkedInTotal: number;
   // Admins in edit mode get checkboxes; everyone else sees Present / Absent.
   editable: boolean;
-  // The list scrolls inside the card and loads the next page of `source` near its bottom.
+  // The card grows with the page and loads the next page of `source` as its end scrolls into view.
   source: CompetitorQuery;
   total: number;
   pageSize: number;
@@ -35,6 +35,7 @@ export function CheckInCard({
   const [shownCompetitors, setShownCompetitors] = useState(competitors);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const sentinel = useRef<HTMLLIElement>(null);
 
   // Fresh server data (paging, search, a refresh) replaces any local toggles.
   if (shownCompetitors !== competitors) {
@@ -52,21 +53,36 @@ export function CheckInCard({
     checkedInTotal,
   );
 
-  async function loadMore(list: HTMLUListElement) {
-    const nearBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 48;
-    if (loadingMore || !nearBottom || rows.length >= total) {
+  const hasMore = rows.length < total && !error;
+
+  // Re-observing after each page fires again while the end is still on screen, so a
+  // tall screen keeps loading until the list reaches past it.
+  useEffect(() => {
+    const end = sentinel.current;
+    if (!end || loadingMore) {
       return;
     }
-    setLoadingMore(true);
-    try {
-      const { data } = await listCompetitors(source, pageSize, rows.length);
-      setMore((m) => [...m, ...data]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't load more fencers");
-    } finally {
-      setLoadingMore(false);
-    }
-  }
+    const observer = new IntersectionObserver(
+      async ([entry]) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
+        observer.disconnect();
+        setLoadingMore(true);
+        try {
+          const { data } = await listCompetitors(source, pageSize, rows.length);
+          setMore((m) => [...m, ...data]);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Couldn't load more fencers");
+        } finally {
+          setLoadingMore(false);
+        }
+      },
+      { rootMargin: "0px 0px 200px 0px" },
+    );
+    observer.observe(end);
+    return () => observer.disconnect();
+  }, [loadingMore, hasMore, rows.length, source, pageSize]);
 
   function toggle(competitor: Competitor) {
     const previous = isCheckedIn(competitor);
@@ -88,10 +104,7 @@ export function CheckInCard({
         <h3 className="text-sm font-medium">Check in:</h3>
         <span className="text-xs text-muted-foreground">{checkedInCount} checked in</span>
       </div>
-      <ul
-        className="max-h-96 divide-y divide-border overflow-y-auto"
-        onScroll={(e) => loadMore(e.currentTarget)}
-      >
+      <ul className="divide-y divide-border">
         {rows.map((competitor) => {
           const checked = isCheckedIn(competitor);
           const name = `${competitor.firstName} ${competitor.lastName}`;
@@ -111,7 +124,11 @@ export function CheckInCard({
             </li>
           );
         })}
-        {loadingMore && <li className="py-3 text-center text-xs text-muted-foreground">Loading…</li>}
+        {loadingMore ? (
+          <li className="py-3 text-center text-xs text-muted-foreground">Loading…</li>
+        ) : hasMore ? (
+          <li ref={sentinel} aria-hidden />
+        ) : null}
       </ul>
       {error ? (
         <p role="alert" className="text-sm text-destructive">
