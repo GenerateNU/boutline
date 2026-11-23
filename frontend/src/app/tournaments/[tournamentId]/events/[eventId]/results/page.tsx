@@ -31,7 +31,7 @@ export default async function ResultsTab({ params }: ResultsTabProps) {
   );
 
   return (
-    <div className="relative isolate -mx-4 -mb-20 min-h-[calc(100dvh-12.5rem)] overflow-clip bg-fencing-white px-4 pt-4 pb-20">
+    <div className="relative isolate -mx-4 h-[calc(100dvh-12.5rem)] overflow-clip bg-fencing-white px-4 pt-4">
       <EventTabBackground />
       <ResultsView
         fencers={fencers}

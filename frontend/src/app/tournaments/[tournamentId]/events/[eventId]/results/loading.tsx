@@ -4,7 +4,7 @@ import { EventTabBackground } from "../_components/event-tab-background";
 
 export default function ResultsTabLoading() {
   return (
-    <div className="relative isolate -mx-4 -mb-20 min-h-[calc(100dvh-12.5rem)] overflow-clip bg-fencing-white px-4 pt-4 pb-20">
+    <div className="relative isolate -mx-4 h-[calc(100dvh-12.5rem)] overflow-clip bg-fencing-white px-4 pt-4">
       <span role="status" className="sr-only">
         Loading results
       </span>
