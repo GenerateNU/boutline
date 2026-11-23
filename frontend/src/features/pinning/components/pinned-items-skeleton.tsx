@@ -2,10 +2,10 @@ import { ListCardSkeleton } from "@/components/primitives/list-card-skeleton";
 import { Skeleton } from "@/components/primitives/skeleton";
 import { cn } from "cn";
 
-const TABS = ["All", "Fencers", "Clubs", "Pools"];
+const TABS = ["All", "Fencers", "Clubs", "Pools", "Tableaus"];
 const SELECTED_TAB = "All";
 const FENCER_CARD_COUNT = 3;
-const EMPTY_SECTION_TITLES = ["Clubs", "Pools"];
+const EMPTY_SECTION_TITLES = ["Clubs", "Pools", "Tableaus"];
 
 interface SectionHeadingProps {
   title: string;

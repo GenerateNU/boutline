@@ -31,6 +31,7 @@ function renderRound(testRound: TableauRound) {
   render(
     <BracketRound
       round={testRound}
+      isFirst={false}
       isLast={false}
       query=""
       boutBasePath="/bout"

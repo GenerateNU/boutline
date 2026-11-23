@@ -128,7 +128,6 @@ async function FencerBrowser({ tournamentId, basePath, query, eventId, canEdit =
       {data.length === 0 && (
         <Text variant="muted">{emptyMessage({ search, hasFilters, eventId })}</Text>
       )}
-
     </>
   );
 }

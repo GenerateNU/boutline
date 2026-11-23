@@ -4,11 +4,16 @@ import { useState } from "react";
 import AccountTreeOutlined from "@mui/icons-material/AccountTreeOutlined";
 import CancelOutlined from "@mui/icons-material/CancelOutlined";
 import ListOutlined from "@mui/icons-material/ListOutlined";
+import PushPin from "@mui/icons-material/PushPin";
+import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
 import SearchOutlined from "@mui/icons-material/SearchOutlined";
 
 import { Button } from "@/components/primitives/button";
 import { ButtonGroup } from "@/components/primitives/button-group";
 import { Input } from "@/components/primitives/input";
+import { PinButton } from "@/components/primitives/pin-button";
+import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
+import type { PinnedEvent } from "@/features/pinning/types/pinning";
 import type { Tableau } from "../../_types/tableau";
 import { latestMatchingRoundId } from "./latest-matching-round";
 import { TableauBracket } from "./tableau-bracket";
@@ -19,9 +24,12 @@ type View = "bracket" | "list";
 interface TableauViewProps {
   tableau: Tableau;
   boutBasePath: string;
+  event: PinnedEvent;
 }
 
-function TableauView({ tableau, boutBasePath }: TableauViewProps) {
+function TableauView({ tableau, boutBasePath, event }: TableauViewProps) {
+  const { isPinned, togglePin } = usePinnedItems();
+  const pinned = isPinned("tableau", event);
   const [view, setView] = useState<View>("bracket");
   const [selectedRoundId, setSelectedRoundId] = useState(
     tableau.rounds[0]?.id ?? "",
@@ -54,7 +62,7 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
               type="text"
               aria-label="Search fencers or clubs"
               value={query}
-              onChange={(event) => handleQueryChange(event.target.value)}
+              onChange={(e) => handleQueryChange(e.target.value)}
               placeholder="Enter search text"
               className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 placeholder:text-neutral-secondary focus-visible:ring-0"
             />
@@ -84,6 +92,16 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
           >
             {view === "bracket" ? <ListOutlined /> : <AccountTreeOutlined />}
           </Button>
+          <PinButton
+            variant="outline"
+            size="sm"
+            active={pinned}
+            className="shadow-sm"
+            aria-label={pinned ? "Unpin tableau" : "Pin tableau"}
+            onClick={() => togglePin("tableau", event)}
+          >
+            {pinned ? <PushPin aria-hidden /> : <PushPinOutlined aria-hidden />}
+          </PinButton>
         </div>
       </div>
 
@@ -101,6 +119,7 @@ function TableauView({ tableau, boutBasePath }: TableauViewProps) {
             }))}
             value={selectedRoundId}
             onValueChange={setSelectedRoundId}
+            className="-mx-4 px-4"
           />
         </div>
 

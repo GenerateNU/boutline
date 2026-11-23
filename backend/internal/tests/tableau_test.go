@@ -44,6 +44,7 @@ func TestGetTableau(t *testing.T) {
 		require.Len(t, semis, 2)
 
 		assert.EqualValues(t, 1, semis[0]["slot"])
+		assert.Equal(t, "Strip 1", semis[0]["location"])
 		top := semis[0]["top"].(map[string]any)
 		bottom := semis[0]["bottom"].(map[string]any)
 		assert.Equal(t, "Maya", top["first_name"])
