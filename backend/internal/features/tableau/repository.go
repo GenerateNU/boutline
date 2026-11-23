@@ -29,6 +29,7 @@ type BoutRow struct {
 	RoundSize   int             `gorm:"column:round_size"`
 	Slot        int             `gorm:"column:slot"`
 	Status      bout.BoutStatus `gorm:"column:status"`
+	Location    *string         `gorm:"column:location"`
 	TopID       uuid.UUID       `gorm:"column:top_id"`
 	TopFirst    string          `gorm:"column:top_first_name"`
 	TopLast     string          `gorm:"column:top_last_name"`
@@ -82,7 +83,7 @@ func (r *tableauRepository) ListTableauBouts(ctx context.Context, directEliminat
 
 	err := r.db.WithContext(ctx).
 		Table("bouts AS b").
-		Select(`b.id, b.round_size, b.slot, b.status,
+		Select(`b.id, b.round_size, b.slot, b.status, b.location,
 			c1.id AS top_id, c1.first_name AS top_first_name, c1.last_name AS top_last_name, c1.primary_club AS top_club, e1.seed AS top_seed,
 			c2.id AS bottom_id, c2.first_name AS bottom_first_name, c2.last_name AS bottom_last_name, c2.primary_club AS bottom_club, e2.seed AS bottom_seed`).
 		Joins("JOIN competitors c1 ON c1.id = b.competitor_1_id").
