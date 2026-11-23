@@ -28,18 +28,19 @@ function usePinnedFencers(tournamentId?: string): PinnedFencers {
       return;
     }
     let ignore = false;
-    fetchPinnedFencers(pinned.fencerIds).then(
-      (fencers) => {
+    async function load() {
+      try {
+        const fencers = await fetchPinnedFencers(pinned.fencerIds);
         if (!ignore) {
           setSettled({ fencers, error: null });
         }
-      },
-      (caught) => {
+      } catch (caught) {
         if (!ignore) {
           setSettled({ fencers: null, error: errorMessage(caught) });
         }
-      },
-    );
+      }
+    }
+    load();
     return () => {
       ignore = true;
     };

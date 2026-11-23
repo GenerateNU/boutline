@@ -19,7 +19,9 @@ var _ bout.BoutRepository = (*FakeBoutRepository)(nil)
 
 type FakeBoutRepository struct {
 	Bouts map[uuid.UUID]bout.Bout
-	Err   error // when set, every method fails with it
+	// Keyed by competitor; a competitor missing from the map doesn't exist.
+	CompetitorBouts map[uuid.UUID][]bout.CompetitorBoutRow
+	Err             error // when set, every method fails with it
 }
 
 func NewFakeBoutRepository(seed ...bout.Bout) *FakeBoutRepository {
@@ -278,4 +280,17 @@ func staffOf(tournamentIDs ...uuid.UUID) *tournamentusertest.FakeMembershipLooku
 	}
 
 	return tournamentusertest.NewFakeMembershipLookup(seed...)
+}
+
+func (f *FakeBoutRepository) ListCompetitorBouts(_ context.Context, competitorID uuid.UUID) ([]bout.CompetitorBoutRow, error) {
+	if f.Err != nil {
+		return nil, f.Err
+	}
+
+	rows, ok := f.CompetitorBouts[competitorID]
+	if !ok {
+		return nil, fmt.Errorf("select competitor %s: %w", competitorID, errs.ErrNotFound)
+	}
+
+	return rows, nil
 }

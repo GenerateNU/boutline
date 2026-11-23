@@ -67,4 +67,11 @@ describe("FencerCard", () => {
     const raw = sessionStorage.getItem(PINNED_STORAGE_KEY);
     expect(raw ? JSON.parse(raw).fencerIds : []).toEqual(stored);
   });
+
+  it("is a button instead of a link to the fencer's page when it opens something in place", () => {
+    render(<FencerCard competitor={YAN} onSelect={() => {}} />);
+
+    expect(screen.getByRole("button", { name: /^Yan Wang/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
 });
