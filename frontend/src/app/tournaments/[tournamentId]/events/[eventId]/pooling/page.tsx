@@ -12,6 +12,7 @@ export default async function PoolingTab({ params }: PoolingTabProps) {
     <PoolList
       pools={pools}
       poolingPath={`/tournaments/${tournamentId}/events/${eventId}/pooling`}
+      event={{ tournamentId, eventId }}
     />
   );
 }

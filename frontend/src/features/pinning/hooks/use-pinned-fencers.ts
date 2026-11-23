@@ -3,18 +3,21 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
+import { fetchFencerBouts } from "@/features/pinning/services/fencer-bouts-query";
 import { fetchPinnedFencers } from "@/features/pinning/services/pinned-items-query";
+import type { FencerBout } from "@/features/pinning/types/fencer-bout";
 import type { Competitor } from "@/types/competitor";
 import { errorMessage } from "@/utils/error-message";
 
-interface Settled {
+interface PinnedFencers {
   fencers: Competitor[] | null;
+  bouts: Record<string, FencerBout[]>;
   error: string | null;
+  // Kept apart from error so the fencer cards stay when only their bouts fail.
+  boutsError: string | null;
 }
 
-interface PinnedFencers extends Settled {
-  unpinFencer: (id: string) => void;
-}
+const NOT_SETTLED: PinnedFencers = { fencers: null, bouts: {}, error: null, boutsError: null };
 
 const subscribe = () => () => {};
 
@@ -24,33 +27,44 @@ function usePinnedFencers(tournamentId?: string): PinnedFencers {
   // Pins live in sessionStorage, which the server render can't see; waiting for
   // hydration keeps "No pinned fencers yet" from flashing before they load.
   const hydrated = useSyncExternalStore(subscribe, () => true, () => false);
-  const { pinned, unpinFencer } = usePinnedItems();
-  const [settled, setSettled] = useState<Settled | null>(null);
+  const { pinned } = usePinnedItems();
+  const [settled, setSettled] = useState<PinnedFencers | null>(null);
 
   useEffect(() => {
     if (!hydrated) {
       return;
     }
     let ignore = false;
-    fetchPinnedFencers(pinned.fencerIds).then(
-      (fencers) => {
+    async function load() {
+      let fencers: Competitor[];
+      try {
+        const all = await fetchPinnedFencers(pinned.fencerIds);
+        fencers = tournamentId ? all.filter((fencer) => fencer.tournamentId === tournamentId) : all;
+      } catch (caught) {
         if (!ignore) {
-          setSettled({ fencers, error: null });
+          setSettled({ ...NOT_SETTLED, error: errorMessage(caught) });
         }
-      },
-      (caught) => {
+        return;
+      }
+      try {
+        const bouts = await fetchFencerBouts(fencers);
         if (!ignore) {
-          setSettled({ fencers: null, error: errorMessage(caught) });
+          setSettled({ fencers, bouts, error: null, boutsError: null });
         }
-      },
-    );
+      } catch (caught) {
+        if (!ignore) {
+          setSettled({ fencers, bouts: {}, error: null, boutsError: errorMessage(caught) });
+        }
+      }
+    }
+    load();
     return () => {
       ignore = true;
     };
-  }, [hydrated, pinned.fencerIds]);
+  }, [hydrated, pinned.fencerIds, tournamentId]);
 
   if (!hydrated || !settled) {
-    return { fencers: null, error: null, unpinFencer };
+    return NOT_SETTLED;
   }
   // While a refetch is in flight the last result stays on screen, minus anything
   // unpinned since, so unpinning removes one card instead of reloading the list.
@@ -59,7 +73,7 @@ function usePinnedFencers(tournamentId?: string): PinnedFencers {
       pinned.fencerIds.includes(fencer.id) &&
       (!tournamentId || fencer.tournamentId === tournamentId),
   );
-  return { fencers: fencers ?? null, error: settled.error, unpinFencer };
+  return { ...settled, fencers: fencers ?? null };
 }
 
 export { usePinnedFencers };

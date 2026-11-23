@@ -13,4 +13,25 @@ describe("ListCard", () => {
     expect(screen.getByText("Boston Blade Club")).toBeInTheDocument();
     expect(screen.queryAllByRole("link")).toHaveLength(links);
   });
+
+  it("shows the pin button and the link together on a pinned row", () => {
+    const { container } = render(
+      <ListCard title="Annika Kim" description="Boston Blade Club" href="/fencers/1" pinned />,
+    );
+
+    expect(screen.getByRole("button", { name: "Unpin Annika Kim" })).toBeInTheDocument();
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/fencers/1");
+    expect(container.querySelector("svg[data-testid='ChevronRightOutlinedIcon']")).not.toBeNull();
+  });
+
+  it("makes the whole row a button with onSelect instead of a link", () => {
+    const { container } = render(
+      <ListCard title="Annika Kim" description="Boston Blade Club" onSelect={() => {}} pinned />,
+    );
+
+    expect(screen.getByRole("button", { name: /^Annika Kim/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unpin Annika Kim" })).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(container.querySelector("svg[data-testid='ChevronRightOutlinedIcon']")).not.toBeNull();
+  });
 });

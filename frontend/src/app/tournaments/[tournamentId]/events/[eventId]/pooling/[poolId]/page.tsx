@@ -24,6 +24,7 @@ export default async function PoolPage({ params }: PoolPageProps) {
       <PoolHeader
         pool={pool}
         poolingPath={`${eventPath}/pooling`}
+        event={{ tournamentId, eventId }}
       />
       {/* Any staff role sees the referee link; the backend decides who may actually score. */}
       <PoolBouts

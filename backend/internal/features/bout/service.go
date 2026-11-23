@@ -43,6 +43,7 @@ type BoutService interface {
 	StartBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error)
 	EndBout(ctx context.Context, input *BoutIDInput) (*BoutOutput, error)
 	DeleteBoutByID(ctx context.Context, input *BoutIDInput) (*struct{}, error)
+	ListCompetitorBouts(ctx context.Context, input *CompetitorBoutsInput) (*CompetitorBoutsOutput, error)
 }
 
 type boutService struct {
@@ -255,6 +256,25 @@ func (s *boutService) ListBouts(ctx context.Context, input *BoutListInput) (*Bou
 		Limit:  limit,
 		Offset: offset,
 	}}, nil
+}
+
+func (s *boutService) ListCompetitorBouts(ctx context.Context, input *CompetitorBoutsInput) (*CompetitorBoutsOutput, error) {
+	competitorID, err := utils.ParseUUID(input.ID, "id")
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	rows, err := s.repo.ListCompetitorBouts(ctx, competitorID)
+	if err != nil {
+		return nil, errs.HumaError(fmt.Errorf("list competitor bouts: %w", err))
+	}
+
+	data := make([]CompetitorBoutResponse, 0, len(rows))
+	for _, row := range rows {
+		data = append(data, newCompetitorBoutResponse(row))
+	}
+
+	return &CompetitorBoutsOutput{Body: CompetitorBoutsBody{Data: data}}, nil
 }
 
 func (s *boutService) UpdateBoutByID(ctx context.Context, input *BoutUpdateInput) (*BoutOutput, error) {

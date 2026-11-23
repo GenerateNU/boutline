@@ -14,6 +14,7 @@ export default async function TableauTab({ params }: TableauTabProps) {
       <div className="h-full">
         <TableauView
           tableau={tableau}
+          event={{ tournamentId, eventId }}
           boutBasePath={`/tournaments/${tournamentId}/events/${eventId}/bout`}
         />
       </div>

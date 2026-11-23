@@ -40,6 +40,16 @@ func RegisterBoutService(api huma.API, service BoutService) {
 		Tags:        []string{"Bouts"},
 	}, service.ListBouts)
 
+	// Unpaginated: one fencer's pool and tableau bouts are a small, bounded set.
+	huma.Register(api, huma.Operation{
+		OperationID: "listCompetitorBouts",
+		Method:      http.MethodGet,
+		Path:        "/api/v1/competitors/{id}/bouts",
+		Summary:     "List a competitor's pool and tableau bouts",
+		Description: "Each bout is seen from the competitor's side. Scores are null until a bout starts.",
+		Tags:        []string{"Bouts"},
+	}, service.ListCompetitorBouts)
+
 	huma.Register(api, huma.Operation{
 		OperationID: "getBoutByID",
 		Method:      http.MethodGet,
