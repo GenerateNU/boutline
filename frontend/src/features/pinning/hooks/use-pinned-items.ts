@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo } from "react";
 import { useSessionStorage } from "@/lib/hooks/use-session-storage";
-import { parsePinnedItems } from "@/features/pinning/services/parse-pinned-items";
 import {
   PINNED_MAX_IDS,
   PINNED_STORAGE_KEY,
@@ -15,6 +14,21 @@ import {
 } from "@/features/pinning/types/pinning";
 
 const INITIAL_PINNED: PinnedItems = { fencerIds: [], clubs: [], pools: [], tableaus: [] };
+const NO_ITEMS: never[] = [];
+
+// Stored arrays are returned by reference so unrelated fields keep their identity across writes.
+// Legacy `{ fencerIds, boutIds, poolIds }` keeps only fencerIds: old pool ids carry no tournament.
+function parsePinnedItems(value: unknown): PinnedItems {
+  const { fencerIds, clubs, pools, tableaus } = (
+    typeof value === "object" && value !== null ? value : {}
+  ) as Record<string, unknown>;
+  return {
+    fencerIds: Array.isArray(fencerIds) ? fencerIds : NO_ITEMS,
+    clubs: Array.isArray(clubs) ? clubs : NO_ITEMS,
+    pools: Array.isArray(pools) ? pools : NO_ITEMS,
+    tableaus: Array.isArray(tableaus) ? tableaus : NO_ITEMS,
+  };
+}
 
 const FIELD_OF_KIND = {
   fencer: "fencerIds",

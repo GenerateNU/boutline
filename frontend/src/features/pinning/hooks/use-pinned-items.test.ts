@@ -60,6 +60,30 @@ describe("usePinnedItems", () => {
     expect(result.current.pinned.fencerIds).toBe(before);
   });
 
+  it.each([
+    { case: "null", stored: null, want: {} },
+    { case: "a string", stored: "x", want: {} },
+    { case: "a number", stored: 3, want: {} },
+    { case: "legacy fencers and bouts", stored: { fencerIds: ["a"], boutIds: ["b"] }, want: { fencerIds: ["a"] } },
+    {
+      case: "legacy fencers, bouts and pools",
+      stored: { fencerIds: ["a"], boutIds: ["b"], poolIds: ["p"] },
+      want: { fencerIds: ["a"] },
+    },
+    { case: "a non-array field", stored: { fencerIds: "a", clubs: [CLUB] }, want: { clubs: [CLUB] } },
+    {
+      case: "the current shape",
+      stored: { fencerIds: ["a"], clubs: [CLUB], pools: [POOL], tableaus: [EVENT] },
+      want: { fencerIds: ["a"], clubs: [CLUB], pools: [POOL], tableaus: [EVENT] },
+    },
+  ])("reads $case from storage", ({ stored, want }) => {
+    sessionStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(stored));
+
+    const { result } = renderHook(() => usePinnedItems());
+
+    expect(result.current.pinned).toEqual({ fencerIds: [], clubs: [], pools: [], tableaus: [], ...want });
+  });
+
   it("writes exactly the four keys when toggling on legacy storage", () => {
     sessionStorage.setItem(
       PINNED_STORAGE_KEY,
