@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 
-import { DIMMED_OVERLAY } from "./dimmed-overlay";
 import { TbaBout } from "./tba-bout";
 
 describe("TbaBout", () => {
@@ -17,7 +16,7 @@ describe("TbaBout", () => {
     render(<TbaBout dimmed />);
 
     const card = screen.getByRole("group", { name: "Bout to be announced" });
-    expect(card).toHaveClass(...DIMMED_OVERLAY.split(" "));
+    expect(card).toHaveClass("dimmed");
     expect(card).not.toHaveClass("opacity-40");
   });
 
@@ -25,7 +24,7 @@ describe("TbaBout", () => {
     render(<TbaBout />);
 
     expect(
-      screen.getByRole("group", { name: "Bout to be announced" }).className,
-    ).not.toContain("after:bg-obsidian/20");
+      screen.getByRole("group", { name: "Bout to be announced" }),
+    ).not.toHaveClass("dimmed");
   });
 });

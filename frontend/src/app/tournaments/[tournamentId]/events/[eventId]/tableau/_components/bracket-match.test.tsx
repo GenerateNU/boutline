@@ -4,7 +4,6 @@ import { PINNED_STORAGE_KEY } from "@/features/pinning/types/pinning";
 
 import type { TableauBout } from "../../_types/tableau";
 import { BracketMatch } from "./bracket-match";
-import { DIMMED_OVERLAY } from "./dimmed-overlay";
 
 const fencer = (id: string, firstName: string) => ({
   id,
@@ -135,7 +134,7 @@ describe("BracketMatch", () => {
   it("greys out a bout that doesn't match the search, pin included, without fading its text", () => {
     renderMatch(bout("ended", 15, 11), { dimmed: true });
 
-    expect(card()).toHaveClass(...DIMMED_OVERLAY.split(" "));
+    expect(card()).toHaveClass("dimmed");
     expect(card()).toContainElement(
       screen.getByRole("button", { name: "Pin bout" }),
     );

@@ -9,7 +9,6 @@ import { BoutLocation } from "./bout-location";
 import { BoutPinButton } from "./bout-pin-button";
 import { BracketFencerRow } from "./bracket-fencer-row";
 import { pillTones } from "./bout-pill-tones";
-import { DIMMED_OVERLAY } from "./dimmed-overlay";
 
 interface BracketMatchProps {
   bout: TableauBout;
@@ -39,7 +38,7 @@ function BracketMatch({
         !matched && live && "h-34.75 border-[1.5px] border-accent-green",
         !matched && !live && "h-34.5 border border-outline",
         !matched && muted && "border-dashed",
-        { [DIMMED_OVERLAY]: dimmed },
+        dimmed && "dimmed",
       )}
     >
       <Link

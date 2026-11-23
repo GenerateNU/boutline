@@ -2,7 +2,6 @@ import { cn } from "cn";
 
 import { BoutLocation } from "./bout-location";
 import { BoutPinButton } from "./bout-pin-button";
-import { DIMMED_OVERLAY } from "./dimmed-overlay";
 
 interface TbaBoutProps {
   dimmed?: boolean;
@@ -17,10 +16,10 @@ function TbaBout({ dimmed = false }: TbaBoutProps) {
       aria-label="Bout to be announced"
       className={cn(
         "relative flex h-34.5 w-full flex-col rounded-md border border-dashed border-outline bg-card px-3 text-muted-foreground",
-        { [DIMMED_OVERLAY]: dimmed },
+        dimmed && "dimmed",
       )}
     >
-      {/* Same frame as BracketMatch, so its fencer divider lines up with the bracket connectors. */}
+      {/* Same frame as BracketMatch, so TBA and real bouts line up in the bracket. */}
       <BoutLocation className="mt-3 mr-7" />
       <BoutPinButton
         pinned={false}
