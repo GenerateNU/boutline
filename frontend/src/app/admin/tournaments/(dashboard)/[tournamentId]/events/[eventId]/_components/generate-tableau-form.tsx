@@ -11,10 +11,9 @@ import { errorMessage } from "@/utils/error-message";
 
 interface GenerateTableauFormProps {
   directEliminationId: string;
-  tableauHref: string;
 }
 
-function GenerateTableauForm({ directEliminationId, tableauHref }: GenerateTableauFormProps) {
+function GenerateTableauForm({ directEliminationId }: GenerateTableauFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
@@ -30,7 +29,7 @@ function GenerateTableauForm({ directEliminationId, tableauHref }: GenerateTable
           body: JSON.stringify({ advance_percent: advancePercent }),
         });
         toast({ description: "Tableau drawn" });
-        router.push(tableauHref);
+        router.refresh();
       } catch (err) {
         toast({ description: errorMessage(err) });
       }

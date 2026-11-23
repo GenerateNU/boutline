@@ -76,7 +76,8 @@ func NewTestService(repo *FakeDirectEliminationRepository) directelimination.Dir
 type FakeDirectEliminationRepository struct {
 	DirectEliminations map[uuid.UUID]directelimination.DirectElimination
 	Events             *FakeEventLookup
-	Err                error // when set, every method fails with it
+	Entries            map[uuid.UUID]int64 // tableau entry count per round
+	Err                error               // when set, every method fails with it
 }
 
 func NewFakeDirectEliminationRepository(
@@ -87,7 +88,11 @@ func NewFakeDirectEliminationRepository(
 		rounds[seeded.ID] = seeded
 	}
 
-	return &FakeDirectEliminationRepository{DirectEliminations: rounds, Events: NewFakeEventLookup()}
+	return &FakeDirectEliminationRepository{
+		DirectEliminations: rounds,
+		Events:             NewFakeEventLookup(),
+		Entries:            map[uuid.UUID]int64{},
+	}
 }
 
 func (f *FakeDirectEliminationRepository) CreateDirectElimination(
@@ -218,6 +223,17 @@ func (f *FakeDirectEliminationRepository) TransitionDirectEliminationByID(
 	f.save(id, stored)
 
 	return nil
+}
+
+func (f *FakeDirectEliminationRepository) CountDirectEliminationEntries(
+	_ context.Context,
+	id uuid.UUID,
+) (int64, error) {
+	if f.Err != nil {
+		return 0, f.Err
+	}
+
+	return f.Entries[id], nil
 }
 
 func (f *FakeDirectEliminationRepository) DeleteDirectEliminationByID(

@@ -21,6 +21,7 @@ type DirectEliminationRepository interface {
 	UpdateDirectEliminationByID(ctx context.Context, id uuid.UUID, edit DirectEliminationEdit) error
 	TransitionDirectEliminationByID(ctx context.Context, id uuid.UUID, transition DirectEliminationTransition) error
 	DeleteDirectEliminationByID(ctx context.Context, id uuid.UUID) error
+	CountDirectEliminationEntries(ctx context.Context, id uuid.UUID) (int64, error)
 }
 
 type DirectEliminationEdit struct {
@@ -207,6 +208,22 @@ func (r *directEliminationRepository) updateByID(
 	}
 
 	return nil
+}
+
+func (r *directEliminationRepository) CountDirectEliminationEntries(
+	ctx context.Context,
+	id uuid.UUID,
+) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&DrawEntry{}).
+		Where("direct_elimination_id = ?", id).
+		Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("count direct elimination %s entries: %w", id, err)
+	}
+
+	return count, nil
 }
 
 func (r *directEliminationRepository) DeleteDirectEliminationByID(
