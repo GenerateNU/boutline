@@ -51,6 +51,7 @@
   --color-neutral-secondary: var(--neutral-secondary);
   --color-neutral-muted: var(--neutral-muted);
   --color-accent-green: var(--accent-green);
+  --color-amber: var(--amber);
   --color-amber-light: var(--amber-light);
   --color-amber-dark: var(--amber-dark);
   --color-lavender-light: var(--lavender-light);
@@ -233,6 +234,7 @@
   --neutral-secondary: #586472;
   --neutral-muted: #969da5;
   --accent-green: #00c597;
+  --amber: #f5a623;
   --amber-light: #ffe8cb;
   --amber-dark: #764c00;
   --lavender-light: #e9e8f3;
