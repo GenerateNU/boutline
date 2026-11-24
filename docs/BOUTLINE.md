@@ -266,6 +266,9 @@ are not a table of their own; a club is the set of distinct `team` values.
   fuzzy name search, alphabetical when there is no `q`, exact match on others,
   `weapon` and `age` come from a sub-query.
 - `GET /competitors/{id}`, and `PATCH /competitors/{id}` (an empty `team` clears it).
+  `PATCH` also takes `{"checkedIn": bool}`, admin only (403 otherwise): true sets
+  `checked_in_at` to now, false clears it (§10.5). Responses include `checkedInAt`
+  (string or null).
 - `DELETE /competitors/{id}`: tournament admins only (§7.2); 409 once the
   competitor has fenced a bout.
 - `GET /tournaments/{id}/teams?q`: the tournament's clubs with a fencer count each,
@@ -335,6 +338,7 @@ timed, on a strip.
 | POST | `/bouts` | tournament must be active; the pool must belong to the same tournament; a pool bout copies the pool's referee, strip and number and takes its next `slot`, under the pool stage lock (§11.2), until pool create makes pool bouts |
 | GET | `/bouts?tournament_id&pool_id&status&ids` | newest first |
 | GET | `/bouts/{id}` | |
+| GET | `/competitors/{id}/bouts` | public; one fencer's pool and tableau bouts from their side: pool id and number, or round size, opponent, and their score then the opponent's (null until the bout starts). Pool bouts first by pool and slot, then tableau bouts from the first round to the final; unpaginated; 404 for an unknown competitor |
 | PATCH | `/bouts/{id}` | admin only; only while `upcoming`; `pool_id` can't change |
 | POST | `/bouts/{id}/claim` | sets `referee_id` to the caller; needs the referee role (an admin passes); only while `upcoming` and unassigned or already the caller's, 409 otherwise |
 | POST | `/bouts/{id}/start` | tournament active, referee assigned, `upcoming → active` |
@@ -512,10 +516,13 @@ back to `/tournaments`. An unknown ID is a 404.
   (venue, city, country), the organizer, then the Ongoing, Upcoming and Completed
   events with their start times. Missing values show as "TBC" placeholders, and the
   organizer contact always does, since none is stored.
-- **Fencers:** a searchable, paginated list of the tournament's fencers from
+- **Fencers:** a searchable list of the tournament's fencers from
   `GET /competitors?tournament_id=&q&team&weapon&ageCategory&rating&gender`,
-  filterable by Club, Weapon, Age Category, Rating and Gender. Weapon and Age
-  Category filter on the owning event, since competitors don't have those fields.
+  filterable by Club, Weapon, Age Category, Rating and Gender, inside the
+  "Check in:" card (§10.5). The card grows with the page, with no scrollbar of its
+  own, and loads the next page as its end scrolls into view.
+  Weapon and Age Category filter on the owning event, since competitors don't have
+  those fields.
 - **Clubs:** a searchable, paginated list of clubs from `GET /tournaments/{id}/teams`;
   each opens the Fencers tab filtered to that club. Clubs store no location yet, and
   the clubs API only searches by name, so its other filters are placeholders.
@@ -534,9 +541,9 @@ Tabs: Pools · Tableau · Fencers · Results (routes `pooling`, `tableau`, `fenc
 than stacking under them, under the event's name and a link back to the
 tournament. An event not in the tournament is a 404.
 
-- **Fencers** (Completed): the event's own competitors (§8.4), searchable by name
-  and filterable by Club, Rating and Gender. Weapon and Age Category are uniform
-  across an event, so they aren't filters here. Rows link to a fencer page, which
+- **Fencers** (Completed): the event's own competitors (§8.4) in the "Check in:"
+  card (§10.5), searchable by name and filterable by Club, Rating and Gender. Weapon
+  and Age Category are uniform across an event, so they aren't filters here. Rows link to a fencer page, which
   is placeholder text.
 - **Pools** (Partial): see §11.6.
 - **Tableau** (Completed): see §12.5.
@@ -580,8 +587,10 @@ Tabs: Fencers (the index page) · Referees · Events · Settings.
   name or email and optionally placed on one of the tournament's pools, and remove
   one after a confirmation. Each row shows Occupied or Available and the referee's
   pool (§10.3).
-- **Fencers**, **Events** and **Settings** (Planned): placeholders until a ticket
-  defines what they show.
+- **Fencers:** the public Fencers tab's list (§4.3), plus Edit Mode for admins.
+  Its "Add fencers" button is disabled until a ticket defines that flow.
+- **Events** and **Settings** (Planned): placeholders until a ticket defines what
+  they show.
 - **Event page** (`/admin/tournaments/[id]/events/[eventId]`): nested under Events,
   with the event's pool stage and, once it ends, the direct elimination.
 
@@ -647,33 +656,44 @@ can score any bout.**
 
 ## 6. Pinning
 
-**Status:** Partial. The state, the batch fetch and the pinned view are built; no
-page has a pin control yet.
+**Status:** Completed.
 
-**What it is:** a spectator pins the fencers and bouts they care about (their
-child, their clubmates, the bout on strip 4) and sees them together, without
-creating an account.
+**What it is:** a spectator pins the fencers, clubs, pools and tableaus they care
+about (their child, their clubmates, the pool on strip 4) and sees them together,
+without creating an account.
 
 ### 6.1 Pinned state
 
 **Status:** Completed.
 
-Pins live in the browser's `sessionStorage` (`boutline:pinned`, up to 100 fencers
-and 100 bouts), never in the database. The pinned view fetches the pinned fencers
-in one request with the `ids` filter on `/competitors` (§B.1). The design pins
-fencers, clubs and pools, not bouts, so pinned bouts are stored but not shown;
-whether `boutIds` should become `clubIds` and `poolIds` is open.
+Pins live in the browser's `sessionStorage` (`boutline:pinned`), never in the
+database: pinned fencer and bout ids, plus club, pool and tableau pins that carry
+their tournament (clubs their name, pools and tableaus their event id, pools their
+id). Only ids are saved, so names are always current. Up to 100 of each kind. Pins
+saved before this keep their fencers and bouts; their old pool pins, which carry no
+tournament, are dropped. Pinned bouts are marked in the tableau bracket but not yet
+listed on the pinned view.
 
 ### 6.2 The pinned view
 
 **Status:** Completed.
 
-`/pinned` is "View Pins", with tabs All / Fencers / Clubs / Pools and a Back link.
-All lists Fencers, Clubs and Pools in that order.
+`/pinned` is "View Pins", with tabs All / Fencers / Clubs / Pools / Tableaus and a
+Back link. All lists Fencers, Clubs, Pools and Tableaus in that order.
 
-- A fencer shows their name, country · club and rating, and links to their event
-  fencer page. Fencers sort by name, and each one's pin unpins them.
-- Clubs and Pools show an empty state until clubs and pools can be pinned.
+- **Fencers:** each pinned fencer's card. Tapping it opens a dialog with everything
+  they're in, loaded when it opens: their pool and tableau bouts from
+  `GET /competitors/{id}/bouts` (§2.8), each showing its stage, the opponent and the
+  score, or "Upcoming", then those pools' grids (`GET /pool-sheets?ids=`), and a link
+  to their fencer page. The page itself requests no bouts.
+- **Clubs:** rows linking to the club's fencer filter.
+- **Pools:** full pool cards under their event's name, loaded live with
+  `GET /pool-sheets?ids=` (§11.3), sorted by event then pool number.
+- **Tableaus:** rows titled with their event's name, linking to the event's
+  Tableau tab.
+- Event names come from one server-side `GET /events?tournament_id=` for the page's
+  tournament.
+- Every item's pin unpins it.
 - Every tournament page except the referee screen has a floating pin button
   linking to `/pinned?tournamentId=…`, which Back returns to.
 
@@ -683,13 +703,13 @@ every pin when it's opened without one.
 
 ### 6.3 Pin controls
 
-**Status:** Partial. Pools (§11.6) and tableau bracket bouts (§12.5) can be
-pinned; the rest is Planned.
+**Status:** Completed.
 
-A pin toggle on each fencer row, on clubs and on pools, and listing pinned clubs
-and pools. Pool pins are stored with the others as `poolIds`;
-pins saved before that keep their fencers and bouts. `/pinned` doesn't list pinned
-pools yet.
+A pin toggle sits on fencer rows (the tournament and event Fencers tabs), club
+rows, pool cards and the pool page header, the tableau toolbar once the tableau is
+drawn, and each bout in the tableau bracket (§12.5). There is no separate pinned
+section: pinned fencers, clubs and pools move to the top of the page of the list
+they're on, alphabetically, and the rest keep the list's order (§11.6).
 
 ---
 
@@ -832,7 +852,7 @@ the tournament and bout `end` state.
 - New columns: `event_id`, `gender`, `birthdate`, `primary_club` and
   `secondary_club` (both nullable), `division` (home state), `member_number`
   (optional, unique within an event; its authority comes from the tournament),
-  `rating_year` (e.g. 24 in `C24`), `seed`, `checked_in_at`. `team` is deprecated
+  `rating_year` (e.g. 24 in `C24`), `seed`, `checked_in_at` (built, §10.5). `team` is deprecated
   in favour of `primary_club`, and still the one the Clubs tab and the club
   filter read.
 - `tournament_id` stays on the row, so tournament-wide lists don't need a join.
@@ -1064,10 +1084,25 @@ name, club and rating.
 
 ### 10.5 Check-in
 
-**Status:** Planned.
+**Status:** Completed. Issue: #197.
 
-Admins mark fencers present on the day (`checked_in_at`). Only checked-in fencers
-are placed into pools.
+Admins mark fencers present on the day with `competitors.checked_in_at` (nullable
+timestamp). `PATCH /competitors/{id}` with `{"checkedIn": bool}` sets it to now or
+clears it, admin only (§2.5). `GET /competitors` filters by `eventId`, and
+`GET /tournaments/{id}/role` tells the frontend whether to show admin controls
+(§2.3).
+
+The public Fencers tabs (§4.3, §4.4) and the management
+dashboard's Fencers tab (§4.6) show a "Check in:" card above the list with an
+"N checked in" count: each fencer is marked Present or Absent. On the dashboard and the event tab,
+admins also get an Edit Mode button (`?edit=1`, "Done" leaves it) that turns the badges
+into checkboxes, blank until checked. The count covers every fencer matching the
+search and filters, not just the ones loaded: `GET /competitors` returns it as
+`checkedIn` next to `total`.
+
+Only checked-in fencers are placed into pools (§11.2): proposing pools uses only
+them, and creating or editing a pool rejects a fencer who isn't checked in (400).
+Clearing a check-in later leaves the fencer in any pool they're already in.
 
 ### 10.6 Creation form (`/admin/tournaments/new`)
 
@@ -1181,11 +1216,14 @@ Creating pools creates bouts, which requires an `active` tournament (§2.8), so
 pools are generated after the tournament starts.
 
 1. **Propose** (Partial): `POST /pool-stages/{id}/proposed-pools` takes
-   `{competitor_ids}` (4 to 1,000, 422 otherwise) and returns
+   an optional `{competitor_ids}` and returns
    `{pools: [{number, fencers: [{competitor_id, first_name, last_name, rating,
    team}]}]}` without saving anything, each pool's fencers in seed order. The
    stage must exist (404), be `upcoming` and have no pools yet (409); existing
-   pools are changed by re-seating. Every competitor must exist
+   pools are changed by re-seating. Omitted, `competitor_ids` defaults to the
+   event's checked-in fencers; a supplied list is 4 to 1,000 (422 otherwise), and
+   a listed fencer who is not checked in is a 400 (`competitor <id> is not checked
+   in`). Every competitor must exist
    and be entered in the stage's event, and none may be listed twice (400), so
    any proposal can be sent to Create as is. Pools are capped at the smaller of
    `max_competitor_per_pool` and 10, Create's limit. `poolstage.GenerateSeed`
@@ -1207,14 +1245,13 @@ pools are generated after the tournament starts.
      standard bout order, and match clubs by the normalised key in §8.4. #153 asks
      for clubmates who do share a pool to fence each other first.
    - Still to do: rating years aren't stored, so every fencer counts as year 0
-     and ties within a letter fall to the draw; `competitor_ids` is required
-     rather than defaulting to the event's checked-in fencers; and Propose is
+     and ties within a letter fall to the draw; and Propose is
      open to any signed-in user until roles land (§7.2).
 2. **Create** (Partial): `POST /pools` takes the adjusted pools
    (`{pools: [{pool_stage_id, number, strip?, start_time?, referee_id?, fencers}],
    points_to_win, time_limit_seconds}`, all in one stage) and creates each one
    with every round-robin bout, under the stage lock below. It needs an active
-   tournament. Fencers take grid positions in the order each pool lists them,
+   tournament. It does not check check-in yet. Fencers take grid positions in the order each pool lists them,
    which Propose returns in seed order. Bouts follow the standard order for the
    pool's size, which spreads each fencer's bouts out. A pool needs 4 to 10
    fencers (400 otherwise): neither the FIE nor USA Fencing allows pools of 2 or

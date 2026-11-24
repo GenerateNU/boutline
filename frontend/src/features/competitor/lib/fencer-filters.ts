@@ -1,5 +1,5 @@
 import { AGE_LABELS, WEAPON_LABELS } from "@/features/event/lib/event-filters";
-import { readOffsetParam, readStringParam, type SearchParams } from "@/lib/search-params";
+import { readStringParam, type SearchParams } from "@/lib/search-params";
 
 interface FilterOption {
   value: string;
@@ -36,7 +36,6 @@ export function parseFencerFilters(query: SearchParams) {
   const ageCategory = readStringParam(query, "ageCategory");
 
   return {
-    offset: readOffsetParam(query),
     search: readStringParam(query, "q"),
     // Values the backend would reject are dropped, since a 422 would break the page.
     team: team && team.length <= MAX_CLUB_LENGTH ? team : undefined,

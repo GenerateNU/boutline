@@ -181,9 +181,12 @@ INSERT INTO pools (id, pool_stage_id, number, strip, referee_id, start_time, sta
 ON CONFLICT DO NOTHING;
 
 -- Open Épée's round is the finished table in the bouts below; Mixed Épée's waits on its pools.
+-- Women's Foil's table is drawn ahead of its pools so one tournament has pools and a
+-- drawn tableau together, for trying pins.
 INSERT INTO direct_eliminations (id, status, event_id, started_at, completed_at, created_at, updated_at) VALUES
   ('f0000000-0000-4000-8000-000000000001', 'ended',    'c0000000-0000-4000-8000-000000000004', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '7 hours 30 minutes', now() - interval '91 days', now()),
-  ('f0000000-0000-4000-8000-000000000002', 'upcoming', 'c0000000-0000-4000-8000-000000000001', NULL,                                          NULL,                                                      now() - interval '1 day',  now())
+  ('f0000000-0000-4000-8000-000000000002', 'upcoming', 'c0000000-0000-4000-8000-000000000001', NULL,                                          NULL,                                                      now() - interval '1 day',  now()),
+  ('f0000000-0000-4000-8000-000000000003', 'upcoming', 'c0000000-0000-4000-8000-000000000002', NULL, NULL, now() - interval '1 day', now())
 ON CONFLICT DO NOTHING;
 
 -- Open Épée's four-fencer table: semis 1v4 and 2v3, then the final. Mixed Épée's
@@ -193,6 +196,18 @@ INSERT INTO direct_elimination_entries (direct_elimination_id, competitor_id, se
   ('f0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000015', 2),
   ('f0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000016', 3),
   ('f0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000014', 4)
+ON CONFLICT DO NOTHING;
+
+-- Women's Foil's table of 8, seeded by rating.
+INSERT INTO direct_elimination_entries (direct_elimination_id, competitor_id, seed) VALUES
+  ('f0000000-0000-4000-8000-000000000003', 'd0000000-0000-4000-8000-000000000033', 1),
+  ('f0000000-0000-4000-8000-000000000003', 'd0000000-0000-4000-8000-000000000038', 2),
+  ('f0000000-0000-4000-8000-000000000003', 'd0000000-0000-4000-8000-000000000034', 3),
+  ('f0000000-0000-4000-8000-000000000003', 'd0000000-0000-4000-8000-000000000036', 4),
+  ('f0000000-0000-4000-8000-000000000003', 'd0000000-0000-4000-8000-000000000042', 5),
+  ('f0000000-0000-4000-8000-000000000003', 'd0000000-0000-4000-8000-000000000035', 6),
+  ('f0000000-0000-4000-8000-000000000003', 'd0000000-0000-4000-8000-000000000040', 7),
+  ('f0000000-0000-4000-8000-000000000003', 'd0000000-0000-4000-8000-000000000044', 8)
 ON CONFLICT DO NOTHING;
 
 -- Fall Open runs two pools of four as round robins, mid-way through: pool 1 has
@@ -215,7 +230,11 @@ INSERT INTO bouts (id, tournament_id, location, start_time, started_at, complete
   ('e0000000-0000-4000-8000-000000000014', 'b0000000-0000-4000-8000-000000000002', NULL,      now() + interval '30 days',             NULL,                                    NULL,                           NULL,                                   180, 5, 1, 'upcoming', 'd0000000-0000-4000-8000-000000000011', 'd0000000-0000-4000-8000-000000000012', NULL, NULL, NULL, NULL, now() - interval '2 days', now()),
   ('e0000000-0000-4000-8000-000000000015', 'b0000000-0000-4000-8000-000000000003', 'Strip 1', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '5 hours 20 minutes', 'a0000000-0000-4000-8000-000000000003', 540, 15, 0, 'ended', 'd0000000-0000-4000-8000-000000000013', 'd0000000-0000-4000-8000-000000000014', NULL, 'f0000000-0000-4000-8000-000000000001', 4, 1, now() - interval '91 days', now()),
   ('e0000000-0000-4000-8000-000000000016', 'b0000000-0000-4000-8000-000000000003', 'Strip 2', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '5 hours', now() - interval '90 days' + interval '5 hours 25 minutes', 'a0000000-0000-4000-8000-000000000003', 540, 15, 0, 'ended', 'd0000000-0000-4000-8000-000000000015', 'd0000000-0000-4000-8000-000000000016', NULL, 'f0000000-0000-4000-8000-000000000001', 4, 2, now() - interval '91 days', now()),
-  ('e0000000-0000-4000-8000-000000000017', 'b0000000-0000-4000-8000-000000000003', 'Strip 1', now() - interval '90 days' + interval '7 hours', now() - interval '90 days' + interval '7 hours', now() - interval '90 days' + interval '7 hours 30 minutes', 'a0000000-0000-4000-8000-000000000003', 540, 15, 0, 'ended', 'd0000000-0000-4000-8000-000000000013', 'd0000000-0000-4000-8000-000000000015', NULL, 'f0000000-0000-4000-8000-000000000001', 2, 1, now() - interval '91 days', now())
+  ('e0000000-0000-4000-8000-000000000017', 'b0000000-0000-4000-8000-000000000003', 'Strip 1', now() - interval '90 days' + interval '7 hours', now() - interval '90 days' + interval '7 hours', now() - interval '90 days' + interval '7 hours 30 minutes', 'a0000000-0000-4000-8000-000000000003', 540, 15, 0, 'ended', 'd0000000-0000-4000-8000-000000000013', 'd0000000-0000-4000-8000-000000000015', NULL, 'f0000000-0000-4000-8000-000000000001', 2, 1, now() - interval '91 days', now()),
+  ('e0000000-0000-4000-8000-000000000018', 'b0000000-0000-4000-8000-000000000001', 'Strip 1', now() + interval '5 hours', NULL, NULL, NULL, 180, 15, 0, 'upcoming', 'd0000000-0000-4000-8000-000000000033', 'd0000000-0000-4000-8000-000000000044', NULL, 'f0000000-0000-4000-8000-000000000003', 8, 1, now() - interval '1 day', now()),
+  ('e0000000-0000-4000-8000-000000000019', 'b0000000-0000-4000-8000-000000000001', 'Strip 2', now() + interval '5 hours', NULL, NULL, NULL, 180, 15, 0, 'upcoming', 'd0000000-0000-4000-8000-000000000036', 'd0000000-0000-4000-8000-000000000042', NULL, 'f0000000-0000-4000-8000-000000000003', 8, 2, now() - interval '1 day', now()),
+  ('e0000000-0000-4000-8000-000000000020', 'b0000000-0000-4000-8000-000000000001', 'Strip 3', now() + interval '5 hours', NULL, NULL, NULL, 180, 15, 0, 'upcoming', 'd0000000-0000-4000-8000-000000000034', 'd0000000-0000-4000-8000-000000000035', NULL, 'f0000000-0000-4000-8000-000000000003', 8, 3, now() - interval '1 day', now()),
+  ('e0000000-0000-4000-8000-000000000021', 'b0000000-0000-4000-8000-000000000001', 'Strip 4', now() + interval '5 hours', NULL, NULL, NULL, 180, 15, 0, 'upcoming', 'd0000000-0000-4000-8000-000000000038', 'd0000000-0000-4000-8000-000000000040', NULL, 'f0000000-0000-4000-8000-000000000003', 8, 4, now() - interval '1 day', now())
 ON CONFLICT DO NOTHING;
 
 -- Touches for every finished bout and for Maya's live bout against Diego, where one touch

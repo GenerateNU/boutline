@@ -21,6 +21,30 @@ type BoutRepository interface {
 	ClaimBoutByID(ctx context.Context, id, refereeID uuid.UUID) error
 	TransitionBoutByID(ctx context.Context, id uuid.UUID, transition BoutTransition) error
 	DeleteBoutByID(ctx context.Context, id uuid.UUID) error
+	ListCompetitorBouts(ctx context.Context, competitorID uuid.UUID) ([]CompetitorBoutRow, error)
+}
+
+// boutScoreRow is one fencer's unrevoked touches in one bout.
+type boutScoreRow struct {
+	BoutID       uuid.UUID `gorm:"column:bout_id"`
+	CompetitorID uuid.UUID `gorm:"column:competitor_id"`
+	Points       int       `gorm:"column:points"`
+}
+
+// CompetitorBoutRow is one pool or tableau bout seen from one competitor. Score and
+// OpponentScore are summed from unrevoked scorings after the bouts are selected.
+type CompetitorBoutRow struct {
+	ID                uuid.UUID  `gorm:"column:id"`
+	Status            BoutStatus `gorm:"column:status"`
+	PoolID            *uuid.UUID `gorm:"column:pool_id"`
+	PoolNumber        *int       `gorm:"column:pool_number"`
+	RoundSize         *int       `gorm:"column:round_size"`
+	Slot              *int       `gorm:"column:slot"`
+	OpponentID        uuid.UUID  `gorm:"column:opponent_id"`
+	OpponentFirstName string     `gorm:"column:opponent_first_name"`
+	OpponentLastName  string     `gorm:"column:opponent_last_name"`
+	Score             int        `gorm:"-"`
+	OpponentScore     int        `gorm:"-"`
 }
 
 type BoutUpdate struct {
@@ -286,4 +310,64 @@ func translateBoutWriteError(op string, err error) error {
 	}
 
 	return fmt.Errorf("%s: %w", op, err)
+}
+
+// ListCompetitorBouts orders pool bouts first, by pool and slot, then tableau bouts
+// from the first round to the final.
+func (r *boutRepository) ListCompetitorBouts(ctx context.Context, competitorID uuid.UUID) ([]CompetitorBoutRow, error) {
+	db := r.db.WithContext(ctx)
+
+	var found int64
+	if err := db.Table("competitors").Where("id = ?", competitorID).Limit(1).Count(&found).Error; err != nil {
+		return nil, fmt.Errorf("check competitor %s: %w", competitorID, err)
+	}
+	if found == 0 {
+		return nil, fmt.Errorf("select competitor %s: %w", competitorID, errs.ErrNotFound)
+	}
+
+	rows := []CompetitorBoutRow{}
+	err := db.Table("bouts AS b").
+		Select(`b.id, b.status, b.pool_id, p.number AS pool_number, b.round_size, b.slot,
+			o.id AS opponent_id, o.first_name AS opponent_first_name, o.last_name AS opponent_last_name`).
+		Joins("JOIN competitors o ON o.id IN (b.competitor_1_id, b.competitor_2_id) AND o.id <> ?", competitorID).
+		Joins("LEFT JOIN pools p ON p.id = b.pool_id").
+		Where("? IN (b.competitor_1_id, b.competitor_2_id)", competitorID).
+		Where("b.pool_id IS NOT NULL OR b.direct_elimination_id IS NOT NULL").
+		Order("b.pool_id IS NULL, p.number, b.round_size DESC, b.slot").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("select bouts for competitor %s: %w", competitorID, err)
+	}
+	if len(rows) == 0 {
+		return rows, nil
+	}
+
+	boutIDs := make([]uuid.UUID, len(rows))
+	for i, row := range rows {
+		boutIDs[i] = row.ID
+	}
+	var sums []boutScoreRow
+	err = db.Table("scorings").
+		Select("bout_id, competitor_id, SUM(points) AS points").
+		Where("bout_id IN ? AND revoked_at IS NULL", boutIDs).
+		Group("bout_id, competitor_id").
+		Scan(&sums).Error
+	if err != nil {
+		return nil, fmt.Errorf("sum scores for competitor %s: %w", competitorID, err)
+	}
+
+	for i := range rows {
+		for _, sum := range sums {
+			if sum.BoutID != rows[i].ID {
+				continue
+			}
+			if sum.CompetitorID == competitorID {
+				rows[i].Score = sum.Points
+			} else {
+				rows[i].OpponentScore = sum.Points
+			}
+		}
+	}
+
+	return rows, nil
 }

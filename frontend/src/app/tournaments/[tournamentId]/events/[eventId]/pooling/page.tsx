@@ -26,10 +26,7 @@ export default async function PoolingTab({ params, searchParams }: PoolingTabPro
         </Suspense>
       ) : (
         <Suspense key={view} fallback={<PoolListSkeleton />}>
-          <PoolListSection
-            eventId={eventId}
-            poolingPath={`/tournaments/${tournamentId}/events/${eventId}/pooling`}
-          />
+          <PoolListSection tournamentId={tournamentId} eventId={eventId} />
         </Suspense>
       )}
     </div>

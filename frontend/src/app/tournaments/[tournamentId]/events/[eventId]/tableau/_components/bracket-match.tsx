@@ -23,8 +23,8 @@ function BracketMatch({
   dimmed = false,
   matched = false,
 }: BracketMatchProps) {
-  const { pinned, pinBout, unpinBout } = usePinnedItems();
-  const isPinned = pinned.boutIds.includes(bout.id);
+  const { isPinned, togglePin } = usePinnedItems();
+  const pinned = isPinned("bout", bout.id);
   const live = bout.status === "active";
   const [topTone, bottomTone] = pillTones(bout);
   const muted = bout.status === "upcoming";
@@ -33,7 +33,7 @@ function BracketMatch({
     <div
       className={cn(
         "relative w-full rounded-lg shadow-md",
-        isPinned ? "bg-blue-lightest" : "bg-card",
+        pinned ? "bg-blue-lightest" : "bg-card",
         matched && "h-35 border-2 border-blue-vivid",
         !matched && live && "h-34.75 border-[1.5px] border-accent-green",
         !matched && !live && "h-34.5 border border-outline",
@@ -66,8 +66,8 @@ function BracketMatch({
         </div>
       </Link>
       <BoutPinButton
-        pinned={isPinned}
-        onClick={() => (isPinned ? unpinBout(bout.id) : pinBout(bout.id))}
+        pinned={pinned}
+        onClick={() => togglePin("bout", bout.id)}
       />
     </div>
   );
