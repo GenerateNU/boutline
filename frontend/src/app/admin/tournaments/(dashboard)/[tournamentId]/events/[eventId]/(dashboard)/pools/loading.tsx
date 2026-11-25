@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/primitives/skeleton";
 
 // A client component so the back link can read the ids from the URL; loading screens get
 // no route params. Only the event's name shimmers, so the link works before it arrives.
-export default function AdminEventLoading() {
+export default function PoolsTabLoading() {
   const { tournamentId, eventId } = useParams<{ tournamentId: string; eventId: string }>();
 
   return (
