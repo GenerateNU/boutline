@@ -592,7 +592,10 @@ Tabs: Fencers (the index page) · Referees · Events · Settings.
 - **Events** and **Settings** (Planned): placeholders until a ticket defines what
   they show.
 - **Event page** (`/admin/tournaments/[id]/events/[eventId]`): nested under Events,
-  with the event's pool stage and, once it ends, the direct elimination.
+  with its own tabs under the tournament's: Pools · Fencers · Results · Settings
+  (routes `pools`, `fencers`, `results`, `settings`). The bare URL redirects to
+  Pools, which shows the event's pool stage and, once it ends, the direct
+  elimination. Fencers, Results and Settings (Planned) are placeholders.
 
 ---
 
