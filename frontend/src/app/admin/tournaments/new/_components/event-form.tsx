@@ -11,7 +11,7 @@ import { useDraftSaving } from "../_hooks/use-draft-saving";
 import { useTournamentDraft } from "../_hooks/use-tournament-draft";
 import { EventDraft } from "../_types/tournament-draft";
 import { missingEventFields, newEventDraft } from "../tournament-draft-helpers";
-import { EventDraftFields } from "./event-draft-fields";
+import { EventFields } from "./event-fields";
 
 const FORM_PATH = "/admin/tournaments/new";
 
@@ -91,7 +91,7 @@ function EventForm({ eventId }: EventFormProps) {
   return (
     <form onSubmit={handleContinue} className="flex flex-col gap-6">
       <fieldset disabled={removing} className="flex min-w-0 flex-col gap-6">
-        <EventDraftFields event={event} attempted={attempted} onChange={handleChange} />
+        <EventFields event={event} attempted={attempted} onChange={handleChange} />
       </fieldset>
 
       <div className="flex flex-col gap-3">

@@ -193,6 +193,18 @@ describe("NewTournamentForm", () => {
     expect(requests()).toEqual(["POST /api/v1/events"]);
   });
 
+  it("names the tournament's own error when it fails to save", async () => {
+    mockApi((call) => (call.path.endsWith("/tournaments") ? { status: 500, body: { detail: "Server exploded" } } : undefined));
+    saveDraft([filledEvent()]);
+    render(<NewTournamentForm />);
+
+    fireEvent.click(continueButton());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't save the tournament details: Server exploded");
+    expect(requests()).toEqual(["POST /api/v1/tournaments"]);
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
   it("sends a tournament saved by an earlier Continue again once it's edited", async () => {
     saveDraft([filledEvent({ eventId: "e1", saved: true })], { ...FILLED_TOURNAMENT, tournamentId: "t1", saved: true });
     render(<NewTournamentForm />);

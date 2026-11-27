@@ -12,14 +12,14 @@ import { TournamentDraft } from "../_types/tournament-draft";
 import { missingTournamentFields, RequiredTournamentField } from "../tournament-draft-helpers";
 import { AUTHORITIES } from "../tournament-request-helpers";
 
-interface TournamentDraftFieldsProps {
+interface TournamentFieldsProps {
   draft: TournamentDraft;
   onField: (field: RequiredTournamentField, value: string) => void;
   // True once Continue has failed, so empty fields stay marked from then on.
   attempted: boolean;
 }
 
-function TournamentDraftFields({ draft, onField, attempted }: TournamentDraftFieldsProps) {
+function TournamentFields({ draft, onField, attempted }: TournamentFieldsProps) {
   // Recomputed from the draft, so a field turns back to normal once it's filled.
   const invalid = new Set<RequiredTournamentField>(attempted ? missingTournamentFields(draft) : []);
   const errorId = useId();
@@ -89,4 +89,4 @@ function TournamentDraftFields({ draft, onField, attempted }: TournamentDraftFie
   );
 }
 
-export { TournamentDraftFields };
+export { TournamentFields };

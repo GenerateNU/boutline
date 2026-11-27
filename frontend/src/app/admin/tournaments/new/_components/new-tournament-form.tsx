@@ -7,16 +7,48 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
 import { Button } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
+import { Card, CardTitle } from "@/components/primitives/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/primitives/collapsible";
+import { Text } from "@/components/primitives/text";
 
 import { useDraftSaving } from "../_hooks/use-draft-saving";
 import { useTournamentDraft } from "../_hooks/use-tournament-draft";
 import { eventTitle, missingEventFields, missingTournamentFields, RequiredTournamentField } from "../tournament-draft-helpers";
-import { TournamentDraftFields } from "./tournament-draft-fields";
+import { TournamentFields } from "./tournament-fields";
 
 function eventPagePath(localId: string) {
   return `/admin/tournaments/new/event?id=${encodeURIComponent(localId)}`;
+}
+
+interface EventRowProps {
+  title: string;
+  // Set in edit mode. Links ignore the disabled fieldset, so the form leaves it unset while saving.
+  editHref?: string;
+  errors: string[];
+}
+
+function EventRow({ title, editHref, errors }: EventRowProps) {
+  return (
+    <li className="flex flex-col gap-1">
+      <Card orientation="horizontal" className="gap-2.5 py-3.5 pr-3">
+        <CardTitle className="min-w-0 flex-1 truncate text-sm font-medium text-obsidian uppercase">{title}</CardTitle>
+        {editHref ? (
+          <Button asChild variant="text" size="icon" className="-my-2 size-8 text-neutral-secondary">
+            <Link href={editHref} aria-label={`Edit ${title}`}>
+              <EditOutlined aria-hidden />
+            </Link>
+          </Button>
+        ) : null}
+      </Card>
+      {errors.length > 0 ? (
+        <ul role="alert" className="flex flex-col gap-1 text-xs text-red-dark">
+          {errors.map((message) => (
+            <li key={message}>{message}</li>
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
 }
 
 function NewTournamentForm() {
@@ -108,13 +140,13 @@ function NewTournamentForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <fieldset disabled={isSaving} className="flex min-w-0 flex-col gap-6">
-        <TournamentDraftFields draft={draft} onField={handleField} attempted={attempted} />
+        <TournamentFields draft={draft} onField={handleField} attempted={attempted} />
 
         <Collapsible defaultOpen>
           <div className="relative flex items-center justify-between">
-            <h2 id={eventsHeadingId} className="text-lg font-medium text-obsidian">
+            <Text as="h2" id={eventsHeadingId} variant="title" className="text-lg font-medium text-obsidian">
               Create Events
-            </h2>
+            </Text>
             {/* A button can't hold the heading, so the trigger is the chevron and its
                 ::after stretches over the header to keep the whole row clickable. */}
             <CollapsibleTrigger
@@ -144,31 +176,14 @@ function NewTournamentForm() {
                 ) : null}
               </div>
               <ul aria-label="Events" className="flex flex-col gap-3">
-                {draft.events.map((draftEvent, index) => {
-                  const title = eventTitle(draftEvent, index);
-                  const eventErrors = errors.events[draftEvent.id] ?? [];
-                  return (
-                    <li key={draftEvent.id} className="flex flex-col gap-1">
-                      <Card orientation="horizontal" className="gap-2.5 py-3.5 pr-3">
-                        <p className="min-w-0 flex-1 truncate text-sm font-medium text-obsidian uppercase">{title}</p>
-                        {editing ? (
-                          <Button asChild variant="text" size="icon" className="-my-2 size-8 text-neutral-secondary">
-                            <Link href={eventPagePath(draftEvent.id)} aria-label={`Edit ${title}`}>
-                              <EditOutlined aria-hidden />
-                            </Link>
-                          </Button>
-                        ) : null}
-                      </Card>
-                      {eventErrors.length > 0 ? (
-                        <ul role="alert" className="flex flex-col gap-1 text-xs text-red-dark">
-                          {eventErrors.map((message) => (
-                            <li key={message}>{message}</li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </li>
-                  );
-                })}
+                {draft.events.map((draftEvent, index) => (
+                  <EventRow
+                    key={draftEvent.id}
+                    title={eventTitle(draftEvent, index)}
+                    editHref={editing && !isSaving ? eventPagePath(draftEvent.id) : undefined}
+                    errors={errors.events[draftEvent.id] ?? []}
+                  />
+                ))}
               </ul>
             </div>
           </CollapsibleContent>

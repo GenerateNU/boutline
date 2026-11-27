@@ -19,7 +19,7 @@ import {
   WEAPONS,
 } from "../tournament-request-helpers";
 
-interface EventDraftFieldsProps {
+interface EventFieldsProps {
   event: EventDraft;
   // True once Continue has failed, so empty fields stay marked from then on.
   attempted: boolean;
@@ -31,7 +31,7 @@ function chipOptions(labels: string[]) {
   return labels.map((label) => ({ value: label, label }));
 }
 
-function EventDraftFields({ event, attempted, onChange }: EventDraftFieldsProps) {
+function EventFields({ event, attempted, onChange }: EventFieldsProps) {
   const errorId = useId();
   // Recomputed from the event, so a field turns back to normal once it's filled.
   const invalid = new Set<RequiredEventField>(attempted ? missingEventFields(event) : []);
@@ -133,4 +133,4 @@ function EventDraftFields({ event, attempted, onChange }: EventDraftFieldsProps)
   );
 }
 
-export { EventDraftFields };
+export { EventFields };

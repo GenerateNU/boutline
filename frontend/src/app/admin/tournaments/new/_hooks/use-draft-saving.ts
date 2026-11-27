@@ -328,8 +328,6 @@ export function useDraftSaving({
     savingEvents,
     removingEvents,
     errors,
-    saveTournament,
-    saveEvent,
     removeEventCard,
     saveUnsaved,
   };
