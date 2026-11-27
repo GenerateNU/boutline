@@ -111,22 +111,77 @@ describe("NewTournamentForm", () => {
     expect(mockPush).toHaveBeenCalledWith(`/admin/tournaments/new/event?id=${added.id}`);
   });
 
-  it("shows an edit link for each event only in edit mode", () => {
+  it("shows an edit link and a checkbox for each event only in edit mode", () => {
     const event = filledEvent();
     saveDraft([event]);
     render(<NewTournamentForm />);
     expect(screen.queryByRole("link", { name: "Edit Y14 Foil" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit Events" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Mode" }));
 
     expect(screen.getByRole("link", { name: "Edit Y14 Foil" })).toHaveAttribute(
       "href",
       `/admin/tournaments/new/event?id=${event.id}`,
     );
+    expect(screen.getByRole("checkbox", { name: "Select Y14 Foil" })).not.toBeChecked();
     expect(screen.queryByRole("button", { name: "Add Events" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Exit Edit Mode" }));
     expect(screen.queryByRole("link", { name: "Edit Y14 Foil" })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { case: "an unsent event", event: { eventId: undefined }, status: 204, removed: true, sent: [] },
+    { case: "a sent event once the server deletes it", event: { eventId: "e1", saved: true }, status: 204, removed: true, sent: ["DELETE /api/v1/events/e1"] },
+    { case: "nothing when the server fails", event: { eventId: "e1", saved: true }, status: 500, removed: false, sent: ["DELETE /api/v1/events/e1"] },
+  ])("removing a selected event removes $case", async ({ event: patch, status, removed, sent }) => {
+    mockApi(() => ({ status, body: status < 400 ? null : { detail: "Server exploded" } }));
+    saveDraft([filledEvent(patch)], { ...FILLED_TOURNAMENT, tournamentId: "t1", saved: true });
+    render(<NewTournamentForm />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Mode" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Y14 Foil" }));
+    const bar = screen.getByRole("region", { name: "Selection" });
+    expect(bar).toHaveTextContent("1 selected");
+    fireEvent.click(within(bar).getByRole("button", { name: "Remove" }));
+
+    if (removed) {
+      await waitFor(() => expect(storedDraft().events).toEqual([]));
+    } else {
+      expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't remove this event");
+      expect(storedDraft().events).toHaveLength(1);
+    }
+    expect(requests()).toEqual(sent);
+    expect(screen.queryByRole("region", { name: "Selection" })).not.toBeInTheDocument();
+  });
+
+  it("leaves edit mode once every event is removed, so Add Events comes back", async () => {
+    saveDraft([filledEvent()]);
+    render(<NewTournamentForm />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Mode" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Y14 Foil" }));
+    fireEvent.click(within(screen.getByRole("region", { name: "Selection" })).getByRole("button", { name: "Remove" }));
+
+    await waitFor(() => expect(storedDraft().events).toEqual([]));
+    expect(screen.getByRole("button", { name: "Add Events" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Edit Mode" })).toBeDisabled();
+  });
+
+  it("hides the selection bar once the selection is cleared or edit mode ends", () => {
+    saveDraft([filledEvent()]);
+    render(<NewTournamentForm />);
+    fireEvent.click(screen.getByRole("button", { name: "Edit Mode" }));
+    expect(screen.queryByRole("region", { name: "Selection" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Y14 Foil" }));
+    fireEvent.click(within(screen.getByRole("region", { name: "Selection" })).getByRole("button", { name: "Clear" }));
+    expect(screen.queryByRole("region", { name: "Selection" })).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Select Y14 Foil" })).not.toBeChecked();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Y14 Foil" }));
+    fireEvent.click(screen.getByRole("button", { name: "Exit Edit Mode" }));
+    expect(screen.queryByRole("region", { name: "Selection" })).not.toBeInTheDocument();
   });
 
   it.each([
@@ -158,16 +213,29 @@ describe("NewTournamentForm", () => {
     expect(apiCalls).toHaveLength(0);
   });
 
-  it("creates the tournament and its events on Continue, then opens it and clears the draft", async () => {
+  it("creates the tournament and its events on Continue, then opens it and clears the draft once it's gone", async () => {
     saveDraft([filledEvent()]);
-    render(<NewTournamentForm />);
+    const { unmount } = render(<NewTournamentForm />);
 
     fireEvent.click(continueButton());
 
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/admin/tournaments/id-1"));
     expect(requests()).toEqual(["POST /api/v1/tournaments", "POST /api/v1/events"]);
     expect(apiCalls[1].body).toMatchObject({ tournament_id: "id-1", weapon: "foil", gender: "female" });
+    // Still filled in while the dashboard loads, so nothing flashes blank.
+    expect(screen.getByRole("textbox", { name: "Name of Tournament" })).toHaveValue("Northeastern Open");
+
+    unmount();
     expect(storedDraft()).toMatchObject({ name: "", events: [] });
+  });
+
+  it("keeps the draft when the form unmounts without creating the tournament", () => {
+    saveDraft([filledEvent()]);
+    const { unmount } = render(<NewTournamentForm />);
+
+    unmount();
+
+    expect(storedDraft()).toMatchObject({ name: "Northeastern Open" });
   });
 
   it("stays on the form when an event fails, names it, and retries only what failed", async () => {

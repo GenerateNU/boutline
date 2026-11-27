@@ -1,40 +1,56 @@
 "use client";
 
 import EditOutlined from "@mui/icons-material/EditOutlined";
+import { cn } from "cn";
 import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { Card, CardTitle } from "@/components/primitives/card";
+import { Checkbox } from "@/components/primitives/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/primitives/collapsible";
 import { Text } from "@/components/primitives/text";
 
 import { useDraftSaving } from "../_hooks/use-draft-saving";
 import { useTournamentDraft } from "../_hooks/use-tournament-draft";
 import { eventTitle, missingEventFields, missingTournamentFields, RequiredTournamentField } from "../tournament-draft-helpers";
+import { SelectionBar } from "./selection-bar";
 import { TournamentFields } from "./tournament-fields";
 
 function eventPagePath(localId: string) {
   return `/admin/tournaments/new/event?id=${encodeURIComponent(localId)}`;
 }
 
+interface EventRowEdit {
+  href: string;
+  selected: boolean;
+  onSelectedChange: (selected: boolean) => void;
+}
+
 interface EventRowProps {
   title: string;
   // Set in edit mode. Links ignore the disabled fieldset, so the form leaves it unset while saving.
-  editHref?: string;
+  edit?: EventRowEdit;
   errors: string[];
 }
 
-function EventRow({ title, editHref, errors }: EventRowProps) {
+function EventRow({ title, edit, errors }: EventRowProps) {
   return (
     <li className="flex flex-col gap-1">
       <Card orientation="horizontal" className="gap-2.5 py-3.5 pr-3">
+        {edit ? (
+          <Checkbox
+            checked={edit.selected}
+            aria-label={`Select ${title}`}
+            onCheckedChange={(checked) => edit.onSelectedChange(checked === true)}
+          />
+        ) : null}
         <CardTitle className="min-w-0 flex-1 truncate text-sm font-medium text-obsidian uppercase">{title}</CardTitle>
-        {editHref ? (
+        {edit ? (
           <Button asChild variant="text" size="icon" className="-my-2 size-8 text-neutral-secondary">
-            <Link href={editHref} aria-label={`Edit ${title}`}>
+            <Link href={edit.href} aria-label={`Edit ${title}`}>
               <EditOutlined aria-hidden />
             </Link>
           </Button>
@@ -58,9 +74,11 @@ function NewTournamentForm() {
   const eventsHeadingId = useId();
   const [attempted, setAttempted] = useState(false);
   const [editing, setEditing] = useState(false);
+  // Local ids of the events checked in edit mode.
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saveFailed, setSaveFailed] = useState(false);
-  const { tournamentSaving, savingEvents, removingEvents, errors, saveUnsaved } = useDraftSaving({
+  const { tournamentSaving, savingEvents, removingEvents, errors, removeEventCard, saveUnsaved } = useDraftSaving({
     draft,
     setTournamentId,
     setTournamentSaved,
@@ -68,6 +86,18 @@ function NewTournamentForm() {
     removeEvent,
   });
   const isSaving = tournamentSaving || savingEvents.size > 0 || removingEvents.size > 0;
+  // Set once the tournament is created. The draft is cleared when the dashboard replaces
+  // this page, not before, so the emptied fields never flash blank and invalid on screen.
+  const created = useRef(false);
+
+  useEffect(
+    () => () => {
+      if (created.current) {
+        clear();
+      }
+    },
+    [clear],
+  );
 
   // A tournament already sent by an earlier, partly failed Continue is sent again once edited.
   function handleField(field: RequiredTournamentField, value: string) {
@@ -81,10 +111,39 @@ function NewTournamentForm() {
     router.push(eventPagePath(addEvent()));
   }
 
+  function setEventSelected(localId: string, isSelected: boolean) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (isSelected) {
+        next.add(localId);
+      } else {
+        next.delete(localId);
+      }
+      return next;
+    });
+  }
+
+  function toggleEditing() {
+    setEditing(!editing);
+    setSelected(new Set());
+  }
+
+  // A removal that fails keeps its event, with the error under its card. Removing
+  // every event also leaves edit mode, which has nothing left to edit.
+  async function handleRemoveSelected() {
+    const ids = [...selected];
+    setSelected(new Set());
+    if (ids.length === draft.events.length) {
+      setEditing(false);
+    }
+    await Promise.all(ids.map((localId) => removeEventCard(localId)));
+  }
+
   function handleClear() {
     clear();
     setAttempted(false);
     setEditing(false);
+    setSelected(new Set());
     setSubmitError(null);
     setSaveFailed(false);
   }
@@ -117,7 +176,7 @@ function NewTournamentForm() {
       setSaveFailed(true);
       return;
     }
-    clear();
+    created.current = true;
     router.push(`/admin/tournaments/${tournamentId}`);
   }
 
@@ -138,7 +197,7 @@ function NewTournamentForm() {
   const submitMessage = saveFailed ? saveFailureMessage() : submitError;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+    <form onSubmit={handleSubmit} className={cn("flex flex-col gap-6", editing && selected.size > 0 && "pb-36")}>
       <fieldset disabled={isSaving} className="flex min-w-0 flex-col gap-6">
         <TournamentFields draft={draft} onField={handleField} attempted={attempted} />
 
@@ -169,18 +228,30 @@ function NewTournamentForm() {
                     Add Events
                   </Button>
                 )}
-                {draft.events.length > 0 ? (
-                  <Button type="button" size="sm" variant={editing ? "filled" : "outline"} onClick={() => setEditing(!editing)}>
-                    {editing ? "Exit Edit Mode" : "Edit Events"}
-                  </Button>
-                ) : null}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={editing ? "filled" : "outline"}
+                  disabled={draft.events.length === 0}
+                  onClick={toggleEditing}
+                >
+                  {editing ? "Exit Edit Mode" : "Edit Mode"}
+                </Button>
               </div>
               <ul aria-label="Events" className="flex flex-col gap-3">
                 {draft.events.map((draftEvent, index) => (
                   <EventRow
                     key={draftEvent.id}
                     title={eventTitle(draftEvent, index)}
-                    editHref={editing && !isSaving ? eventPagePath(draftEvent.id) : undefined}
+                    edit={
+                      editing && !isSaving
+                        ? {
+                            href: eventPagePath(draftEvent.id),
+                            selected: selected.has(draftEvent.id),
+                            onSelectedChange: (isSelected) => setEventSelected(draftEvent.id, isSelected),
+                          }
+                        : undefined
+                    }
                     errors={errors.events[draftEvent.id] ?? []}
                   />
                 ))}
@@ -203,6 +274,14 @@ function NewTournamentForm() {
           Continue
         </Button>
       </div>
+
+      {editing && selected.size > 0 ? (
+        <SelectionBar count={selected.size} onClear={() => setSelected(new Set())}>
+          <Button type="button" variant="outline" disabled={isSaving} onClick={handleRemoveSelected}>
+            Remove
+          </Button>
+        </SelectionBar>
+      ) : null}
     </form>
   );
 }

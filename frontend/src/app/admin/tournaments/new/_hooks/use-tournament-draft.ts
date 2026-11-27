@@ -1,3 +1,5 @@
+import { useCallback } from "react";
+
 import { ACCOUNT_STORAGE_PREFIX } from "@/features/auth/services/account-storage";
 import { useSessionStorage } from "@/lib/hooks/use-session-storage";
 import { CompetitorImportRow } from "@/types/competitor-import";
@@ -84,9 +86,8 @@ export function useTournamentDraft() {
     updateEvents((events) => importFencers(events, rows));
   }
 
-  function clear() {
-    setDraft(EMPTY_TOURNAMENT_DRAFT);
-  }
+  // Stable, so the form can clear the draft from an unmount effect.
+  const clear = useCallback(() => setDraft(EMPTY_TOURNAMENT_DRAFT), [setDraft]);
 
   return {
     draft,

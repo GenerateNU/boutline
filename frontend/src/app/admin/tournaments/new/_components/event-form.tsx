@@ -7,7 +7,6 @@ import { useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/primitives/button";
 import { Text } from "@/components/primitives/text";
 
-import { useDraftSaving } from "../_hooks/use-draft-saving";
 import { useTournamentDraft } from "../_hooks/use-tournament-draft";
 import { EventDraft } from "../_types/tournament-draft";
 import { missingEventFields, newEventDraft } from "../tournament-draft-helpers";
@@ -35,14 +34,7 @@ function EventForm({ eventId }: EventFormProps) {
   // The draft lives in sessionStorage, which the server render can't see; waiting
   // for hydration keeps "isn't in the draft" from flashing before it loads.
   const hydrated = useSyncExternalStore(subscribe, () => true, () => false);
-  const { draft, setTournamentId, setTournamentSaved, updateEvent, updateEventWith, removeEvent } = useTournamentDraft();
-  const { removingEvents, errors, removeEventCard } = useDraftSaving({
-    draft,
-    setTournamentId,
-    setTournamentSaved,
-    updateEventWith,
-    removeEvent,
-  });
+  const { draft, updateEvent } = useTournamentDraft();
   const [attempted, setAttempted] = useState(false);
   const event = draft.events.find((draftEvent) => draftEvent.id === eventId);
 
@@ -70,12 +62,6 @@ function EventForm({ eventId }: EventFormProps) {
     setAttempted(false);
   }
 
-  async function handleRemove() {
-    if (await removeEventCard(eventId)) {
-      router.push(FORM_PATH);
-    }
-  }
-
   function handleContinue(submit: React.FormEvent<HTMLFormElement>) {
     submit.preventDefault();
     if (event && missingEventFields(event).length > 0) {
@@ -85,31 +71,16 @@ function EventForm({ eventId }: EventFormProps) {
     router.push(FORM_PATH);
   }
 
-  const removing = removingEvents.has(eventId);
-  const eventErrors = errors.events[eventId] ?? [];
-
   return (
     <form onSubmit={handleContinue} className="flex flex-col gap-6">
-      <fieldset disabled={removing} className="flex min-w-0 flex-col gap-6">
-        <EventFields event={event} attempted={attempted} onChange={handleChange} />
-      </fieldset>
+      <EventFields event={event} attempted={attempted} onChange={handleChange} />
 
       <div className="flex flex-col gap-3">
-        {eventErrors.length > 0 ? (
-          <ul role="alert" className="flex flex-col gap-1 text-xs text-red-dark">
-            {eventErrors.map((message) => (
-              <li key={message}>{message}</li>
-            ))}
-          </ul>
-        ) : null}
-        <Button type="button" variant="tonal" className="w-full" disabled={removing} onClick={handleClear}>
+        <Button type="button" variant="tonal" className="w-full" onClick={handleClear}>
           Clear All
         </Button>
-        <Button type="submit" className="w-full" disabled={removing}>
+        <Button type="submit" className="w-full">
           Continue
-        </Button>
-        <Button type="button" variant="text" className="w-full text-red-dark" disabled={removing} onClick={handleRemove}>
-          {removing ? "Removing…" : "Remove event"}
         </Button>
       </div>
     </form>

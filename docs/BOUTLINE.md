@@ -1114,13 +1114,16 @@ Clearing a check-in later leaves the fencer in any pool they're already in.
 - **Tournament page:** the tournament fields (§10.1), then a collapsible Create
   Events section listing one card per event by name ("Event 2" until it has one),
   then Clear All and Continue. Add Events adds a blank event to the draft and opens
-  it on the event page. Edit Events turns on edit mode, where each card gets a
-  pencil that reopens its event, until Exit Edit Mode.
+  it on the event page. Edit Mode (disabled until there's an event) turns on edit
+  mode, where each card gets a checkbox and a pencil that reopens its event, until
+  Exit Edit Mode or until every event is removed. Checking events shows a selection
+  bar ("2 selected", Clear) whose Remove removes them.
+  Removing an event an earlier Continue already sent deletes it on the server first,
+  and keeps it with an error under its card if that fails.
 - **Event page (`/admin/tournaments/new/event?id=`):** the attributes in §8.5 for
   one draft event, with Weapon and Gender Mix as chip rows. Edits go straight into
-  the draft. Continue checks the event and goes back; Clear All empties its fields;
-  Remove event drops it, deleting it on the server first if an earlier Continue
-  sent it. An id that isn't in the draft says so and links back.
+  the draft. Continue checks the event and goes back; Clear All empties its fields.
+  An id that isn't in the draft says so and links back.
 - **Continue:** checks the tournament fields (marking empty ones), that there is
   at least one event, and that every unsent event is complete, naming any that
   aren't. It then sends the tournament (`POST /tournaments`, or `PATCH` once it

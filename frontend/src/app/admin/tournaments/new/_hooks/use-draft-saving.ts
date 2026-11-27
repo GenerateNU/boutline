@@ -283,16 +283,15 @@ export function useDraftSaving({
 
   // Deletes a saved card on the server before dropping it, so a failure leaves
   // the card (with its error) rather than hiding an event that still exists.
-  // Resolves true once the event is gone from the draft, and from the server if it was saved.
-  async function removeEventCard(localId: string): Promise<boolean> {
+  async function removeEventCard(localId: string) {
     const eventId = draft.events.find((event) => event.id === localId)?.eventId;
     if (!eventId) {
       removeEvent(localId);
-      return true;
+      return;
     }
     const key = `remove:${localId}`;
     if (inFlight.current.has(key)) {
-      return false;
+      return;
     }
     inFlight.current.add(key);
     setRemovingEvents((current) => withId(current, localId, true));
@@ -300,10 +299,8 @@ export function useDraftSaving({
     try {
       await deleteEvent(eventId);
       removeEvent(localId);
-      return true;
     } catch (error) {
       setEventErrors(localId, [`Couldn't remove this event: ${errorMessage(error)}`]);
-      return false;
     } finally {
       inFlight.current.delete(key);
       setRemovingEvents((current) => withId(current, localId, false));

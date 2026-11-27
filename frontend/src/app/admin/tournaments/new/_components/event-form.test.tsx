@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
-import { EventDraft, TournamentDraft } from "../_types/tournament-draft";
+import { EventDraft } from "../_types/tournament-draft";
 import { EMPTY_TOURNAMENT_DRAFT, newEventDraft } from "../tournament-draft-helpers";
 import { EventForm } from "./event-form";
 
@@ -20,20 +20,12 @@ const FILLED_EVENT = {
   qualifier: "No",
 };
 
-function saveDraft(event: EventDraft, tournament: Partial<TournamentDraft> = {}) {
-  sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...EMPTY_TOURNAMENT_DRAFT, ...tournament, events: [event] }));
+function saveDraft(event: EventDraft) {
+  sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...EMPTY_TOURNAMENT_DRAFT, events: [event] }));
 }
 
 function storedEvents(): EventDraft[] {
   return JSON.parse(sessionStorage.getItem(DRAFT_KEY)!).events;
-}
-
-function mockDelete(status: number) {
-  global.fetch = jest.fn(async () => ({
-    status,
-    ok: status < 400,
-    json: async () => (status < 400 ? null : { detail: "Server exploded" }),
-  })) as unknown as typeof fetch;
 }
 
 describe("EventForm", () => {
@@ -79,28 +71,6 @@ describe("EventForm", () => {
 
     expect(screen.getByRole("textbox", { name: "Event name" })).toHaveValue("");
     expect(storedEvents()).toEqual([expect.objectContaining({ id: event.id, name: "", weapon: "" })]);
-  });
-
-  it.each([
-    { case: "an unsent event", event: { eventId: undefined }, status: 204, removed: true },
-    { case: "a sent event once the server deletes it", event: { eventId: "e1", saved: true }, status: 204, removed: true },
-    { case: "nothing when the server fails", event: { eventId: "e1", saved: true }, status: 500, removed: false },
-  ])("Remove event removes $case", async ({ event: patch, status, removed }) => {
-    mockDelete(status);
-    const event = { ...newEventDraft(), ...FILLED_EVENT, ...patch };
-    saveDraft(event, { tournamentId: "t1", saved: true });
-    render(<EventForm eventId={event.id} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Remove event" }));
-
-    if (removed) {
-      await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/admin/tournaments/new"));
-      expect(storedEvents()).toEqual([]);
-    } else {
-      expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't remove this event");
-      expect(mockPush).not.toHaveBeenCalled();
-      expect(storedEvents()).toHaveLength(1);
-    }
   });
 
   it("says so when the event isn't in the draft", () => {

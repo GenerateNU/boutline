@@ -70,7 +70,13 @@ function FencerImport({ onImport, disabled }: FencerImportProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <ImportDropzone accept={CSV_ACCEPT} hint="Only .csv files are accepted." onFile={handleFile} onReject={handleReject}>
+      <ImportDropzone
+        accept={CSV_ACCEPT}
+        title="Already have fencer info?"
+        hint=".csv files only"
+        onFile={handleFile}
+        onReject={handleReject}
+      >
         <CsvSampleButton />
       </ImportDropzone>
       {importError ? (
