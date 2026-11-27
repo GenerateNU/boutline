@@ -556,7 +556,7 @@ tournament. An event not in the tournament is a 404.
 
 **Status:** Partial.
 
-Where login and signup land by default, behind the login gate. A "Create
+Where login and signup land by default, behind the login gate. A "Create a new
 tournament" card links to the creation form (§10.6), then the tournaments the
 caller created or is staff in (`GET /tournaments?mine=true`, which matches
 `created_by` or any `tournament_users` row, admin or referee; the `created_by`
@@ -1073,12 +1073,15 @@ name, club and rating.
 - **Built:** the parser (`frontend/src/lib/competitor-import/`). It maps headers,
   checks ratings and birthdates, finds duplicates by member number, and caps
   uploads at 2 MiB and 5000 rows, with tests.
-- **Sample:** the creation form's dropzone says it takes only `.csv` and opens a
+- **Off the creation form for now (#348):** adding fencers is moving to its own
+  page, so the dropzone below and the fencer cards are built but not shown, and
+  events are created without fencers.
+- **Sample:** the dropzone says it takes only `.csv` and opens a
   sample CSV in a dialog, whose Download Sample CSV button saves it as
   `sample-competitors.csv`. The sample is the valid rows of #80's example upload
   (`example-competitor-import.ts`), and a parser test keeps every row of it valid.
-- **Autofill:** the creation form's dropzone runs the parser and sorts valid rows
-  into event cards (§10.6). Rejected files and parse errors show inline.
+- **Autofill:** the dropzone runs the parser and sorts valid rows into events by
+  their Event column. Rejected files and parse errors show inline.
 - **Planned:** submit commits the fencers with `POST /competitors` and reports
   created and skipped counts (#208).
 
@@ -1106,53 +1109,37 @@ Clearing a check-in later leaves the fencer in any pool they're already in.
 
 ### 10.6 Creation form (`/admin/tournaments/new`)
 
-**Status:** Partial. Issues: #136, #252.
+**Status:** Partial. Issues: #136, #252, #348.
 
-- **Built (UI only):** one page holds the tournament fields (§10.1), a CSV
-  dropzone (§10.4), and one card per event, titled by its event name ("Event 2"
-  until it has one), with the attributes in §8.5. Cards can be added and removed,
-  keeping at least one.
-- **Import:** the CSV's valid rows are sorted into cards by their Event column. A
-  card with a matching name (ignoring case) gets those fencers in place of its own,
-  so a second upload doesn't double them. Other events fill a blank card that has no
-  fencers yet, then get new cards. A toast says how many events and fencers were
-  autofilled and how many rows were skipped; a file that can't be read gets an
-  inline error instead, so it doesn't vanish before it's fixed.
-- **Saving:** the tournament details card has its own Save, and Save event stays
-  disabled until the tournament exists on the server. Either Save checks only its
-  own card (an event also checks its fencers) and marks empty fields. It then
-  sends the card to the API and collapses it to a summary
-  until Edit reopens it. The first Save tournament is `POST /tournaments`, later
-  ones `PATCH`. Save event does `POST`/`PATCH /events`, then deletes fencers
-  removed from the card, `PATCH`es fencers edited since their last save, and
-  `POST`s new ones. Each server id is written to the draft as soon as it arrives,
-  so a retry after a failure sends only what failed. A card can't be edited while
-  it saves. Removing a saved card deletes the
-  event first and drops the card only if that succeeds. An upload that replaces a
-  saved card's fencers deletes the old competitors on the next save and reopens
-  the card for review. A fencer's errors show on its card as "First Last: message".
-  The form sends the location as `city`, the date and time as the admin's local
+- **Tournament page:** the tournament fields (§10.1), then a collapsible Create
+  Events section listing one card per event by name ("Event 2" until it has one),
+  then Clear All and Continue. Add Events adds a blank event to the draft and opens
+  it on the event page. Edit Events turns on edit mode, where each card gets a
+  pencil that reopens its event, until Exit Edit Mode.
+- **Event page (`/admin/tournaments/new/event?id=`):** the attributes in §8.5 for
+  one draft event, with Weapon and Gender Mix as chip rows. Edits go straight into
+  the draft. Continue checks the event and goes back; Clear All empties its fields;
+  Remove event drops it, deleting it on the server first if an earlier Continue
+  sent it. An id that isn't in the draft says so and links back.
+- **Continue:** checks the tournament fields (marking empty ones), that there is
+  at least one event, and that every unsent event is complete, naming any that
+  aren't. It then sends the tournament (`POST /tournaments`, or `PATCH` once it
+  exists) and every unsent event in parallel (`POST`/`PATCH /events`). When all
+  succeed it clears the draft and opens the tournament dashboard (§4.6). Otherwise
+  it stays, names what failed with each event's error under its card, and keeps
+  the draft; each server id is written to the draft as soon as it arrives, so the
+  next Continue sends only what failed. Editing a sent tournament or event marks it
+  to be sent again. The form is disabled while anything saves.
+- The form sends the location as `city`, the date and time as the admin's local
   time converted to an instant, and a blank rating as `U`.
-- **Fencers:** each is a card inside its event, showing name, club, rating and
-  member number, plus what it is still missing. First and last name, gender, birth
-  date and division are required, as `POST /competitors` requires them. Imported
-  genders are mapped to F, M or O; anything else is left blank to be filled in. While the
-  event is being edited, fencers can be edited, removed, or added by hand.
-- **Collapsing:** event cards and fencer lists collapse, and a card's header shows
-  its title and fencer count either way. Collapsed fields escape the browser's
-  required check, so submit reopens any unsaved card that is missing fields or has
-  incomplete fencers, and names it.
-- **Draft:** the whole form, events and fencers included, is kept in
-  sessionStorage, so a reload doesn't lose it. Its key starts with `account:`.
-  Fencers' details mustn't reach the next account in the tab, so logging out
-  clears `account:` keys, and so does signing in as a different account than the
-  one that owned them (an expired session skips logout). The same account signing
-  back in keeps its draft.
-- **Submit:** Create tournament runs the same checks, saves the tournament if it
-  isn't saved, then every unsaved event in parallel. When all succeed it clears
-  the draft and opens the tournament dashboard (§4.6). Otherwise it stays, names
-  the cards that failed, and keeps the draft; the button is disabled while anything
-  saves.
+- **Draft:** the whole form, events included, is kept in sessionStorage, so a
+  reload or the trip to the event page doesn't lose it. Its key starts with
+  `account:`, so logging out clears it, and so does signing in as a different
+  account than the one that owned it (an expired session skips logout). The same
+  account signing back in keeps its draft. Clear All on the tournament page empties
+  it.
+- **Fencers:** not on this form for now (§10.4). The draft still holds each
+  event's fencers, and saving an event still sends any it has.
 - **Accepted risk:** requests carry no idempotency key, so a create that succeeds
   on the server but fails on the network can be duplicated by the retry.
 - **Planned:** adding staff and showing the competitor and staff counts on the

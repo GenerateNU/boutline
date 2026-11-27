@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 
-import { Button } from "@/components/primitives/button";
+import { ChipGroup, ChipGroupOptions } from "@/components/primitives/chip-group";
 import { DateField } from "@/components/primitives/date-field";
 import { SelectField } from "@/components/primitives/select-field";
 import { TextField } from "@/components/primitives/text-field";
@@ -10,13 +10,7 @@ import { TimeField } from "@/components/primitives/time-field";
 import { formatDateParam, parseDateParam } from "@/features/tournament/lib/date-param";
 
 import { EventDraft } from "../_types/tournament-draft";
-import {
-  EVENT_FORMATS,
-  EVENT_TYPES,
-  hasIncompleteFencers,
-  missingEventFields,
-  RequiredEventField,
-} from "../tournament-draft-helpers";
+import { EVENT_FORMATS, EVENT_TYPES, missingEventFields, RequiredEventField } from "../tournament-draft-helpers";
 import {
   AGE_CATEGORIES,
   GENDER_MIXES,
@@ -27,24 +21,20 @@ import {
 
 interface EventDraftFieldsProps {
   event: EventDraft;
-  // An event can only be saved once its tournament exists on the server.
-  canSave: boolean;
-  saving: boolean;
-  // Set while the card is being deleted, so Save can't race the delete.
-  removing: boolean;
-  // True once Save has failed, so empty fields stay marked from then on.
+  // True once Continue has failed, so empty fields stay marked from then on.
   attempted: boolean;
   onChange: (patch: Partial<EventDraft>) => void;
-  onSave: () => void;
-  // The fencer list, shown above Save since saving covers the fencers too.
-  children: React.ReactNode;
 }
 
-function EventDraftFields({ event, canSave, saving, removing, attempted, onChange, onSave, children }: EventDraftFieldsProps) {
+// ChipGroup takes value/label pairs; these option lists are their own labels.
+function chipOptions(labels: string[]) {
+  return labels.map((label) => ({ value: label, label }));
+}
+
+function EventDraftFields({ event, attempted, onChange }: EventDraftFieldsProps) {
   const errorId = useId();
   // Recomputed from the event, so a field turns back to normal once it's filled.
   const invalid = new Set<RequiredEventField>(attempted ? missingEventFields(event) : []);
-  const showFencerError = attempted && hasIncompleteFencers(event);
 
   // Marks an empty field and points it at the error, so a screen reader reads why.
   function invalidProps(field: RequiredEventField) {
@@ -52,7 +42,7 @@ function EventDraftFields({ event, canSave, saving, removing, attempted, onChang
   }
 
   return (
-    <fieldset disabled={saving || removing} className="flex min-w-0 flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <TextField
         label="Event name"
         placeholder="Y14 Women's Foil"
@@ -84,45 +74,45 @@ function EventDraftFields({ event, canSave, saving, removing, attempted, onChang
           onValueChange={(time) => onChange({ time })}
           required
         />
-        <SelectField
-          label="Weapon"
-          options={WEAPONS}
-          value={event.weapon}
-          {...invalidProps("weapon")}
-          onValueChange={(weapon) => onChange({ weapon })}
-          required
-        />
-        <SelectField
-          label="Gender Mix"
-          options={GENDER_MIXES}
-          value={event.genderMix}
-          {...invalidProps("genderMix")}
-          onValueChange={(genderMix) => onChange({ genderMix })}
-          required
-        />
-        <SelectField
-          label="Age Category"
-          options={AGE_CATEGORIES}
-          value={event.ageCategory}
-          {...invalidProps("ageCategory")}
-          onValueChange={(ageCategory) => onChange({ ageCategory })}
-          required
-        />
-        <SelectField
-          label="Rating Level"
-          options={RATING_LEVELS}
-          value={event.ratingLevel}
-          {...invalidProps("ratingLevel")}
-          onValueChange={(ratingLevel) => onChange({ ratingLevel })}
-          required
-        />
       </div>
+      <ChipGroup
+        label="Weapon"
+        value={event.weapon}
+        onValueChange={(weapon) => weapon && onChange({ weapon })}
+        className={invalid.has("weapon") ? "rounded-md ring-2 ring-red-dark" : undefined}
+      >
+        <ChipGroupOptions options={chipOptions(WEAPONS)} />
+      </ChipGroup>
+      <ChipGroup
+        label="Gender Mix"
+        value={event.genderMix}
+        onValueChange={(genderMix) => genderMix && onChange({ genderMix })}
+        className={invalid.has("genderMix") ? "rounded-md ring-2 ring-red-dark" : undefined}
+      >
+        <ChipGroupOptions options={chipOptions(GENDER_MIXES)} />
+      </ChipGroup>
+      <SelectField
+        label="Age Category"
+        options={AGE_CATEGORIES}
+        value={event.ageCategory}
+        {...invalidProps("ageCategory")}
+        onValueChange={(ageCategory) => onChange({ ageCategory })}
+        required
+      />
       <SelectField
         label="Event Format"
         options={EVENT_FORMATS}
         value={event.format}
         {...invalidProps("format")}
         onValueChange={(format) => onChange({ format })}
+        required
+      />
+      <SelectField
+        label="Rating Level"
+        options={RATING_LEVELS}
+        value={event.ratingLevel}
+        {...invalidProps("ratingLevel")}
+        onValueChange={(ratingLevel) => onChange({ ratingLevel })}
         required
       />
       <SelectField
@@ -134,30 +124,12 @@ function EventDraftFields({ event, canSave, saving, removing, attempted, onChang
         required
       />
 
-      {children}
       {invalid.size > 0 ? (
         <p id={errorId} role="alert" className="text-xs text-red-dark">
-          Fill in the highlighted fields to save this event.
+          Fill in the highlighted fields to add this event.
         </p>
       ) : null}
-      {showFencerError ? (
-        <p role="alert" className="text-xs text-red-dark">
-          Finish the fencers marked as missing details to save this event.
-        </p>
-      ) : null}
-      {canSave ? null : (
-        <p className="text-xs text-neutral-secondary">Save the tournament details before saving an event.</p>
-      )}
-      <Button
-        type="button"
-        variant="tonal"
-        className="h-10 rounded-full"
-        disabled={!canSave || saving || removing}
-        onClick={onSave}
-      >
-        {saving ? "Saving…" : "Save event"}
-      </Button>
-    </fieldset>
+    </div>
   );
 }
 

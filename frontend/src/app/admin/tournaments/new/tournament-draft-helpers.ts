@@ -121,7 +121,7 @@ export function missingTournamentFields(draft: TournamentDraft): RequiredTournam
   return REQUIRED_TOURNAMENT_FIELDS.filter((field) => draft[field].trim() === "");
 }
 
-// Starts with one blank event card, so there is always one to fill in or import into.
+// Events are added one at a time from the Add Events page.
 export const EMPTY_TOURNAMENT_DRAFT: TournamentDraft = {
   name: "",
   location: "",
@@ -130,7 +130,7 @@ export const EMPTY_TOURNAMENT_DRAFT: TournamentDraft = {
   time: "",
   authority: "",
   saved: false,
-  events: [newEventDraft()],
+  events: [],
 };
 
 // Event names match ignoring case and surrounding spaces ("Y14 Foil " = "y14 foil").

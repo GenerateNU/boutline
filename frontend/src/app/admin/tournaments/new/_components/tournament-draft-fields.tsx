@@ -1,8 +1,7 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId } from "react";
 
-import { Button } from "@/components/primitives/button";
 import { DateField } from "@/components/primitives/date-field";
 import { SelectField } from "@/components/primitives/select-field";
 import { TextField } from "@/components/primitives/text-field";
@@ -16,13 +15,11 @@ import { AUTHORITIES } from "../tournament-request-helpers";
 interface TournamentDraftFieldsProps {
   draft: TournamentDraft;
   onField: (field: RequiredTournamentField, value: string) => void;
-  onSave: () => void;
-  saving: boolean;
-  error: string | null;
+  // True once Continue has failed, so empty fields stay marked from then on.
+  attempted: boolean;
 }
 
-function TournamentDraftFields({ draft, onField, onSave, saving, error }: TournamentDraftFieldsProps) {
-  const [attempted, setAttempted] = useState(false);
+function TournamentDraftFields({ draft, onField, attempted }: TournamentDraftFieldsProps) {
   // Recomputed from the draft, so a field turns back to normal once it's filled.
   const invalid = new Set<RequiredTournamentField>(attempted ? missingTournamentFields(draft) : []);
   const errorId = useId();
@@ -32,19 +29,11 @@ function TournamentDraftFields({ draft, onField, onSave, saving, error }: Tourna
     return invalid.has(field) ? { "aria-invalid": true, "aria-describedby": errorId } : {};
   }
 
-  function handleSave() {
-    if (missingTournamentFields(draft).length > 0) {
-      setAttempted(true);
-      return;
-    }
-    onSave();
-  }
-
   return (
-    <fieldset disabled={saving} className="flex min-w-0 flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <TextField
-        label="Name of tournament"
-        placeholder="Northeastern Open"
+        label="Name of Tournament"
+        placeholder="ex. Boston Boutline Open"
         value={draft.name}
         {...invalidProps("name")}
         onChange={(change) => onField("name", change.target.value)}
@@ -52,7 +41,7 @@ function TournamentDraftFields({ draft, onField, onSave, saving, error }: Tourna
       />
       <TextField
         label="Location"
-        placeholder="City, State"
+        placeholder="ex. Boston, MA"
         value={draft.location}
         {...invalidProps("location")}
         onChange={(change) => onField("location", change.target.value)}
@@ -60,7 +49,7 @@ function TournamentDraftFields({ draft, onField, onSave, saving, error }: Tourna
       />
       <TextField
         label="Venue"
-        placeholder="Cabot Center"
+        placeholder="ex. Matthews Center"
         value={draft.venue}
         {...invalidProps("venue")}
         onChange={(change) => onField("venue", change.target.value)}
@@ -93,18 +82,10 @@ function TournamentDraftFields({ draft, onField, onSave, saving, error }: Tourna
 
       {invalid.size > 0 ? (
         <p id={errorId} role="alert" className="text-xs text-red-dark">
-          Fill in the highlighted fields to save the tournament.
+          Fill in the highlighted fields to create the tournament.
         </p>
       ) : null}
-      {error ? (
-        <p role="alert" className="text-xs text-red-dark">
-          {error}
-        </p>
-      ) : null}
-      <Button type="button" variant="tonal" className="h-10 rounded-full" disabled={saving} onClick={handleSave}>
-        {saving ? "Saving…" : "Save tournament"}
-      </Button>
-    </fieldset>
+    </div>
   );
 }
 

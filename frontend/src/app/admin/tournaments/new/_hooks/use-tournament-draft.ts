@@ -55,8 +55,11 @@ export function useTournamentDraft() {
     setDraft((current) => ({ ...current, saved }));
   }
 
+  // Returns the new event's id, so the Add Events page can open it.
   function addEvent() {
-    updateEvents((events) => [...events, newEventDraft()]);
+    const event = newEventDraft();
+    updateEvents((events) => [...events, event]);
+    return event.id;
   }
 
   function removeEvent(id: string) {
