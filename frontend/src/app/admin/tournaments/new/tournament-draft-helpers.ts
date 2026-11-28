@@ -113,6 +113,13 @@ export function missingEventFields(event: EventDraft): RequiredEventField[] {
   return REQUIRED_EVENT_FIELDS.filter((field) => event[field].trim() === "");
 }
 
+// Type and format start chosen, so an event is blank when only those are set: added
+// with Add Events but never filled in, never sent, and with no fencers.
+export function isBlankEvent(event: EventDraft) {
+  const untouched = missingEventFields(event).length === REQUIRED_EVENT_FIELDS.length - 2;
+  return untouched && !event.eventId && event.fencers.length === 0;
+}
+
 const REQUIRED_TOURNAMENT_FIELDS = ["name", "location", "venue", "date", "time", "authority"] as const;
 
 export type RequiredTournamentField = (typeof REQUIRED_TOURNAMENT_FIELDS)[number];
@@ -121,7 +128,7 @@ export function missingTournamentFields(draft: TournamentDraft): RequiredTournam
   return REQUIRED_TOURNAMENT_FIELDS.filter((field) => draft[field].trim() === "");
 }
 
-// Starts with one blank event card, so there is always one to fill in or import into.
+// Events are added one at a time from the Add Events page.
 export const EMPTY_TOURNAMENT_DRAFT: TournamentDraft = {
   name: "",
   location: "",
@@ -130,7 +137,7 @@ export const EMPTY_TOURNAMENT_DRAFT: TournamentDraft = {
   time: "",
   authority: "",
   saved: false,
-  events: [newEventDraft()],
+  events: [],
 };
 
 // Event names match ignoring case and surrounding spaces ("Y14 Foil " = "y14 foil").

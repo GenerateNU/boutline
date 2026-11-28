@@ -14,7 +14,7 @@ describe("AdminTournamentBrowserSkeleton", () => {
   it("renders the constant content for real", () => {
     render(<AdminTournamentBrowserSkeleton />);
 
-    expect(screen.getByRole("link", { name: /Create tournament/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Create a new tournament/ })).toHaveAttribute(
       "href",
       "/admin/tournaments/new",
     );

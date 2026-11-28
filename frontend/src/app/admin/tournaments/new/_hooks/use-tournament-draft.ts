@@ -1,3 +1,5 @@
+import { useCallback } from "react";
+
 import { ACCOUNT_STORAGE_PREFIX } from "@/features/auth/services/account-storage";
 import { useSessionStorage } from "@/lib/hooks/use-session-storage";
 import { CompetitorImportRow } from "@/types/competitor-import";
@@ -6,6 +8,7 @@ import { EventDraft, FencerDraft, TournamentDraft } from "../_types/tournament-d
 import {
   EMPTY_TOURNAMENT_DRAFT,
   importFencers,
+  isBlankEvent,
   newEventDraft,
   newFencerDraft,
   withoutFencer,
@@ -55,8 +58,11 @@ export function useTournamentDraft() {
     setDraft((current) => ({ ...current, saved }));
   }
 
+  // Returns the new event's id, so the Add Events page can open it.
   function addEvent() {
-    updateEvents((events) => [...events, newEventDraft()]);
+    const event = newEventDraft();
+    updateEvents((events) => [...events, event]);
+    return event.id;
   }
 
   function removeEvent(id: string) {
@@ -81,9 +87,15 @@ export function useTournamentDraft() {
     updateEvents((events) => importFencers(events, rows));
   }
 
-  function clear() {
-    setDraft(EMPTY_TOURNAMENT_DRAFT);
-  }
+  // Stable, so the form can clear the draft from an unmount effect.
+  const clear = useCallback(() => setDraft(EMPTY_TOURNAMENT_DRAFT), [setDraft]);
+
+  // Stable, so the form can run it from a mount effect. Reads the stored draft, not
+  // this render's copy, so it works before the draft has loaded into the page.
+  const removeBlankEvents = useCallback(
+    () => setDraft((current) => ({ ...current, events: current.events.filter((event) => !isBlankEvent(event)) })),
+    [setDraft],
+  );
 
   return {
     draft,
@@ -99,5 +111,6 @@ export function useTournamentDraft() {
     removeFencer,
     importRows,
     clear,
+    removeBlankEvents,
   };
 }

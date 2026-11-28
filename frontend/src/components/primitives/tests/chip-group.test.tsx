@@ -36,4 +36,16 @@ describe("ChipGroup", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Beta" }));
     expect(onValueChange).toHaveBeenLastCalledWith("b");
   });
+
+  it("marks the group invalid and points it at its error, like a form field", () => {
+    render(
+      <ChipGroup label="Weapon" aria-invalid aria-describedby="weapon-error">
+        <ChipGroupItem value="foil">Foil</ChipGroupItem>
+      </ChipGroup>,
+    );
+
+    const group = screen.getByRole("radiogroup", { name: "Weapon" });
+    expect(group).toHaveAttribute("aria-invalid", "true");
+    expect(group).toHaveAttribute("aria-describedby", "weapon-error");
+  });
 });

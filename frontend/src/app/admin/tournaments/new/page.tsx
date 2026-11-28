@@ -1,15 +1,13 @@
-import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
-import Link from "next/link";
+import { BackButton } from "@/components/primitives/back-button";
+import { Background } from "@/components/primitives/background";
 
 import { NewTournamentForm } from "./_components/new-tournament-form";
 
 export default function NewTournamentPage() {
   return (
-    <main className="mx-auto flex w-full max-w-mobile flex-col gap-6 px-7 py-5 lg:max-w-5xl">
-      <Link href="/admin/tournaments" className="flex items-center gap-1 self-start">
-        <ChevronLeftOutlined aria-hidden className="size-6" />
-        Back
-      </Link>
+    <main className="relative isolate mx-auto flex w-full max-w-mobile flex-col gap-6 overflow-hidden px-7 py-5">
+      <Background version={4} className="opacity-50" />
+      <BackButton href="/admin/tournaments" className="self-start" />
       <h1 className="text-xl font-medium text-brand">Create Tournament</h1>
       <NewTournamentForm />
     </main>

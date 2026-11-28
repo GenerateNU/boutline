@@ -128,7 +128,8 @@ Page text uses the `Text` primitive (`textVariants` inside other primitives' slo
   `border-red-dark` when `aria-invalid` or `:user-invalid` (a required field left
   empty once edited or submitted), and `bg-disabled` when disabled. A required
   field's label ends in a `text-red-dark` asterisk, hidden from screen readers since
-  `required` is already announced.
+  `required` is already announced. A required `ChipGroup` takes the same
+  `aria-invalid`, which gives each of its chips that 2px `border-red-dark`.
   - Select is Radix Select, its menu capped at `max-h-80` and scrolling past that.
   - The date field opens the calendar in a Radix Popover on the picked day (or
     today) and shows `MMM d, yyyy`.
@@ -149,6 +150,9 @@ Page text uses the `Text` primitive (`textVariants` inside other primitives' slo
   `triggerActive` gives the trigger its pressed look while filters are applied.
 - **Applied filters** show as `Name: Value` removable `Chip` tags (e.g. "Status: In
   Progress") under the page's search bar.
+- **Selection bar:** while edit mode has rows checked, a navy `rounded-xl` bar floats
+  at the bottom of the screen with "N selected", a Clear, and the selection's actions
+  as equal-width outline buttons (`SelectionBar`, in the creation form for now).
 - **Toast:** a single obsidian row with white `text-sm`, a leading icon, an
   `accent-green` action, and no close button.
 - A component used by one route stays in that route's `_components/` until a second

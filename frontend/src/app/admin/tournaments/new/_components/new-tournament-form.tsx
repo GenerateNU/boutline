@@ -1,242 +1,311 @@
 "use client";
 
-import AddOutlined from "@mui/icons-material/AddOutlined";
-import CheckCircleOutlined from "@mui/icons-material/CheckCircleOutlined";
+import EditOutlined from "@mui/icons-material/EditOutlined";
+import { cn } from "cn";
+import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@/components/primitives/button";
-import { ImportDropzone } from "@/components/primitives/import-dropzone";
-import { useToast } from "@/components/primitives/toast";
-import { parseCompetitorImport } from "@/lib/competitor-import/parse-competitor-import";
-import { pluralize } from "@/lib/pluralize";
-import { errorMessage } from "@/utils/error-message";
+import { Card, CardTitle } from "@/components/primitives/card";
+import { Checkbox } from "@/components/primitives/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/primitives/collapsible";
+import { Text } from "@/components/primitives/text";
 
 import { useDraftSaving } from "../_hooks/use-draft-saving";
 import { useTournamentDraft } from "../_hooks/use-tournament-draft";
 import {
   eventTitle,
-  hasIncompleteFencers,
-  importedEventCount,
+  isBlankEvent,
   missingEventFields,
   missingTournamentFields,
+  RequiredTournamentField,
 } from "../tournament-draft-helpers";
-import { CsvSampleButton } from "./csv-sample-button";
-import { EventDraftCard } from "./event-draft-card";
-import { TournamentDetailsCard } from "./tournament-details-card";
+import { SelectionBar } from "./selection-bar";
+import { TournamentFields } from "./tournament-fields";
 
-// The parser reads CSV only.
-const CSV_ACCEPT = { "text/csv": [".csv"] };
+function eventPagePath(localId: string) {
+  return `/admin/tournaments/new/event?id=${encodeURIComponent(localId)}`;
+}
+
+interface EventRowEdit {
+  href: string;
+  selected: boolean;
+  onSelectedChange: (selected: boolean) => void;
+}
+
+interface EventRowProps {
+  title: string;
+  // Set in edit mode. Links ignore the disabled fieldset, so the form leaves it unset while saving.
+  edit?: EventRowEdit;
+  errors: string[];
+}
+
+function EventRow({ title, edit, errors }: EventRowProps) {
+  return (
+    <li className="flex flex-col gap-1">
+      <Card orientation="horizontal" className="gap-2.5 py-3.5 pr-3">
+        {edit ? (
+          <Checkbox
+            checked={edit.selected}
+            aria-label={`Select ${title}`}
+            onCheckedChange={(checked) => edit.onSelectedChange(checked === true)}
+          />
+        ) : null}
+        <CardTitle className="min-w-0 flex-1 truncate text-sm font-medium text-obsidian uppercase">{title}</CardTitle>
+        {edit ? (
+          <Button asChild variant="text" size="icon" className="-my-2 size-8 text-neutral-secondary">
+            <Link href={edit.href} aria-label={`Edit ${title}`}>
+              <EditOutlined aria-hidden />
+            </Link>
+          </Button>
+        ) : null}
+      </Card>
+      {errors.length > 0 ? (
+        <ul role="alert" className="flex flex-col gap-1 text-xs text-red-dark">
+          {errors.map((message) => (
+            <li key={message}>{message}</li>
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
 
 function NewTournamentForm() {
   const router = useRouter();
-  const { toast } = useToast();
   const {
     draft,
     setField,
     setTournamentId,
     setTournamentSaved,
     addEvent,
-    updateEvent,
     updateEventWith,
     removeEvent,
-    addFencer,
-    updateFencer,
-    removeFencer,
-    importRows,
     clear,
+    removeBlankEvents,
   } = useTournamentDraft();
-  const [importError, setImportError] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const eventsHeadingId = useId();
+  const [attempted, setAttempted] = useState(false);
+  const [editing, setEditing] = useState(false);
+  // Local ids of the events checked in edit mode.
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saveFailed, setSaveFailed] = useState(false);
-  const { tournamentSaving, savingEvents, removingEvents, errors, saveTournament, saveEvent, removeEventCard, saveUnsaved } =
-    useDraftSaving({ draft, setTournamentId, setTournamentSaved, updateEventWith, removeEvent });
-  const latestUpload = useRef(0);
+  const { tournamentSaving, savingEvents, removingEvents, errors, removeEventCard, saveUnsaved } = useDraftSaving({
+    draft,
+    setTournamentId,
+    setTournamentSaved,
+    updateEventWith,
+    removeEvent,
+  });
   const isSaving = tournamentSaving || savingEvents.size > 0 || removingEvents.size > 0;
+  // A just-added event stays out of the list until something is filled in, so it can't
+  // flash as "Event 1" while its page opens; removeBlankEvents drops it if it never is.
+  const listedEvents = draft.events.filter((draftEvent) => !isBlankEvent(draftEvent));
+  // Set once the tournament is created. The draft is cleared when the dashboard replaces
+  // this page, not before, so the emptied fields never flash blank and invalid on screen.
+  const created = useRef(false);
 
-  // Parses an uploaded CSV, sorts its fencers into event cards, and toasts what
-  // it filled in. A file that finishes parsing after a newer upload started is
-  // dropped, so it can't overwrite the newer one. A file that can't be read gets
-  // an inline error instead, since a toast would vanish before it's fixed.
-  async function handleFile(file: File) {
-    if (isSaving) {
-      setImportError("Wait for the save to finish before importing a file.");
-      return;
-    }
-    const upload = ++latestUpload.current;
-    try {
-      const { rows } = await parseCompetitorImport(file);
-      if (upload !== latestUpload.current) {
-        return;
+  useEffect(
+    () => () => {
+      if (created.current) {
+        clear();
       }
-      importRows(rows);
-      setImportError(null);
-      const fencers = rows.filter((row) => row.status === "valid").length;
-      const events = importedEventCount(rows);
-      const skipped = rows.length - fencers;
-      const skippedNote = skipped > 0 ? ` Skipped ${skipped} invalid or duplicate ${pluralize(skipped, "row")}.` : "";
-      toast({
-        icon: <CheckCircleOutlined aria-hidden />,
-        description: `Autofilled ${events} ${pluralize(events, "event")} and ${fencers} ${pluralize(fencers, "fencer")} from ${file.name}.${skippedNote}`,
-      });
-    } catch (error) {
-      if (upload === latestUpload.current) {
-        setImportError(`Couldn't read ${file.name}: ${errorMessage(error)}`);
-      }
+    },
+    [clear],
+  );
+
+  // An event added and left without anything filled in (Add Events, then Back) is
+  // dropped when this page shows, so it can't block Continue with "Finish Event 1".
+  useEffect(() => {
+    removeBlankEvents();
+  }, [removeBlankEvents]);
+
+  // A tournament already sent by an earlier, partly failed Continue is sent again once edited.
+  function handleField(field: RequiredTournamentField, value: string) {
+    setField(field, value);
+    if (draft.saved) {
+      setTournamentSaved(false);
     }
   }
 
-  // A rejected file still supersedes any upload still parsing, so that one can't
-  // finish later, apply an older file, and clear this error.
-  function handleReject(message: string) {
-    latestUpload.current++;
-    setImportError(`Couldn't import that file: ${message}`);
+  function handleAddEvent() {
+    router.push(eventPagePath(addEvent()));
   }
 
-  function setExpanded(ids: string[], expanded: boolean) {
-    setCollapsed((current) => {
+  function setEventSelected(localId: string, isSelected: boolean) {
+    setSelected((current) => {
       const next = new Set(current);
-      ids.forEach((id) => (expanded ? next.delete(id) : next.add(id)));
+      if (isSelected) {
+        next.add(localId);
+      } else {
+        next.delete(localId);
+      }
       return next;
     });
   }
 
-  // The browser only checks fields on the page, and a collapsed card's aren't,
-  // so unsaved cards are checked here and reopened if they're missing anything.
-  // Saved cards were checked when saved. Whatever isn't saved yet is then sent,
-  // and the draft is cleared only once all of it is on the server.
+  function toggleEditing() {
+    setEditing(!editing);
+    setSelected(new Set());
+  }
+
+  // A removal that fails keeps its event, with the error under its card. Removing
+  // every event also leaves edit mode, which has nothing left to edit.
+  async function handleRemoveSelected() {
+    const ids = [...selected];
+    setSelected(new Set());
+    if (ids.length === listedEvents.length) {
+      setEditing(false);
+    }
+    await Promise.all(ids.map((localId) => removeEventCard(localId)));
+  }
+
+  function handleClear() {
+    clear();
+    setAttempted(false);
+    setEditing(false);
+    setSelected(new Set());
+    setSubmitError(null);
+    setSaveFailed(false);
+  }
+
+  // The browser's required check accepts a field of spaces, and events are filled in
+  // on their own page, so both are checked here. Whatever isn't saved yet is then
+  // sent, and the draft is cleared only once all of it is on the server.
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaveFailed(false);
-    // The browser's required check accepts a field of spaces, so the tournament
-    // is checked here too.
     if (missingTournamentFields(draft).length > 0) {
-      setTournamentSaved(false);
-      setSubmitError("Finish the tournament details before creating the tournament.");
+      setAttempted(true);
+      setSubmitError(null);
       return;
     }
-    const incomplete = draft.events
+    if (listedEvents.length === 0) {
+      setSubmitError("Add at least one event before creating the tournament.");
+      return;
+    }
+    const incomplete = listedEvents
       .map((draftEvent, index) => ({ draftEvent, title: eventTitle(draftEvent, index) }))
-      .filter(({ draftEvent }) => {
-        const hasMissingFields = missingEventFields(draftEvent).length > 0;
-        return !draftEvent.saved && (hasMissingFields || hasIncompleteFencers(draftEvent));
-      });
+      .filter(({ draftEvent }) => !draftEvent.saved && missingEventFields(draftEvent).length > 0);
     if (incomplete.length > 0) {
-      setExpanded(incomplete.map(({ draftEvent }) => draftEvent.id), true);
       setSubmitError(`Finish ${incomplete.map(({ title }) => title).join(", ")} before creating the tournament.`);
       return;
     }
     setSubmitError(null);
-    // Drops any upload still parsing, so it can't add cards that this save
-    // doesn't send and the clear below then throws away.
-    latestUpload.current++;
     const tournamentId = await saveUnsaved();
     if (!tournamentId) {
       setSaveFailed(true);
       return;
     }
-    clear();
+    created.current = true;
     router.push(`/admin/tournaments/${tournamentId}`);
   }
 
-  // Derived from the cards' own errors, so it goes away once a retry fixes them.
+  // Derived from the save errors, so it goes away once a retry fixes them.
   function saveFailureMessage() {
     if (errors.tournament) {
-      return "Couldn't save the tournament details.";
+      return `Couldn't save the tournament details: ${errors.tournament}`;
     }
-    const failedTitles = draft.events
+    const failedTitles = listedEvents
       .map((draftEvent, index) => ({ id: draftEvent.id, title: eventTitle(draftEvent, index) }))
       .filter(({ id }) => errors.events[id])
       .map(({ title }) => title);
     return failedTitles.length > 0
-      ? `Couldn't save ${failedTitles.join(", ")}. Fix the errors on the cards and try again.`
+      ? `Couldn't save ${failedTitles.join(", ")}. Fix the errors under each event and try again.`
       : null;
-  }
-
-  async function handleSaveEvent(localId: string) {
-    if (draft.tournamentId) {
-      await saveEvent(localId, draft.tournamentId);
-    }
   }
 
   const submitMessage = saveFailed ? saveFailureMessage() : submitError;
 
-  // One column on phones (upload, tournament, events, submit). On a laptop the
-  // upload spans both columns, then events sit in a right column beside the
-  // tournament and submit; the 1fr last row keeps submit right under the
-  // tournament however tall the events get.
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-x-10"
-    >
-      <div className="flex flex-col gap-4 lg:col-span-2">
-        <ImportDropzone
-          accept={CSV_ACCEPT}
-          hint="Only .csv files are accepted."
-          onFile={handleFile}
-          onReject={handleReject}
-        >
-          <CsvSampleButton />
-        </ImportDropzone>
-        {importError ? (
-          <p role="alert" className="text-xs text-red-dark">
-            {importError}
-          </p>
-        ) : null}
-      </div>
+    <form onSubmit={handleSubmit} className={cn("flex flex-col gap-6", editing && selected.size > 0 && "pb-36")}>
+      <fieldset disabled={isSaving} className="flex min-w-0 flex-col gap-6">
+        <TournamentFields draft={draft} onField={handleField} attempted={attempted} />
 
-      <div className="lg:col-start-1">
-        <TournamentDetailsCard
-          draft={draft}
-          onField={setField}
-          onEdit={() => setTournamentSaved(false)}
-          onSave={saveTournament}
-          saving={tournamentSaving}
-          error={errors.tournament}
-        />
-      </div>
+        <Collapsible defaultOpen>
+          <div className="relative flex items-center justify-between">
+            <Text as="h2" id={eventsHeadingId} variant="title" className="text-lg font-medium text-obsidian">
+              Create Events
+            </Text>
+            {/* A button can't hold the heading, so the trigger is the chevron and its
+                ::after stretches over the header to keep the whole row clickable. */}
+            <CollapsibleTrigger
+              aria-labelledby={eventsHeadingId}
+              className="group/trigger flex shrink-0 cursor-pointer items-center outline-none after:absolute after:-inset-2 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring"
+            >
+              <ExpandMoreOutlined
+                aria-hidden
+                className="size-5 text-neutral-secondary transition-transform group-data-[state=open]/trigger:rotate-180"
+              />
+            </CollapsibleTrigger>
+          </div>
+          {/* The negative margin and matching padding leave room for focus rings,
+              which the animation's overflow-hidden would otherwise clip. */}
+          <CollapsibleContent className="-mx-1 -mb-1 px-1 pb-1">
+            <div className="flex flex-col gap-3 pt-3">
+              <div className="flex gap-2">
+                {editing ? null : (
+                  <Button type="button" size="sm" onClick={handleAddEvent}>
+                    Add Events
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={editing ? "filled" : "outline"}
+                  disabled={listedEvents.length === 0}
+                  onClick={toggleEditing}
+                >
+                  {editing ? "Exit Edit Mode" : "Edit Mode"}
+                </Button>
+              </div>
+              <ul aria-label="Events" className="flex flex-col gap-3">
+                {listedEvents.map((draftEvent, index) => (
+                  <EventRow
+                    key={draftEvent.id}
+                    title={eventTitle(draftEvent, index)}
+                    edit={
+                      editing && !isSaving
+                        ? {
+                            href: eventPagePath(draftEvent.id),
+                            selected: selected.has(draftEvent.id),
+                            onSelectedChange: (isSelected) => setEventSelected(draftEvent.id, isSelected),
+                          }
+                        : undefined
+                    }
+                    errors={errors.events[draftEvent.id] ?? []}
+                  />
+                ))}
+              </ul>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </fieldset>
 
-      <section aria-labelledby="events-heading" className="flex flex-col gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-2">
-        <h2 id="events-heading" className="text-lg font-semibold text-obsidian">
-          Events
-        </h2>
-        {draft.events.map((event, index) => (
-          <EventDraftCard
-            key={event.id}
-            event={event}
-            title={eventTitle(event, index)}
-            expanded={!collapsed.has(event.id)}
-            tournamentId={draft.tournamentId}
-            saving={savingEvents.has(event.id)}
-            removing={removingEvents.has(event.id)}
-            errors={errors.events[event.id] ?? []}
-            onExpandedChange={(expanded) => setExpanded([event.id], expanded)}
-            onChange={(patch) => updateEvent(event.id, patch)}
-            onSave={() => handleSaveEvent(event.id)}
-            onRemove={draft.events.length > 1 ? () => removeEventCard(event.id) : undefined}
-            onAddFencer={() => addFencer(event.id)}
-            onChangeFencer={(fencerId, patch) => updateFencer(event.id, fencerId, patch)}
-            onRemoveFencer={(fencerId) => removeFencer(event.id, fencerId)}
-          />
-        ))}
-        <Button type="button" variant="outline" className="h-12 rounded-full" onClick={addEvent} disabled={isSaving}>
-          <AddOutlined aria-hidden />
-          Add event
-        </Button>
-      </section>
-
-      <div className="flex flex-col gap-2 lg:col-start-1">
+      <div className="flex flex-col gap-3">
         {submitMessage ? (
           <p role="alert" className="text-xs text-red-dark">
             {submitMessage}
           </p>
         ) : null}
-        <Button type="submit" variant="filled" className="h-12 rounded-full" disabled={isSaving}>
-          Create tournament
+        <Button type="button" variant="tonal" className="w-full" disabled={isSaving} onClick={handleClear}>
+          Clear All
+        </Button>
+        <Button type="submit" className="w-full" disabled={isSaving}>
+          Continue
         </Button>
       </div>
+
+      {editing && selected.size > 0 ? (
+        <SelectionBar count={selected.size} onClear={() => setSelected(new Set())}>
+          <Button type="button" variant="outline" disabled={isSaving} onClick={handleRemoveSelected}>
+            Remove
+          </Button>
+        </SelectionBar>
+      ) : null}
     </form>
   );
 }

@@ -6,6 +6,7 @@ import {
   formatRating,
   importedEventCount,
   importFencers,
+  isBlankEvent,
   missingEventFields,
   missingFencerFields,
   newEventDraft,
@@ -149,12 +150,12 @@ describe("missingEventFields", () => {
     },
     {
       name: "treats whitespace as empty",
-      patch: { name: "  ", date: "2026-11-20", time: "09:00", weapon: "Foil", genderMix: "Female", ageCategory: "Y14", ratingLevel: "Open", qualifier: "No" },
+      patch: { name: "  ", date: "2026-11-20", time: "09:00", weapon: "foil", genderMix: "female", ageCategory: "Y14", ratingLevel: "Open", qualifier: "No" },
       want: ["name"],
     },
     {
       name: "is empty once everything is filled",
-      patch: { name: "Y14 Foil", date: "2026-11-20", time: "09:00", weapon: "Foil", genderMix: "Female", ageCategory: "Y14", ratingLevel: "Open", qualifier: "No" },
+      patch: { name: "Y14 Foil", date: "2026-11-20", time: "09:00", weapon: "foil", genderMix: "female", ageCategory: "Y14", ratingLevel: "Open", qualifier: "No" },
       want: [],
     },
   ])("$name", ({ patch, want }) => {
@@ -215,5 +216,17 @@ describe("formatRating", () => {
     { rating: "U", ratingYear: undefined, want: "U" },
   ] as const)("formats $rating $ratingYear as $want", ({ rating, ratingYear, want }) => {
     expect(formatRating({ ...row("Ada", "").competitor, rating, ratingYear })).toBe(want);
+  });
+});
+
+describe("isBlankEvent", () => {
+  it.each([
+    { case: "a new event", patch: {}, blank: true },
+    { case: "one with a name", patch: { name: "Y14 Foil" }, blank: false },
+    { case: "one with a weapon picked", patch: { weapon: "foil" }, blank: false },
+    { case: "one already sent", patch: { eventId: "e1" }, blank: false },
+    { case: "one with fencers", patch: { fencers: [newFencerDraft()] }, blank: false },
+  ])("$case is blank: $blank", ({ patch, blank }) => {
+    expect(isBlankEvent({ ...newEventDraft(), ...patch })).toBe(blank);
   });
 });

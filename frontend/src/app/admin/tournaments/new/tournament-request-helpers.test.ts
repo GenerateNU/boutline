@@ -7,21 +7,16 @@ import {
   AUTHORITY_VALUES,
   competitorRequest,
   eventRequest,
-  GENDER_MIXES,
   localStartTime,
   QUALIFIER_OPTIONS,
   RATING_LEVELS,
   RATING_LEVEL_VALUES,
   tournamentRequest,
-  WEAPON_VALUES,
-  WEAPONS,
 } from "./tournament-request-helpers";
 
 describe("option lists", () => {
   it.each([
     { name: "authorities", options: AUTHORITIES, want: ["askFRED", "USA Fencing", "FIE", "Other"] },
-    { name: "weapons", options: WEAPONS, want: ["Foil", "Épée", "Sabre"] },
-    { name: "gender mixes", options: GENDER_MIXES, want: ["Male", "Female", "Other"] },
     { name: "age categories", options: AGE_CATEGORIES, want: ["Y8", "Y10", "Y12", "Y14", "Cadet", "Junior", "Senior", "Veteran", "Open"] },
     {
       name: "rating levels",
@@ -68,14 +63,14 @@ describe("eventRequest", () => {
     ...newEventDraft(" Y14 Foil "),
     date: "2026-11-20",
     time: "10:00",
-    weapon: "Foil",
-    genderMix: "Female",
+    weapon: "foil",
+    genderMix: "female",
     ageCategory: "Y14",
     ratingLevel: "Open",
     qualifier: "No",
   };
 
-  it("maps every label and leaves the format out", () => {
+  it("maps every label, sends weapon and gender as picked, and leaves the format out", () => {
     expect(eventRequest(FILLED)).toEqual({
       name: "Y14 Foil",
       start_time: localStartTime("2026-11-20", "10:00"),
@@ -89,7 +84,6 @@ describe("eventRequest", () => {
   });
 
   it.each([
-    ...Object.entries(WEAPON_VALUES).map(([label, wire]) => ({ patch: { weapon: label }, key: "weapon", wire })),
     ...Object.entries(AGE_CATEGORY_VALUES).map(([label, wire]) => ({ patch: { ageCategory: label }, key: "age_category", wire })),
     ...Object.entries(RATING_LEVEL_VALUES).map(([label, wire]) => ({ patch: { ratingLevel: label }, key: "rating_limit", wire })),
     { patch: { qualifier: "Yes" }, key: "qualifier", wire: true },
