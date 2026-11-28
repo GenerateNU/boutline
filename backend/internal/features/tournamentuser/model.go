@@ -32,12 +32,14 @@ func (TournamentUser) TableName() string {
 	return "tournament_users"
 }
 
-// TournamentMember is a membership joined with the member's name, which is all
-// a listing exposes of the user, and what they're refereeing in the tournament.
+// TournamentMember is a membership joined with the member's name and email, and
+// what they're refereeing in the tournament. The service shows the email only to
+// the tournament's admins.
 type TournamentMember struct {
 	TournamentUser `gorm:"embedded"`
 	FirstName      string
 	LastName       string
+	Email          string
 	Occupied       bool
 	PoolNumber     *int
 }

@@ -1166,6 +1166,104 @@ func TestListUsersByTournament(t *testing.T) {
 	})
 }
 
+func TestListUsersByTournamentStaffFilters(t *testing.T) {
+	t.Parallel()
+
+	tournamentID := uuid.New()
+	sam := uuid.New()
+	poolOne, poolTwo := uuid.New(), uuid.New()
+	seed := append(Staff(tournamentID),
+		tournamentuser.TournamentUser{TournamentID: tournamentID, UserID: sam, Role: tournamentuser.TournamentUserRoleReferee})
+
+	tests := []struct {
+		name       string
+		caller     Caller
+		input      tournament.TournamentUserListInput
+		wantStatus int
+		wantLast   []string
+		wantEmails bool
+	}{
+		{
+			name:       "an admin sees every member's email",
+			caller:     CallerAdmin,
+			wantLast:   []string{"Admin", "Referee", "Rivera"},
+			wantEmails: true,
+		},
+		{
+			name:     "a referee sees no emails",
+			caller:   CallerReferee,
+			wantLast: []string{"Admin", "Referee", "Rivera"},
+		},
+		{
+			name:     "anyone can filter by pool",
+			caller:   CallerAnonymous,
+			input:    tournament.TournamentUserListInput{Pool: poolTwo.String()},
+			wantLast: []string{"Rivera"},
+		},
+		{
+			name:       "rejects a pool that isn't an id",
+			caller:     CallerAnonymous,
+			input:      tournament.TournamentUserListInput{Pool: "2"},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "an admin filters by part of an email, ignoring case",
+			caller:     CallerAdmin,
+			input:      tournament.TournamentUserListInput{Email: "  SAM@ "},
+			wantLast:   []string{"Rivera"},
+			wantEmails: true,
+		},
+		{
+			name:       "a referee can't filter by email",
+			caller:     CallerReferee,
+			input:      tournament.TournamentUserListInput{Email: "sam"},
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:       "nor can a signed-out caller",
+			caller:     CallerAnonymous,
+			input:      tournament.TournamentUserListInput{Email: "sam"},
+			wantStatus: http.StatusForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := NewFakeTournamentUserRepository(seed...)
+			repo.Names = map[uuid.UUID][2]string{
+				TestAdminID:   {"Ada", "Admin"},
+				TestRefereeID: {"Rex", "Referee"},
+				sam:           {"Sam", "Rivera"},
+			}
+			repo.Emails = map[uuid.UUID]string{
+				TestAdminID:   "ada@boutline.dev",
+				TestRefereeID: "rex@boutline.dev",
+				sam:           "sam@boutline.dev",
+			}
+			repo.Pools = map[uuid.UUID][]uuid.UUID{TestRefereeID: {poolOne}, sam: {poolTwo}}
+			service := tournament.NewTournamentService(NewFakeTournamentRepository(), repo)
+
+			tt.input.TournamentID = tournamentID.String()
+			output, err := service.ListUsersByTournament(tt.caller.Context(context.Background()), &tt.input)
+
+			if tt.wantStatus != 0 {
+				code, _ := apiError(t, err)
+				assert.Equal(t, tt.wantStatus, code)
+				return
+			}
+			require.NoError(t, err)
+			lastNames := make([]string, 0, len(output.Body.Data))
+			for _, row := range output.Body.Data {
+				lastNames = append(lastNames, row.LastName)
+				assert.Equal(t, tt.wantEmails, row.Email != nil, "email shown for %s", row.LastName)
+			}
+			assert.ElementsMatch(t, tt.wantLast, lastNames)
+		})
+	}
+}
+
 func TestUpdateTournamentUserRole(t *testing.T) {
 	t.Parallel()
 

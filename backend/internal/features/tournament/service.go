@@ -514,19 +514,24 @@ func (s *tournamentService) ListUsersByTournament(
 
 	limit, offset := page(input.Limit, input.Offset)
 
-	members, total, err := s.membershipRepo.ListMembersByTournament(ctx, tournamentID, tournamentuser.TournamentUserFilter{
-		Role:   input.Role,
-		Term:   strings.TrimSpace(input.Query),
-		Limit:  limit,
-		Offset: offset,
-	})
+	// Anyone can list a tournament's staff, but only its admins see or search their emails.
+	isAdmin, err := s.callerIsAdmin(ctx, tournamentID)
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+	filter, err := memberFilter(input, isAdmin, limit, offset)
+	if err != nil {
+		return nil, errs.HumaError(err)
+	}
+
+	members, total, err := s.membershipRepo.ListMembersByTournament(ctx, tournamentID, filter)
 	if err != nil {
 		return nil, errs.HumaError(fmt.Errorf("list users in tournament: %w", err))
 	}
 
 	data := make([]TournamentMemberResponse, 0, len(members))
 	for _, member := range members {
-		data = append(data, newTournamentMemberResponse(member))
+		data = append(data, newTournamentMemberResponse(member, isAdmin))
 	}
 
 	return &TournamentUserListOutput{Body: TournamentUserListBody{
@@ -610,6 +615,59 @@ func (s *tournamentService) keepCreatorAdmin(ctx context.Context, tournamentID, 
 	}
 
 	return nil
+}
+
+// A caller who isn't an admin of the tournament gets false, not an error; only a
+// failed lookup is one.
+func (s *tournamentService) callerIsAdmin(ctx context.Context, tournamentID uuid.UUID) (bool, error) {
+	err := tournamentuser.RequireRole(ctx, s.membershipRepo, tournamentID, tournamentuser.TournamentUserRoleAdmin)
+	if errors.Is(err, errs.ErrForbidden) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("check caller role: %w", err)
+	}
+
+	return true, nil
+}
+
+// The repository filter for a members list. Only admins may filter by email.
+func memberFilter(
+	input *TournamentUserListInput,
+	isAdmin bool,
+	limit, offset int,
+) (tournamentuser.TournamentUserFilter, error) {
+	email := strings.TrimSpace(input.Email)
+	if email != "" && !isAdmin {
+		return tournamentuser.TournamentUserFilter{}, errs.Public(
+			"filtering by email requires the admin role in the tournament", errs.ErrForbidden)
+	}
+	poolID, err := optionalUUID(input.Pool, "pool")
+	if err != nil {
+		return tournamentuser.TournamentUserFilter{}, err
+	}
+
+	return tournamentuser.TournamentUserFilter{
+		Role:   input.Role,
+		Term:   strings.TrimSpace(input.Query),
+		Email:  email,
+		PoolID: poolID,
+		Limit:  limit,
+		Offset: offset,
+	}, nil
+}
+
+// An unset optional ID is nil; a set one must parse.
+func optionalUUID(raw, field string) (*uuid.UUID, error) {
+	if raw == "" {
+		return nil, nil
+	}
+	id, err := utils.ParseUUID(raw, field)
+	if err != nil {
+		return nil, err
+	}
+
+	return &id, nil
 }
 
 func parseMembershipIDs(rawTournamentID, rawUserID string) (uuid.UUID, uuid.UUID, error) {

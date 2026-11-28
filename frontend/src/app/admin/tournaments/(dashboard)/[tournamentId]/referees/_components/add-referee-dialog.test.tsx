@@ -1,9 +1,9 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { Toaster } from "@/components/primitives/toast";
-import type { TournamentEvent } from "@/features/event/types/event";
 import { ApiError, apiRequest } from "@/services/api-request";
 
+import type { PoolOption } from "../_services/get-tournament-pools";
 import { AddRefereeDialog } from "./add-referee-dialog";
 
 const refresh = jest.fn();
@@ -33,17 +33,11 @@ const USERS = {
   offset: 0,
 };
 
-const POOLS = {
-  data: [
-    { id: "p-1", number: 1, status: "active" },
-    { id: "p-2", number: 2, status: "upcoming" },
-  ],
-  total: 2,
-  limit: 100,
-  offset: 0,
-};
-
-const EVENTS = [{ id: "e-1", name: "Mixed Épée" }] as TournamentEvent[];
+// p-1 has started, so only p-2 can take a referee.
+const POOLS: PoolOption[] = [
+  { id: "p-1", label: "Pool 1 · Mixed Épée", upcoming: false },
+  { id: "p-2", label: "Pool 2 · Mixed Épée", upcoming: true },
+];
 
 const DUPLICATE = new ApiError("This user is already a referee in this tournament", 409);
 
@@ -78,9 +72,6 @@ function mockApi(staffError?: Error) {
     if (path.startsWith("/users")) {
       return USERS;
     }
-    if (path.startsWith("/pool-sheets")) {
-      return POOLS;
-    }
     if (path.endsWith("/users") && staffError) {
       throw staffError;
     }
@@ -88,12 +79,12 @@ function mockApi(staffError?: Error) {
   });
 }
 
-function renderDialog(events = EVENTS) {
+function renderDialog(pools = POOLS) {
   render(
     <Toaster>
       <AddRefereeDialog
         tournamentId="t-1"
-        events={events}
+        pools={pools}
         open
         onOpenChange={onOpenChange}
         returnFocusTo={{ current: null }}
@@ -110,15 +101,12 @@ describe("AddRefereeDialog", () => {
   });
 
   it.each([
-    { name: "while the pools load", events: EVENTS, poolsPending: true, text: "Loading pools…", disabled: true },
-    { name: "with no pools", events: [], poolsPending: false, text: "No pools yet", disabled: true },
-    { name: "once the pools arrive", events: EVENTS, poolsPending: false, text: "eg. 1,2,3,4...", disabled: false },
-  ])("shows the Pool field $name", async ({ events, poolsPending, text, disabled }) => {
+    { name: "with no pools", pools: [], text: "No pools yet", disabled: true },
+    { name: "with only started pools", pools: [POOLS[0]], text: "No pools yet", disabled: true },
+    { name: "with an upcoming pool", pools: POOLS, text: "eg. 1,2,3,4...", disabled: false },
+  ])("shows the Pool field $name", async ({ pools, text, disabled }) => {
     mockApi();
-    if (poolsPending) {
-      apiRequestMock.mockImplementation(() => new Promise(() => {}));
-    }
-    renderDialog(events);
+    renderDialog(pools);
 
     const pool = screen.getByRole("combobox", { name: "Pool" });
     await waitFor(() => expect(pool).toHaveTextContent(text));

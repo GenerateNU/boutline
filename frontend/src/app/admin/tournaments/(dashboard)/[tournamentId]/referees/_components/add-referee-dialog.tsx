@@ -1,75 +1,32 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { Chip } from "@/components/primitives/chip";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { Modal, ModalFooter } from "@/components/primitives/modal";
-import { SelectField, type SelectOption } from "@/components/primitives/select-field";
+import { SelectField } from "@/components/primitives/select-field";
 import { useToast } from "@/components/primitives/toast";
 import type { AuthUser } from "@/features/auth/types/auth";
-import type { TournamentEvent } from "@/features/event/types/event";
 import { useSearchSuggestions } from "@/lib/hooks/use-search-suggestions";
 import { ApiError, apiRequest } from "@/services/api-request";
 import type { ListResponse } from "@/types/list-response";
 import { errorMessage } from "@/utils/error-message";
 
-const SUGGESTION_LIMIT = 10;
-// The backend's maximum page size; no event has anywhere near this many pools.
-const POOL_LIMIT = 100;
+import type { PoolOption } from "../_services/get-tournament-pools";
 
+const SUGGESTION_LIMIT = 10;
 interface UserSuggestion {
   value: string;
   label: string;
   name: string;
 }
 
-interface PoolSheet {
-  id: string;
-  number: number;
-  status: "upcoming" | "active" | "ended";
-}
-
-interface TournamentPool extends PoolSheet {
-  eventName: string;
-}
-
 function toSuggestion({ id, firstName, lastName, email }: AuthUser): UserSuggestion {
   const name = `${firstName} ${lastName}`;
   return { value: id, label: `${name} · ${email}`, name };
-}
-
-// Pool numbers repeat across events, so each label names its event.
-function poolLabel({ number, eventName }: TournamentPool) {
-  return `Pool ${number} · ${eventName}`;
-}
-
-function toPoolOption(pool: TournamentPool): SelectOption {
-  return { value: pool.id, label: poolLabel(pool) };
-}
-
-function poolPlaceholder(pools: TournamentPool[] | null) {
-  if (pools === null) {
-    return "Loading pools…";
-  }
-  return pools.length === 0 ? "No pools yet" : "eg. 1,2,3,4...";
-}
-
-async function fetchEventPools({ id, name }: TournamentEvent): Promise<TournamentPool[]> {
-  const query = new URLSearchParams({ event_id: id, limit: String(POOL_LIMIT) });
-  const result = await apiRequest<ListResponse<PoolSheet>>(`/pool-sheets?${query}`);
-  // A pool that has started can't change referee, so only upcoming ones are offered.
-  return result.data
-    .filter((pool) => pool.status === "upcoming")
-    .map((pool) => ({ ...pool, eventName: name }));
-}
-
-// Every event's upcoming pools, as one list for the Pool dropdown.
-async function fetchTournamentPools(events: TournamentEvent[]) {
-  const poolsByEvent = await Promise.all(events.map(fetchEventPools));
-  return poolsByEvent.flat();
 }
 
 // allowExisting: when a pool is being assigned, someone already on the staff is fine.
@@ -88,18 +45,17 @@ async function addToStaff(tournamentId: string, userId: string, allowExisting: b
 
 interface AddRefereeDialogProps {
   tournamentId: string;
-  events: TournamentEvent[];
+  // Every pool of the tournament; only upcoming ones can take a referee.
+  pools: PoolOption[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   returnFocusTo: React.RefObject<HTMLElement | null>;
 }
 
-function AddRefereeDialog({ tournamentId, events, open, onOpenChange, returnFocusTo }: AddRefereeDialogProps) {
+function AddRefereeDialog({ tournamentId, pools, open, onOpenChange, returnFocusTo }: AddRefereeDialogProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [pickedUser, setPickedUser] = useState<UserSuggestion | null>(null);
-  // null while the pools are loading.
-  const [pools, setPools] = useState<TournamentPool[] | null>(null);
   const [poolId, setPoolId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -111,33 +67,11 @@ function AddRefereeDialog({ tournamentId, events, open, onOpenChange, returnFocu
     return result.data.map(toSuggestion);
   });
 
-  // Load the pools each time the dialog opens; ignore stops a stale load from landing after it closes.
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    let ignore = false;
-    fetchTournamentPools(events)
-      .then((found) => {
-        if (!ignore) {
-          setPools(found);
-        }
-      })
-      .catch((err) => {
-        if (!ignore) {
-          setPools([]);
-          setError(errorMessage(err));
-        }
-      });
-    return () => {
-      ignore = true;
-    };
-  }, [open, events]);
+  const upcomingPools = pools.filter(({ upcoming }) => upcoming);
 
   // Opening or closing always starts from a blank form.
   function handleOpenChange(next: boolean) {
     setPickedUser(null);
-    setPools(null);
     setPoolId("");
     setError(null);
     userSearch.clear();
@@ -150,7 +84,7 @@ function AddRefereeDialog({ tournamentId, events, open, onOpenChange, returnFocu
       return;
     }
     setError(null);
-    const selectedPool = pools?.find(({ id }) => id === poolId);
+    const selectedPool = upcomingPools.find(({ id }) => id === poolId);
 
     // Add them to the staff, then put them on the pool if one was picked.
     startTransition(async () => {
@@ -166,7 +100,7 @@ function AddRefereeDialog({ tournamentId, events, open, onOpenChange, returnFocu
         router.refresh();
         toast({
           description: selectedPool
-            ? `Added ${pickedUser.name} as the referee for ${poolLabel(selectedPool)}`
+            ? `Added ${pickedUser.name} as the referee for ${selectedPool.label}`
             : `Added ${pickedUser.name} as a referee`,
         });
         handleOpenChange(false);
@@ -214,11 +148,11 @@ function AddRefereeDialog({ tournamentId, events, open, onOpenChange, returnFocu
         <SelectField
           label="Pool"
           name="pool"
-          placeholder={poolPlaceholder(pools)}
-          options={(pools ?? []).map(toPoolOption)}
+          placeholder={upcomingPools.length === 0 ? "No pools yet" : "eg. 1,2,3,4..."}
+          options={upcomingPools.map(({ id, label }) => ({ value: id, label }))}
           value={poolId}
           onValueChange={setPoolId}
-          disabled={!pools?.length}
+          disabled={upcomingPools.length === 0}
         />
         {error && (
           <p role="alert" className="text-sm text-red-dark">
