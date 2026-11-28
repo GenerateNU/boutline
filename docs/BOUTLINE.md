@@ -621,8 +621,12 @@ Tabs: Fencers (the index page) · Referees · Events · Settings.
     its touches from the scoring history. In edit mode admins can change an
     upcoming bout's two fencers, or delete a bout that isn't active, after a
     confirmation.
-  - **Fencers**, **Results** and **Settings** (Planned): placeholders until their
-    tickets land.
+  - **Fencers** and **Settings** (Planned): placeholders until their tickets land.
+  - **Results:** the event's final placings from `GET /events/{id}/results`
+    (place, name, club, rating), shown once a stage has ended; each row opens the
+    fencer's page. Placings are computed from the bouts and can't be changed by
+    hand. Ratings show with their year
+    (e.g. A26) once results include it (waiting on backend).
 
 ---
 
