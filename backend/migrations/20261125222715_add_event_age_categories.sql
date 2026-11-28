@@ -1,0 +1,2 @@
+-- Modify "events" table
+ALTER TABLE "events" DROP CONSTRAINT "chk_events_age_category", ADD CONSTRAINT "chk_events_age_category" CHECK (age_category = ANY (ARRAY['y8'::text, 'y10'::text, 'y12'::text, 'y14'::text, 'cadet'::text, 'junior'::text, 'senior'::text, 'veteran'::text, 'open'::text, 'u9'::text, 'u11'::text, 'u13'::text, 'u15'::text, 'u17'::text, 'u18'::text, 'u23'::text, 'cadet_u16'::text, 'veteran_40'::text, 'veteran_40_59'::text, 'veteran_abc'::text, 'veteran_50'::text, 'grand_veteran'::text, 'veteran_60'::text, 'veteran_70'::text]));

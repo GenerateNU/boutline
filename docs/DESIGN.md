@@ -135,7 +135,9 @@ Page text uses the `Text` primitive (`textVariants` inside other primitives' slo
   `required` is already announced.
   - Select is Radix Select, its menu capped at `max-h-80` and scrolling past that.
   - The date field opens the calendar in a Radix Popover on the picked day (or
-    today) and shows `MMM d, yyyy`.
+    today) and shows `MMM d, yyyy`. With `presentation="modal"` it opens a
+    "Calendar" modal over the darkened page instead, and the pick only lands on
+    Choose Date (the event Settings form uses this).
   - The time field is a Select of 15-minute slots shown as `h:mm a` behind a clock
     icon, holding the `HH:mm` a native time input would; an off-grid value is added
     to the list.

@@ -29,6 +29,7 @@ type EventUpdate struct {
 	RatingLimit *EventRatingLimit
 	Qualifier   *bool
 	StartTime   *time.Time
+	Clear       []string // column names to set back to NULL
 }
 
 func (e EventUpdate) columns() map[string]any {
@@ -57,6 +58,9 @@ func (e EventUpdate) columns() map[string]any {
 	}
 	if e.StartTime != nil {
 		columns["start_time"] = *e.StartTime
+	}
+	for _, column := range e.Clear {
+		columns[column] = nil
 	}
 
 	return columns

@@ -1,4 +1,4 @@
-h1:TxFvmbAX9D5YOk5fAbe60x2mYMP9xWVS8ORZlplPkbM=
+h1:4gdvRWL1jeXl6/9GRxo1Yv+o7NWN1kDAevzqHs95x7Q=
 20260912065155_create_examples.sql h1:0KjoBLsLY6UbTg23Ctie16NbsSEZPGfFV/QxvOV7NHE=
 20260919030549_create_tournaments.sql h1:x/6bQNnr7O+E76TEIpBmjwvZeZDH9AYV8c6v8SEB0w4=
 20260921045710_create_users.sql h1:sYJ+YDgRgLEeCsWY1twv4IioM7e9VT5NQwjkT99CngM=
@@ -28,3 +28,5 @@ h1:TxFvmbAX9D5YOk5fAbe60x2mYMP9xWVS8ORZlplPkbM=
 20261114180402_add_event_attributes_and_tournament_venue.sql h1:gJ0m7TEDj+AxlL+mloVH7YEgst7zBoznS9Gnyab6rLs=
 20261114195028_competitors_tournament_id_not_null.sql h1:ThBUncbkM/07VfbolcFV3x74MbtbmkWlRNmInOSwZAU=
 20261116145731_add_competitors_checked_in_at.sql h1:Cu5xi2a4z/3NRcvz2UZufcc8tlIO3RJvFJ8y0F+M2gQ=
+20261125215324_add_event_rating_limits.sql h1:c+FevpsJPVylcCFVeeQTxMblx6vRIeWJ8MKDGOAG0tE=
+20261125222715_add_event_age_categories.sql h1:C3nLOrFaPXqdB7uctp8iID38AS5gEcfxyBRe5Idnax0=

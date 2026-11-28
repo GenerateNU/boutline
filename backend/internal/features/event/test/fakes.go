@@ -140,6 +140,16 @@ func (f *FakeEventRepository) UpdateEventByID(_ context.Context, id uuid.UUID, u
 	if update.StartTime != nil {
 		stored.StartTime = update.StartTime
 	}
+	for _, column := range update.Clear {
+		switch column {
+		case "type":
+			stored.Type = nil
+		case "age_category":
+			stored.AgeCategory = nil
+		case "rating_limit":
+			stored.RatingLimit = nil
+		}
+	}
 
 	f.save(id, stored)
 

@@ -11,8 +11,8 @@ type EventResponse struct {
 	Type         *EventType        `json:"type" enum:"individual,team"`
 	Weapon       *EventWeapon      `json:"weapon" enum:"foil,epee,sabre"`
 	Gender       *EventGender      `json:"gender" enum:"male,female,other"`
-	AgeCategory  *EventAgeCategory `json:"age_category" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open"`
-	RatingLimit  *EventRatingLimit `json:"rating_limit" enum:"open,b_and_under,c_and_under,d_and_under,e_and_under,unrated"`
+	AgeCategory  *EventAgeCategory `json:"age_category" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open,u9,u11,u13,u15,u17,u18,u23,cadet_u16,veteran_40,veteran_40_59,veteran_abc,veteran_50,grand_veteran,veteran_60,veteran_70"`
+	RatingLimit  *EventRatingLimit `json:"rating_limit" enum:"open,div_1a,c_and_above,b_and_under,c_and_under,d_and_under,e_and_under,unrated"`
 	Qualifier    bool              `json:"qualifier"`
 	StartTime    *time.Time        `json:"start_time" doc:"Scheduled start, if one was set"`
 	StartedAt    *time.Time        `json:"started_at" doc:"When the event actually went active"`
@@ -48,8 +48,8 @@ type EventCreateBody struct {
 	Type         *EventType        `json:"type,omitempty" enum:"individual,team"`
 	Weapon       *EventWeapon      `json:"weapon,omitempty" enum:"foil,epee,sabre"`
 	Gender       *EventGender      `json:"gender,omitempty" enum:"male,female,other"`
-	AgeCategory  *EventAgeCategory `json:"age_category,omitempty" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open"`
-	RatingLimit  *EventRatingLimit `json:"rating_limit,omitempty" enum:"open,b_and_under,c_and_under,d_and_under,e_and_under,unrated"`
+	AgeCategory  *EventAgeCategory `json:"age_category,omitempty" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open,u9,u11,u13,u15,u17,u18,u23,cadet_u16,veteran_40,veteran_40_59,veteran_abc,veteran_50,grand_veteran,veteran_60,veteran_70"`
+	RatingLimit  *EventRatingLimit `json:"rating_limit,omitempty" enum:"open,div_1a,c_and_above,b_and_under,c_and_under,d_and_under,e_and_under,unrated"`
 	Qualifier    *bool             `json:"qualifier,omitempty"`
 	StartTime    *time.Time        `json:"start_time,omitempty" doc:"Scheduled start"`
 }
@@ -67,10 +67,11 @@ type EventUpdateBody struct {
 	Type        *EventType        `json:"type,omitempty" enum:"individual,team"`
 	Weapon      *EventWeapon      `json:"weapon,omitempty" enum:"foil,epee,sabre"`
 	Gender      *EventGender      `json:"gender,omitempty" enum:"male,female,other"`
-	AgeCategory *EventAgeCategory `json:"age_category,omitempty" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open"`
-	RatingLimit *EventRatingLimit `json:"rating_limit,omitempty" enum:"open,b_and_under,c_and_under,d_and_under,e_and_under,unrated"`
+	AgeCategory *EventAgeCategory `json:"age_category,omitempty" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open,u9,u11,u13,u15,u17,u18,u23,cadet_u16,veteran_40,veteran_40_59,veteran_abc,veteran_50,grand_veteran,veteran_60,veteran_70"`
+	RatingLimit *EventRatingLimit `json:"rating_limit,omitempty" enum:"open,div_1a,c_and_above,b_and_under,c_and_under,d_and_under,e_and_under,unrated"`
 	Qualifier   *bool             `json:"qualifier,omitempty"`
 	StartTime   *time.Time        `json:"start_time,omitempty" doc:"New scheduled start"`
+	Clear       []string          `json:"clear,omitempty" enum:"type,age_category,rating_limit" uniqueItems:"true" doc:"Settings to set back to empty; a field can't be both set and cleared"`
 }
 
 type EventUpdateInput struct {

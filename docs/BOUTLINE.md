@@ -243,8 +243,16 @@ event runs its own pools and tableau.
 `pool_then_direct_elimination`, set by the server), `status` (`upcoming` | `active`
 | `ended`), `start_time`, `started_at`, `completed_at`, and the attributes in §8.5:
 `type`, `weapon`, `gender`, `age_category`, `rating_limit` (each optional, so older
-events stay valid) and `qualifier` (boolean, default false). `POST /events` and
-`PATCH /events/{id}` accept the six attributes; the responses return them.
+events stay valid) and `qualifier` (boolean, default false). `rating_limit` is one of
+`open`, `div_1a`, `c_and_above`, `b_and_under`, `c_and_under`, `d_and_under`,
+`e_and_under` or `unrated`. `age_category` is a USA Fencing age category: `u9`,
+`y10`, `u11`, `y12`, `u13`, `y14`, `senior`, `u15`, `cadet`, `junior`, `u23`,
+`cadet_u16`, `u17`, `u18`, `veteran` (40+), `veteran_40`, `veteran_40_59`,
+`veteran_abc`, `veteran_50`, `grand_veteran`, `veteran_60` or `veteran_70`; `y8` and
+`open` predate that list and stay valid. `POST /events` and `PATCH /events/{id}` accept the six
+attributes; the responses return them. `PATCH /events/{id}` also takes `clear`, a
+list of `type`, `age_category` and `rating_limit` to set back to empty; a field can't
+be both set and cleared in one request.
 
 `POST /events` (tournament must exist), `GET /events?tournament_id&status`,
 `GET /events/{id}`, `PATCH /events/{id}` and `DELETE /events/{id}` (both only while
@@ -621,8 +629,11 @@ Tabs: Fencers (the index page) · Referees · Events · Settings.
     its touches from the scoring history. In edit mode admins can change an
     upcoming bout's two fencers, or delete a bout that isn't active, after a
     confirmation.
-  - **Fencers**, **Results** and **Settings** (Planned): placeholders until their
-    tickets land.
+  - **Fencers** and **Results** (Planned): placeholders until their tickets land.
+  - **Settings:** the event's type, date and time, weapon, gender, age category,
+    format and rating level. An admin can edit them while the event is `upcoming`
+    (`PATCH /events/{id}`, §2.4), and setting type or age category back to None
+    clears it. Format is read-only, and a started event's settings are read-only.
 
 ---
 

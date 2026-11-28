@@ -46,8 +46,7 @@ func parseWeapon(raw string) (event.EventWeapon, error) {
 func parseAgeCategory(raw string) (event.EventAgeCategory, error) {
 	ageCategory := event.EventAgeCategory(strings.TrimSpace(raw))
 	if !ageCategory.IsValid() {
-		return "", errs.Public(
-			"age category must be one of y8, y10, y12, y14, cadet, junior, senior, veteran, or open", errs.ErrInvalidInput)
+		return "", errs.Public("age category is not a known USA Fencing age category", errs.ErrInvalidInput)
 	}
 	return ageCategory, nil
 }
