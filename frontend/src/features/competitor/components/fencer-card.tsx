@@ -12,9 +12,11 @@ interface FencerCardProps {
   competitor: Competitor;
   // Replaces the link to the fencer's page, e.g. to open a dialog about them.
   onSelect?: () => void;
+  // Shown instead of the chevron when `onSelect` is set.
+  selectIcon?: React.ReactNode;
 }
 
-function FencerCard({ competitor, onSelect }: FencerCardProps) {
+function FencerCard({ competitor, onSelect, selectIcon }: FencerCardProps) {
   const { id, eventId, tournamentId, firstName, lastName, rating, ratingYear, team } = competitor;
   const { isPinned, togglePin } = usePinnedItems();
   const pinned = isPinned("fencer", id);
@@ -34,6 +36,7 @@ function FencerCard({ competitor, onSelect }: FencerCardProps) {
       badge={<RatingBadge tone={pinned ? "filled" : "subtle"}>{ratingLabel(rating, ratingYear)}</RatingBadge>}
       href={onSelect ? undefined : href || undefined}
       onSelect={onSelect}
+      selectIcon={selectIcon}
       pinned={pinned}
       onTogglePin={() => togglePin("fencer", id)}
     />

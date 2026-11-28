@@ -395,6 +395,8 @@ func TestListCompetitorsFilters(t *testing.T) {
 	otherEvent.EventID = uuid.New()
 	baker := seeded("B", "Baker", competitor.RatingA, "BU Fencing")
 	baker.Gender = competitor.GenderM
+	checkedInAt := time.Now()
+	baker.CheckedInAt = &checkedInAt
 	seed := []competitor.Competitor{
 		seeded("A", "Adams", competitor.RatingA, "NU Fencing"),
 		baker,
@@ -421,6 +423,16 @@ func TestListCompetitorsFilters(t *testing.T) {
 			name:     "filters by gender",
 			input:    &competitor.CompetitorListInput{EventID: testEventID.String(), Gender: "M"},
 			wantLast: []string{"Baker"},
+		},
+		{
+			name:     "filters to checked-in competitors",
+			input:    &competitor.CompetitorListInput{EventID: testEventID.String(), CheckedIn: "true"},
+			wantLast: []string{"Baker"},
+		},
+		{
+			name:     "filters to competitors not checked in",
+			input:    &competitor.CompetitorListInput{EventID: testEventID.String(), CheckedIn: "false"},
+			wantLast: []string{"Adams", "Clark"},
 		},
 		{
 			name: "combines rating and gender",

@@ -262,9 +262,10 @@ are not a table of their own; a club is the set of distinct `team` values.
   `U` = unrated, default U), `team` (free-text club, `''` when none), `user_id`
   (the account that created the row; `SET NULL` when that user is deleted).
 - `POST /competitors` (the tournament must exist; the caller becomes `user_id`).
-- `GET /competitors?q&tournament_id&eventId&rating&gender&team&weapon&ageCategory&ids`:
+- `GET /competitors?q&tournament_id&eventId&rating&gender&checkedIn&team&weapon&ageCategory&ids`:
   fuzzy name search, alphabetical when there is no `q`, exact match on others,
-  `weapon` and `age` come from a sub-query.
+  `weapon` and `age` come from a sub-query, and `checkedIn=true|false` keeps only
+  fencers who are or aren't checked in.
 - `GET /competitors/{id}`, and `PATCH /competitors/{id}` (an empty `team` clears it).
   `PATCH` also takes `{"checkedIn": bool}`, admin only (403 otherwise): true sets
   `checked_in_at` to now, false clears it (§10.5). Responses include `checkedInAt`
@@ -621,8 +622,13 @@ Tabs: Fencers (the index page) · Referees · Events · Settings.
     its touches from the scoring history. In edit mode admins can change an
     upcoming bout's two fencers, or delete a bout that isn't active, after a
     confirmation.
-  - **Fencers**, **Results** and **Settings** (Planned): placeholders until their
-    tickets land.
+  - **Fencers:** the event's fencers, searchable and filterable by name, check-in
+    status (present or absent), club and rating. Admins can add a fencer (first
+    and last name, gender, birth date and division required, as the API needs
+    them; club and rating optional, rating defaults to U), or upload a
+    registration CSV that adds each complete row to the event. They can edit a
+    fencer's name, check-in status (present or absent), club and rating.
+  - **Results** and **Settings** (Planned): placeholders until their tickets land.
 
 ---
 

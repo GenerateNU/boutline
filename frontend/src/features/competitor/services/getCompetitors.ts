@@ -7,6 +7,7 @@ interface CompetitorFilters {
   team?: string;
   rating?: string;
   gender?: string;
+  checkedIn?: string;
   weapon?: string;
   ageCategory?: string;
 }
@@ -15,7 +16,7 @@ export function getCompetitors(
   tournamentId: string,
   limit: number,
   offset: number,
-  { eventId, query, team, rating, gender, weapon, ageCategory }: CompetitorFilters = {},
+  { eventId, query, team, rating, gender, checkedIn, weapon, ageCategory }: CompetitorFilters = {},
 ): Promise<CompetitorListResult> {
   return serverRequest<CompetitorListResult>("/competitors", {
     params: {
@@ -27,6 +28,7 @@ export function getCompetitors(
       team,
       rating,
       gender,
+      checkedIn,
       weapon,
       ageCategory,
     },

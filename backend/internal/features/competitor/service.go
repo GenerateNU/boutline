@@ -345,6 +345,10 @@ func (s *competitorService) ListCompetitors(
 		}
 		filter.Gender = &gender
 	}
+	if input.CheckedIn != "" {
+		checkedIn := input.CheckedIn == "true"
+		filter.CheckedIn = &checkedIn
+	}
 	if team := strings.TrimSpace(input.Team); team != "" {
 		filter.Team = &team
 	}

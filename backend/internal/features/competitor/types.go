@@ -123,6 +123,7 @@ type CompetitorListInput struct {
 	TournamentID string `query:"tournament_id" doc:"Only competitors entered in this tournament"`
 	Rating       string `query:"rating" enum:"A,B,C,D,E,U" doc:"Only competitors with this rating"`
 	Gender       string `query:"gender" enum:"F,M,O" doc:"Only competitors with this gender"`
+	CheckedIn    string `query:"checkedIn" enum:"true,false" doc:"true lists only checked-in competitors, false only the rest"`
 	Team         string `query:"team" maxLength:"120" doc:"Only competitors whose team contains this text; omit to return every competitor"`
 	Weapon       string `query:"weapon" enum:"foil,epee,sabre" doc:"Only competitors whose event uses this weapon"`
 	AgeCategory  string `query:"ageCategory" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open" doc:"Only competitors whose event is in this age category"`

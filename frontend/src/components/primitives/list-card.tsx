@@ -15,6 +15,8 @@ interface ListCardProps {
   href?: string;
   // Opens something in place, such as a dialog, instead of linking away; ignored with an href.
   onSelect?: () => void;
+  // Replaces the chevron on a card that opens something in place.
+  selectIcon?: React.ReactNode;
   pinned?: boolean;
   onTogglePin?: () => void;
 }
@@ -22,7 +24,7 @@ interface ListCardProps {
 const STRETCHED_TARGET_CLASS =
   "min-w-0 flex-1 text-left outline-none after:absolute after:inset-0 after:rounded-[12px] focus-visible:after:ring-2 focus-visible:after:ring-ring";
 
-function ListCard({ title, description, badge, href, onSelect, pinned, onTogglePin }: ListCardProps) {
+function ListCard({ title, description, badge, href, onSelect, selectIcon, pinned, onTogglePin }: ListCardProps) {
   // Material marks a pin as set with its filled glyph rather than by filling the outline.
   const PinIcon = pinned ? PushPin : PushPinOutlined;
 
@@ -75,9 +77,14 @@ function ListCard({ title, description, badge, href, onSelect, pinned, onToggleP
           <PinIcon aria-hidden />
         </PinButton>
       )}
-      {(href || onSelect) && (
-        <ChevronRightOutlined aria-hidden className="size-6 shrink-0 text-neutral-muted" />
-      )}
+      {(href || onSelect) &&
+        (onSelect && selectIcon ? (
+          <div className="flex size-6 shrink-0 items-center justify-center text-neutral-muted [&_svg]:size-6">
+            {selectIcon}
+          </div>
+        ) : (
+          <ChevronRightOutlined aria-hidden className="size-6 shrink-0 text-neutral-muted" />
+        ))}
     </Card>
   );
 }

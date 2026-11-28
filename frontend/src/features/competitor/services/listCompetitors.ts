@@ -8,18 +8,19 @@ export interface CompetitorQuery {
   team?: string;
   rating?: string;
   gender?: string;
+  checkedIn?: string;
   weapon?: string;
   ageCategory?: string;
 }
 
 // The browser-side twin of getCompetitors, for loading more rows after the first page.
 export function listCompetitors(
-  { tournamentId, eventId, query, team, rating, gender, weapon, ageCategory }: CompetitorQuery,
+  { tournamentId, eventId, query, team, rating, gender, checkedIn, weapon, ageCategory }: CompetitorQuery,
   limit: number,
   offset: number,
 ): Promise<CompetitorListResult> {
   const params = new URLSearchParams({ tournament_id: tournamentId, limit: `${limit}`, offset: `${offset}` });
-  for (const [key, value] of Object.entries({ eventId, q: query, team, rating, gender, weapon, ageCategory })) {
+  for (const [key, value] of Object.entries({ eventId, q: query, team, rating, gender, checkedIn, weapon, ageCategory })) {
     if (value) {
       params.set(key, value);
     }
