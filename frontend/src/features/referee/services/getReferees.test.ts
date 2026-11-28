@@ -46,6 +46,21 @@ describe("getReferees", () => {
     expect(url.pathname + url.search).toBe(expected);
   });
 
+  it.each([
+    { name: "a token", token: "abc", authorization: "Bearer abc" },
+    { name: "no token", token: undefined, authorization: undefined },
+  ])("sends the bearer header for $name", async ({ token, authorization }) => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [], total: 0, limit: 20, offset: 0 }),
+    });
+
+    await getReferees("t-1", 20, 0, {}, token);
+
+    expect(fetchMock.mock.calls[0][1].headers?.Authorization).toBe(authorization);
+  });
+
   it("throws when the backend responds with an error status", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 

@@ -1,5 +1,6 @@
 import { ActiveFilterChips } from "@/components/primitives/active-filter-chips";
 import { Pagination } from "@/components/primitives/pagination";
+import { getSessionToken } from "@/features/auth/services/session";
 import { getEvents } from "@/features/event/services/getEvents";
 import { getReferees } from "@/features/referee/services/getReferees";
 import { SearchForm } from "@/features/tournament/components/search-form";
@@ -22,7 +23,11 @@ export default async function RefereesTab({
   const offset = readOffsetParam(query);
   const basePath = `/admin/tournaments/${tournamentId}/referees`;
 
-  const [role, events] = await Promise.all([getTournamentRole(tournamentId), getEvents(tournamentId)]);
+  const [role, events, token] = await Promise.all([
+    getTournamentRole(tournamentId),
+    getEvents(tournamentId),
+    getSessionToken(),
+  ]);
   const pools = await getTournamentPools(events);
   // Only admins may search emails, and only one of this tournament's pools is sent,
   // so a stale or hand-edited URL narrows nothing instead of failing the page.
@@ -30,11 +35,13 @@ export default async function RefereesTab({
   const email = isAdmin ? readStringParam(query, "email") : "";
   const pool = pools.find(({ id }) => id === readStringParam(query, "pool"));
 
-  const { data, total, limit } = await getReferees(tournamentId, PAGE_SIZE, offset, {
-    query: search,
-    email,
-    pool: pool?.id,
-  });
+  const { data, total, limit } = await getReferees(
+    tournamentId,
+    PAGE_SIZE,
+    offset,
+    { query: search, email, pool: pool?.id },
+    token,
+  );
   const filtered = Boolean(search || email || pool);
 
   return (
