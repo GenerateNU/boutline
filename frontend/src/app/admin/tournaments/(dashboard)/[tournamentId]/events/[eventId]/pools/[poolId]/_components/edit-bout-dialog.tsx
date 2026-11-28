@@ -32,7 +32,7 @@ export function EditBoutDialog({ bout, pool, onOpenChange }: EditBoutDialogProps
     event.preventDefault();
     startTransition(async () => {
       try {
-        await apiRequest(`/bouts/${bout.id}`, {
+        await apiRequest(`/bouts/${encodeURIComponent(bout.id)}`, {
           method: "PATCH",
           body: JSON.stringify({ competitor_1_id: first, competitor_2_id: second }),
         });

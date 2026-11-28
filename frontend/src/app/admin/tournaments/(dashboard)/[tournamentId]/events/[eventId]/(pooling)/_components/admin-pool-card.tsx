@@ -1,4 +1,3 @@
-import DeleteIcon from "@mui/icons-material/Delete";
 import Link from "next/link";
 
 import { Button } from "@/components/primitives/button";
@@ -6,8 +5,11 @@ import { Card, CardHeader, CardTitle } from "@/components/primitives/card";
 import { Tag } from "@/components/primitives/tag";
 import { PoolStatusBadge } from "@/features/pool/components/pool-status-badge";
 import { fencerName } from "@/features/pool/lib/fencer-name";
+import { fencersByPosition } from "@/features/pool/lib/fencers-by-position";
 import { poolStripTitle } from "@/features/pool/lib/pool-strip";
 import type { PoolBoard } from "@/features/pool/types/pool-board";
+
+import { DeleteIconButton } from "../../_components/delete-icon-button";
 
 interface AdminPoolCardProps {
   pool: PoolBoard;
@@ -26,30 +28,17 @@ function AdminPoolCard({ pool, editing, poolsPath, onEdit, onDelete }: AdminPool
             {poolStripTitle(pool)}
           </CardTitle>
           {editing ? (
-            <button
-              type="button"
-              aria-label="Delete pool"
-              title={pool.status === "upcoming" ? undefined : "Started pools can't be deleted"}
-              disabled={pool.status !== "upcoming"}
-              onClick={() => onDelete(pool)}
-              className="-m-1 shrink-0 cursor-pointer rounded-md p-1 text-red-dark outline-none hover:bg-red-light focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:text-disabled-foreground disabled:hover:bg-transparent"
-            >
-              <DeleteIcon aria-hidden className="size-6" />
-            </button>
+            <DeleteIconButton label="Delete pool" disabledReason={pool.status === "upcoming" ? undefined : "Started pools can't be deleted"} onClick={() => onDelete(pool)} />
           ) : (
             <PoolStatusBadge status={pool.status} />
           )}
         </CardHeader>
         <ul className="flex flex-wrap gap-x-3 gap-y-2">
-          {[...pool.fencers]
-            .sort((a, b) => a.position - b.position)
-            .map((fencer) => (
-              <li key={fencer.competitor_id}>
-                <Tag className="rounded-full bg-blue-lighter px-2 font-normal text-blue-dark">
-                  {fencerName(fencer)}
-                </Tag>
-              </li>
-            ))}
+          {fencersByPosition(pool).map((fencer) => (
+            <li key={fencer.competitor_id}>
+              <Tag className="rounded-full bg-blue-lighter px-2 font-normal text-blue-dark">{fencerName(fencer)}</Tag>
+            </li>
+          ))}
         </ul>
       </div>
       {editing ? (

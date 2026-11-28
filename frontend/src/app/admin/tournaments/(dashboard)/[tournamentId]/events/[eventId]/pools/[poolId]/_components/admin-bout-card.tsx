@@ -1,4 +1,3 @@
-import DeleteIcon from "@mui/icons-material/Delete";
 import Link from "next/link";
 import { useId } from "react";
 import { cn } from "cn";
@@ -9,6 +8,8 @@ import { Card } from "@/components/primitives/card";
 import { Text } from "@/components/primitives/text";
 import { PoolStatusBadge } from "@/features/pool/components/pool-status-badge";
 import type { PoolBoutDetail, PoolBoutSide } from "@/features/pool/types/pool-bout-detail";
+
+import { DeleteIconButton } from "../../../_components/delete-icon-button";
 
 interface AdminBoutCardProps {
   detail: PoolBoutDetail;
@@ -70,17 +71,7 @@ export function AdminBoutCard({
           </Text>
         </div>
         {editing ? (
-          // A bout being fenced can't be deleted.
-          <button
-            type="button"
-            aria-label="Delete"
-            title={detail.status === "active" ? "A bout in progress can't be deleted" : undefined}
-            disabled={detail.status === "active"}
-            onClick={onDelete}
-            className="-m-1 shrink-0 cursor-pointer rounded-md p-1 text-red-dark outline-none hover:bg-red-light focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:text-disabled-foreground disabled:hover:bg-transparent"
-          >
-            <DeleteIcon aria-hidden className="size-6" />
-          </button>
+          <DeleteIconButton label="Delete" disabledReason={detail.status === "active" ? "A bout in progress can't be deleted" : undefined} onClick={onDelete} />
         ) : (
           <PoolStatusBadge status={detail.status} />
         )}

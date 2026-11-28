@@ -1,7 +1,7 @@
+import { MAX_FENCERS_PER_POOL } from "@/features/pool/lib/pool-limits";
 import { stripBody } from "@/features/pool/lib/pool-strip";
 import { apiRequest } from "@/services/api-request";
 
-const MAX_COMPETITORS_PER_POOL = 10;
 
 interface CreatePoolInput {
   eventId: string;
@@ -16,7 +16,7 @@ export async function createPool({ eventId, poolStageId, number, strip, fencerId
   if (stageId === null) {
     const stage = await apiRequest<{ id: string }>("/pool-stages", {
       method: "POST",
-      body: JSON.stringify({ event_id: eventId, max_competitor_per_pool: MAX_COMPETITORS_PER_POOL }),
+      body: JSON.stringify({ event_id: eventId, max_competitor_per_pool: MAX_FENCERS_PER_POOL }),
     });
     stageId = stage.id;
   }

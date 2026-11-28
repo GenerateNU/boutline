@@ -5,17 +5,14 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { Sheet } from "@/components/primitives/sheet";
-import { Text } from "@/components/primitives/text";
 import { TextField } from "@/components/primitives/text-field";
 import { useToast } from "@/components/primitives/toast";
+import { isValidPool } from "@/features/pool/lib/pool-limits";
 import { errorMessage } from "@/utils/error-message";
 
 import { createPool } from "../_services/create-pool";
-import { PoolFencerChips, type PickedFencer } from "./pool-fencer-chips";
-import { PoolFencerPicker } from "./pool-fencer-picker";
+import { type PickedFencer, PoolFencerField } from "./pool-fencer-field";
 import { EMD_FORM_FIELDS } from "../../_components/emd-form-fields";
-
-const MIN_FENCERS = 4;
 
 interface AddPoolSheetProps {
   tournamentId: string;
@@ -39,15 +36,13 @@ function AddPoolSheet({
   const router = useRouter();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [number, setNumber] = useState(String(nextNumber));
   const [strip, setStrip] = useState("");
   const [fencers, setFencers] = useState<PickedFencer[]>([]);
   const [pending, startTransition] = useTransition();
 
   const poolNumber = Number(number);
-  const valid =
-    fencers.length >= MIN_FENCERS && fencers.length <= maxFencers && Number.isInteger(poolNumber) && poolNumber >= 1;
+  const valid = isValidPool(poolNumber, fencers.length, maxFencers);
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
@@ -98,27 +93,17 @@ function AddPoolSheet({
           value={strip}
           onChange={(event) => setStrip(event.target.value)}
         />
-        <div className="flex flex-col gap-2">
-          <Text>Fencers</Text>
-          <PoolFencerChips
-            fencers={fencers}
-            onRemove={(id) => setFencers(fencers.filter((fencer) => fencer.id !== id))}
-            onAdd={() => setPickerOpen(true)}
-          />
-        </div>
+        <PoolFencerField
+          fencers={fencers}
+          onChange={setFencers}
+          tournamentId={tournamentId}
+          eventId={eventId}
+          excludedIds={excludedIds}
+        />
         <Button type="submit" className="w-full" disabled={!valid || pending}>
           Add Pool
         </Button>
       </form>
-      <PoolFencerPicker
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        tournamentId={tournamentId}
-        eventId={eventId}
-        excludedIds={excludedIds}
-        selected={fencers}
-        onConfirm={setFencers}
-      />
     </Sheet>
   );
 }

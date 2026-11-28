@@ -15,7 +15,7 @@ import { listEventCompetitors } from "@/features/competitor/services/listEventCo
 import type { Competitor } from "@/types/competitor";
 import { errorMessage } from "@/utils/error-message";
 
-import type { PickedFencer } from "./pool-fencer-chips";
+import type { PickedFencer } from "./pool-fencer-field";
 
 const SKELETON_ROWS = 4;
 

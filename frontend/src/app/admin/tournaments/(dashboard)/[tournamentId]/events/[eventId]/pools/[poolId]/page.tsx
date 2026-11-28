@@ -45,8 +45,7 @@ export default async function AdminPoolPage({
         pool={pool}
         editing={editing}
         canManage={canManage}
-        editHref={`${poolPath}?edit=1`}
-        exitHref={poolPath}
+        poolPath={poolPath}
         refereeBasePath={`/tournaments/${tournamentId}/events/${eventId}/bout`}
       />
     </div>

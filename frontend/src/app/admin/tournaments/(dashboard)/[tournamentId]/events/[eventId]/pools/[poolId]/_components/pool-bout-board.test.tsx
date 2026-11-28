@@ -58,8 +58,7 @@ function renderBoard(props: { editing?: boolean; canManage?: boolean } = {}) {
         pool={POOL}
         editing={props.editing ?? false}
         canManage={props.canManage ?? true}
-        editHref="/edit"
-        exitHref="/exit"
+        poolPath="/pool"
         refereeBasePath={REFEREE_BASE}
       />
     </Toaster>,
@@ -113,8 +112,8 @@ describe("PoolBoutBoard", () => {
   });
 
   const modeLinks = [
-    { name: "offers edit mode", editing: false, canManage: true, label: "Edit Mode", href: "/edit" },
-    { name: "offers exit while editing", editing: true, canManage: true, label: "Exit Edit Mode", href: "/exit" },
+    { name: "offers edit mode", editing: false, canManage: true, label: "Edit Mode", href: "/pool?edit=1" },
+    { name: "offers exit while editing", editing: true, canManage: true, label: "Exit Edit Mode", href: "/pool" },
   ];
 
   it.each(modeLinks)("$name", ({ editing, canManage, label, href }) => {

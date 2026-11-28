@@ -5,26 +5,22 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { Modal, ModalFooter } from "@/components/primitives/modal";
-import { Text } from "@/components/primitives/text";
 import { TextField } from "@/components/primitives/text-field";
 import { useToast } from "@/components/primitives/toast";
 import { fencerName } from "@/features/pool/lib/fencer-name";
+import { fencersByPosition } from "@/features/pool/lib/fencers-by-position";
 import { stripBody, stripNumber } from "@/features/pool/lib/pool-strip";
+import { isValidPool } from "@/features/pool/lib/pool-limits";
 import { poolStatusLabels } from "@/features/pool/lib/pool-status-labels";
 import type { PoolBoard } from "@/features/pool/types/pool-board";
 import { apiRequest } from "@/services/api-request";
 import { errorMessage } from "@/utils/error-message";
 
-import { PoolFencerChips, type PickedFencer } from "./pool-fencer-chips";
-import { PoolFencerPicker } from "./pool-fencer-picker";
+import { type PickedFencer, PoolFencerField } from "./pool-fencer-field";
 import { EMD_FORM_FIELDS } from "../../_components/emd-form-fields";
 
-const MIN_FENCERS = 4;
-
-function poolFencers({ fencers }: PoolBoard): PickedFencer[] {
-  return [...fencers]
-    .sort((a, b) => a.position - b.position)
-    .map((fencer) => ({ id: fencer.competitor_id, name: fencerName(fencer) }));
+function poolFencers(pool: PoolBoard): PickedFencer[] {
+  return fencersByPosition(pool).map((fencer) => ({ id: fencer.competitor_id, name: fencerName(fencer) }));
 }
 
 interface EditPoolFormProps extends Omit<EditPoolDialogProps, "pool"> {
@@ -35,15 +31,13 @@ interface EditPoolFormProps extends Omit<EditPoolDialogProps, "pool"> {
 function EditPoolForm({ pool, onOpenChange, tournamentId, eventId, maxFencers, excludedIds }: EditPoolFormProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [number, setNumber] = useState(String(pool.number));
   const [strip, setStrip] = useState(stripNumber(pool.strip));
   const [fencers, setFencers] = useState(() => poolFencers(pool));
   const [pending, startTransition] = useTransition();
 
   const poolNumber = Number(number);
-  const valid =
-    fencers.length >= MIN_FENCERS && fencers.length <= maxFencers && Number.isInteger(poolNumber) && poolNumber >= 1;
+  const valid = isValidPool(poolNumber, fencers.length, maxFencers);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,50 +59,37 @@ function EditPoolForm({ pool, onOpenChange, tournamentId, eventId, maxFencers, e
   }
 
   return (
-    <>
-      <form onSubmit={handleSubmit} className={EMD_FORM_FIELDS}>
-        <div className="flex flex-col gap-2">
-          <Text>Fencers</Text>
-          <PoolFencerChips
-            fencers={fencers}
-            onRemove={(id) => setFencers(fencers.filter((fencer) => fencer.id !== id))}
-            onAdd={() => setPickerOpen(true)}
-          />
-        </div>
-        <TextField
-          label="Number"
-          type="number"
-          min={1}
-          value={number}
-          onChange={(event) => setNumber(event.target.value)}
-        />
-        <TextField
-          label="Strip"
-          placeholder="ex. 1, 2, 3, 4"
-          value={strip}
-          onChange={(event) => setStrip(event.target.value)}
-        />
-        {/* Read-only: a pool's status only changes by starting or ending it. */}
-        <TextField label="Status" readOnly value={poolStatusLabels[pool.status]} className="[&_input]:text-neutral-secondary" />
-        <ModalFooter>
-          <Button type="submit" disabled={!valid || pending}>
-            Confirm edits
-          </Button>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-        </ModalFooter>
-      </form>
-      <PoolFencerPicker
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
+    <form onSubmit={handleSubmit} className={EMD_FORM_FIELDS}>
+      <PoolFencerField
+        fencers={fencers}
+        onChange={setFencers}
         tournamentId={tournamentId}
         eventId={eventId}
         excludedIds={excludedIds}
-        selected={fencers}
-        onConfirm={setFencers}
       />
-    </>
+      <TextField
+        label="Number"
+        type="number"
+        min={1}
+        value={number}
+        onChange={(event) => setNumber(event.target.value)}
+      />
+      <TextField
+        label="Strip"
+        placeholder="ex. 1, 2, 3, 4"
+        value={strip}
+        onChange={(event) => setStrip(event.target.value)}
+      />
+      <TextField label="Status" readOnly value={poolStatusLabels[pool.status]} className="[&_input]:text-neutral-secondary" />
+      <ModalFooter>
+        <Button type="submit" disabled={!valid || pending}>
+          Confirm edits
+        </Button>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+      </ModalFooter>
+    </form>
   );
 }
 

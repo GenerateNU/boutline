@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/primitives/button";
 import { ConfirmDeleteModal } from "@/components/primitives/confirm-delete-modal";
 import { SearchBar } from "@/components/primitives/search-bar";
 import { Text } from "@/components/primitives/text";
@@ -17,6 +15,7 @@ import { errorMessage } from "@/utils/error-message";
 import { filterBouts } from "../_services/filter-bouts";
 
 import { AdminBoutCard } from "./admin-bout-card";
+import { EditModeLink } from "../../../_components/edit-mode-link";
 import { BoutAuditLogDialog } from "./bout-audit-log-dialog";
 import { BoutStatusFilterSheet } from "./bout-status-filter-sheet";
 import { EditBoutDialog } from "./edit-bout-dialog";
@@ -25,12 +24,11 @@ interface PoolBoutBoardProps {
   pool: PoolBoard;
   editing: boolean;
   canManage: boolean;
-  editHref: string;
-  exitHref: string;
+  poolPath: string;
   refereeBasePath: string;
 }
 
-export function PoolBoutBoard({ pool, editing, canManage, editHref, exitHref, refereeBasePath }: PoolBoutBoardProps) {
+export function PoolBoutBoard({ pool, editing, canManage, poolPath, refereeBasePath }: PoolBoutBoardProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
@@ -46,7 +44,7 @@ export function PoolBoutBoard({ pool, editing, canManage, editHref, exitHref, re
   function deleteBout() {
     startTransition(async () => {
       try {
-        await apiRequest(`/bouts/${deleteId}`, { method: "DELETE" });
+        await apiRequest(`/bouts/${encodeURIComponent(String(deleteId))}`, { method: "DELETE" });
         toast({ description: "Bout deleted" });
         setDeleteId(null);
         router.refresh();
@@ -69,9 +67,7 @@ export function PoolBoutBoard({ pool, editing, canManage, editHref, exitHref, re
         <BoutStatusFilterSheet statuses={statuses} onApply={setStatuses} />
       </div>
       {canManage && (
-        <Button asChild size="sm" className="self-start">
-          <Link href={editing ? exitHref : editHref}>{editing ? "Exit Edit Mode" : "Edit Mode"}</Link>
-        </Button>
+        <EditModeLink editing={editing} path={poolPath} className="self-start" />
       )}
       {bouts.length > 0 ? (
         bouts.map((bout) => {

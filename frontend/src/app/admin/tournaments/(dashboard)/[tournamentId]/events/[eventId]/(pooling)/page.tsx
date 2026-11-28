@@ -1,10 +1,9 @@
-import Link from "next/link";
 
 import { Background } from "@/components/primitives/background";
-import { Button } from "@/components/primitives/button";
 import { Section } from "@/components/primitives/section";
 import { Text } from "@/components/primitives/text";
 import { EventStatusBadge } from "@/features/event/components/event-status-badge";
+import { MAX_FENCERS_PER_POOL } from "@/features/pool/lib/pool-limits";
 import { getEventPools } from "@/features/pool/services/get-event-pools";
 import { EndPoolStageButton } from "@/features/pool-stage/components/end-pool-stage-button";
 import { getEventPoolStage } from "@/features/pool-stage/services/get-event-pool-stage";
@@ -13,10 +12,10 @@ import { getTournamentRole } from "@/features/tournament/services/getTournamentR
 import { readStringParam } from "@/lib/search-params";
 
 import { DirectEliminationSection } from "../_components/direct-elimination-section";
+import { EditModeLink } from "../_components/edit-mode-link";
 import { AddPoolSheet } from "./_components/add-pool-sheet";
 import { AdminPoolList } from "./_components/admin-pool-list";
 
-const MAX_FENCERS_PER_POOL = 10;
 
 export default async function PoolingTab({
   params,
@@ -62,11 +61,7 @@ export default async function PoolingTab({
               />
             )}
             {pools.length > 0 && (
-              <Button asChild variant="outline" size="sm">
-                <Link href={editing ? eventPath : `${eventPath}?edit=1`}>
-                  {editing ? "Exit Edit Mode" : "Edit Mode"}
-                </Link>
-              </Button>
+              <EditModeLink editing={editing} path={eventPath} variant="outline" />
             )}
           </div>
         )}
