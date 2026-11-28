@@ -347,7 +347,10 @@ type FakeTournamentUserRepository struct {
 	Tournaments map[uuid.UUID]tournament.Tournament
 	// Names holds {first, last} per user id, standing in for the users table.
 	Names map[uuid.UUID][2]string
-	Err   error
+	// Emails per user id, and the pool numbers each one referees in the tournament.
+	Emails map[uuid.UUID]string
+	Pools  map[uuid.UUID][]int
+	Err    error
 }
 
 func NewFakeTournamentUserRepository(seed ...tournamentuser.TournamentUser) *FakeTournamentUserRepository {
@@ -445,11 +448,19 @@ func (f *FakeTournamentUserRepository) ListMembersByTournament(
 		if !strings.Contains(strings.ToLower(name[0]+" "+name[1]), term) {
 			continue
 		}
+		email := f.Emails[candidate.UserID]
+		if !strings.Contains(strings.ToLower(email), strings.ToLower(filter.Email)) {
+			continue
+		}
+		if filter.Pool > 0 && !slices.Contains(f.Pools[candidate.UserID], filter.Pool) {
+			continue
+		}
 
 		matched = append(matched, tournamentuser.TournamentMember{
 			TournamentUser: candidate,
 			FirstName:      name[0],
 			LastName:       name[1],
+			Email:          email,
 		})
 	}
 

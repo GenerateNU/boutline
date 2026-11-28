@@ -514,9 +514,22 @@ func (s *tournamentService) ListUsersByTournament(
 
 	limit, offset := page(input.Limit, input.Offset)
 
+	// Anyone can list a tournament's staff, but only its admins see or search their emails.
+	adminErr := tournamentuser.RequireRole(ctx, s.membershipRepo, tournamentID, tournamentuser.TournamentUserRoleAdmin)
+	if adminErr != nil && !errors.Is(adminErr, errs.ErrForbidden) {
+		return nil, errs.HumaError(fmt.Errorf("check caller role: %w", adminErr))
+	}
+	isAdmin := adminErr == nil
+	email := strings.TrimSpace(input.Email)
+	if email != "" && !isAdmin {
+		return nil, errs.HumaError(adminErr)
+	}
+
 	members, total, err := s.membershipRepo.ListMembersByTournament(ctx, tournamentID, tournamentuser.TournamentUserFilter{
 		Role:   input.Role,
 		Term:   strings.TrimSpace(input.Query),
+		Email:  email,
+		Pool:   input.Pool,
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -526,7 +539,7 @@ func (s *tournamentService) ListUsersByTournament(
 
 	data := make([]TournamentMemberResponse, 0, len(members))
 	for _, member := range members {
-		data = append(data, newTournamentMemberResponse(member))
+		data = append(data, newTournamentMemberResponse(member, isAdmin))
 	}
 
 	return &TournamentUserListOutput{Body: TournamentUserListBody{

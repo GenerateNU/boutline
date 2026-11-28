@@ -30,9 +30,11 @@ interface RefereeRosterProps {
   events: TournamentEvent[];
   // Admins add and remove; referees see the same roster read-only.
   canManage: boolean;
+  // Shown when there are no rows, e.g. naming the filters that matched nothing.
+  emptyMessage: string;
 }
 
-function RefereeRoster({ tournamentId, referees, events, canManage }: RefereeRosterProps) {
+function RefereeRoster({ tournamentId, referees, events, canManage, emptyMessage }: RefereeRosterProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
@@ -70,7 +72,7 @@ function RefereeRoster({ tournamentId, referees, events, canManage }: RefereeRos
         </Button>
       )}
       {rows.length === 0 ? (
-        <p className="text-sm text-neutral-secondary">No referees yet.</p>
+        <p className="text-sm text-neutral-secondary">{emptyMessage}</p>
       ) : (
         <RefereeCard
           referees={rows}

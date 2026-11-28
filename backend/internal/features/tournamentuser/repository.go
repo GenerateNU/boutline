@@ -28,6 +28,8 @@ type TournamentUserRepository interface {
 type TournamentUserFilter struct {
 	Role   TournamentUserRole // empty means any role
 	Term   string
+	Email  string // substring of the email; empty means any
+	Pool   int    // a pool number they referee in this tournament, in any event; 0 means any
 	Limit  int
 	Offset int
 }
@@ -49,6 +51,14 @@ const memberOccupiedSQL = `(EXISTS (SELECT 1 ` + memberOpenPoolsSQL + ` AND pool
 		WHERE bouts.referee_id = tournament_users.user_id
 			AND bouts.tournament_id = tournament_users.tournament_id
 			AND bouts.status = 'active')) AS occupied`
+
+// Assigned to a pool with this number in the tournament, finished or not.
+const memberRefereesPoolSQL = `EXISTS (SELECT 1 FROM pools
+	JOIN pool_stages ON pool_stages.id = pools.pool_stage_id
+	JOIN events ON events.id = pool_stages.event_id
+	WHERE pools.referee_id = tournament_users.user_id
+		AND events.tournament_id = tournament_users.tournament_id
+		AND pools.number = ?)`
 
 // The pool they're running now, else the next one they're down for.
 const memberPoolNumberSQL = `(SELECT pools.number ` + memberOpenPoolsSQL + `
@@ -92,6 +102,10 @@ func (r *tournamentUserRepository) ListMembersByTournament(
 		query = query.Where("tournament_users.role = ?", filter.Role)
 	}
 	query = utils.TrigramMatch(query, memberNameSearchColumns, filter.Term)
+	query = utils.SubstringMatch(query, []string{"users.email"}, filter.Email)
+	if filter.Pool > 0 {
+		query = query.Where(memberRefereesPoolSQL, filter.Pool)
+	}
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -104,7 +118,7 @@ func (r *tournamentUserRepository) ListMembersByTournament(
 	members := make([]TournamentMember, 0, filter.Limit)
 	err := query.
 		Select("tournament_users.user_id, tournament_users.tournament_id, tournament_users.role, " +
-			"tournament_users.created_at, tournament_users.updated_at, users.first_name, users.last_name, " +
+			"tournament_users.created_at, tournament_users.updated_at, users.first_name, users.last_name, users.email, " +
 			memberOccupiedSQL + ", " + memberPoolNumberSQL).
 		Limit(filter.Limit).
 		Offset(filter.Offset).

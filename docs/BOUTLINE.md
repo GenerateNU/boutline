@@ -227,7 +227,7 @@ is deleted.
 | Method | Path | |
 | --- | --- | --- |
 | POST | `/tournaments/{id}/users` | add `{user_id, role}`; 409 if already a member, naming the role they hold (a person has one role per tournament; an admin can still referee a pool they're assigned to) |
-| GET | `/tournaments/{id}/users?role&q&limit&offset` | list; each member carries first and last name, `occupied` (running a started pool or an active bout here) and `pool_number` (that pool, else their next unfinished one; null if none). `q` is a fuzzy name search |
+| GET | `/tournaments/{id}/users?role&q&email&pool&limit&offset` | list; each member carries first and last name, `occupied` (running a started pool or an active bout here) and `pool_number` (that pool, else their next unfinished one; null if none). `q` is a fuzzy name search; `pool` keeps members refereeing a pool with that number in any of the tournament's events. Only the tournament's admins get each member's `email` and may filter by part of it (`email`, ignoring case; 403 for anyone else) |
 | PATCH | `/tournaments/{id}/users/{user_id}` | change role |
 | DELETE | `/tournaments/{id}/users/{user_id}` | remove |
 | GET | `/tournaments/{id}/role` | the caller's role, `{"role": "admin" \| "referee" \| null}`; null when they're signed out, aren't on the staff, or the tournament is unknown. A public read: the token is used when sent |
@@ -583,7 +583,9 @@ Scheduled), date range (as on the Overview in §4.3) and location.
 Tabs: Fencers (the index page) · Referees · Events · Settings.
 
 - **Referees:** a searchable, paginated roster of the tournament's referees, from
-  `GET /tournaments/{id}/users?role=referee`. Admins can add a referee, found by
+  `GET /tournaments/{id}/users?role=referee`. A filter sheet narrows it by referee,
+  pool number and, for admins only, email; applied filters stay in the URL and show
+  as chips. Admins can add a referee, found by
   name or email and optionally placed on one of the tournament's pools, and remove
   one after a confirmation. Each row shows Occupied or Available and the referee's
   pool (§10.3).

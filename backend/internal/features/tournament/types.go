@@ -162,20 +162,26 @@ func newTournamentUserResponse(membership tournamentuser.TournamentUser) Tournam
 // The list's row: the membership plus what the list query joins in.
 type TournamentMemberResponse struct {
 	TournamentUserResponse
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	Occupied   bool   `json:"occupied" doc:"Running a pool or refereeing an active bout in this tournament"`
-	PoolNumber *int   `json:"pool_number" doc:"The unfinished pool they're running, else the next one they're assigned; null when none"`
+	FirstName  string  `json:"first_name"`
+	LastName   string  `json:"last_name"`
+	Email      *string `json:"email,omitempty" doc:"Only for the tournament's admins"`
+	Occupied   bool    `json:"occupied" doc:"Running a pool or refereeing an active bout in this tournament"`
+	PoolNumber *int    `json:"pool_number" doc:"The unfinished pool they're running, else the next one they're assigned; null when none"`
 }
 
-func newTournamentMemberResponse(member tournamentuser.TournamentMember) TournamentMemberResponse {
-	return TournamentMemberResponse{
+func newTournamentMemberResponse(member tournamentuser.TournamentMember, showEmail bool) TournamentMemberResponse {
+	resp := TournamentMemberResponse{
 		TournamentUserResponse: newTournamentUserResponse(member.TournamentUser),
 		FirstName:              member.FirstName,
 		LastName:               member.LastName,
 		Occupied:               member.Occupied,
 		PoolNumber:             member.PoolNumber,
 	}
+	if showEmail {
+		resp.Email = &member.Email
+	}
+
+	return resp
 }
 
 type TournamentUserAddBody struct {
@@ -192,6 +198,8 @@ type TournamentUserListInput struct {
 	TournamentID string                            `path:"id" format:"uuid" doc:"Tournament ID"`
 	Role         tournamentuser.TournamentUserRole `query:"role" enum:"referee,admin" doc:"Filter by role; omit for all"`
 	Query        string                            `query:"q" maxLength:"120" doc:"Fuzzy match against the member's full name; omit to return every member"`
+	Email        string                            `query:"email" maxLength:"254" doc:"Substring of the member's email, ignoring case; tournament admins only"`
+	Pool         int                               `query:"pool" doc:"Only members refereeing a pool with this number, in any of the tournament's events; omit for any"`
 	Limit        int                               `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset       int                               `query:"offset" default:"0" minimum:"0"`
 }
