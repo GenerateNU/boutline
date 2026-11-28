@@ -30,8 +30,8 @@ describe("getReferees", () => {
       name: "with an email and a pool",
       limit: 20,
       offset: 0,
-      filters: { email: "sam@", pool: 2 },
-      expected: "/api/v1/tournaments/t-1/users?role=referee&limit=20&offset=0&email=sam%40&pool=2",
+      filters: { email: "sam@", pool: "p-1" },
+      expected: "/api/v1/tournaments/t-1/users?role=referee&limit=20&offset=0&email=sam%40&pool=p-1",
     },
   ])("builds the URL $name", async ({ limit, offset, filters, expected }) => {
     fetchMock.mockResolvedValue({

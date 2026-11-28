@@ -28,8 +28,8 @@ type TournamentUserRepository interface {
 type TournamentUserFilter struct {
 	Role   TournamentUserRole // empty means any role
 	Term   string
-	Email  string // substring of the email; empty means any
-	Pool   int    // a pool number they referee in this tournament, in any event; 0 means any
+	Email  string     // substring of the email; empty means any
+	PoolID *uuid.UUID // a pool of this tournament they referee; nil means any
 	Limit  int
 	Offset int
 }
@@ -52,13 +52,13 @@ const memberOccupiedSQL = `(EXISTS (SELECT 1 ` + memberOpenPoolsSQL + ` AND pool
 			AND bouts.tournament_id = tournament_users.tournament_id
 			AND bouts.status = 'active')) AS occupied`
 
-// Assigned to a pool with this number in the tournament, finished or not.
+// Assigned to this pool, finished or not, as long as it belongs to the tournament.
 const memberRefereesPoolSQL = `EXISTS (SELECT 1 FROM pools
 	JOIN pool_stages ON pool_stages.id = pools.pool_stage_id
 	JOIN events ON events.id = pool_stages.event_id
 	WHERE pools.referee_id = tournament_users.user_id
 		AND events.tournament_id = tournament_users.tournament_id
-		AND pools.number = ?)`
+		AND pools.id = ?)`
 
 // The pool they're running now, else the next one they're down for.
 const memberPoolNumberSQL = `(SELECT pools.number ` + memberOpenPoolsSQL + `
@@ -103,8 +103,8 @@ func (r *tournamentUserRepository) ListMembersByTournament(
 	}
 	query = utils.TrigramMatch(query, memberNameSearchColumns, filter.Term)
 	query = utils.SubstringMatch(query, []string{"users.email"}, filter.Email)
-	if filter.Pool > 0 {
-		query = query.Where(memberRefereesPoolSQL, filter.Pool)
+	if filter.PoolID != nil {
+		query = query.Where(memberRefereesPoolSQL, *filter.PoolID)
 	}
 
 	var total int64

@@ -7,11 +7,11 @@ import { Button } from "@/components/primitives/button";
 import { Modal, ModalFooter } from "@/components/primitives/modal";
 import { useToast } from "@/components/primitives/toast";
 import { RefereeCard, type Referee } from "@/features/referee/components/referee-card";
-import type { TournamentEvent } from "@/features/event/types/event";
 import type { RefereeResponse } from "@/features/referee/types/referee";
 import { apiRequest } from "@/services/api-request";
 import { errorMessage } from "@/utils/error-message";
 
+import type { PoolOption } from "../_services/get-tournament-pools";
 import { AddRefereeDialog } from "./add-referee-dialog";
 
 // The API row, shaped for RefereeCard.
@@ -27,14 +27,14 @@ function toReferee({ user_id, first_name, last_name, occupied, pool_number }: Re
 interface RefereeRosterProps {
   tournamentId: string;
   referees: RefereeResponse[];
-  events: TournamentEvent[];
+  pools: PoolOption[];
   // Admins add and remove; referees see the same roster read-only.
   canManage: boolean;
   // Shown when there are no rows, e.g. naming the filters that matched nothing.
   emptyMessage: string;
 }
 
-function RefereeRoster({ tournamentId, referees, events, canManage, emptyMessage }: RefereeRosterProps) {
+function RefereeRoster({ tournamentId, referees, pools, canManage, emptyMessage }: RefereeRosterProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
@@ -87,7 +87,7 @@ function RefereeRoster({ tournamentId, referees, events, canManage, emptyMessage
       {canManage && (
         <AddRefereeDialog
           tournamentId={tournamentId}
-          events={events}
+          pools={pools}
           open={addOpen}
           onOpenChange={setAddOpen}
           returnFocusTo={addButton}

@@ -1171,6 +1171,7 @@ func TestListUsersByTournamentStaffFilters(t *testing.T) {
 
 	tournamentID := uuid.New()
 	sam := uuid.New()
+	poolOne, poolTwo := uuid.New(), uuid.New()
 	seed := append(Staff(tournamentID),
 		tournamentuser.TournamentUser{TournamentID: tournamentID, UserID: sam, Role: tournamentuser.TournamentUserRoleReferee})
 
@@ -1194,10 +1195,16 @@ func TestListUsersByTournamentStaffFilters(t *testing.T) {
 			wantLast: []string{"Admin", "Referee", "Rivera"},
 		},
 		{
-			name:     "anyone can filter by pool number",
+			name:     "anyone can filter by pool",
 			caller:   CallerAnonymous,
-			input:    tournament.TournamentUserListInput{Pool: 2},
+			input:    tournament.TournamentUserListInput{Pool: poolTwo.String()},
 			wantLast: []string{"Rivera"},
+		},
+		{
+			name:       "rejects a pool that isn't an id",
+			caller:     CallerAnonymous,
+			input:      tournament.TournamentUserListInput{Pool: "2"},
+			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name:       "an admin filters by part of an email, ignoring case",
@@ -1235,7 +1242,7 @@ func TestListUsersByTournamentStaffFilters(t *testing.T) {
 				TestRefereeID: "rex@boutline.dev",
 				sam:           "sam@boutline.dev",
 			}
-			repo.Pools = map[uuid.UUID][]int{TestRefereeID: {1}, sam: {2}}
+			repo.Pools = map[uuid.UUID][]uuid.UUID{TestRefereeID: {poolOne}, sam: {poolTwo}}
 			service := tournament.NewTournamentService(NewFakeTournamentRepository(), repo)
 
 			tt.input.TournamentID = tournamentID.String()

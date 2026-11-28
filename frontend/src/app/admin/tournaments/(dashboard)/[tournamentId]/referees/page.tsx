@@ -8,14 +8,9 @@ import { readOffsetParam, readStringParam } from "@/lib/search-params";
 
 import { RefereeFilterSheet } from "./_components/referee-filter-sheet";
 import { RefereeRoster } from "./_components/referee-roster";
+import { getTournamentPools } from "./_services/get-tournament-pools";
 
 const PAGE_SIZE = 20;
-
-// Anything but a positive whole number leaves the pool filter off, since the API rejects it.
-function readPoolParam(value: string) {
-  const pool = Number(value);
-  return Number.isInteger(pool) && pool > 0 ? pool : undefined;
-}
 
 export default async function RefereesTab({
   params,
@@ -24,38 +19,40 @@ export default async function RefereesTab({
   const [{ tournamentId }, query] = await Promise.all([params, searchParams]);
 
   const search = readStringParam(query, "q");
-  const pool = readPoolParam(readStringParam(query, "pool"));
   const offset = readOffsetParam(query);
   const basePath = `/admin/tournaments/${tournamentId}/referees`;
 
-  // The role decides whether the email filter is sent at all: only admins may search emails.
-  const role = await getTournamentRole(tournamentId);
+  const [role, events] = await Promise.all([getTournamentRole(tournamentId), getEvents(tournamentId)]);
+  const pools = await getTournamentPools(events);
+  // Only admins may search emails, and only one of this tournament's pools is sent,
+  // so a stale or hand-edited URL narrows nothing instead of failing the page.
   const isAdmin = role === "admin";
   const email = isAdmin ? readStringParam(query, "email") : "";
+  const pool = pools.find(({ id }) => id === readStringParam(query, "pool"));
 
-  const [{ data, total, limit }, events] = await Promise.all([
-    getReferees(tournamentId, PAGE_SIZE, offset, { query: search, email, pool }),
-    getEvents(tournamentId),
-  ]);
-  const poolText = pool ? String(pool) : undefined;
+  const { data, total, limit } = await getReferees(tournamentId, PAGE_SIZE, offset, {
+    query: search,
+    email,
+    pool: pool?.id,
+  });
   const filtered = Boolean(search || email || pool);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2.5">
         <SearchForm action={basePath} label="Search referees" placeholder="Search referees" defaultValue={search} />
-        <RefereeFilterSheet tournamentId={tournamentId} canSeeEmails={isAdmin} />
+        <RefereeFilterSheet tournamentId={tournamentId} canSeeEmails={isAdmin} pools={pools} />
       </div>
       <ActiveFilterChips
         filters={[
           { param: "email", name: "Email", value: email },
-          { param: "pool", name: "Pool", value: poolText },
+          { param: "pool", name: "Pool", value: pool?.label },
         ]}
       />
       <RefereeRoster
         tournamentId={tournamentId}
         referees={data}
-        events={events}
+        pools={pools}
         canManage={isAdmin}
         emptyMessage={filtered ? "No referees match these filters." : "No referees yet."}
       />
@@ -64,7 +61,7 @@ export default async function RefereesTab({
         limit={limit}
         offset={offset}
         basePath={basePath}
-        params={{ q: search, email, pool: poolText }}
+        params={{ q: search, email, pool: pool?.id }}
       />
     </div>
   );

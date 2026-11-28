@@ -524,12 +524,20 @@ func (s *tournamentService) ListUsersByTournament(
 	if email != "" && !isAdmin {
 		return nil, errs.HumaError(adminErr)
 	}
+	var poolID *uuid.UUID
+	if input.Pool != "" {
+		parsed, err := utils.ParseUUID(input.Pool, "pool")
+		if err != nil {
+			return nil, errs.HumaError(err)
+		}
+		poolID = &parsed
+	}
 
 	members, total, err := s.membershipRepo.ListMembersByTournament(ctx, tournamentID, tournamentuser.TournamentUserFilter{
 		Role:   input.Role,
 		Term:   strings.TrimSpace(input.Query),
 		Email:  email,
-		Pool:   input.Pool,
+		PoolID: poolID,
 		Limit:  limit,
 		Offset: offset,
 	})

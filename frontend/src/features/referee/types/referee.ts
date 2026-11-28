@@ -18,5 +18,6 @@ export interface RefereeResponse {
 export interface RefereeFilters {
   query?: string;
   email?: string;
-  pool?: number;
+  // A pool's id.
+  pool?: string;
 }

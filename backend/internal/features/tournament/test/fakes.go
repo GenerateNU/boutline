@@ -347,9 +347,9 @@ type FakeTournamentUserRepository struct {
 	Tournaments map[uuid.UUID]tournament.Tournament
 	// Names holds {first, last} per user id, standing in for the users table.
 	Names map[uuid.UUID][2]string
-	// Emails per user id, and the pool numbers each one referees in the tournament.
+	// Emails per user id, and the pools each one referees in the tournament.
 	Emails map[uuid.UUID]string
-	Pools  map[uuid.UUID][]int
+	Pools  map[uuid.UUID][]uuid.UUID
 	Err    error
 }
 
@@ -452,7 +452,7 @@ func (f *FakeTournamentUserRepository) ListMembersByTournament(
 		if !strings.Contains(strings.ToLower(email), strings.ToLower(filter.Email)) {
 			continue
 		}
-		if filter.Pool > 0 && !slices.Contains(f.Pools[candidate.UserID], filter.Pool) {
+		if filter.PoolID != nil && !slices.Contains(f.Pools[candidate.UserID], *filter.PoolID) {
 			continue
 		}
 

@@ -194,12 +194,14 @@ type TournamentUserAddInput struct {
 	Body         TournamentUserAddBody
 }
 
+// Pool has no format:"uuid", since Huma rejects an empty optional query string against
+// that format; the service parses it only when it's set.
 type TournamentUserListInput struct {
 	TournamentID string                            `path:"id" format:"uuid" doc:"Tournament ID"`
 	Role         tournamentuser.TournamentUserRole `query:"role" enum:"referee,admin" doc:"Filter by role; omit for all"`
 	Query        string                            `query:"q" maxLength:"120" doc:"Fuzzy match against the member's full name; omit to return every member"`
 	Email        string                            `query:"email" maxLength:"254" doc:"Substring of the member's email, ignoring case; tournament admins only"`
-	Pool         int                               `query:"pool" doc:"Only members refereeing a pool with this number, in any of the tournament's events; omit for any"`
+	Pool         string                            `query:"pool" doc:"Pool ID: only members refereeing that pool of the tournament; omit for any"`
 	Limit        int                               `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset       int                               `query:"offset" default:"0" minimum:"0"`
 }

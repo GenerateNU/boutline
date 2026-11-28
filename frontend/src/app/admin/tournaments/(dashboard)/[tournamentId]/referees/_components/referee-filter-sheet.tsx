@@ -5,29 +5,28 @@ import { useState } from "react";
 import { Chip } from "@/components/primitives/chip";
 import { FilterSearchField } from "@/components/primitives/filter-search-field";
 import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
+import { SelectField } from "@/components/primitives/select-field";
 import type { RefereeResponse } from "@/features/referee/types/referee";
 import { useTournamentFilters } from "@/features/tournament/hooks/use-tournament-filters";
 import { useFilterSearch } from "@/lib/hooks/use-filter-search";
 import { apiRequest } from "@/services/api-request";
 import type { ListResponse } from "@/types/list-response";
 
-const SUGGESTION_LIMIT = 10;
+import type { PoolOption } from "../_services/get-tournament-pools";
 
-// A pool filter is a pool number; anything else is dropped rather than sent.
-function poolNumber(text: string | undefined) {
-  const number = Number(text?.trim());
-  return Number.isInteger(number) && number > 0 ? String(number) : undefined;
-}
+const SUGGESTION_LIMIT = 10;
 
 interface RefereeFilterSheetProps {
   tournamentId: string;
   // Only the tournament's admins can see or search referees' emails.
   canSeeEmails: boolean;
+  pools: PoolOption[];
 }
 
-function RefereeFilterSheet({ tournamentId, canSeeEmails }: RefereeFilterSheetProps) {
+function RefereeFilterSheet({ tournamentId, canSeeEmails, pools }: RefereeFilterSheetProps) {
   const { searchParams, setFilters } = useTournamentFilters();
   const [open, setOpen] = useState(false);
+  const [poolId, setPoolId] = useState("");
 
   async function searchReferees(params: Record<string, string>) {
     const query = new URLSearchParams({ role: "referee", limit: String(SUGGESTION_LIMIT), ...params });
@@ -46,15 +45,11 @@ function RefereeFilterSheet({ tournamentId, canSeeEmails }: RefereeFilterSheetPr
   const emailField = useFilterSearch(async (term) =>
     (await searchReferees({ email: term })).flatMap(({ email }) => (email ? [{ value: email, label: email }] : [])),
   );
-  const poolField = useFilterSearch(async (term) => {
-    const number = poolNumber(term);
-    return number ? [{ value: number, label: `Pool ${number}` }] : [];
-  });
 
   const activeTags = [
     { name: "Referee", value: refereeField.value, clear: () => refereeField.reset() },
     { name: "Email", value: emailField.value, clear: () => emailField.reset() },
-    { name: "Pool", value: poolField.value, clear: () => poolField.reset() },
+    { name: "Pool", value: pools.find(({ id }) => id === poolId)?.label, clear: () => setPoolId("") },
   ].filter((tag) => tag.value);
 
   return (
@@ -66,7 +61,7 @@ function RefereeFilterSheet({ tournamentId, canSeeEmails }: RefereeFilterSheetPr
         if (next) {
           refereeField.reset(searchParams.get("q") ?? "");
           emailField.reset(searchParams.get("email") ?? "");
-          poolField.reset(searchParams.get("pool") ?? "");
+          setPoolId(searchParams.get("pool") ?? "");
         }
         setOpen(next);
       }}
@@ -76,13 +71,13 @@ function RefereeFilterSheet({ tournamentId, canSeeEmails }: RefereeFilterSheetPr
       onReset={() => {
         refereeField.reset();
         emailField.reset();
-        poolField.reset();
+        setPoolId("");
       }}
       onSubmit={() => {
         setFilters({
           q: refereeField.submitValue(),
           email: canSeeEmails ? emailField.submitValue() : undefined,
-          pool: poolNumber(poolField.submitValue()),
+          pool: poolId || undefined,
         });
         setOpen(false);
       }}
@@ -127,19 +122,14 @@ function RefereeFilterSheet({ tournamentId, canSeeEmails }: RefereeFilterSheetPr
           noun="emails"
         />
       )}
-      <FilterSearchField
+      <SelectField
         label="Pool"
-        placeholder="Search pools"
-        inputMode="numeric"
-        value={poolField.query}
-        onChange={(event) => poolField.change(event.target.value)}
-        suggestions={poolField.suggestions}
-        failed={poolField.failed}
-        loading={poolField.loading}
-        selected={poolField.value}
-        onPick={poolField.pick}
-        onCommitText={poolField.commitText}
-        noun="pools"
+        name="pool"
+        placeholder={pools.length === 0 ? "No pools yet" : "Select a pool"}
+        options={pools.map(({ id, label }) => ({ value: id, label }))}
+        value={poolId}
+        onValueChange={setPoolId}
+        disabled={pools.length === 0}
       />
     </FilterSheetDialog>
   );

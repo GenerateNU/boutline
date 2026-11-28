@@ -41,7 +41,7 @@ const REFEREES: RefereeResponse[] = [
 function renderRoster(referees: RefereeResponse[], canManage = true) {
   render(
     <Toaster>
-      <RefereeRoster tournamentId="t-1" referees={referees} events={[]} canManage={canManage} emptyMessage="No referees yet." />
+      <RefereeRoster tournamentId="t-1" referees={referees} pools={[]} canManage={canManage} emptyMessage="No referees yet." />
     </Toaster>,
   );
 }
