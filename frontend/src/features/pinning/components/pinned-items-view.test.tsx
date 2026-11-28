@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
-import { buildPool } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_fixtures/build-pool";
+import { buildPool } from "@/features/pool/fixtures/build-pool";
 import { PinnedItemsView } from "@/features/pinning/components/pinned-items-view";
 import { PINNED_STORAGE_KEY, type PinnedItems } from "@/features/pinning/types/pinning";
 import type { Competitor } from "@/types/competitor";

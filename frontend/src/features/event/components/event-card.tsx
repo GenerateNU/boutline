@@ -9,14 +9,17 @@ import { pluralize } from "@/lib/pluralize";
 interface EventCardProps {
   event: TournamentEvent;
   competitorCount: number;
+  // Defaults to the public event page; the admin dashboard links to its own.
+  href?: string;
 }
 
-function EventCard({ event, competitorCount }: EventCardProps) {
+function EventCard({
+  event,
+  competitorCount,
+  href = `/tournaments/${event.tournament_id}/events/${event.id}`,
+}: EventCardProps) {
   return (
-    <Link
-      href={`/tournaments/${event.tournament_id}/events/${event.id}`}
-      className="block rounded-[12px]"
-    >
+    <Link href={href} className="block rounded-[12px]">
       <Card orientation="horizontal" className="gap-3 transition-colors hover:bg-blue-lightest">
         <CardHeader>
           <CardTitle className={textVariants({ variant: "subtitle", className: "uppercase" })}>

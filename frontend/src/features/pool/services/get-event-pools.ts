@@ -1,5 +1,5 @@
 import { serverRequest } from "@/services/server-request";
-import { PoolBoard, PoolBoardList } from "../_types/pool-board";
+import { PoolBoard, PoolBoardList } from "@/features/pool/types/pool-board";
 
 // The backend's maximum page size.
 const POOL_FETCH_LIMIT = 100;

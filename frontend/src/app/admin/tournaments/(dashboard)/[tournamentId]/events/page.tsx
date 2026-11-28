@@ -1,32 +1,34 @@
-import { Skeleton } from "@/components/primitives/skeleton";
+import { Text } from "@/components/primitives/text";
+import { getCompetitors } from "@/features/competitor/services/getCompetitors";
+import { EventCard } from "@/features/event/components/event-card";
+import { getEvents } from "@/features/event/services/getEvents";
+import { byStartThenName } from "@/lib/event-schedule";
 
-const CARD_COUNT = 3;
+export default async function EventsTab({
+  params,
+}: PageProps<"/admin/tournaments/[tournamentId]/events">) {
+  const { tournamentId } = await params;
+  const events = (await getEvents(tournamentId)).toSorted(byStartThenName);
+  // Only each event's total is needed, so ask for a single row.
+  const counts = await Promise.all(
+    events.map((event) => getCompetitors(tournamentId, 1, 0, { eventId: event.id })),
+  );
 
-// A placeholder shaped like a list of event cards until a ticket defines what this tab shows.
-export default function EventsTab() {
+  if (events.length === 0) {
+    return <Text variant="muted">No events have been added to this tournament yet.</Text>;
+  }
+
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm text-neutral-secondary">Event management is coming soon.</p>
-      <ul aria-hidden className="flex flex-col gap-5">
-        {Array.from({ length: CARD_COUNT }, (_, index) => (
-          <li
-            key={index}
-            className="flex flex-col gap-3 rounded-[12px] border border-outline bg-card p-4 shadow-sm"
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex flex-1 flex-col gap-2">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-3.5 w-1/2" />
-              </div>
-              <Skeleton className="h-6 w-20 shrink-0 rounded-full" />
-            </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-9 flex-1 rounded-full" />
-              <Skeleton className="h-9 flex-1 rounded-full" />
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul className="flex flex-col gap-3">
+      {events.map((event, index) => (
+        <li key={event.id}>
+          <EventCard
+            event={event}
+            competitorCount={counts[index].total}
+            href={`/admin/tournaments/${tournamentId}/events/${event.id}`}
+          />
+        </li>
+      ))}
+    </ul>
   );
 }

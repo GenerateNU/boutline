@@ -1,5 +1,5 @@
 import { PoolList } from "./_components/pool-list";
-import { getEventPools } from "./_services/get-event-pools";
+import { getEventPools } from "@/features/pool/services/get-event-pools";
 
 interface PoolingTabProps
   extends PageProps<"/tournaments/[tournamentId]/events/[eventId]/pooling"> {}

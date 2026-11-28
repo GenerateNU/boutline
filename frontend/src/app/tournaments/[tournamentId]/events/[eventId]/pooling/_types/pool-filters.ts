@@ -1,4 +1,4 @@
-import type { PoolStatus } from "./pool-board";
+import type { PoolStatus } from "@/features/pool/types/pool-board";
 
 export type PoolSortKey = "number" | "start_time" | "strip";
 

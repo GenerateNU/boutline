@@ -38,6 +38,10 @@ still look like the earlier outlined set. Components use tokens, never raw color
   level's header. Each draws one back button, labelled with where it goes, in its
   place. `TabPageOnly` hides the level's header by URL depth, so a loading screen
   above the layout agrees.
+- **A nested level with its own tabs** (the admin event dashboard) replaces its
+  parent's tab row rather than stacking under it. Its tabs are a light in-page row
+  under its header: `text-sm` labels on a `border-outline` hairline, with the active
+  tab `font-semibold text-obsidian` over a 2px `accent-green` underline.
 - The hi-fi navigation set is `logo`, `navbar`, `navigation-bar` and
   `navigation-item`. `global-nav` renders `navbar` as its header. `navigation-bar`
   is the obsidian row of `navigation-item` tabs, and `tab-nav` renders it with the
@@ -140,6 +144,8 @@ Page text uses the `Text` primitive (`textVariants` inside other primitives' slo
 - **Modal:** a `rounded-3xl p-5` card with an `text-xl` title and close (X) header,
   a muted description, and a two-column `ModalFooter` (outline Cancel plus a filled
   or `destructive` action).
+- **Sheet:** the `rounded-t-3xl` bottom-anchored container with a `text-xl` title and
+  close (X) header. The filter sheet and the create forms build on it.
 - **Filter sheet:** a `rounded-t-3xl` bottom sheet. Its search sections are a label
   above a `FilterSearchField`, whose suggestions show in a `Dropdown` of
   `DropdownOption` rows while typing, floating over the sections below rather than

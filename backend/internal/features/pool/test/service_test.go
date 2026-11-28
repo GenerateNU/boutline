@@ -576,19 +576,19 @@ func TestDeletePoolByID(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		hasBouts   bool
+		started    bool
 		unknownID  bool
 		badID      bool
 		caller     Caller
 		wantCode   int
 		wantDetail string
 	}{
-		{name: "deletes a pool"},
+		{name: "deletes an unstarted pool with its bouts"},
 		{
-			name:       "refuses to delete a pool that has bouts",
-			hasBouts:   true,
+			name:       "refuses to delete a started pool",
+			started:    true,
 			wantCode:   http.StatusConflict,
-			wantDetail: "a pool with bouts cannot be deleted",
+			wantDetail: "a started pool cannot be deleted",
 		},
 		{
 			name:      "reports an unknown id as not found",
@@ -626,8 +626,11 @@ func TestDeletePoolByID(t *testing.T) {
 			t.Parallel()
 
 			stored := seededPool(uuid.New())
+			if tt.started {
+				stored.StartedAt = ptr(time.Now())
+			}
 			repo := NewFakePoolRepository(stored)
-			repo.WithBouts[stored.ID] = tt.hasBouts
+			repo.Bouts = []pool.PoolBout{{ID: uuid.New(), PoolID: stored.ID}}
 
 			id := stored.ID.String()
 			switch {
@@ -643,6 +646,7 @@ func TestDeletePoolByID(t *testing.T) {
 			if tt.wantCode == 0 {
 				require.NoError(t, err)
 				assert.NotContains(t, repo.Pools, stored.ID)
+				assert.Empty(t, repo.Bouts)
 
 				return
 			}

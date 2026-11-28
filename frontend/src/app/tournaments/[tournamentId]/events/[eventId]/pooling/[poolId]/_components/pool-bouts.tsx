@@ -5,10 +5,10 @@ import { useState } from "react";
 import { PoolTable } from "@/features/pool/components/pool-table";
 
 import { PoolStandingsTable } from "../../_components/pool-standings-table";
-import { poolBoutDetail } from "../../_services/pool-bout-detail";
+import { poolBoutDetail } from "@/features/pool/lib/pool-bout-detail";
 import { boutsTable } from "../../_services/pool-table-data";
 import { poolTitle } from "../../_services/pool-title";
-import type { PoolBoard } from "../../_types/pool-board";
+import type { PoolBoard } from "@/features/pool/types/pool-board";
 
 import { BoutCard } from "./bout-card";
 

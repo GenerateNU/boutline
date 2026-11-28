@@ -13,6 +13,8 @@ interface ModalProps {
   description?: string;
   onCloseAutoFocus?: (event: Event) => void;
   className?: string;
+  // Opens the modal when pressed; omit it when something else sets `open`.
+  trigger?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -23,12 +25,14 @@ function Modal({
   description,
   onCloseAutoFocus,
   className,
+  trigger,
   children,
 }: ModalProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      {trigger && <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>}
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-obsidian/40 motion-safe:data-[state=open]:animate-fade-in motion-safe:data-[state=closed]:animate-fade-out" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-obsidian/40 motion-safe:data-[state=open]:animate-fade-in motion-safe:data-[state=closed]:animate-fade-out" />
         <Dialog.Content
           data-slot="modal"
           onCloseAutoFocus={onCloseAutoFocus}

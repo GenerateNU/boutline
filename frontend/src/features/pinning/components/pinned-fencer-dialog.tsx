@@ -6,10 +6,10 @@ import Link from "next/link";
 import { Dialog } from "radix-ui";
 import { useEffect, useState } from "react";
 
-import { PoolStatusBadge } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_components/pool-status-badge";
+import { PoolStatusBadge } from "@/features/pool/components/pool-status-badge";
 import { boutsTable } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_services/pool-table-data";
 import { poolTitle } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_services/pool-title";
-import type { PoolBoard } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_types/pool-board";
+import type { PoolBoard } from "@/features/pool/types/pool-board";
 import { Button } from "@/components/primitives/button";
 import { Loading } from "@/components/primitives/loading";
 import { Text } from "@/components/primitives/text";

@@ -1,6 +1,6 @@
-import { PoolBoard } from "../_types/pool-board";
+import { PoolBoard } from "@/features/pool/types/pool-board";
 
-import { fencerName } from "./fencer-name";
+import { fencerName } from "@/features/pool/lib/fencer-name";
 import { poolTitle } from "./pool-title";
 
 export function filterPools(pools: PoolBoard[], search: string): PoolBoard[] {

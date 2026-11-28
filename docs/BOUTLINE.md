@@ -589,10 +589,40 @@ Tabs: Fencers (the index page) · Referees · Events · Settings.
   pool (§10.3).
 - **Fencers:** the public Fencers tab's list (§4.3), plus Edit Mode for admins.
   Its "Add fencers" button is disabled until a ticket defines that flow.
-- **Events** and **Settings** (Planned): placeholders until a ticket defines what
-  they show.
-- **Event page** (`/admin/tournaments/[id]/events/[eventId]`): nested under Events,
-  with the event's pool stage and, once it ends, the direct elimination.
+- **Events:** the tournament's events in start-time order, each a card with its
+  status and competitor count that opens the event dashboard.
+- **Settings** (Planned): a placeholder until a ticket defines what it shows.
+- **Event dashboard** (`/admin/tournaments/[id]/events/[eventId]`): nested under
+  Events, it replaces the tournament's tabs with its own. The header shows the
+  event's name, status, start time and competitor count. Tabs:
+  - Edit mode on every tab is a toggle. Only tournament admins see the Add and
+    Edit controls; referees see the tabs read-only.
+  - **Pools** (the index page): the event's pools as cards (number, strip,
+    status, fencers), each opening its pool page. Admins always see Add Pools and
+    Edit Mode, and can:
+    - Add a pool, while the tournament is active and the event has no pool stage
+      or it is upcoming (otherwise Add Pools is disabled with the reason): number,
+      strip and 4–10 fencers picked from the event's checked-in fencers not already
+      in another pool. Adding the first pool of an event with no pool stage creates
+      the stage (max 10 fencers per pool).
+    - Edit a pool's number, strip and fencers. Changing the fencers re-seats the
+      pool and regenerates its bouts, and is allowed only before the pool starts.
+      Status is shown, not edited; it changes by starting and ending.
+    - Delete a pool that hasn't started, after a confirmation. This removes its
+      bouts (`DELETE /pools/{id}`); a started pool can't be deleted.
+
+    Below the pools: the pool stage's status and End control and, once it ends, the
+    direct elimination.
+  - **Pool page** (`/admin/tournaments/[id]/events/[eventId]/pools/[poolId]`):
+    nested under Pools, it keeps the event's tabs and has a back button in place
+    of the header. It lists the pool's bouts (bout n of total, fencers, scores,
+    status), searchable by fencer and filterable by status. Each bout opens the
+    referee screen (Start Match or Continue Match) or, once ended, an audit log of
+    its touches from the scoring history. In edit mode admins can change an
+    upcoming bout's two fencers, or delete a bout that isn't active, after a
+    confirmation.
+  - **Fencers**, **Results** and **Settings** (Planned): placeholders until their
+    tickets land.
 
 ---
 

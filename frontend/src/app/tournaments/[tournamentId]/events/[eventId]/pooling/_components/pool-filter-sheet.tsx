@@ -10,7 +10,7 @@ import { FilterSheetDialog } from "@/components/primitives/filter-sheet-dialog";
 import { defaultPoolFilters, hasActiveFilters } from "../_services/apply-pool-filters";
 import { matchingSuggestions } from "../_services/pool-filter-options";
 import { poolStatusLabels } from "../_services/pool-status-labels";
-import type { PoolStatus } from "../_types/pool-board";
+import type { PoolStatus } from "@/features/pool/types/pool-board";
 import type { PoolFilterOptions, PoolFilters, PoolSortKey } from "../_types/pool-filters";
 
 interface PoolFilterSheetProps {

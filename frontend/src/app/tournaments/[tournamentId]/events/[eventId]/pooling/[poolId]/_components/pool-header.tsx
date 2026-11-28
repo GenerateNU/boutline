@@ -2,9 +2,9 @@ import { BackButton } from "@/components/primitives/back-button";
 import type { PinnedEvent } from "@/features/pinning/types/pinning";
 
 import { PoolPinButton } from "../../_components/pool-pin-button";
-import { PoolStatusBadge } from "../../_components/pool-status-badge";
+import { PoolStatusBadge } from "@/features/pool/components/pool-status-badge";
 import { poolTitle } from "../../_services/pool-title";
-import type { PoolBoard } from "../../_types/pool-board";
+import type { PoolBoard } from "@/features/pool/types/pool-board";
 
 interface PoolHeaderProps {
   pool: PoolBoard;

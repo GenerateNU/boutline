@@ -6,7 +6,7 @@ import { cn } from "cn";
 import { Button } from "@/components/primitives/button";
 import type { BoutStatus } from "@/types/bout";
 
-import type { PoolBoutDetail, PoolBoutSide } from "../../_types/pool-bout-detail";
+import type { PoolBoutDetail, PoolBoutSide } from "@/features/pool/types/pool-bout-detail";
 
 interface BoutCardProps {
   detail: PoolBoutDetail;

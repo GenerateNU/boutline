@@ -1,4 +1,4 @@
-import type { PoolStatus } from "../_types/pool-board";
+import type { PoolStatus } from "@/features/pool/types/pool-board";
 
 export const poolStatusLabels: Record<PoolStatus, string> = {
   upcoming: "Upcoming",

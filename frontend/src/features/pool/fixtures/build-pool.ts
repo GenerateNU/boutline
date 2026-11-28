@@ -1,6 +1,6 @@
 import type { BoutStatus } from "@/types/bout";
 
-import type { PoolBoard, PoolBout, PoolFencer, PoolStanding, PoolStatus } from "../_types/pool-board";
+import type { PoolBoard, PoolBout, PoolFencer, PoolStanding, PoolStatus } from "@/features/pool/types/pool-board";
 
 // Test-only: builds a pool sheet in the API's shape from just the fields a test cares about.
 

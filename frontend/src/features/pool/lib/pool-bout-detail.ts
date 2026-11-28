@@ -1,5 +1,5 @@
-import type { PoolBoard, PoolBout, PoolFencer } from "../_types/pool-board";
-import type { PoolBoutDetail, PoolBoutSide } from "../_types/pool-bout-detail";
+import type { PoolBoard, PoolBout, PoolFencer } from "@/features/pool/types/pool-board";
+import type { PoolBoutDetail, PoolBoutSide } from "@/features/pool/types/pool-bout-detail";
 
 import { fencerName } from "./fencer-name";
 
@@ -9,6 +9,7 @@ function boutSide(bout: PoolBout, fencer: PoolFencer, score: number): PoolBoutSi
     competitorId: fencer.competitor_id,
     name: fencerName(fencer),
     team: fencer.team,
+    position: fencer.position,
     score: bout.status === "upcoming" ? null : score,
     result: decided ? (bout.winner_id === fencer.competitor_id ? "V" : "D") : null,
   };

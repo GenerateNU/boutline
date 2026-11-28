@@ -12,12 +12,12 @@ import { PoolTable } from "@/features/pool/components/pool-table";
 
 import { boutsTable } from "../_services/pool-table-data";
 import { poolTitle } from "../_services/pool-title";
-import type { PoolBoard } from "../_types/pool-board";
+import type { PoolBoard } from "@/features/pool/types/pool-board";
 import type { PoolView } from "../_types/pool-table";
 
 import { PoolPinButton } from "./pool-pin-button";
 import { PoolStandingsTable } from "./pool-standings-table";
-import { PoolStatusBadge } from "./pool-status-badge";
+import { PoolStatusBadge } from "@/features/pool/components/pool-status-badge";
 
 interface PoolCardProps {
   pool: PoolBoard;

@@ -38,7 +38,10 @@ export default async function TournamentDashboardLayout({
           dates={formatEventDateRange(events, tournament.start_time)}
         />
       </TabPageOnly>
-      <DashboardTabNav />
+      {/* An event draws its own tabs, so the tournament's row stays on its tab pages. */}
+      <TabPageOnly basePath={`/admin/tournaments/${tournamentId}`}>
+        <DashboardTabNav />
+      </TabPageOnly>
       <div className="mx-auto flex w-full max-w-mobile flex-col gap-10 px-4 pt-10 pb-20">
         {children}
       </div>

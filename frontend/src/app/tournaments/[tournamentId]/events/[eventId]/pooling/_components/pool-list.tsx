@@ -6,7 +6,7 @@ import type { PinnedEvent } from "@/features/pinning/types/pinning";
 import { usePoolFilters } from "../_hooks/use-pool-filters";
 import { noPoolsMessage } from "../_services/no-pools-message";
 import { poolTitle } from "../_services/pool-title";
-import type { PoolBoard } from "../_types/pool-board";
+import type { PoolBoard } from "@/features/pool/types/pool-board";
 
 import { PoolCard } from "./pool-card";
 import { PoolFilterSheet } from "./pool-filter-sheet";

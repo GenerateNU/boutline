@@ -80,7 +80,7 @@ func RegisterPoolService(api huma.API, service PoolService) {
 		Method:        http.MethodDelete,
 		Path:          poolBasePath + "/{id}",
 		Summary:       "Delete a pool",
-		Description:   "A pool that still has bouts cannot be deleted.",
+		Description:   "Deletes the pool with its bouts. A pool that has started cannot be deleted.",
 		Tags:          []string{"Pools"},
 		DefaultStatus: http.StatusNoContent,
 	}, service.DeletePoolByID)

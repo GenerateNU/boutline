@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 
-import type { PoolBoard } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_types/pool-board";
+import type { PoolBoard } from "@/features/pool/types/pool-board";
 import { fetchPinnedPools } from "@/features/pinning/services/pinned-pools-query";
 import type { PinnedPool } from "@/features/pinning/types/pinning";
 import { errorMessage } from "@/utils/error-message";

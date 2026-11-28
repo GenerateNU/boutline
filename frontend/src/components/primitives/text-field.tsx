@@ -43,6 +43,7 @@ function TextField({
         </label>
       ) : null}
       <div
+        data-slot="text-field-control"
         role="group"
         className={cn(
           "flex h-10 items-center gap-2 rounded-md border border-outline bg-background px-3 text-sm text-obsidian [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-neutral-secondary",
