@@ -9,7 +9,6 @@ import type {
   TournamentEvent,
 } from "@/features/event/types/event";
 
-// Select values are strings, so an unset attribute is "" rather than null.
 export interface EventSettingsValues {
   type: EventType | "";
   date: Date | undefined;
@@ -31,8 +30,6 @@ export function valuesFrom(event: TournamentEvent): EventSettingsValues {
   };
 }
 
-// Unset fields become undefined, which JSON drops, so the API leaves them as they are. A setting
-// picked back to None goes in `clear` instead, so the API empties it.
 export function updateFrom(values: EventSettingsValues, event: TournamentEvent): EventUpdate {
   const clear: NonNullable<EventUpdate["clear"]> = [];
   if (!values.type && event.type) {

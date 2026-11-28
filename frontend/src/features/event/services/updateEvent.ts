@@ -8,7 +8,6 @@ import type {
 } from "@/features/event/types/event";
 import { apiRequest } from "@/services/api-request";
 
-// An omitted field is left as it is; one named in `clear` is set back to empty.
 export interface EventUpdate {
   start_time?: string;
   type?: EventType;

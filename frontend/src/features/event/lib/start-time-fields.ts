@@ -1,7 +1,3 @@
-// Splits a start time into the date and "HH:mm" time the form edits, and joins them back.
-// Both read the UTC clock, like every start time the app displays (lib/event-schedule.ts),
-// so the form shows the same time as the header above it. The date is a local-midnight
-// Date only because DateField formats in local time.
 export function splitStartTime(startTime: string | null): { date: Date | undefined; time: string } {
   if (!startTime) {
     return { date: undefined, time: "" };

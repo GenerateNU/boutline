@@ -23,8 +23,6 @@ interface DateFieldProps {
   "aria-describedby"?: string;
   className?: string;
   eventDates?: Date[];
-  // "modal" opens the calendar in a centered dialog over a darkened page, with a Choose Date
-  // button, instead of a popover under the field.
   presentation?: "popover" | "modal";
 }
 
@@ -48,7 +46,6 @@ function DateField({
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
 
-  // combobox, as Radix gives Select's trigger, so it can carry aria-invalid and reads its label rather than its text.
   const trigger = (
     <button
       id={triggerId}
@@ -81,7 +78,6 @@ function DateField({
         <Modal
           open={open}
           onOpenChange={(next) => {
-            // Each opening starts from the saved date; closing without Choose Date drops the pick.
             if (next) {
               setDraft(value);
             }
@@ -123,7 +119,6 @@ function DateField({
               align="start"
               sideOffset={4}
               collisionPadding={16}
-              // The calendar focuses the picked day (or today) itself, rather than its first arrow.
               onOpenAutoFocus={(event) => event.preventDefault()}
               className="z-50 w-76 origin-(--radix-popover-content-transform-origin) rounded-xl border border-outline bg-background p-3 shadow-md outline-none motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out"
             >
