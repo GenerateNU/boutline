@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/primitives/button";
 import { Modal, ModalFooter } from "@/components/primitives/modal";
+import { Text } from "@/components/primitives/text";
 import { useToast } from "@/components/primitives/toast";
 import { RefereeCard, type Referee } from "@/features/referee/components/referee-card";
 import type { RefereeResponse } from "@/features/referee/types/referee";
@@ -72,7 +73,7 @@ function RefereeRoster({ tournamentId, referees, pools, canManage, emptyMessage 
         </Button>
       )}
       {rows.length === 0 ? (
-        <p className="text-sm text-neutral-secondary">{emptyMessage}</p>
+        <Text variant="muted">{emptyMessage}</Text>
       ) : (
         <RefereeCard
           referees={rows}
