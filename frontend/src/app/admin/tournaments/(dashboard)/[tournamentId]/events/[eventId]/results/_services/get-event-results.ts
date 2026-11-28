@@ -26,8 +26,5 @@ export async function getEventResults(eventId: string) {
   const rest = await Promise.all(
     offsets.map((offset) => getResultPage(eventId, offset)),
   );
-  return {
-    results: [first, ...rest].flatMap((page) => page.data),
-    total: first.total,
-  };
+  return [first, ...rest].flatMap((page) => page.data);
 }

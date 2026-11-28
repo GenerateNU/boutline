@@ -7,7 +7,7 @@ export default async function ResultsTab({
   params,
 }: PageProps<"/admin/tournaments/[tournamentId]/events/[eventId]/results">) {
   const { tournamentId, eventId } = await params;
-  const { results } = await getEventResults(eventId);
+  const results = await getEventResults(eventId);
 
   if (results.length === 0) {
     return <Text variant="muted">Results appear once a stage ends.</Text>;

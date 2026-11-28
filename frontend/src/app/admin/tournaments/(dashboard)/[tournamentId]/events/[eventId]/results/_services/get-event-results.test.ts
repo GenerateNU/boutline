@@ -34,10 +34,9 @@ describe("getEventResults", () => {
       return page(pages[offset / 100], total, offset);
     });
 
-    const { results, total: returnedTotal } = await getEventResults("e1");
+    const results = await getEventResults("e1");
 
     expect(results.map(({ place }) => place)).toEqual(pages.flat());
-    expect(returnedTotal).toBe(total);
     for (const [url] of fetchMock.mock.calls) {
       expect(new URL(url).pathname).toBe("/api/v1/events/e1/results");
       expect(new URL(url).searchParams.get("limit")).toBe("100");
