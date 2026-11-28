@@ -13,8 +13,8 @@ const FILLED_EVENT = {
   name: "Y14 Foil",
   date: "2026-11-20",
   time: "09:00",
-  weapon: "Foil",
-  genderMix: "Female",
+  weapon: "foil",
+  genderMix: "female",
   ageCategory: "Y14",
   ratingLevel: "Open",
   qualifier: "No",
@@ -102,13 +102,24 @@ describe("NewTournamentForm", () => {
     ]);
   });
 
-  it("adds an event to the draft and opens it on its own page", () => {
+  it("drops events that were added but never filled in, keeping the rest", () => {
+    const halfDone = newEventDraft();
+    halfDone.name = "Cadet Epee";
+    saveDraft([newEventDraft(), filledEvent(), halfDone]);
+    render(<NewTournamentForm />);
+
+    expect(storedDraft().events.map((event) => event.name)).toEqual(["Y14 Foil", "Cadet Epee"]);
+    expect(within(screen.getByRole("list", { name: "Events" })).getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("adds an event to the draft and opens it on its own page, without listing it while blank", () => {
     render(<NewTournamentForm />);
 
     fireEvent.click(screen.getByRole("button", { name: "Add Events" }));
 
     const [added] = storedDraft().events;
     expect(mockPush).toHaveBeenCalledWith(`/admin/tournaments/new/event?id=${added.id}`);
+    expect(within(screen.getByRole("list", { name: "Events" })).queryAllByRole("listitem")).toHaveLength(0);
   });
 
   it("shows an edit link and a checkbox for each event only in edit mode", () => {

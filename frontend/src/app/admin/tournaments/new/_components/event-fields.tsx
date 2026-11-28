@@ -7,28 +7,18 @@ import { DateField } from "@/components/primitives/date-field";
 import { SelectField } from "@/components/primitives/select-field";
 import { TextField } from "@/components/primitives/text-field";
 import { TimeField } from "@/components/primitives/time-field";
+import { GENDER_OPTIONS, WEAPON_OPTIONS } from "@/features/event/lib/event-filters";
 import { formatDateParam, parseDateParam } from "@/features/tournament/lib/date-param";
 
 import { EventDraft } from "../_types/tournament-draft";
 import { EVENT_FORMATS, EVENT_TYPES, missingEventFields, RequiredEventField } from "../tournament-draft-helpers";
-import {
-  AGE_CATEGORIES,
-  GENDER_MIXES,
-  QUALIFIER_OPTIONS,
-  RATING_LEVELS,
-  WEAPONS,
-} from "../tournament-request-helpers";
+import { AGE_CATEGORIES, QUALIFIER_OPTIONS, RATING_LEVELS } from "../tournament-request-helpers";
 
 interface EventFieldsProps {
   event: EventDraft;
   // True once Continue has failed, so empty fields stay marked from then on.
   attempted: boolean;
   onChange: (patch: Partial<EventDraft>) => void;
-}
-
-// ChipGroup takes value/label pairs; these option lists are their own labels.
-function chipOptions(labels: string[]) {
-  return labels.map((label) => ({ value: label, label }));
 }
 
 function EventFields({ event, attempted, onChange }: EventFieldsProps) {
@@ -78,18 +68,18 @@ function EventFields({ event, attempted, onChange }: EventFieldsProps) {
       <ChipGroup
         label="Weapon"
         value={event.weapon}
+        {...invalidProps("weapon")}
         onValueChange={(weapon) => weapon && onChange({ weapon })}
-        className={invalid.has("weapon") ? "rounded-md ring-2 ring-red-dark" : undefined}
       >
-        <ChipGroupOptions options={chipOptions(WEAPONS)} />
+        <ChipGroupOptions options={WEAPON_OPTIONS} />
       </ChipGroup>
       <ChipGroup
         label="Gender Mix"
         value={event.genderMix}
+        {...invalidProps("genderMix")}
         onValueChange={(genderMix) => genderMix && onChange({ genderMix })}
-        className={invalid.has("genderMix") ? "rounded-md ring-2 ring-red-dark" : undefined}
       >
-        <ChipGroupOptions options={chipOptions(GENDER_MIXES)} />
+        <ChipGroupOptions options={GENDER_OPTIONS} />
       </ChipGroup>
       <SelectField
         label="Age Category"

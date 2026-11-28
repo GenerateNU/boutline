@@ -15,7 +15,13 @@ import { Text } from "@/components/primitives/text";
 
 import { useDraftSaving } from "../_hooks/use-draft-saving";
 import { useTournamentDraft } from "../_hooks/use-tournament-draft";
-import { eventTitle, missingEventFields, missingTournamentFields, RequiredTournamentField } from "../tournament-draft-helpers";
+import {
+  eventTitle,
+  isBlankEvent,
+  missingEventFields,
+  missingTournamentFields,
+  RequiredTournamentField,
+} from "../tournament-draft-helpers";
 import { SelectionBar } from "./selection-bar";
 import { TournamentFields } from "./tournament-fields";
 
@@ -69,8 +75,17 @@ function EventRow({ title, edit, errors }: EventRowProps) {
 
 function NewTournamentForm() {
   const router = useRouter();
-  const { draft, setField, setTournamentId, setTournamentSaved, addEvent, updateEventWith, removeEvent, clear } =
-    useTournamentDraft();
+  const {
+    draft,
+    setField,
+    setTournamentId,
+    setTournamentSaved,
+    addEvent,
+    updateEventWith,
+    removeEvent,
+    clear,
+    removeBlankEvents,
+  } = useTournamentDraft();
   const eventsHeadingId = useId();
   const [attempted, setAttempted] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -86,6 +101,9 @@ function NewTournamentForm() {
     removeEvent,
   });
   const isSaving = tournamentSaving || savingEvents.size > 0 || removingEvents.size > 0;
+  // A just-added event stays out of the list until something is filled in, so it can't
+  // flash as "Event 1" while its page opens; removeBlankEvents drops it if it never is.
+  const listedEvents = draft.events.filter((draftEvent) => !isBlankEvent(draftEvent));
   // Set once the tournament is created. The draft is cleared when the dashboard replaces
   // this page, not before, so the emptied fields never flash blank and invalid on screen.
   const created = useRef(false);
@@ -98,6 +116,12 @@ function NewTournamentForm() {
     },
     [clear],
   );
+
+  // An event added and left without anything filled in (Add Events, then Back) is
+  // dropped when this page shows, so it can't block Continue with "Finish Event 1".
+  useEffect(() => {
+    removeBlankEvents();
+  }, [removeBlankEvents]);
 
   // A tournament already sent by an earlier, partly failed Continue is sent again once edited.
   function handleField(field: RequiredTournamentField, value: string) {
@@ -133,7 +157,7 @@ function NewTournamentForm() {
   async function handleRemoveSelected() {
     const ids = [...selected];
     setSelected(new Set());
-    if (ids.length === draft.events.length) {
+    if (ids.length === listedEvents.length) {
       setEditing(false);
     }
     await Promise.all(ids.map((localId) => removeEventCard(localId)));
@@ -159,11 +183,11 @@ function NewTournamentForm() {
       setSubmitError(null);
       return;
     }
-    if (draft.events.length === 0) {
+    if (listedEvents.length === 0) {
       setSubmitError("Add at least one event before creating the tournament.");
       return;
     }
-    const incomplete = draft.events
+    const incomplete = listedEvents
       .map((draftEvent, index) => ({ draftEvent, title: eventTitle(draftEvent, index) }))
       .filter(({ draftEvent }) => !draftEvent.saved && missingEventFields(draftEvent).length > 0);
     if (incomplete.length > 0) {
@@ -185,7 +209,7 @@ function NewTournamentForm() {
     if (errors.tournament) {
       return `Couldn't save the tournament details: ${errors.tournament}`;
     }
-    const failedTitles = draft.events
+    const failedTitles = listedEvents
       .map((draftEvent, index) => ({ id: draftEvent.id, title: eventTitle(draftEvent, index) }))
       .filter(({ id }) => errors.events[id])
       .map(({ title }) => title);
@@ -232,14 +256,14 @@ function NewTournamentForm() {
                   type="button"
                   size="sm"
                   variant={editing ? "filled" : "outline"}
-                  disabled={draft.events.length === 0}
+                  disabled={listedEvents.length === 0}
                   onClick={toggleEditing}
                 >
                   {editing ? "Exit Edit Mode" : "Edit Mode"}
                 </Button>
               </div>
               <ul aria-label="Events" className="flex flex-col gap-3">
-                {draft.events.map((draftEvent, index) => (
+                {listedEvents.map((draftEvent, index) => (
                   <EventRow
                     key={draftEvent.id}
                     title={eventTitle(draftEvent, index)}

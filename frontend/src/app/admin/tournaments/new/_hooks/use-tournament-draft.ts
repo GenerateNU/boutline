@@ -8,6 +8,7 @@ import { EventDraft, FencerDraft, TournamentDraft } from "../_types/tournament-d
 import {
   EMPTY_TOURNAMENT_DRAFT,
   importFencers,
+  isBlankEvent,
   newEventDraft,
   newFencerDraft,
   withoutFencer,
@@ -89,6 +90,13 @@ export function useTournamentDraft() {
   // Stable, so the form can clear the draft from an unmount effect.
   const clear = useCallback(() => setDraft(EMPTY_TOURNAMENT_DRAFT), [setDraft]);
 
+  // Stable, so the form can run it from a mount effect. Reads the stored draft, not
+  // this render's copy, so it works before the draft has loaded into the page.
+  const removeBlankEvents = useCallback(
+    () => setDraft((current) => ({ ...current, events: current.events.filter((event) => !isBlankEvent(event)) })),
+    [setDraft],
+  );
+
   return {
     draft,
     setField,
@@ -103,5 +111,6 @@ export function useTournamentDraft() {
     removeFencer,
     importRows,
     clear,
+    removeBlankEvents,
   };
 }

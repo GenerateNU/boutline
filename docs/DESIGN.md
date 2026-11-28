@@ -128,7 +128,8 @@ Page text uses the `Text` primitive (`textVariants` inside other primitives' slo
   `border-red-dark` when `aria-invalid` or `:user-invalid` (a required field left
   empty once edited or submitted), and `bg-disabled` when disabled. A required
   field's label ends in a `text-red-dark` asterisk, hidden from screen readers since
-  `required` is already announced.
+  `required` is already announced. A required `ChipGroup` takes the same
+  `aria-invalid`, which gives each of its chips that 2px `border-red-dark`.
   - Select is Radix Select, its menu capped at `max-h-80` and scrolling past that.
   - The date field opens the calendar in a Radix Popover on the picked day (or
     today) and shows `MMM d, yyyy`.

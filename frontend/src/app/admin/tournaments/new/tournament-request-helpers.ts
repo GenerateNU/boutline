@@ -2,6 +2,7 @@ import { FencerDraft, EventDraft, TournamentDraft } from "./_types/tournament-dr
 import { CompetitorRequest, EventRequest, TournamentRequest } from "./_types/tournament-requests";
 
 // The form keeps display labels; these map each label to what the API accepts.
+// Weapon and gender mix come from the shared event options, which already hold API values.
 export const AUTHORITY_VALUES: Record<string, string> = {
   askFRED: "askfred",
   "USA Fencing": "usa_fencing",
@@ -9,8 +10,6 @@ export const AUTHORITY_VALUES: Record<string, string> = {
   Other: "other",
 };
 export const EVENT_TYPE_VALUES: Record<string, string> = { Individual: "individual" };
-export const WEAPON_VALUES: Record<string, string> = { Foil: "foil", Épée: "epee", Sabre: "sabre" };
-export const GENDER_MIX_VALUES: Record<string, string> = { Male: "male", Female: "female", Other: "other" };
 export const AGE_CATEGORY_VALUES: Record<string, string> = {
   Y8: "y8",
   Y10: "y10",
@@ -33,8 +32,6 @@ export const RATING_LEVEL_VALUES: Record<string, string> = {
 export const QUALIFIER_VALUES: Record<string, boolean> = { No: false, Yes: true };
 
 export const AUTHORITIES = Object.keys(AUTHORITY_VALUES);
-export const WEAPONS = Object.keys(WEAPON_VALUES);
-export const GENDER_MIXES = Object.keys(GENDER_MIX_VALUES);
 export const AGE_CATEGORIES = Object.keys(AGE_CATEGORY_VALUES);
 export const RATING_LEVELS = Object.keys(RATING_LEVEL_VALUES);
 export const QUALIFIER_OPTIONS = Object.keys(QUALIFIER_VALUES);
@@ -59,8 +56,8 @@ export function eventRequest(event: EventDraft): EventRequest {
     name: event.name.trim(),
     start_time: localStartTime(event.date, event.time),
     type: EVENT_TYPE_VALUES[event.type],
-    weapon: WEAPON_VALUES[event.weapon],
-    gender: GENDER_MIX_VALUES[event.genderMix],
+    weapon: event.weapon,
+    gender: event.genderMix,
     age_category: AGE_CATEGORY_VALUES[event.ageCategory],
     rating_limit: RATING_LEVEL_VALUES[event.ratingLevel],
     qualifier: QUALIFIER_VALUES[event.qualifier],

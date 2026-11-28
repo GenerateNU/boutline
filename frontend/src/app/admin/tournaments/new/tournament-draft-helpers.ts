@@ -113,6 +113,13 @@ export function missingEventFields(event: EventDraft): RequiredEventField[] {
   return REQUIRED_EVENT_FIELDS.filter((field) => event[field].trim() === "");
 }
 
+// Type and format start chosen, so an event is blank when only those are set: added
+// with Add Events but never filled in, never sent, and with no fencers.
+export function isBlankEvent(event: EventDraft) {
+  const untouched = missingEventFields(event).length === REQUIRED_EVENT_FIELDS.length - 2;
+  return untouched && !event.eventId && event.fencers.length === 0;
+}
+
 const REQUIRED_TOURNAMENT_FIELDS = ["name", "location", "venue", "date", "time", "authority"] as const;
 
 export type RequiredTournamentField = (typeof REQUIRED_TOURNAMENT_FIELDS)[number];

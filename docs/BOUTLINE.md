@@ -1117,7 +1117,8 @@ Clearing a check-in later leaves the fencer in any pool they're already in.
   it on the event page. Edit Mode (disabled until there's an event) turns on edit
   mode, where each card gets a checkbox and a pencil that reopens its event, until
   Exit Edit Mode or until every event is removed. Checking events shows a selection
-  bar ("2 selected", Clear) whose Remove removes them.
+  bar ("2 selected", Clear) whose Remove removes them. An event added but left with
+  nothing filled in (Add Events, then Back) is dropped when the page shows again.
   Removing an event an earlier Continue already sent deletes it on the server first,
   and keeps it with an error under its card if that fails.
 - **Event page (`/admin/tournaments/new/event?id=`):** the attributes in §8.5 for

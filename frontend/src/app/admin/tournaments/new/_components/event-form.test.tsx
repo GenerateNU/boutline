@@ -13,8 +13,8 @@ const FILLED_EVENT = {
   name: "Y14 Foil",
   date: "2026-11-20",
   time: "09:00",
-  weapon: "Foil",
-  genderMix: "Female",
+  weapon: "foil",
+  genderMix: "female",
   ageCategory: "Y14",
   ratingLevel: "Open",
   qualifier: "No",
@@ -38,10 +38,10 @@ describe("EventForm", () => {
     render(<EventForm eventId={event.id} />);
 
     fireEvent.change(screen.getByRole("textbox", { name: "Event name" }), { target: { value: "Cadet Epee" } });
-    fireEvent.click(screen.getByRole("radio", { name: "Épée" }));
-    fireEvent.click(screen.getByRole("radio", { name: "Male" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Epee" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Men's" }));
 
-    expect(storedEvents()[0]).toMatchObject({ name: "Cadet Epee", weapon: "Épée", genderMix: "Male" });
+    expect(storedEvents()[0]).toMatchObject({ name: "Cadet Epee", weapon: "epee", genderMix: "male" });
   });
 
   it.each([
@@ -59,6 +59,7 @@ describe("EventForm", () => {
     } else {
       expect(mockPush).not.toHaveBeenCalled();
       expect(screen.getByRole("alert")).toHaveTextContent("Fill in the highlighted fields to add this event.");
+      expect(screen.getByRole("radiogroup", { name: "Weapon" })).toHaveAttribute("aria-invalid", "true");
     }
   });
 
