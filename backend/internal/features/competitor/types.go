@@ -125,7 +125,7 @@ type CompetitorListInput struct {
 	Gender       string `query:"gender" enum:"F,M,O" doc:"Only competitors with this gender"`
 	Team         string `query:"team" maxLength:"120" doc:"Only competitors whose team contains this text; omit to return every competitor"`
 	Weapon       string `query:"weapon" enum:"foil,epee,sabre" doc:"Only competitors whose event uses this weapon"`
-	AgeCategory  string `query:"ageCategory" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open" doc:"Only competitors whose event is in this age category"`
+	AgeCategory  string `query:"ageCategory" enum:"y8,y10,y12,y14,cadet,junior,senior,veteran,open,u9,u11,u13,u15,u17,u18,u23,cadet_u16,veteran_40,veteran_40_59,veteran_abc,veteran_50,grand_veteran,veteran_60,veteran_70" doc:"Only competitors whose event is in this age category"`
 }
 
 type CompetitorListBody struct {

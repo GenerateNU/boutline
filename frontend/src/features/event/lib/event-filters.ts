@@ -1,6 +1,7 @@
 import type {
   EventAgeCategory,
   EventGender,
+  EventRatingLimit,
   EventStatus,
   EventType,
   EventWeapon,
@@ -15,15 +16,31 @@ const WEAPON_LABELS: Record<EventWeapon, string> = {
   epee: "Epee",
 };
 
+// USA Fencing's age categories, in the design's order.
 const AGE_LABELS: Record<EventAgeCategory, string> = {
+  u9: "Under-9",
+  y10: "Under-10",
+  u11: "Under-11",
+  y12: "Under-12",
+  u13: "Under-13",
+  y14: "Under-14",
+  senior: "Senior (13+)",
+  u15: "Under-15",
+  cadet: "Cadet (Under 17)",
+  junior: "Junior (Under 20)",
+  u23: "Under-23",
+  cadet_u16: "Cadet (Under 16)",
+  u17: "Under-17",
+  u18: "Under-18",
+  veteran: "Veteran 40+",
+  veteran_40: "Veteran 40",
+  veteran_40_59: "Veterans (40-59)",
+  veteran_abc: "Veteran A-B-C",
+  veteran_50: "Veteran 50",
+  grand_veteran: "Grand Veterans",
+  veteran_60: "Veteran 60",
+  veteran_70: "Veteran 70",
   y8: "Y8",
-  y10: "Y10",
-  y12: "Y12",
-  y14: "Y14",
-  cadet: "Cadet",
-  junior: "Junior",
-  senior: "Senior",
-  veteran: "Veteran",
   open: "Open",
 };
 
@@ -31,6 +48,18 @@ const GENDER_LABELS: Record<EventGender, string> = {
   female: "Women's",
   male: "Men's",
   other: "Mixed",
+};
+
+// Named after USA Fencing divisions where an API value matches one.
+const RATING_LIMIT_LABELS: Record<EventRatingLimit, string> = {
+  open: "None (Open event)",
+  div_1a: "Division I-A",
+  c_and_above: "Division I (C & above)",
+  c_and_under: "Division II (C & under)",
+  d_and_under: "Division III (D & under)",
+  e_and_under: "E & under",
+  unrated: "Unrated only",
+  b_and_under: "B & under",
 };
 
 const STATUS_LABELS: Record<EventStatus, string> = {
@@ -87,8 +116,11 @@ function toOptions(labels: Record<string, string>) {
 }
 
 const WEAPON_OPTIONS = toOptions(WEAPON_LABELS);
-const AGE_OPTIONS = toOptions(AGE_LABELS);
+// Y8 and Open predate the design's list: still shown on events that have them, but not offered.
+const AGE_OPTIONS = toOptions(AGE_LABELS).filter(({ value }) => value !== "y8" && value !== "open");
 const GENDER_OPTIONS = toOptions(GENDER_LABELS);
+// B & under is still accepted and shown on events that have it, but no longer offered.
+const RATING_LIMIT_OPTIONS = toOptions(RATING_LIMIT_LABELS).filter(({ value }) => value !== "b_and_under");
 const STATUS_OPTIONS = toOptions(STATUS_LABELS);
 const TYPE_OPTIONS = toOptions(TYPE_LABELS);
 
@@ -111,6 +143,8 @@ export {
   GENDER_OPTIONS,
   matchesEventFilters,
   parseEventFilters,
+  RATING_LIMIT_LABELS,
+  RATING_LIMIT_OPTIONS,
   STATUS_LABELS,
   STATUS_OPTIONS,
   TYPE_LABELS,

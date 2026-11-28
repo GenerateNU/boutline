@@ -232,12 +232,12 @@ describe("FencerFilterSheet", () => {
     expect(screen.getByText("Weapon: Epee")).toBeInTheDocument();
   });
 
-  it("shows Age Category: Y10 as a tag", async () => {
+  it("shows Age Category: Under-10 as a tag", async () => {
     await openSheet();
 
     await chooseAgeCategory("y10");
 
-    expect(screen.getByText("Age Category: Y10")).toBeInTheDocument();
+    expect(screen.getByText("Age Category: Under-10")).toBeInTheDocument();
   });
 
   it("Clear All then Show Fencers clears all five filters", async () => {

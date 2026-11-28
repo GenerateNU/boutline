@@ -335,6 +335,48 @@ func TestUpdateEventByID(t *testing.T) {
 		assert.Equal(t, "only an upcoming event can be edited", detail)
 	})
 
+	t.Run("clears the settings it is asked to and sets the new rating limits", func(t *testing.T) {
+		t.Parallel()
+
+		stored := seededEvent(event.EventStatusUpcoming, TestTournamentID)
+		individual := event.EventTypeIndividual
+		junior := event.EventAgeCategoryJunior
+		stored.Type = &individual
+		stored.AgeCategory = &junior
+		repo := NewFakeEventRepository(stored)
+		div1A := event.EventRatingLimitDiv1A
+
+		out, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).UpdateEventByID(asUser(t, TestAdminID),
+			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{
+				RatingLimit: &div1A,
+				Clear:       []string{"type", "age_category"},
+			}})
+
+		require.NoError(t, err)
+		assert.Nil(t, out.Body.Type)
+		assert.Nil(t, out.Body.AgeCategory)
+		require.NotNil(t, out.Body.RatingLimit)
+		assert.Equal(t, event.EventRatingLimitDiv1A, *out.Body.RatingLimit)
+	})
+
+	t.Run("refuses to set and clear the same setting", func(t *testing.T) {
+		t.Parallel()
+
+		stored := seededEvent(event.EventStatusUpcoming, TestTournamentID)
+		repo := NewFakeEventRepository(stored)
+		team := event.EventTypeTeam
+
+		_, err := event.NewEventService(repo, NewFakeTournamentLookup(), NewTestMemberships()).UpdateEventByID(asUser(t, TestAdminID),
+			&event.EventUpdateInput{ID: stored.ID.String(), Body: event.EventUpdateBody{
+				Type:  &team,
+				Clear: []string{"type"},
+			}})
+
+		code, detail := apiError(t, err)
+		assert.Equal(t, http.StatusBadRequest, code)
+		assert.Equal(t, "type can't be both set and cleared", detail)
+	})
+
 	t.Run("refuses an empty patch", func(t *testing.T) {
 		t.Parallel()
 

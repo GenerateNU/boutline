@@ -6,7 +6,9 @@ import CalendarTodayOutlined from "@mui/icons-material/CalendarTodayOutlined";
 import { Popover } from "radix-ui";
 import { useId, useState } from "react";
 
+import { Button } from "@/components/primitives/button";
 import { Calendar } from "@/components/primitives/calendar";
+import { Modal } from "@/components/primitives/modal";
 import { selectTriggerClassName } from "@/components/primitives/select";
 
 interface DateFieldProps {
@@ -21,6 +23,9 @@ interface DateFieldProps {
   "aria-describedby"?: string;
   className?: string;
   eventDates?: Date[];
+  // "modal" opens the calendar in a centered dialog over a darkened page, with a Choose Date
+  // button, instead of a popover under the field.
+  presentation?: "popover" | "modal";
 }
 
 function DateField({
@@ -35,11 +40,33 @@ function DateField({
   "aria-describedby": ariaDescribedBy,
   className,
   eventDates = [],
+  presentation = "popover",
 }: DateFieldProps) {
   const fallbackId = useId();
   const triggerId = id ?? fallbackId;
   const calendarId = `${triggerId}-calendar`;
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  // combobox, as Radix gives Select's trigger, so it can carry aria-invalid and reads its label rather than its text.
+  const trigger = (
+    <button
+      id={triggerId}
+      type="button"
+      role="combobox"
+      aria-expanded={open}
+      aria-controls={open && presentation === "popover" ? calendarId : undefined}
+      disabled={disabled}
+      aria-required={required}
+      aria-invalid={ariaInvalid}
+      aria-describedby={ariaDescribedBy}
+      data-placeholder={value ? undefined : ""}
+      className={selectTriggerClassName}
+    >
+      <span className="truncate">{value ? format(value, "MMM d, yyyy") : placeholder}</span>
+      <CalendarTodayOutlined aria-hidden className="size-4 shrink-0 text-neutral-secondary" />
+    </button>
+  );
 
   return (
     <div data-slot="date-field" className={cn("group flex flex-col gap-1", className)}>
@@ -50,52 +77,72 @@ function DateField({
         {label}
         {required ? <span aria-hidden className="text-red-dark"> *</span> : null}
       </label>
-      <Popover.Root open={open} onOpenChange={setOpen}>
-        <Popover.Trigger asChild>
-          {/* combobox, as Radix gives Select's trigger, so it can carry aria-invalid and reads its label rather than its text. */}
-          <button
-            id={triggerId}
+      {presentation === "modal" ? (
+        <Modal
+          open={open}
+          onOpenChange={(next) => {
+            // Each opening starts from the saved date; closing without Choose Date drops the pick.
+            if (next) {
+              setDraft(value);
+            }
+            setOpen(next);
+          }}
+          title="Calendar"
+          trigger={trigger}
+        >
+          <Calendar
+            mode="single"
+            required
+            autoFocus
+            selected={draft}
+            defaultMonth={draft}
+            modifiers={{ hasEvent: eventDates }}
+            onSelect={setDraft}
+          />
+          <Button
             type="button"
-            role="combobox"
-            aria-expanded={open}
-            aria-controls={open ? calendarId : undefined}
-            disabled={disabled}
-            aria-required={required}
-            aria-invalid={ariaInvalid}
-            aria-describedby={ariaDescribedBy}
-            data-placeholder={value ? undefined : ""}
-            className={selectTriggerClassName}
+            className="w-full rounded-lg"
+            disabled={!draft}
+            onClick={() => {
+              if (draft) {
+                onValueChange(draft);
+              }
+              setOpen(false);
+            }}
           >
-            <span className="truncate">{value ? format(value, "MMM d, yyyy") : placeholder}</span>
-            <CalendarTodayOutlined aria-hidden className="size-4 shrink-0 text-neutral-secondary" />
-          </button>
-        </Popover.Trigger>
-        <Popover.Portal>
-          <Popover.Content
-            id={calendarId}
-            aria-label="Calendar"
-            align="start"
-            sideOffset={4}
-            collisionPadding={16}
-            // The calendar focuses the picked day (or today) itself, rather than its first arrow.
-            onOpenAutoFocus={(event) => event.preventDefault()}
-            className="z-50 w-76 origin-(--radix-popover-content-transform-origin) rounded-xl border border-outline bg-background p-3 shadow-md outline-none motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out"
-          >
-            <Calendar
-              mode="single"
-              required
-              autoFocus
-              selected={value}
-              defaultMonth={value}
-              modifiers={{ hasEvent: eventDates }}
-              onSelect={(next) => {
-                onValueChange(next);
-                setOpen(false);
-              }}
-            />
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
+            Choose Date
+          </Button>
+        </Modal>
+      ) : (
+        <Popover.Root open={open} onOpenChange={setOpen}>
+          <Popover.Trigger asChild>{trigger}</Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              id={calendarId}
+              aria-label="Calendar"
+              align="start"
+              sideOffset={4}
+              collisionPadding={16}
+              // The calendar focuses the picked day (or today) itself, rather than its first arrow.
+              onOpenAutoFocus={(event) => event.preventDefault()}
+              className="z-50 w-76 origin-(--radix-popover-content-transform-origin) rounded-xl border border-outline bg-background p-3 shadow-md outline-none motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out"
+            >
+              <Calendar
+                mode="single"
+                required
+                autoFocus
+                selected={value}
+                defaultMonth={value}
+                modifiers={{ hasEvent: eventDates }}
+                onSelect={(next) => {
+                  onValueChange(next);
+                  setOpen(false);
+                }}
+              />
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+      )}
     </div>
   );
 }

@@ -46,6 +46,34 @@ describe("DateField", () => {
     expect(onValueChange).toHaveBeenCalledWith(new Date(2026, 9, 9));
   });
 
+  it("as a modal, keeps the date until Choose Date", () => {
+    const onValueChange = jest.fn();
+    render(<ControlledDateField presentation="modal" initial={new Date(2026, 9, 5)} onValueChange={onValueChange} />);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Start" }));
+    expect(screen.getByRole("dialog", { name: "Calendar" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /October 9/ }));
+    expect(onValueChange).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Choose Date" }));
+    expect(onValueChange).toHaveBeenCalledWith(new Date(2026, 9, 9));
+    expect(screen.getByRole("combobox", { name: "Start" })).toHaveTextContent("Oct 9, 2026");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("as a modal, drops the pick when closed without choosing", () => {
+    const onValueChange = jest.fn();
+    render(<ControlledDateField presentation="modal" initial={new Date(2026, 9, 5)} onValueChange={onValueChange} />);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Start" }));
+    fireEvent.click(screen.getByRole("button", { name: /October 9/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("combobox", { name: "Start" })).toHaveTextContent("Oct 5, 2026");
+  });
+
   it.each([
     { name: "marks a required field", required: true, marks: 1 },
     { name: "leaves an optional field unmarked", required: false, marks: 0 },

@@ -161,8 +161,11 @@ func (s *eventService) UpdateEventByID(ctx context.Context, input *EventUpdateIn
 		}
 		body.Name = &name
 	}
-	if body == (EventUpdateBody{}) {
+	if isEmptyEventUpdate(body) {
 		return nil, errs.HumaError(errs.Public("provide at least one field to update", errs.ErrInvalidInput))
+	}
+	if field, ok := setAndCleared(body); ok {
+		return nil, errs.HumaError(errs.Public(field+" can't be both set and cleared", errs.ErrInvalidInput))
 	}
 
 	if err := s.requireEventAdmin(ctx, id); err != nil {
@@ -183,6 +186,28 @@ func (s *eventService) UpdateEventByID(ctx context.Context, input *EventUpdateIn
 	}
 
 	return &EventOutput{Body: newEventResponse(*event)}, nil
+}
+
+func isEmptyEventUpdate(body EventUpdateBody) bool {
+	return body.Name == nil && body.Type == nil && body.Weapon == nil && body.Gender == nil &&
+		body.AgeCategory == nil && body.RatingLimit == nil && body.Qualifier == nil && body.StartTime == nil &&
+		len(body.Clear) == 0
+}
+
+// setAndCleared reports the first field the body both sets and asks to clear.
+func setAndCleared(body EventUpdateBody) (string, bool) {
+	set := map[string]bool{
+		"type":         body.Type != nil,
+		"age_category": body.AgeCategory != nil,
+		"rating_limit": body.RatingLimit != nil,
+	}
+	for _, field := range body.Clear {
+		if set[field] {
+			return field, true
+		}
+	}
+
+	return "", false
 }
 
 func (s *eventService) DeleteEventByID(ctx context.Context, input *EventIDInput) (*struct{}, error) {
