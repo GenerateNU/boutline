@@ -75,4 +75,10 @@ describe("FencerCard", () => {
     expect(screen.getByRole("button", { name: /^Yan Wang/ })).toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
+
+  it("shows the given icon instead of the chevron when it opens something in place", () => {
+    render(<FencerCard competitor={YAN} onSelect={() => {}} selectIcon={<svg data-testid="pencil" />} />);
+
+    expect(screen.getByTestId("pencil")).toBeInTheDocument();
+  });
 });

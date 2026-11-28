@@ -87,6 +87,7 @@ type CompetitorListFilter struct {
 	TournamentID *uuid.UUID              // nil means don't filter by tournament
 	Rating       *Rating                 // nil means don't filter by rating
 	Gender       *Gender                 // nil means don't filter by gender
+	CheckedIn    *bool                   // nil means don't filter by check-in
 	Team         *string                 // nil means don't filter by team
 	Weapon       *event.EventWeapon      // nil means don't filter by weapon
 	AgeCategory  *event.EventAgeCategory // nil means don't filter by age category
@@ -224,6 +225,13 @@ func (r *competitorRepository) ListCompetitors(
 	}
 	if filter.Gender != nil {
 		query = query.Where("gender = ?", string(*filter.Gender))
+	}
+	if filter.CheckedIn != nil {
+		if *filter.CheckedIn {
+			query = query.Where("checked_in_at IS NOT NULL")
+		} else {
+			query = query.Where("checked_in_at IS NULL")
+		}
 	}
 	if filter.Weapon != nil || filter.AgeCategory != nil {
 		// sub-query because events table has weapon and age
