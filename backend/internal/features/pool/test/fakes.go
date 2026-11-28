@@ -61,7 +61,6 @@ var _ pool.PoolRepository = (*FakePoolRepository)(nil)
 
 type FakePoolRepository struct {
 	Pools       map[uuid.UUID]pool.Pool
-	WithBouts   map[uuid.UUID]bool      // pools the real database would refuse to delete
 	Tournaments map[uuid.UUID]uuid.UUID // pool id to the tournament its stage's event belongs to
 	OpenBouts   map[uuid.UUID]int64     // pool id to its bouts that have not ended
 	Err         error                   // when set, every method fails with it
@@ -81,7 +80,6 @@ func NewFakePoolRepository(seed ...pool.Pool) *FakePoolRepository {
 
 	return &FakePoolRepository{
 		Pools:       pools,
-		WithBouts:   map[uuid.UUID]bool{},
 		Tournaments: tournaments,
 		OpenBouts:   map[uuid.UUID]int64{},
 
@@ -112,8 +110,7 @@ func (f *FakePoolRepository) CreatePoolsWithBouts(_ context.Context, lineups []p
 			lineup.Bouts[j].UpdatedAt = now
 			f.Bouts = append(f.Bouts, lineup.Bouts[j])
 		}
-		// New bouts are upcoming, so the pool can't be deleted or ended until they finish.
-		f.WithBouts[lineup.Pool.ID] = true
+		// New bouts are upcoming, so the pool can't be ended until they finish.
 		f.OpenBouts[lineup.Pool.ID] = int64(len(lineup.Bouts))
 	}
 
@@ -386,16 +383,18 @@ func (f *FakePoolRepository) DeletePoolByID(_ context.Context, id uuid.UUID) err
 		return f.Err
 	}
 
-	if _, ok := f.Pools[id]; !ok {
+	p, ok := f.Pools[id]
+	if !ok {
 		return fmt.Errorf("delete pool %s: %w", id, errs.ErrNotFound)
 	}
-	if f.WithBouts[id] {
+	if p.StartedAt != nil {
 		return fmt.Errorf("delete pool %s: %w", id,
-			errs.Public("a pool with bouts cannot be deleted", errs.ErrConflict))
+			errs.Public("a started pool cannot be deleted", errs.ErrConflict))
 	}
 
 	delete(f.Pools, id)
 	delete(f.Tournaments, id)
+	f.Bouts = slices.DeleteFunc(f.Bouts, func(b pool.PoolBout) bool { return b.PoolID == id })
 
 	return nil
 }

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 
-import { buildPool } from "../_fixtures/build-pool";
+import { buildPool } from "@/features/pool/fixtures/build-pool";
 
 import { PoolList } from "./pool-list";
 

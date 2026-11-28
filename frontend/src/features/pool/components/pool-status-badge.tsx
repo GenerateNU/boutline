@@ -1,6 +1,6 @@
 import { StatusBadge, type Status } from "@/components/primitives/status-badge";
 
-import type { PoolStatus } from "../_types/pool-board";
+import type { PoolStatus } from "@/features/pool/types/pool-board";
 
 const badgeStatus: Record<PoolStatus, Status> = {
   upcoming: "upcoming",

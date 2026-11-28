@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 
 import { PINNED_STORAGE_KEY } from "@/features/pinning/types/pinning";
 
-import { buildPool } from "../_fixtures/build-pool";
+import { buildPool } from "@/features/pool/fixtures/build-pool";
 
 import { PoolPinButton } from "./pool-pin-button";
 

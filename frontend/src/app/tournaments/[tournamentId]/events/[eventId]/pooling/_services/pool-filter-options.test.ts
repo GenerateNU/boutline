@@ -1,4 +1,4 @@
-import { buildPool } from "../_fixtures/build-pool";
+import { buildPool } from "@/features/pool/fixtures/build-pool";
 
 import { matchingSuggestions, poolFilterOptions } from "./pool-filter-options";
 

@@ -1,4 +1,4 @@
-import type { PoolBoard, PoolStatus } from "../_types/pool-board";
+import type { PoolBoard, PoolStatus } from "@/features/pool/types/pool-board";
 import type { PoolFilters } from "../_types/pool-filters";
 
 import { applyPoolFilters, defaultPoolFilters, hasActiveFilters } from "./apply-pool-filters";

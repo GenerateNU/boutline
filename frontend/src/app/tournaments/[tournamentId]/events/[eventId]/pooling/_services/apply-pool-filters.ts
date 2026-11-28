@@ -1,7 +1,7 @@
-import type { PoolBoard } from "../_types/pool-board";
+import type { PoolBoard } from "@/features/pool/types/pool-board";
 import type { PoolFilters, PoolSortKey } from "../_types/pool-filters";
 
-import { fencerName } from "./fencer-name";
+import { fencerName } from "@/features/pool/lib/fencer-name";
 
 export const defaultPoolFilters: PoolFilters = {
   fencer: "",

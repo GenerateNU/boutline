@@ -1,4 +1,4 @@
-import { PoolBoard, PoolBout, PoolFencer } from "../_types/pool-board";
+import { PoolBoard, PoolBout, PoolFencer } from "@/features/pool/types/pool-board";
 
 import { boutsTable } from "./pool-table-data";
 

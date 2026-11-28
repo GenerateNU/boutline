@@ -1,4 +1,4 @@
-import type { PoolBoard, PoolBout, PoolFencer } from "../_types/pool-board";
+import type { PoolBoard, PoolBout, PoolFencer } from "@/features/pool/types/pool-board";
 
 import { poolBoutDetail } from "./pool-bout-detail";
 
@@ -69,8 +69,8 @@ describe("poolBoutDetail", () => {
       poolNumber: 7,
       strip: "3",
       sides: [
-        { competitorId: "a", name: "Ann Xu", team: "Ann Club" },
-        { competitorId: "b", name: "Ben Yu", team: "Ben Club" },
+        { competitorId: "a", name: "Ann Xu", team: "Ann Club", position: 1 },
+        { competitorId: "b", name: "Ben Yu", team: "Ben Club", position: 2 },
       ],
     });
   });

@@ -1,4 +1,4 @@
-import type { PoolBoard, PoolFencer } from "../_types/pool-board";
+import type { PoolBoard, PoolFencer } from "@/features/pool/types/pool-board";
 
 import { poolStandings } from "./pool-standings";
 

@@ -33,4 +33,10 @@ describe("EventCard", () => {
     expect(screen.getByText(want)).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/tournaments/t1/events/e1");
   });
+
+  it("links to a given href instead of the public event page", () => {
+    render(<EventCard event={EVENT} competitorCount={0} href="/admin/tournaments/t1/events/e1" />);
+
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/admin/tournaments/t1/events/e1");
+  });
 });

@@ -1,8 +1,8 @@
 import { PoolTableCell, PoolTableData } from "@/features/pool/types/pool-table";
 
-import { PoolBoard, PoolFencer } from "../_types/pool-board";
+import { PoolBoard, PoolFencer } from "@/features/pool/types/pool-board";
 
-import { fencerListName } from "./fencer-name";
+import { fencerListName } from "@/features/pool/lib/fencer-name";
 
 // Rows follow `position` because that is the pool sheet order the column numbers refer to.
 function byPosition(pool: PoolBoard): PoolFencer[] {

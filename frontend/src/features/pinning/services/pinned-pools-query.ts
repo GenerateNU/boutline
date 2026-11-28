@@ -1,4 +1,4 @@
-import type { PoolBoard, PoolBoardList } from "@/app/tournaments/[tournamentId]/events/[eventId]/pooling/_types/pool-board";
+import type { PoolBoard, PoolBoardList } from "@/features/pool/types/pool-board";
 import { apiRequest } from "@/services/api-request";
 
 // The backend caps ids at 100, the same cap as the pin limit.

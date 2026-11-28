@@ -3,6 +3,7 @@ import type { BoutStatus } from "@/types/bout";
 export interface PoolBoutSide {
   competitorId: string;
   name: string;
+  position: number;
   team: string;
   score: number | null;
   result: "V" | "D" | null;

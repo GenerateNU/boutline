@@ -24,7 +24,7 @@ const TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
 const utcMidnight = (day: string) => new Date(`${day}T00:00:00Z`);
 
 // Start time ascending with undated events last, then name, then id.
-function byStartThenName(a: TournamentEvent, b: TournamentEvent): number {
+export function byStartThenName(a: TournamentEvent, b: TournamentEvent): number {
   const aTime = a.start_time ? Date.parse(a.start_time) : Infinity;
   const bTime = b.start_time ? Date.parse(b.start_time) : Infinity;
   if (aTime !== bTime) {

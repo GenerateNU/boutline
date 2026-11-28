@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { getTournamentRole } from "@/features/tournament/services/getTournamentRole";
 
-import { getPool } from "../_services/get-pool";
+import { getPool } from "@/features/pool/services/get-pool";
 
 import { PoolBouts } from "./_components/pool-bouts";
 import { PoolHeader } from "./_components/pool-header";

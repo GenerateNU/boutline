@@ -4,6 +4,7 @@ import { MockCountry } from "@/app/tournaments/[tournamentId]/_components/mock-c
 import { ListCard } from "@/components/primitives/list-card";
 import { RatingBadge } from "@/components/primitives/rating-badge";
 import { Text } from "@/components/primitives/text";
+import { ratingLabel } from "@/features/competitor/lib/rating-label";
 import { usePinnedItems } from "@/features/pinning/hooks/use-pinned-items";
 import type { Competitor } from "@/types/competitor";
 
@@ -30,7 +31,7 @@ function FencerCard({ competitor, onSelect }: FencerCardProps) {
           <MockCountry /> &middot; {team || "No club"}
         </Text>
       }
-      badge={<RatingBadge tone={pinned ? "filled" : "subtle"}>{rating}{ratingYear}</RatingBadge>}
+      badge={<RatingBadge tone={pinned ? "filled" : "subtle"}>{ratingLabel(rating, ratingYear)}</RatingBadge>}
       href={onSelect ? undefined : href || undefined}
       onSelect={onSelect}
       pinned={pinned}

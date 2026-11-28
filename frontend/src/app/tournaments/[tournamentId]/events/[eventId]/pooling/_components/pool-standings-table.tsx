@@ -1,6 +1,6 @@
 import { poolStandings } from "../_services/pool-standings";
 import { poolTitle } from "../_services/pool-title";
-import type { PoolBoard } from "../_types/pool-board";
+import type { PoolBoard } from "@/features/pool/types/pool-board";
 
 import { PoolStandingsHead } from "./pool-standings-head";
 

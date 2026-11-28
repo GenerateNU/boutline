@@ -1,7 +1,7 @@
-import type { PoolBoard } from "../_types/pool-board";
+import type { PoolBoard } from "@/features/pool/types/pool-board";
 import type { PoolStandingRow } from "../_types/pool-standing-row";
 
-import { fencerListName } from "./fencer-name";
+import { fencerListName } from "@/features/pool/lib/fencer-name";
 
 function signed(value: number): string {
   return value > 0 ? `+${value}` : String(value);

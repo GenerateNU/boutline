@@ -7,6 +7,7 @@ import LocationOnOutlined from "@mui/icons-material/LocationOnOutlined";
 import { BackButton } from "@/components/primitives/back-button";
 import { Skeleton } from "@/components/primitives/skeleton";
 import { TabPageOnly } from "@/components/primitives/tab-page-only";
+import { Text } from "@/components/primitives/text";
 
 import { DashboardTabNav } from "./_components/dashboard-tab-nav";
 
@@ -16,16 +17,16 @@ export default function TournamentDashboardLoading() {
 
   return (
     <div className="flex flex-col">
-      <span role="status" className="sr-only">
+      <p role="status" className="sr-only">
         Loading tournament
-      </span>
+      </p>
       <TabPageOnly basePath={`/admin/tournaments/${tournamentId}`}>
         <header className="mx-auto flex w-full max-w-mobile flex-col gap-2 px-4 pt-4 pb-6 font-manrope">
           <BackButton href="/admin/tournaments" className="self-start">
             All tournaments
           </BackButton>
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-neutral-secondary">Tournament Management Dashboard</p>
+            <Text variant="caption">Tournament Management Dashboard</Text>
             <Skeleton className="h-6 w-24 rounded-full" />
           </div>
           <Skeleton className="h-7 w-3/4" />
@@ -41,7 +42,9 @@ export default function TournamentDashboardLoading() {
           </div>
         </header>
       </TabPageOnly>
-      <DashboardTabNav />
+      <TabPageOnly basePath={`/admin/tournaments/${tournamentId}`}>
+        <DashboardTabNav />
+      </TabPageOnly>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type PoolRepository interface {
@@ -407,21 +408,46 @@ func (r *poolRepository) CountOpenPoolBouts(ctx context.Context, id uuid.UUID) (
 	return open, nil
 }
 
+// DeletePoolByID deletes an unstarted pool with its bouts. Like ReplacePoolBouts it
+// deletes only upcoming bouts and rolls back if any others remain, since starting a
+// bout doesn't take the pool's lock.
 func (r *poolRepository) DeletePoolByID(ctx context.Context, id uuid.UUID) error {
-	result := r.db.WithContext(ctx).Where("id = ?", id).Delete(&Pool{})
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrForeignKeyViolated) {
-			return fmt.Errorf("delete pool %s: %w", id,
-				errs.Public("a pool with bouts cannot be deleted", errs.ErrConflict))
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		started := fmt.Errorf("delete pool %s: %w", id,
+			errs.Public("a started pool cannot be deleted", errs.ErrConflict))
+
+		var pool Pool
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "started_at").
+			Where("id = ?", id).Take(&pool).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("delete pool %s: %w", id, errs.ErrNotFound)
 		}
-		return fmt.Errorf("delete pool %s: %w", id, result.Error)
-	}
+		if err != nil {
+			return fmt.Errorf("delete pool %s: %w", id, err)
+		}
+		if pool.StartedAt != nil {
+			return started
+		}
 
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("delete pool %s: %w", id, errs.ErrNotFound)
-	}
+		// A scoring still pointing at an upcoming bout blocks its delete (design §9.1).
+		err = tx.Where("pool_id = ? AND status = ?", id, upcomingBoutStatus).Delete(&PoolBout{}).Error
+		if errors.Is(err, gorm.ErrForeignKeyViolated) {
+			return started
+		}
+		if err != nil {
+			return fmt.Errorf("delete bouts of pool %s: %w", id, err)
+		}
 
-	return nil
+		// Bouts that have started still reference the pool, so this fails on them.
+		if err := tx.Where("id = ?", id).Delete(&Pool{}).Error; err != nil {
+			if errors.Is(err, gorm.ErrForeignKeyViolated) {
+				return started
+			}
+			return fmt.Errorf("delete pool %s: %w", id, err)
+		}
+
+		return nil
+	})
 }
 
 func translatePoolWriteError(op string, err error) error {

@@ -55,7 +55,7 @@ function Select({
         <SelectPrimitive.Content
           position="popper"
           sideOffset={4}
-          className="z-50 max-h-(--radix-select-content-available-height) w-(--radix-select-trigger-width) origin-(--radix-select-content-transform-origin) rounded-lg border border-outline bg-background shadow-md motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out"
+          className="z-50 max-h-(--radix-select-content-available-height) w-(--radix-select-trigger-width) origin-(--radix-select-content-transform-origin) rounded-[12px] border border-outline bg-background shadow-md motion-safe:data-[state=open]:animate-pop-in motion-safe:data-[state=closed]:animate-pop-out"
         >
           <SelectPrimitive.Viewport className="max-h-80 p-1">{children}</SelectPrimitive.Viewport>
         </SelectPrimitive.Content>
@@ -73,7 +73,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "cursor-pointer rounded-md px-3 py-2 text-sm text-neutral-secondary outline-none data-highlighted:bg-blue-lightest",
+        "cursor-pointer rounded-md px-3 py-2 text-sm text-neutral-secondary outline-none data-highlighted:bg-blue-lightest data-highlighted:text-blue",
         className,
       )}
       {...props}

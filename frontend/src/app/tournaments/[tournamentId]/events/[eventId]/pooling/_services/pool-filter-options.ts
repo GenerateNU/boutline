@@ -1,9 +1,9 @@
 import type { Suggestion } from "@/components/primitives/filter-search-field";
 
-import type { PoolBoard } from "../_types/pool-board";
+import type { PoolBoard } from "@/features/pool/types/pool-board";
 import type { PoolFilterOptions } from "../_types/pool-filters";
 
-import { fencerName } from "./fencer-name";
+import { fencerName } from "@/features/pool/lib/fencer-name";
 
 function sortedUnique(values: string[]): string[] {
   return [...new Set(values)].sort((a, b) => a.localeCompare(b));
